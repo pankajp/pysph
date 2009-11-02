@@ -1,0 +1,104 @@
+"""
+Implementation of resizeable arrays of different types in Cython.
+
+All arrays provide for the following operations:
+
+ - access by indexing.
+ - access through get/set function.
+ - appending values at the end of the array.
+ - reserving space for future appends.
+ - access to internal data through a numpy array.
+
+** Numpy array access **
+Each array also provides an interface to its data through a numpy array. This is
+done through the get_npy_array function. The returned numpy array can be used
+just like any other numpy array but for the following restrictions:
+
+ - the array may not be resized.
+ - references of this array should not be kept.
+ - slices of this array may not be made.
+
+The numpy array may however be copied and used in any manner.
+
+** Examples **
+
+"""
+# For malloc etc.
+include "stdlib.pxd"
+
+cimport numpy as np
+
+import numpy as np
+
+# 'importing' some Numpy C-api functions.
+cdef extern from "numpy/arrayobject.h":
+    cdef void  import_array()
+    
+    ctypedef struct PyArrayObject:
+        char  *data
+        int *dimensions
+    
+    cdef enum NPY_TYPES:
+        NPY_INT, 
+        NPY_LONG,
+        NPY_FLOAT,
+        NPY_DOUBLE
+    
+    np.ndarray PyArray_SimpleNewFromData(int, int*, int, void*)
+    
+# numpy module initialization call
+import_array()
+
+cdef class BaseArray:
+    """
+    Base class for managed C-arrays.
+    """     
+    def __cinit__(self, *args, **kwargs):
+        pass
+
+    cpdef reserve(self, int size):
+        raise NotImplementedError, 'BaseArray::reserve'
+
+    cpdef resize(self, int size):
+        raise NotImplementedError, 'BaseArray::resize'
+
+    cpdef np.ndarray get_npy_array(self):
+        return self._npy_array
+
+    cpdef set_data(self, np.ndarray nparr):
+        """
+        Set data from the given numpy array.
+
+        If the numpy array is a reference to the numpy array maintained
+        internally by this class, nothing is done. 
+        Otherwise, if the size of nparr matches this array, values are
+        copied into the array maintained.
+
+        """
+        cdef PyArrayObject* sarr = <PyArrayObject*>nparr
+        cdef PyArrayObject* darr = <PyArrayObject*>self._npy_array
+
+        if self._npy_array is nparr:
+            return
+        if sarr.dimensions[0] == darr.dimensions[0]:
+            self._npy_array[:] = nparr
+        else:
+            raise ValueError, 'array size mismatch'
+
+    cpdef squeeze(self):
+        raise NotImplementedError, 'BaseArray::squeeze'
+
+    cpdef remove(self, np.ndarray index_list, int input_sorted=0):
+        raise NotImplementedError, 'BaseArray::remove'
+
+    cpdef extend(self, np.ndarray in_array):
+        raise NotImplementedError, 'BaseArray::extend'
+        
+    cpdef reset(self):
+        """
+        Reset the length of the array to 0.
+    	"""
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+        self.length = 0
+        arr.dimensions[0] = self.length        
+        

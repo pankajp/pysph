@@ -1,0 +1,187 @@
+################################################################################
+# `CLASSNAME` class.
+################################################################################
+cdef class CLASSNAME(BaseArray):
+    #cdef public int length, alloc
+    #cdef ARRAY_TYPE *data
+    #cdef np.ndarray _npy_array
+
+    def __cinit__(self, int n=0, *args, **kwargs):
+        """
+        Constructor.
+        """
+        self.length = n
+        if n == 0:
+            n = 16
+        self.alloc = n
+        self.data = <ARRAY_TYPE*>malloc(n*sizeof(ARRAY_TYPE))
+        
+        self._setup_npy_array()
+	 
+    def __dealloc__(self):
+        """
+        Frees the array.
+        """
+        free(<void*>self.data)
+    
+    def __getitem__(self, int idx):
+        """
+        Get item at position idx.
+        """
+        return self.data[idx]
+
+    def __setitem__(self, int idx, ARRAY_TYPE value):
+        """
+        Set location idx to value.
+        """
+        self.data[idx] = value
+
+    cdef _setup_npy_array(self):
+        """
+        Create the numpy array.
+        """
+        cdef int nd = 1
+        cdef int *dims = [self.length]
+
+        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NUMPY_TYPENAME, self.data)
+
+    cdef ARRAY_TYPE* get_data_ptr(self):
+        """
+        Return the internal data pointer.
+        """
+        return self.data
+            
+    cpdef ARRAY_TYPE get(self, int idx):
+        """
+        Gets value stored at position idx.
+        """
+        return self.data[idx]
+
+    cpdef set(self, int idx, ARRAY_TYPE value):
+        """
+        Sets location idx to value.
+        """
+        self.data[idx] = value
+    
+    cpdef append(self, ARRAY_TYPE value):
+        """
+        Appends value to the end of the array.
+        """
+        cdef int l = self.length
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+
+        if l >= self.alloc:
+            self.reserve(l*2)
+        self.data[l] = value
+        self.length += 1
+
+        # update the numpy arrays length
+        arr.dimensions[0] = self.length
+
+    cpdef reserve(self, int size):
+        """
+        Resizes the internal data to size*sizeof(ARRAY_TYPE) bytes.
+        """
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+        cdef void* data = NULL
+        if size > self.alloc:
+            data = <ARRAY_TYPE*>realloc(self.data, size*sizeof(ARRAY_TYPE))
+
+            if data == NULL:
+                free(<void*>self.data)
+                raise MemoryError
+
+            self.data = <ARRAY_TYPE*>data
+            self.alloc = size
+            arr.data = <char *>self.data
+            
+    cpdef resize(self, int size):
+        """
+ 	Resizes internal data to size*sizeof(ARRAY_TYPE) bytes and sets the
+        length to the new size.
+        
+        """
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+
+        # reserve memory
+        self.reserve(size)
+
+        # update the lengths
+        self.length = size
+        arr.dimensions[0] = self.length
+
+    cpdef squeeze(self):
+        """
+        Release any unused memory.
+        """
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+        cdef void* data = NULL
+        data = <ARRAY_TYPE*>realloc(self.data, self.length*sizeof(ARRAY_TYPE))
+        
+        if data == NULL:
+            # free original data
+            free(<void*>self.data)
+            raise MemoryError
+        
+        self.data = <ARRAY_TYPE*>data
+        self.alloc = self.length
+        arr.data = <char *>self.data
+        
+    cpdef remove(self, np.ndarray index_list, int input_sorted=0):
+        """
+        Remove the particles with indices in index_list.
+
+        **Parameters**
+
+         - index_list - a list of indices which should be removed.
+         - input_sorted - indicates if the input is sorted in ascending order.
+           if not, the array will be sorted internally.
+
+        **Algorithm**
+         
+         If the input indices are not sorted, sort them in ascending order. 
+         Starting with the last element in the index list, start replacing the 
+         element at the said index with the last element in the data and update 
+         the length of the array.
+
+        """
+        cdef int i
+        cdef int inlength = index_list.size
+        cdef np.ndarray sorted_indices
+        cdef long id
+        cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
+        
+        if inlength > self.length:
+            return
+
+        if input_sorted != 1:
+            sorted_indices = np.sort(index_list)
+        else:
+            sorted_indices = index_list
+        
+        for i in range(inlength):
+            id = sorted_indices[inlength-(i+1)]
+            if id < self.length:
+                self.data[id] = self.data[self.length-1]
+                self.length = self.length - 1
+                arr.dimensions[0] = self.length
+
+    cpdef extend(self, np.ndarray in_array):
+        """
+        Extend the array with data from in_array.
+        
+        **Parameters**
+         
+         - in_array - a numpy array with data to be added to the current array.
+
+        **Issues**
+         
+         - accessing the in_array using the indexing operation seems to be 
+           costly. Look at the annotated cython html file.
+
+        """
+        cdef int len = in_array.size
+        cdef int i
+        for i in range(len):
+            self.append(in_array[i])
+    

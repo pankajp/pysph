@@ -1,0 +1,25 @@
+Friday 11 September 2009 (03:42:09 PM)
+       - Add provision to remove values from *Arrays.
+       - Test-cases for *Arrays.   
+       - Add provision to initialize *Arrays from numpy arrays.
+       - How is the standard_name_map from ParticleArray being implemented. Or
+         decide if it is actually required.
+       - Need to maintain a multi-level cell hierarcy of cells in the
+         CellManager.
+       - How does NNPS perform search using the multi-level hierarchy for cells
+         ? How does one decide which hierarcy to use for a particular search.       
+
+09/15/2009 (03:49:06 PM)
+       - Updating cell manager in a parallel implementation to be thought of.
+       - 
+
+
+
+Saturday 10 October 2009 (07:51:54 PM)
+    - a method in the ParticleArray to specify the properties it provides.
+      Each property will have a standard name, using which it will be
+      identified, for example 'mass', 'density' etc. With this name will be
+      associated another string which will identify the name of the array that
+      holds that property. So if any module wants the 'mass' array from the
+      particle array, it will just query for mass, and get the array. It need
+      not bother about the exact that the array is stored internall as.
