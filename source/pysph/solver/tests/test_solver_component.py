@@ -119,6 +119,13 @@ class DummyComponent1(SolverComponent):
         flags[EntityTypes.Entity_Fluid] = [{'name':'f1', 'default':4}]
         flags[EntityTypes.Entity_Solid] = [{'name':'f2', 'default':5}]        
 
+        # add entity property requirements
+        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep[EntityTypes.Entity_Fluid] = [{'name':'h', 'default':0.1},
+                                        {'name':'mu', 'default':None}]
+
+        ep[EntityTypes.Entity_Solid] = [{'name':'mu', 'default':None}]
+
 ################################################################################
 # `DummyComponent2` class.
 ################################################################################
@@ -153,6 +160,13 @@ class DummyComponent2(SolverComponent):
         flags[EntityTypes.Entity_Fluid] = [{'name':'f3', 'default':4}]
         flags[EntityTypes.Entity_Solid] = [{'name':'f4', 'default':5}]        
 
+        # add entity property requirements
+        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep[EntityTypes.Entity_Fluid] = [{'name':'h1', 'default':0.1},
+                                        {'name':'mu', 'default':1.0}]
+
+        ep[EntityTypes.Entity_Solid] = [{'name':'g', 'default':None}]
+
 ################################################################################
 # `DummyComponent2` class.
 ################################################################################
@@ -169,6 +183,11 @@ class DummyComponent3(SolverComponent):
         rp[EntityTypes.Entity_Fluid] = ['b', 'd']
 
         rp[EntityTypes.Entity_Solid] = ['a', 'b', 'c', 'd']
+
+        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep[EntityTypes.Entity_Solid] = [{'name':'mu', 'default':1.0}]
+
+        ep[EntityTypes.Entity_Fluid] = [{'name':'nu', 'default':3.0}]
 
 ################################################################################
 # `TestComponentManager` class.
@@ -206,9 +225,11 @@ class TestComponentManager(unittest.TestCase):
         cm.add_component(c1)
 
         # make sure the component has been added.
-        self.assertEqual(cm.component_dict['c1'], (c1, False))
+        self.assertEqual(cm.component_dict['c1']['component'], c1)
+        self.assertEqual(cm.component_dict['c1']['notify'], False)
         # make sure the property requirements have been updated.
         particle_props = cm.information.get_dict(cm.PARTICLE_PROPERTIES)
+        entity_props = cm.information.get_dict(cm.ENTITY_PROPERTIES)
 
         solid_props = particle_props[EntityTypes.Entity_Solid]
         check_particle_properties(solid_props,
@@ -221,10 +242,22 @@ class TestComponentManager(unittest.TestCase):
                          ['c', 'd', 'e', 'f', 'f1'],
                          ['double', 'double', 'double', 'double', 'int'],
                          [None, None, 10.0, 11.0, 4])
+
+        # check if the entity properties were added.
+        fluid_entity_props = entity_props[EntityTypes.Entity_Fluid]
+        check_entity_properties(fluid_entity_props,
+                                ['h', 'mu'],
+                                [0.1, None])
+        solid_entity_props = entity_props[EntityTypes.Entity_Solid]
+        check_entity_properties(solid_entity_props,
+                                ['mu'],
+                                [None])
         
         # add a DummyComponent3, which will be accepted for sure.
         cm.add_component(c3, True)
-        self.assertEqual(cm.component_dict['c3'], (c3, True)) 
+        self.assertEqual(cm.component_dict['c3']['component'], c3)
+        self.assertEqual(cm.component_dict['c3']['notify'], True)
+        
         # solid properties should contain the extra array 'd'
         check_particle_properties(solid_props,
                                   ['a', 'b', 'f2', 'd', 'c'],
@@ -237,9 +270,19 @@ class TestComponentManager(unittest.TestCase):
                          ['double', 'double', 'double', 'double', 'double', 'int'],
                          [None, None, None, 10.0, 11.0, 4])
 
+        # check if the entity properties were added.
+        fluid_entity_props = entity_props[EntityTypes.Entity_Fluid]
+        check_entity_properties(fluid_entity_props,
+                                ['h', 'mu', 'nu'],
+                                [0.1, None, 3.0])
+        solid_entity_props = entity_props[EntityTypes.Entity_Solid]
+        check_entity_properties(solid_entity_props,
+                                ['mu'],
+                                [1.0])
+
         # now try adding a component with conflicting requirements.
         cm.add_component(c2)
-        
+                
         # the component should not have been added. And the arrays should not
         # have changed.
         self.assertEqual(cm.component_dict.has_key('c2'), False)
@@ -264,7 +307,21 @@ def check_particle_properties(prop_dict, prop_names, data_types, default_vals):
         prop = prop_dict[prop_names[i]]
         assert prop['default'] == default_vals[i]
         assert prop['data_type'] == data_types[i]
-            
+
+def check_entity_properties(prop_dict, prop_names, default_vals):
+    """
+    Checks if prop_dict has the names in prop_names and the required default
+    values.
+    """
+    # make sure we have the exact same number of properties.
+    assert len(prop_dict.keys()) ==  len(prop_names)
+    for i in range(len(prop_names)):
+        prop = prop_dict[prop_names[i]]
+        val = prop['default'] == default_vals[i]
+        msg = '%s != %s'%(str(prop['default']), str(default_vals[i]))
+        msg += ' for property %s'%(prop_names[i])
+        assert val, msg
+
 if __name__ == '__main__':
     import logging
     logger = logging.getLogger()

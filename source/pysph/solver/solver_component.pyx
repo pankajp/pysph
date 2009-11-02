@@ -221,14 +221,19 @@ cdef class ComponentManager(Base):
         Adds this entity to all entities in the component manager that need to
         be notified about new inputs.
         """
-        pass
+        cdef SolverComponent c
+
+        for val in self.component_dict:
+            if val['notify'] == True:
+                c = val['component']
+                c.add_entity(c)
 
     cpdef SolverComponent get_component(self, str comp_name):
         """
         Get the named component.
         """
         if self.component_dict.has_key(comp_name):
-            return self.component_dict['comp_name'][0]
+            return <SolverComponent>self.component_dict['comp_name']['component']
         else:
             logger.error('%s : no such component'%(comp_name))
             return None
@@ -246,15 +251,15 @@ cdef class ComponentManager(Base):
         """
         # first check if the component already exists, in which case we won't
         # add it. Also two components of same name are not allowed.
-        cdef SolverComponent comp = self.component_dict.get(c.name)
-        if comp is not None:
-            if comp is not c:
+        cdef dict comp_details = self.component_dict.get(c.name)
+        if comp_details is not None:
+            if comp_details['component'] is not c:
                 raise ValueError, 'Two components with same name not allowed'
             return
         else:
             # add this component.
             if self.validate_property_requirements(c):
-                self.component_dict[c.name] = (c, notify)
+                self.component_dict[c.name] = {'component':c, 'notify':notify}
             else:
                 logger.warn('Component %s not added'%(c.name))
 
@@ -323,6 +328,39 @@ cdef class ComponentManager(Base):
         # add entity properties to entity_properties
         entity_props = self.information.get_dict(
             ComponentManager.ENTITY_PROPERTIES)
+
+        e_props = c.information.get_dict(
+            c.ENTITY_PROPERTIES)
+        
+        for etype in e_props:
+            p_list = e_props[etype]
+
+            e_props1 = entity_props.get(etype)
+
+            if e_props1 is None:
+                e_props1 = {}
+                entity_props[etype] = e_props1
+            
+            for p in p_list:
+                p_name = p['name']
+                p_default = p['default']
+
+                p1 = e_props1.get(p_name)
+                if p1 is None:
+                    p1 = {'default':p_default}
+                    e_props1[p_name] = p1
+                else:
+                    if p1['default'] is None:
+                        p1['default'] = p_default
+                    else:
+                        if p_default != p1['default']:
+                            msg = 'Different default values for'
+                            msg += ' %s'%(p_name)
+                            logger.warn(msg)
+                            logger.warn('Using new value of %s'%p_default)
+                            p1['default'] = p_default                
+        
+        # add the particle properites to particle_properties
         particle_props = self.information.get_dict(
             ComponentManager.PARTICLE_PROPERTIES)
         
@@ -445,7 +483,6 @@ cdef class ComponentManager(Base):
 
         # no component yet needs this property
         if c_inf is None:
-            print 'returning true at 406', prop
             return True
 
         # checks
@@ -464,7 +501,6 @@ cdef class ComponentManager(Base):
                     # or a private property of an already existing component.
                     msg = 'Property %s is %s in %s'%(prop_name, access_mode_1,
                                                      c_name)
-                    print msg
                     logger.error(msg)
                     return False
                 if access_mode == 'write':
@@ -473,7 +509,6 @@ cdef class ComponentManager(Base):
                         # property of another component.
                         msg = 'Property %s is %s in %s'%(prop_name, access_mode_1,
                                                          c_name)
-                        print msg
                         logger.error(msg)
                         return False
         
