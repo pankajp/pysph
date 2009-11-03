@@ -6,6 +6,8 @@ Module to hold base classes for different solver components.
 from pysph.solver.base cimport Base
 from pysph.solver.entity_base cimport EntityBase
 
+# forward declaration.
+cdef class ComponentManager
 
 ################################################################################
 # `SolverComponent` class.
@@ -17,6 +19,9 @@ cdef class SolverComponent(Base):
 
     # name of the component.
     cdef public str name
+
+    # reference to the component manager.
+    cdef public ComponentManager cm
 
     # function to perform the components computation.
     cdef int compute(self) except -1

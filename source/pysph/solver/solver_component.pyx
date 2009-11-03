@@ -16,7 +16,7 @@ from pysph.solver.typed_dict cimport TypedDict
 ################################################################################
 # `SolverComponent` class.
 ################################################################################
-cdef class SolverComponent:
+cdef class SolverComponent(Base):
     """
     Base class for all components.
 
@@ -53,11 +53,12 @@ cdef class SolverComponent:
     INPUT_TYPES = 'INPUT_TYPES'
     ENTITY_NAMES = 'ENTITY_NAMES'
 
-    def __cinit__(self, str name='', *args, **kwargs):
+    def __cinit__(self, str name='', ComponentManager cm = None, *args, **kwargs):
         """
         Constructor.
         """
         self.name = name
+        self.cm = cm
 
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})
@@ -152,7 +153,10 @@ cdef class SolverComponent:
 cdef class UserDefinedComponent(SolverComponent):
     """
     """
-    def __cinit__(self):
+    def __cinit__(self, str name='', ComponentManager cm=None, *args, **kwargs):
+        """
+        Constructor.
+        """
         pass
 
     cdef int compute(self) except -1:

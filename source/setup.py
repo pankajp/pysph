@@ -56,6 +56,8 @@ solver = [Extension("pysph.solver.typed_dict",
                     ["pysph/solver/entity_types.pyx"]),
           Extension("pysph.solver.solver_component",
                     ["pysph/solver/solver_component.pyx"]),
+          Extension("pysph.solver.integrator_base",
+                    ["pysph/solver/integrator_base.pyx"])
           ]
 
 # all extension modules.
