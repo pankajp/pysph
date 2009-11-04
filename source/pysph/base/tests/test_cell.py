@@ -658,7 +658,7 @@ class TestCellManager(unittest.TestCase):
             z = numpy.random.rand(num_particles)
             name = 'arr' + str(i)
 
-            p_arr = ParticleArray(None, name, **{'x':x, 'y':y, 'z':z})
+            p_arr = ParticleArray(None, name, **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}})
             ret.append(p_arr)
         
         return ret

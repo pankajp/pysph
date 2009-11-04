@@ -6,7 +6,12 @@ Contains base classes for all integrators.
 import logging
 logger = logging.getLogger()
 
+# numpy imports
+cimport numpy
+
 # local imports
+from pysph.base.carray cimport DoubleArray
+from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.solver_component cimport SolverComponent, ComponentManager
 from pysph.solver.entity_base cimport EntityBase
 
@@ -42,19 +47,23 @@ cdef class ODESteper(SolverComponent):
     array name.
 
     """
-    def __cinit__(self, list entity_list=[], list integrands=[], list
-                  integrals=[], TimeStep time_step):
+    def __cinit__(self, list entity_list=[], str prop_name='', list integrands=[],
+                  list integrals=[], TimeStep time_step=None):
         """
         Constructor.
 
         **Params**
         
-             - entity_list - list of entities (not names)
-             - integrand_names - list of names of integrands
-             - integral_names - list of names of integrals
+             - entity_list - list of entities (not names).
+             - prop_name - name of the property being stepped. This parameters
+               is required as some steppers may have specific setup tasks to do
+               for particular properties.
+             - integrand_names - list of names of integrands.
+             - integral_names - list of names of integrals.
 
         """
         self.entity_list = []
+        self.prop_name = ''
         self.integrand_names = []
         self.integral_names = []
         self.next_step_names = []
@@ -62,14 +71,66 @@ cdef class ODESteper(SolverComponent):
         self.time_step = time_step
 
         self.entity_list[:] = entity_list
-        self.integrand_names[:] = integrands
+
+        self.set_properties(prop_name, integrands, integrals)
+
+    cpdef set_properties(self, str prop_name, list integrands, list integrals):
+        """
+        Sets the properties that are to be stepped.
+        """
+        self.prop_name = prop_name
         self.integral_names[:] = integrals
+        self.integrand_names[:] = integrands
+        self.setup_done = False
 
     cpdef int setup_component(self) except -1:
         """
+        Sets up the names of the arrays to be used for storing the values of the
+        next step.
         """
-        pass
+        cdef int i, num_props, num_entities
+        cdef str arr_name
+        cdef EntityBase e
+        cdef ParticleArray parr
+        cdef list to_remove = []
 
+        if self.setup_done == False:
+
+            # make sure timestep is setup properly
+            if self.time_step is None:
+                raise ValueError, 'time_step not set'
+
+            self.next_step_names[:] = []
+        
+            num_props = len(self.integral_names)
+        
+            for i from 0 <= i < num_props:
+                arr_name = self.integral_names[i]
+                self.next_step_names.append(
+                    arr_name + '_next')
+
+            # now make sure that all the entities have the _next property.
+            num_entities = len(self.entity_list)
+            for i from 0 <= i < num_entities:
+                e = self.entity_list[i]
+                parr = e.get_particle_array()
+                if e is not None:
+                    # make sure all the _next arrays are present, if not add
+                    # them.
+                    for j from 0 <= j < num_props:
+                        arr_name = self.next_step_names[j]
+                        if not parr.properties.has_key(arr_name):
+                            parr.add_property({'name':arr_name})
+                else:
+                    to_remove.append(e)
+
+            # remove entities that did not provide a particle array.
+            for e in to_remove:
+                self.entity_list.remove(e)
+            
+            # mark component setup as done.
+            self.setup_done = True
+        
     cdef int compute(self) except -1:
         """
         Performs simple euler integration by the time_step, for the said arrays
@@ -83,6 +144,11 @@ cdef class ODESteper(SolverComponent):
         cdef int i, num_entities
         cdef int num_props, p, j
         cpdef ParticleArray parr
+        cdef numpy.ndarray an, bn, an1
+        cdef DoubleArray _an, _bn, _an1
+       
+        # make sure the component has been setup
+        self.setup_component()
         
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
@@ -97,13 +163,22 @@ cdef class ODESteper(SolverComponent):
                 continue
             
             for j from 0 <= j < num_props:
-                
-            
+                _an = parr.get_carray(self.integral_names[i])
+                _bn = parr.get_carray(self.integrand_names[i])
+                _an1 = parr.get_carray(self.next_step_names[i])
+
+                an = _an.get_npy_array()
+                bn = _bn.get_npy_array()
+                an1 = _an1.get_npy_array()
+
+                an1[:] = an + bn*self.time_step.time_step                
 
     cpdef add_entity(self, EntityBase entity):
         """
+        Add an entity whose properties are to be integrated.
         """
-        pass
+        if not self.filter_entity(entity):
+            self.entity_list.append(entity)
 
 ################################################################################
 # `Integrator` class.
@@ -181,9 +256,7 @@ cdef class Integrator(SolverComponent):
             dimension = 3
             logger.warn('Dimension > 3 specified, using 3')
 
-
         self.dimension = dimension
-
 
         vel_arrays = []
         accel_arrays = []

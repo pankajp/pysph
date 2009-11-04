@@ -3,14 +3,27 @@ from pysph.base.particle_tags cimport ParticleTag
 from pysph.base.carray cimport LongArray
 
 cdef class ParticleArray:
+    """
+    Maintains various properties for particles.
+    """
+    # dictionary to hold the properties held per particle.
     cdef public dict properties
     cdef public list property_arrays
+
+    # default value associated with each property
+    cdef public dict default_values
+
+    # dictionary to hold temporary arrays - we can do away with this.
     cdef public dict temporary_arrays
+
+    # the particle manager of which this is part of.
     cdef public object particle_manager
+
+    # name associated with this particle array
     cdef public str name
+
+    # indicates if coordinates of particles has changed.
     cdef public bint is_dirty
-    cdef public dict standard_name_map
-    cdef public long default_particle_tag
 
     cdef object _create_c_array_from_npy_array(self, np.ndarray arr)
     cdef _check_property(self, str)
@@ -23,11 +36,11 @@ cdef class ParticleArray:
     cpdef remove_particles(self, LongArray index_list)
     cpdef remove_tagged_particles(self, long tag)
 
-    # new functionality to be added.
-
     # function to add any property
-    #cpdef add_property(self, str prop_name, str data_type, list default)
+    cpdef add_property(self, dict prop_info)
+    
+    # increase the number of particles by num_particles
+    cpdef extend(self, int num_particles)
 
     # function to remove particles with particular value of a flag property.
     #cpdef remove_flagged_particles(self, str flag_name, int flag_value)
-

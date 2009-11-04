@@ -32,6 +32,9 @@ cdef class ODESteper(SolverComponent):
     # list of entities whose properties have to be stepped.
     cdef public list entity_list
 
+    # make of the property that is being stepped.
+    cdef public str prop_name
+
     # names of properties that have to be stepped
     cdef public list integral_names
 
@@ -48,6 +51,7 @@ cdef class ODESteper(SolverComponent):
     cpdef int setup_component(self) except -1
     cpdef add_entity(self, EntityBase entity)
     cdef int compute(self) except -1
+    cpdef set_properties(self, str prop_name, list integrands, list integrals)
 
 ################################################################################
 # `Integrator` class.

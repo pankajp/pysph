@@ -23,13 +23,13 @@ def generate_sample_dataset_1():
     w = numpy.zeros(9)
 
 
-    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':x, 'y':y,
-                                                                  'z':z, 'h':h,
-                                                                  'm':m,
-                                                                  'rho':rho,
-                                                                  'velx':u,
-                                                                  'v':v,
-                                                                  'w':w})
+    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':{'data':x}, 'y':{'data':y},
+                                                                  'z':{'data':z}, 'h':{'data':h},
+                                                                  'm':{'data':m},
+                                                                  'rho':{'data':rho},
+                                                                  'velx':{'data':u},
+                                                                  'v':{'data':v},
+                                                                  'w':{'data':w}})
 
     return [parr1]
 
@@ -50,12 +50,12 @@ def generate_sample_dataset_2():
 
     t = numpy.zeros(9)
     
-    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':x,
-                                                                  'y':y,
-                                                                  'z':z,
-                                                                  'm':m,
-                                                                  'rho':rho,
-                                                                  'h':h,
-                                                                  't':t})
+    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':{'data':x},
+                                                                  'y':{'data':y},
+                                                                  'z':{'data':z},
+                                                                  'm':{'data':m},
+                                                                  'rho':{'data':rho},
+                                                                  'h':{'data':h},
+                                                                  't':{'data':t}})
 
     return [parr1]

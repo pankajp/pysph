@@ -59,6 +59,7 @@ cdef class SolverComponent(Base):
         """
         self.name = name
         self.cm = cm
+        self.setup_done = False
 
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})

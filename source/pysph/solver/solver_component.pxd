@@ -23,6 +23,9 @@ cdef class SolverComponent(Base):
     # reference to the component manager.
     cdef public ComponentManager cm
 
+    # indicates if the component is ready for execution.
+    cdef public bint setup_done
+
     # function to perform the components computation.
     cdef int compute(self) except -1
 

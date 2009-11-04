@@ -10,6 +10,15 @@ import unittest
 from pysph.solver.integrator_base import Integrator
 
 
+class TestODEStepper(unittest.TestCase):
+    """
+    Tests the ODESteper class.
+    """
+    def test_constructor(self):
+        """
+        """
+        pass
+
 class TestIntegrator(unittest.TestCase):
     """
     Tests the Integrator class.
