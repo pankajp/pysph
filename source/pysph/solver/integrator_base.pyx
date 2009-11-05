@@ -47,8 +47,9 @@ cdef class ODESteper(SolverComponent):
     array name.
 
     """
-    def __cinit__(self, list entity_list=[], str prop_name='', list integrands=[],
-                  list integrals=[], TimeStep time_step=None):
+    def __cinit__(self, str name='', ComponentManager cm=None, list
+                  entity_list=[], str prop_name='', list integrands=[], list
+                  integrals=[], TimeStep time_step=None, *args, **kwargs):
         """
         Constructor.
 
@@ -114,7 +115,7 @@ cdef class ODESteper(SolverComponent):
             for i from 0 <= i < num_entities:
                 e = self.entity_list[i]
                 parr = e.get_particle_array()
-                if e is not None:
+                if parr is not None:
                     # make sure all the _next arrays are present, if not add
                     # them.
                     for j from 0 <= j < num_props:
@@ -163,9 +164,9 @@ cdef class ODESteper(SolverComponent):
                 continue
             
             for j from 0 <= j < num_props:
-                _an = parr.get_carray(self.integral_names[i])
-                _bn = parr.get_carray(self.integrand_names[i])
-                _an1 = parr.get_carray(self.next_step_names[i])
+                _an = parr.get_carray(self.integral_names[j])
+                _bn = parr.get_carray(self.integrand_names[j])
+                _an1 = parr.get_carray(self.next_step_names[j])
 
                 an = _an.get_npy_array()
                 bn = _bn.get_npy_array()

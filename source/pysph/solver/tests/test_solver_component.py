@@ -23,6 +23,9 @@ class TestSolverComponent(unittest.TestCase):
         Tests the constructor.
         """
         c = SolverComponent()
+
+        self.assertEqual(c.setup_done, False)
+
         self.assertEqual(c.information.get_dict(
                 SolverComponent.PARTICLE_PROPERTIES_WRITE), {})
         self.assertEqual(c.information.get_dict(
