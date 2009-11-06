@@ -11,7 +11,8 @@ import numpy
 from pysph.base.particle_array import ParticleArray
 
 from pysph.solver.entity_base import EntityBase
-from pysph.solver.integrator_base import Integrator, TimeStep, ODESteper
+from pysph.solver.entity_types import EntityTypes
+from pysph.solver.integrator_base import Integrator, TimeStep, ODEStepper
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -50,7 +51,7 @@ def get_ode_step_data():
 
 class TestODEStepper(unittest.TestCase):
     """
-    Tests the ODESteper class.
+    Tests the ODEStepper class.
     """
     def test_constructor(self):
         """
@@ -59,7 +60,7 @@ class TestODEStepper(unittest.TestCase):
         e = get_ode_step_data()
         ts = TimeStep(1.0)
 
-        stepper = ODESteper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
 
         self.assertEqual(stepper.entity_list, [e])
         self.assertEqual(stepper.prop_name, 'position')
@@ -75,7 +76,7 @@ class TestODEStepper(unittest.TestCase):
         e1 = EntityBase()
         ts = TimeStep(1.0)
 
-        stepper = ODESteper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
         stepper.setup_component()
 
         self.assertEqual(stepper.setup_done, True)
@@ -84,7 +85,7 @@ class TestODEStepper(unittest.TestCase):
 
         self.assertEqual(parr.properties.has_key('x_next'), True)
 
-        stepper = ODESteper(
+        stepper = ODEStepper(
             '', None, [e, e1], 'position', ['u', 'v'], ['x', 'y'], ts
             )
         stepper.setup_component()
@@ -104,7 +105,7 @@ class TestODEStepper(unittest.TestCase):
         e = get_ode_step_data()
         e1 = EntityBase()
         ts = TimeStep(1.0)
-        stepper = ODESteper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
 
         stepper.py_compute()
 
@@ -116,7 +117,7 @@ class TestODEStepper(unittest.TestCase):
         self.assertEqual(check_array(x_next, parr.x_next), True)
 
         e = get_ode_step_data()
-        stepper = ODESteper(
+        stepper = ODEStepper(
             '', None, [e, e1], 'position', ['u', 'v'], ['x', 'y'], ts
             )
         stepper.py_compute()
@@ -143,9 +144,118 @@ class TestIntegrator(unittest.TestCase):
         Tests the constructor.
         """
         i = Integrator()
+        
+        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        self.assertEqual(len(ip), 2)
+        self.assertEqual(ip.has_key('velocity'), True)
+        self.assertEqual(ip.has_key('position'), True)
 
-        print i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        ds = i.information.get_dict(i.DEFAULT_STEPPERS)
+        self.assertEqual(ds.has_key('default'), True)
+        self.assertEqual(ds['default'], 'euler')
 
+    def test_add_property(self):
+        """
+        Tests the add_property function.
+        """
+        i = Integrator()
+        
+        prop_name = 'density'
+        integrand_arrays = ['rho_rate']
+        integral_arrays = ['rho']
+        entity_types = [EntityTypes.Entity_Fluid]
+        stepper = {'default':'euler',
+                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+
+        i.add_property(prop_name, integrand_arrays, integral_arrays,
+                       entity_types, stepper)
+
+        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+
+        self.assertEqual(ip.has_key('density'), True)
+        density_info = ip['density']
+        self.assertEqual(density_info['integral'], ['rho'])
+        self.assertEqual(density_info['integrand'], ['rho_rate'])
+        self.assertEqual(density_info['entity_types'],
+                         [EntityTypes.Entity_Fluid])
+        self.assertEqual(len(density_info['steppers']), 2)
+        self.assertEqual(density_info['steppers']['default'],
+                         'euler')
+        self.assertEqual(density_info['steppers'][EntityTypes.Entity_Fluid],
+                         'ya_stepper')
+
+    def test_add_component(self):
+        """
+        Tests the add_component function.
+        """
+        i = Integrator()
+        i.add_component('velocity', 'pre_v_1')
+        i.add_component('velocity', 'pre_v_2')
+        i.add_component('velocity', 'post_v_1', pre_step=False)
+
+        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        
+        vel_info = ip['velocity']
+        pre_comps = vel_info['pre_step_components']
+        self.assertEqual(pre_comps, ['pre_v_1', 'pre_v_2'])
+        post_comps = vel_info['post_step_components']
+        self.assertEqual(post_comps, ['post_v_1'])
+
+        # add a new property and add components to it.
+        prop_name = 'density'
+        integrand_arrays = ['rho_rate']
+        integral_arrays = ['rho']
+        entity_types = [EntityTypes.Entity_Fluid]
+        stepper = {'default':'euler',
+                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+
+        i.add_property(prop_name, integrand_arrays, integral_arrays,
+                       entity_types, stepper)
+
+        i.add_component('density', 'pre_den_1')
+        den_info = ip['density']
+        pre_comps = den_info['pre_step_components']
+        self.assertEqual(pre_comps, ['pre_den_1'])
+        self.assertEqual(den_info.get('post_step_components'), None)
+
+    def test_add_pre_integration_component(self):
+        """
+        Tests the add_pre_integration_component function.
+        """
+        i = Integrator()
+
+        i.add_pre_integration_component('comp1')
+        i.add_pre_integration_component('comp2')
+        i.add_pre_integration_component('comp0', at_tail=False)
+
+        pic = i.information.get_list('PRE_INTEGRATION_COMPONENTS')
+        self.assertEqual(pic[0], 'comp0')
+        self.assertEqual(pic[1], 'comp1')
+        self.assertEqual(pic[2], 'comp2')
+
+    def test_set_integration_order(self):
+        """
+        Tests the set_integration_order function.
+        """
+        i = Integrator()
+
+        # add a new property and add components to it.
+        prop_name = 'density'
+        integrand_arrays = ['rho_rate']
+        integral_arrays = ['rho']
+        entity_types = [EntityTypes.Entity_Fluid]
+        stepper = {'default':'euler',
+                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+
+        i.add_property(prop_name, integrand_arrays, integral_arrays,
+                       entity_types, stepper)
+
+        i.set_integration_order(['density', 'velocity', 'position'])
+
+        io = i.information.get_list(i.INTEGRATION_ORDER)
+        self.assertEqual(io, ['density', 'velocity', 'position'])
+        i.set_integration_order(['density'])
+        self.assertEqual(io, ['density'])
 
 if __name__ == '__main__':
     import logging

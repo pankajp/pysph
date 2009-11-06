@@ -36,9 +36,9 @@ cdef class TimeStep(Base):
         self.time_step = time_step    
 
 ################################################################################
-# `ODESteper` class.
+# `ODEStepper` class.
 ################################################################################
-cdef class ODESteper(SolverComponent):
+cdef class ODEStepper(SolverComponent):
     """
     Class to step a given property by a given time step.
 
@@ -207,30 +207,38 @@ cdef class Integrator(SolverComponent):
               stepping this property.
             - post_step - a list of components to be executed after stepping
               this property.
+            - steppers - a dictionary, specifying the stepper to be used for
+              each kind of entity, or a default stepper to be used for any
+              entity while stepping the said property.
+            - entity_types - a list of types of entities that will be accepted
+              for stepping this particular property.
 
     **INTEGRATION_ORDER**
         A list of property names in the order in which they have to be stepped.
 
-    **STEPPERS**
-        For each entity type, for each property type, the kind if stepper to be
-        used. This allows for a lot of flexibility in using different kinds of
-        steppers for different properties for different types of entities. If a
-        stepper for a property or entity is not given, the DEFAULT_STEPPER will
-        be used.
+    **DEFAULT_STEPPERS**
+        For each entity type, the kind of stepper to use. These stepper are kind
+        of fall-back stepper / default stepper for each entity type, in case not
+        other stepper is available. Usually integrators may decided to use a
+        particular kind of stepper for a particular property. When no such
+        information is provided, then default steppers from this will be
+        used. By default the 'steppers' information should provide a 'default'
+        stepper'. This will be used when no other stepper specification is
+        found. In addition to this, an integrator class may decide to provide
+        default steppers for each entity type. 
 
-    **DEFAULT_STEPPER**
-        A default stepper to be used when no stepper has been specified for any
-        entity type.
+        Derived classes may use this for more complex specification of the
+        steppers to be used.
 
     """
     # list of information keys provided by this class.
     INTEGRATION_PROPERTIES = 'INTEGRATION_PROPERTIES'
     PRE_INTEGRATION_COMPONENTS = 'PRE_INTEGRATION_COMPONENTS'
-    DEFAULT_STEPPER = 'DEFAULT_STEPPER'
-    STEPPERS = 'STEPPERS'
+    DEFAULT_STEPPERS = 'DEFAULT_STEPPERS'
     INTEGRATION_ORDER = 'INTEGRATION_ORDER'
     
-    def __cinit__(self, str name='', ComponentManager cm=None, int dimension=3, *args, **kwargs):
+    def __cinit__(self, str name='', ComponentManager cm=None, int dimension=3,
+                  *args, **kwargs):
         """
         Constructor.
         """
@@ -240,11 +248,33 @@ cdef class Integrator(SolverComponent):
         self.information.set_dict(self.INTEGRATION_PROPERTIES, {})
         self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
         self.information.set_list(self.INTEGRATION_ORDER, [])
-        self.information.set_str(self.DEFAULT_STEPPER, '')
-        self.information.set_dict(self.STEPPERS, {})
+        self.information.set_dict(self.DEFAULT_STEPPERS, {})
 
-        self.set_dimension(dimension)        
+        # setup the velocity and position properties according to dimension
+        self.set_dimension(dimension)
+        
+        # setup the various steppers.
+        self.setup_defualt_steppers()
 
+    def setup_defualt_steppers(self):
+        """
+        Sets up the different kinds of steppers required by the integrator.
+        
+        This integrator will use an euler stepper for integrating any proerpty
+        of any entity type. Change it as necessary for derived classes.
+        """
+        cdef dict default_steppers = self.information.get_dict(
+            self.DEFAULT_STEPPERS) 
+        cdef str s        
+        # we only add one default stepper to be used for all kinds of entities. 
+        s = default_steppers.get('default')
+        
+        if s is not None:
+            logger.warn('Default stepper %s already exists'%(s))
+            logger.warn('Replacing with euler')
+        
+        default_steppers['default'] = 'euler'        
+    
     cpdef set_dimension(self, int dimension):
         """
         Sets the dimension of the velocity and position vectors.
@@ -289,13 +319,45 @@ cdef class Integrator(SolverComponent):
             self.entity_list.add(entity)
 
     cpdef add_property(self, str prop_name, list integrand_arrays, list
-                       integral_arrays, list entity_types=[]):
+                       integral_arrays, list entity_types=[], dict steppers={}):
         """
         Adds a new property that has to be integrated to the
         INTEGRATION_PROPERTIES dictionary in the components information.
 
         If the property exists already, the arrays are replaced with the new
         ones, and a warning logged.
+
+        **PARAMETERS**
+            
+            - prop_name - name of the property to be be stepped.
+            - integrand_arrays - names of arrays making up the integrand of this
+              property. 
+            - integral_arrays - names of the arrays making up the integral of
+              this property.
+            - entity_types - a list of accepeted entity types for this
+              property. If an empty list is provided, all entities will be
+              accepted. 
+            - steppers - Optional information about the stepper class to use
+              while stepping this property for each entity. Defaults will be
+              used if this information is not present.
+
+        Format of information to specified as part of 'steppers'
+        
+            - 'default' - the default stepper to use if no other information is
+              available for a particular case.
+            - one entry per entity type specifying the kind on stepper to use
+              for this property.
+
+        The reason for providing for such detailed information as above is to
+        attain as much flexibility as needed. 
+        - If each property of each entity needs a specific type of stepper,
+          that can be provided using the above mechanism.
+        - If each entity needs one kind of stepper irrespective of the property
+          being integrated, that can be done.
+        - If a single stepper can be used for any entity and any property that
+          can also be done.
+        - Also, if no stepper information is provided at all, defaults from the
+          integrator class will be used.        
 
         """
         cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
@@ -309,11 +371,13 @@ cdef class Integrator(SolverComponent):
             logger.warn('Property %s already exists, overwriting'%(prop_name))
         
         p_dict['integrand'] = []
-        p_dict['integrals'] = []
+        p_dict['integral'] = []
         p_dict['entity_types'] = []
         p_dict['integrand'][:] = integrand_arrays
-        p_dict['integrals'][:] = integral_arrays
+        p_dict['integral'][:] = integral_arrays
         p_dict['entity_types'][:] = entity_types        
+        p_dict['steppers'] = {}
+        p_dict['steppers'].update(steppers)
         
         # also append the property name to the integraion_order information.
         if io.count(prop_name) == 0:
@@ -375,7 +439,7 @@ cdef class Integrator(SolverComponent):
             prepended to the said list.
 
         """
-        cdef list pic = self.information.get_dict(
+        cdef list pic = self.information.get_list(
             self.PRE_INTEGRATION_COMPONENTS)
         
         if at_tail ==  False:
@@ -393,7 +457,7 @@ cdef class Integrator(SolverComponent):
             order.
 
         """
-        cdef list io = self.information.get_dict(self.INTEGRATION_ORDER)
+        cdef list io = self.information.get_list(self.INTEGRATION_ORDER)
         
         # first check if the new order list has the same components as the
         # current list. If not, we warn about extra / removed components, but
@@ -403,7 +467,7 @@ cdef class Integrator(SolverComponent):
         
         if curr != new:
             msg = 'Current integration order and new integration order'
-            msg += ' have different set of properties'
+            msg += '\nhave different set of properties'
             logger.warn(msg)
 
         io[:] = order            

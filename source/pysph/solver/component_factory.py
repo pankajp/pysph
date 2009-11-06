@@ -26,7 +26,8 @@ class ComponentFactory:
             return ComponentFactory.get_ode_stepper(comp_type)
         elif comp_category == 'integrator':
             return ComponentFactory.get_integrator(comp_type)
-
+        else:
+            return None
 
     @staticmethod
     def get_ode_stepper(comp_type):
@@ -37,6 +38,8 @@ class ComponentFactory:
 
         if comp_type == 'base' or comp_type == 'euler':
             return pysph.solver.integrator_base.ODESteper()
+        else:
+            return None
         
     @staticmethod
     def get_integrator(comp_type):
@@ -47,3 +50,5 @@ class ComponentFactory:
 
         if comp_type == 'base' or comp_type =='euler':
             return pysph.solver.integrator_base.Integrator()
+        else:
+            return None

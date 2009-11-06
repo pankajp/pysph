@@ -13,3 +13,9 @@ List of changes made
 
 Thu Nov  5 09:49:06 IST 2009
     - tests for odestepper done, seems to be working fine.
+
+
+Fri Nov  6 09:32:48 IST 2009
+    - stepper specification in Integrator changed and documented.
+    - add_property function changed to include stepper for each property.
+    - tests for almost all functions in Integrator written.

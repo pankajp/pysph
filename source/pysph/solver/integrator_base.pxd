@@ -23,9 +23,9 @@ cdef class TimeStep(Base):
     cdef public double time_step
 
 ################################################################################
-# `ODESteper` class.
+# `ODEStepper` class.
 ################################################################################
-cdef class ODESteper(SolverComponent):
+cdef class ODEStepper(SolverComponent):
     """
     Class to step a given property by a given time step.
     """
@@ -94,7 +94,7 @@ cdef class Integrator(SolverComponent):
     # add a new property to be integrated along with arrays representing the
     # properties. 
     cpdef add_property(self, str prop_name, list integrand_arrays, list
-                       integral_arrays, list entity_types=*)
+                       integral_arrays, list entity_types=*, dict steppers=*)
 
     cpdef set_dimension(self, int dimension)
     
