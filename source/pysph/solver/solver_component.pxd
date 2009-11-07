@@ -41,6 +41,9 @@ cdef class SolverComponent(Base):
     # function to setup the component once before execution.
     cpdef int setup_component(self) except -1
 
+    # update the property requirements of this component
+    cpdef int update_property_requirements(self) except -1
+
 ################################################################################
 # `UserDefinedComponent` class.
 ################################################################################
@@ -84,3 +87,8 @@ cdef class ComponentManager(Base):
     cpdef remove_component(self, str comp_name)
 
     cpdef SolverComponent get_component(self, str component_name)
+
+    cpdef get_entity_properties(self, int e_type)
+    cpdef get_particle_properties(self, int e_type)
+
+    cpdef setup_entity(self, EntityBase entity)

@@ -19,3 +19,18 @@ Fri Nov  6 09:32:48 IST 2009
     - stepper specification in Integrator changed and documented.
     - add_property function changed to include stepper for each property.
     - tests for almost all functions in Integrator written.
+
+Saturday 07 November 2009 (01:57:14 PM)
+    - made the property specification in the particle_array and solver_component
+      modules consistent.
+    - module for dummy components added.
+    - array_copier module added.
+    - add_integration_property to EntityBase
+    - clean mechanism to update property requirements of components.
+    - Integrator, can now also be created without the default velocity and position
+      properites.
+    - Facility to add entity types to specific properties in the integrator.
+    - Integrator.setup_component written - yet to be tested.
+    - identifier and category added as class attributes to components.
+    - Function to setup a given entity with required properties by the component
+      manager.

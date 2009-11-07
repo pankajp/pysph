@@ -150,6 +150,12 @@ cdef class ParticleArray:
         """
         self.is_dirty = value
 
+    cpdef has_array(self, str arr_name):
+        """
+        Returns true if the array arr_name is present.
+        """
+        return self.properties.has_key(arr_name)
+
     def clear(self):
         """
         Clear all data held by this array.
@@ -570,7 +576,7 @@ cdef class ParticleArray:
 
         self.default_values[prop_name] = default
 
-        # array sizes are compatible, now resize the requireed arrays
+        # array sizes are compatible, now resize the required arrays
         # appropriately and add.
         if self.get_number_of_particles() == 0:
             if data is None or len(data) == 0:

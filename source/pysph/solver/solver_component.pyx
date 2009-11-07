@@ -36,10 +36,10 @@ cdef class SolverComponent(Base):
               every particle - also need to specify default value for flag. A
               flag will usually be specific to this component, or components
               that work as helpers to this component. Thus they are typically
-              'private' properties to this component.
+              'write' properties to this component.
             - specify properties that need to be considered as 'output' of this
               component.
-
+      
     """
     # list of information keys used by this class.
     PARTICLE_PROPERTIES_READ = 'PARTICLE_PROPERTIES_READ'
@@ -52,7 +52,9 @@ cdef class SolverComponent(Base):
 
     INPUT_TYPES = 'INPUT_TYPES'
     ENTITY_NAMES = 'ENTITY_NAMES'
-
+    
+    identifier = 'base_component'
+    category = 'base'
     def __cinit__(self, str name='', ComponentManager cm = None, *args, **kwargs):
         """
         Constructor.
@@ -148,12 +150,43 @@ cdef class SolverComponent(Base):
         """
         raise NotImplementedError, 'SolverComponent::setup_component'
 
+    cpdef int update_property_requirements(self) except -1:
+        """
+        Make up to date any property/array requirements of this component.
+
+
+        Most components will be able to specify their property requirements
+        during construction time. Thus this function need NOT be implemented in
+        most cases. In some components however, property requirements become
+        available only when the component is being setup (using various public
+        function provided by the component) We are NOT referring to the final
+        setup of the component before execution.
+        
+        This function should be written such that, once the component has been
+        setup, this function is able to dedude the property requirements from
+        the components internal information (specific to the component).
+
+        This will be used by the component manager before it queries a component
+        for its property requirement. Once a component has been setup, this
+        function's operation should be idempotent - calling the function
+        repeatedly should not change the property requirements.
+
+        This function should be only called AFTER the component has been setup
+        as required. The component manager will call this function inside the
+        add_component function. Property requirements should not change after
+        the component has been added to the component manager.
+
+        """
+        pass
+
 ################################################################################
 # `UserDefinedComponent` class.
 ################################################################################
 cdef class UserDefinedComponent(SolverComponent):
     """
     """
+    category = 'base'
+    identifier = 'ud_component_base'
     def __cinit__(self, str name='', ComponentManager cm=None, *args, **kwargs):
         """
         Constructor.
@@ -192,7 +225,7 @@ cdef class ComponentManager(Base):
         - particle_properties - A dictionary keyed on entity type, with a list
           for each key. Each list will contain one dictionary for each property
           required. This dictionary will have the following keys: name,
-          data_type, default.
+          type, default.
         
         - entity_properties - A dictionary keyed on entity type, with one
           property name for each key. All properties here will be double.
@@ -220,6 +253,19 @@ cdef class ComponentManager(Base):
         # stores the names of components requiring a particular property.
         self.information.set_dict(
             ComponentManager.PROPERTY_COMPONENT_MAP, {})
+
+    cpdef get_entity_properties(self, int e_type):
+        """
+        Get the entity property requirements of all components.
+        """
+        return self.information.get_dict(ComponentManager.ENTITY_PROPERTIES)[e_type]
+
+    cpdef get_particle_properties(self, int e_type):
+        """
+        Get the particle property requirements of all components.
+        """
+        return self.information.get_dict(
+            ComponentManager.PARTICLE_PROPERTIES)[e_type]
 
     cpdef add_input(self, EntityBase entity):
         """
@@ -253,6 +299,13 @@ cdef class ComponentManager(Base):
             - notify - indicates if the component should be notified if
               some new entity is added as input.
 
+        **Notes**
+
+            - Property requirements of the component should not change after it
+              has been added to the component manager. The component manager
+              will not be able to consistenly report the property requirements
+              if that is done.
+
         """
         # first check if the component already exists, in which case we won't
         # add it. Also two components of same name are not allowed.
@@ -262,6 +315,9 @@ cdef class ComponentManager(Base):
                 raise ValueError, 'Two components with same name not allowed'
             return
         else:
+            # update the properties component requirements.
+            c.update_property_requirements()
+
             # add this component.
             if self.validate_property_requirements(c):
                 self.component_dict[c.name] = {'component':c, 'notify':notify}
@@ -404,8 +460,8 @@ cdef class ComponentManager(Base):
 
         return True
 
-    cpdef _update_property_component_map(self, str prop, str comp_name, int etype, str
-                                         access_type):
+    cpdef _update_property_component_map(self, str prop, str comp_name, int
+                                         etype, str access_type):
         """
         """
         cdef dict pc_map = self.information.get_dict(
@@ -456,8 +512,9 @@ cdef class ComponentManager(Base):
         
         if entry is None:
             d = {}
-            d['data_type'] = data_type
+            d['type'] = data_type
             d['default'] = prop['default']
+            d['name'] = pname
             e_type_props[pname] = d
         else:
             if prop['default'] is not None:
@@ -518,3 +575,38 @@ cdef class ComponentManager(Base):
                         return False
         
         return True
+
+    cpdef setup_entity(self, EntityBase entity):
+        """
+        Sets up required properties for the given entity.
+
+        Call this on any entity AFTER all required components have been added to
+        the component manager.
+        """
+        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        pp = self.information.get_dict(self.PARTICLE_PROPERTIES)
+
+        # update the entity properties first
+        for e_type in ep.keys():
+            if entity.is_a(e_type):
+                e_props = ep[e_type]
+                for prop_name in e_props:
+                    if entity.properties.has_key(prop_name):
+                        continue
+                    else:
+                        entity.properties[prop_name] = e_props[prop_name][
+                            'default']
+        
+
+        # update the particle properties
+        parray = entity.get_particle_array()
+        if parray is None:
+            return
+        
+        for e_type in pp.keys():
+            if entity.is_a(e_type):
+                p_props = pp[e_type]
+                for prop_name in p_props:
+                    prop_inf = p_props[prop_name]
+                    parray.add_property(prop_inf)
+        

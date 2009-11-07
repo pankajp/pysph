@@ -32,7 +32,7 @@ cdef class ODEStepper(SolverComponent):
     # list of entities whose properties have to be stepped.
     cdef public list entity_list
 
-    # make of the property that is being stepped.
+    # name of the property that is being stepped.
     cdef public str prop_name
 
     # names of properties that have to be stepped
@@ -52,6 +52,16 @@ cdef class ODEStepper(SolverComponent):
     cpdef add_entity(self, EntityBase entity)
     cdef int compute(self) except -1
     cpdef set_properties(self, str prop_name, list integrands, list integrals)
+
+################################################################################
+# `PyODEStepper` class.
+################################################################################
+cdef class PyODEStepper(ODEStepper):
+    """
+    Class to implement some steppers in pure python if needed.
+    """
+    cdef int compute(self) except -1
+    cpdef int py_compute(self) except -1
 
 ################################################################################
 # `Integrator` class.
@@ -89,7 +99,7 @@ cdef class Integrator(SolverComponent):
     cdef int compute(self) except -1
     
     # setup the component once prior to execution.
-    cpdef int setup_component(self) except -1
+    #cpdef int setup_component(self) except -1
 
     # add a new property to be integrated along with arrays representing the
     # properties. 
@@ -97,4 +107,11 @@ cdef class Integrator(SolverComponent):
                        integral_arrays, list entity_types=*, dict steppers=*)
 
     cpdef set_dimension(self, int dimension)
+
+    # add an entity type for inclusion in integration of a given property.
+    cpdef add_entity_type(self, str prop_name, int entity_type)
+    cpdef remove_entity_type(self, str prop_name, int entity_type)
+
+    # updates internal data structures about property requirements.
+    cpdef int update_property_requirements(self) except -1
     

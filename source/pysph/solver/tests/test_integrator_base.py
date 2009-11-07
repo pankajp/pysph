@@ -10,9 +10,11 @@ import numpy
 # local imports
 from pysph.base.particle_array import ParticleArray
 
-from pysph.solver.entity_base import EntityBase
+from pysph.solver.entity_base import EntityBase, Fluid
 from pysph.solver.entity_types import EntityTypes
 from pysph.solver.integrator_base import Integrator, TimeStep, ODEStepper
+from pysph.solver.solver_component import ComponentManager
+from pysph.solver.dummy_components import *
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -23,10 +25,10 @@ class SimpleEntity(EntityBase):
     """
     Simple entity class for test purposes.
     """
-    def __init__(self, name=''):
+    def __init__(self, name='', properties={}, particle_props={}, *args, **kwargs):
         """
         """
-        self.parr = None
+        self.parr = ParticleArray(name=self.name, **particle_props)
 
     def get_particle_array(self):
         return self.parr
@@ -48,6 +50,63 @@ def get_ode_step_data():
     se.parr = p
 
     return se
+
+def get_sample_integrator_setup():
+    """
+    Returns an integrator with some setup done. 
+    Used in tests.
+    """
+
+    # setup a component manager with some components.
+    c = ComponentManager()
+
+    # create a few components to be used in the integrator and add them to the
+    # component manager.
+    c1 = DummyComponent1('c1')
+    c.add_component(c1)
+    c2 = DummyComponent3('c2')
+    c.add_component(c2)
+    c3 = DummyComponent3('c3')
+    c.add_component(c3)
+    c4 = DummyComponent1('c4')
+    c.add_component(c4)
+    c5 = DummyComponent3('c5')
+    c.add_component(c5)
+    c6 = DummyComponent1('c6')
+    c.add_component(c6)
+
+    # create the required entities.
+    props = {}
+    standard_props={'x':{}, 'y':{}, 'z':{}, 'u':{}, 'v':{}, 'w':{}, 'ax':{},
+                  'ay':{}, 'az':{}}
+
+    props.update(c.get_particle_properties(EntityTypes.Entity_Fluid))
+    # add velocity and position properties
+    props.update(standard_props)
+    e1 = Fluid(particle_props=props)
+    e2 = Fluid(particle_props=props)
+
+    props1 = {}
+    props1.update(c.get_particle_properties(EntityTypes.Entity_Solid))
+    props1.update(standard_props)
+    e3= SimpleEntity(particle_props=props1)
+
+    # now setup the integrator.
+    i = Integrator()
+    
+    
+    prop_name = 'density'
+    integrand_arrays = ['rho_rate']
+    integral_arrays = ['rho']
+    entity_types = [EntityTypes.Entity_Fluid]
+    stepper = {'default':'euler',
+               EntityTypes.Entity_Fluid:'ya_stepper'} 
+    
+    i.add_property(prop_name, integrand_arrays, integral_arrays,
+                   entity_types, stepper)
+
+    i.add_component('velocity', 'dc1')
+    i.add_component('velocity', 'dc2', True)    
 
 class TestODEStepper(unittest.TestCase):
     """
@@ -217,7 +276,6 @@ class TestIntegrator(unittest.TestCase):
         pre_comps = den_info['pre_step_components']
         self.assertEqual(pre_comps, ['pre_den_1'])
         self.assertEqual(den_info.get('post_step_components'), None)
-
     def test_add_pre_integration_component(self):
         """
         Tests the add_pre_integration_component function.
@@ -256,6 +314,13 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(io, ['density', 'velocity', 'position'])
         i.set_integration_order(['density'])
         self.assertEqual(io, ['density'])
+
+    def test_get_stepper(self):
+        """
+        Tests the get_stepper function.
+        """
+        i = get_sample_integrator_setup()
+        pass
 
 if __name__ == '__main__':
     import logging

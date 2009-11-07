@@ -31,7 +31,6 @@ cdef class EntityBase(Base):
     # function to return the set of particles representing the entity.
     cpdef ParticleArray get_particle_array(self)
 
-
 ################################################################################
 # `Fluid` class.
 ################################################################################
@@ -39,8 +38,7 @@ cdef class Fluid(EntityBase):
     """
     Base class for all fluids.
     """
-    cdef ParticleArray particle_array
-    
+    cdef ParticleArray particle_array    
 
 ################################################################################
 # `Solid` class.

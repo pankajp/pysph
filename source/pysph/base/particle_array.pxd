@@ -42,5 +42,7 @@ cdef class ParticleArray:
     # increase the number of particles by num_particles
     cpdef extend(self, int num_particles)
 
+    cpdef has_array(self, str arr_name)
+
     # function to remove particles with particular value of a flag property.
     #cpdef remove_flagged_particles(self, str flag_name, int flag_value)
