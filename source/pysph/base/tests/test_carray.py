@@ -186,6 +186,19 @@ class TestLongArray(unittest.TestCase):
         self.assertEqual(l1.length, 0)
         self.assertEqual(len(l1.get_npy_array()), 0)
 
+    def test_align_array(self):
+        """
+        Test the align_array function.
+        """
+        l1 = LongArray(10)
+        l1.set_data(numpy.arange(10))
+        
+        new_indices = LongArray(10)
+        new_indices.set_data(numpy.asarray([1, 5, 3, 2, 4, 7, 8, 6, 9, 0]))
+        
+        l1.align_array(new_indices)
+        self.assertEqual(numpy.allclose([1, 5, 3, 2, 4, 7, 8, 6, 9, 0],
+                                        l1.get_npy_array()), True)
 if __name__ == '__main__':
     unittest.main()
         

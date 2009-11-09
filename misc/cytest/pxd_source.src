@@ -21,3 +21,5 @@ cdef class CLASSNAME(BaseArray):
     cpdef remove(self, np.ndarray index_list, int input_sorted=*)
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
+
+    cdef void _align_array(self, LongArray new_indices)

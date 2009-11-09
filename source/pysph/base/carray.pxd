@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Wed Nov  4 15:47:42 2009
+# Mon Nov  9 16:13:48 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -11,6 +11,10 @@ Declaration File.
 
 # numpy import
 cimport numpy as np
+
+# forward declaration
+cdef class BaseArray
+cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """
@@ -28,6 +32,8 @@ cdef class BaseArray:
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
 
+    cpdef align_array(self, LongArray new_indices)
+    cdef void _align_array(self, LongArray new_indices)
 ################################################################################
 # `IntArray` class.
 ################################################################################
@@ -51,6 +57,9 @@ cdef class IntArray(BaseArray):
     cpdef remove(self, np.ndarray index_list, int input_sorted=*)
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
+
+    cdef void _align_array(self, LongArray new_indices)
+
 
 ################################################################################
 # `DoubleArray` class.
@@ -76,6 +85,9 @@ cdef class DoubleArray(BaseArray):
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
 
+    cdef void _align_array(self, LongArray new_indices)
+
+
 ################################################################################
 # `FloatArray` class.
 ################################################################################
@@ -100,6 +112,9 @@ cdef class FloatArray(BaseArray):
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
 
+    cdef void _align_array(self, LongArray new_indices)
+
+
 ################################################################################
 # `LongArray` class.
 ################################################################################
@@ -123,4 +138,7 @@ cdef class LongArray(BaseArray):
     cpdef remove(self, np.ndarray index_list, int input_sorted=*)
     cpdef extend(self, np.ndarray in_array)
     cpdef reset(self)
+
+    cdef void _align_array(self, LongArray new_indices)
+
 

@@ -442,7 +442,28 @@ class ParticleArrayTest(unittest.TestCase):
         self.assertEqual(check_array(p.x, [0, 0, 0, 0, 0]), True)
         self.assertEqual(check_array(p.y, [-1., -1., -1., -1., -1.]), True)
         self.assertEqual(check_array(p.tag, [10, 10, 10, 10, 10]), True)
-        
+
+    def test_align_particles(self):
+        """
+        Tests the align particles function.
+        """
+        p = particle_array.ParticleArray()
+        p.add_property({'name':'x', 'data':[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+        p.add_property({'name':'y', 'data':[10, 9, 8, 7, 6, 5, 4, 3, 2, 1]})
+        p.set_dirty(False)
+        p.set(**{'tag':[0, 0, 1, 1, 1, 0, 4, 0, 1, 5]})
+        self.assertEqual(check_array(p.x, [1, 2, 6, 8, 5, 3, 7, 4, 9, 10]),
+                         True)
+        self.assertEqual(check_array(p.y, [10, 9, 5, 3, 6, 8, 4, 7, 2, 1]), True)
+        self.assertEqual(p.is_dirty, True)
+
+        p.set_dirty(False)
+        p.set(**{'tag':[0, 0, 0, 0, 1, 1, 1, 1, 1, 1]})
+        self.assertEqual(check_array(p.x, [1, 2, 6, 8, 5, 3, 7, 4, 9, 10]),
+                         True)
+        self.assertEqual(check_array(p.y, [10, 9, 5, 3, 6, 8, 4, 7, 2, 1]), True)
+        self.assertEqual(p.is_dirty, False)
+       
 if __name__ == '__main__':
     import logging
     logger = logging.getLogger()

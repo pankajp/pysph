@@ -46,8 +46,17 @@ cdef extern from "numpy/arrayobject.h":
     
     np.ndarray PyArray_SimpleNewFromData(int, int*, int, void*)
     
+
+# memcpy
+cdef extern from "stdlib.h":
+     void *memcpy(void *dst, void *src, long n)
+
 # numpy module initialization call
 import_array()
+
+# forward declaration
+cdef class BaseArray
+cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """
@@ -93,6 +102,12 @@ cdef class BaseArray:
 
     cpdef extend(self, np.ndarray in_array):
         raise NotImplementedError, 'BaseArray::extend'
+
+    cpdef align_array(self, LongArray new_indices):
+        self._align_array(new_indices)
+
+    cdef void _align_array(self, LongArray new_indices):
+        raise NotImplementedError, 'BaseArray::_align_array'	
         
     cpdef reset(self):
         """

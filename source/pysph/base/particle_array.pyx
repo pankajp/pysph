@@ -25,9 +25,24 @@ default values to property names in various constructors.
 
  - Do we need to have a particle class separately, and make this an array of 
    those particles ?
+
  - Do we have a Particle class that will be a proxy to the data in the 
    ParticleArray ? It should provide get and set functions to access the 
    properties of the particle. May make some access more natural.
+
+ - Setting of property values of real particles only.
+   We need a facility to retrieve properties of real particles only. In many
+   cases, such a requirement is seen. For example, consider a parallel algorithm
+   where some particles are fetched from neighbor processors and are only used
+   as sources - their values are only read - any computation of their properties
+   is done by the remote processor. All particles of an entity will however be
+   stored as part of a single particle array. Now we may need to integrate
+   properties of only the real paritcles and not the copies of the remote
+   ones. How should this be done elegantly ?
+
+   One way is to store all the real particles in continguos positions starting
+   from 0. This way we can easily get slices of the numpy array containing the
+   real particles easily.
 
 """
 
@@ -42,29 +57,6 @@ import numpy
 # Local imports
 from pysph.base.carray cimport *
 from pysph.base.particle_tags cimport *
-
-class Particle(object):
-    """
-    A simple proxy object that acts as an accessor to the ParticleArray.
-
-    """
-    def __init__(self, index=0, particle_array=None):
-        """
-        """
-        self.index = 0
-        self.particle_array = particle_array
-
-    def get(self, prop):
-        """
-        Get the value of the property "prop" for the particle at self.index.
-
-        """
-        pass
-
-    def set(self, prop, value):
-        """
-        """
-        pass
 
 cdef class ParticleArray:
     """
@@ -386,6 +378,8 @@ cdef class ParticleArray:
             arr.resize(new_num_particles)
 
         if num_extra_particles > 0:
+            # make sure particles are aligned properly.
+            self.align_particles()
             self.is_dirty = True
 
     cpdef extend(self, int num_particles):
@@ -492,6 +486,10 @@ cdef class ParticleArray:
                 prop_array.set_data(proparr)
             elif self.temporary_arrays.has_key(prop):
                 self.temporary_arrays[prop].set_data(proparr)
+            # if the tag property is being set, the alignment will have to be
+            # changed.                 
+            if prop == 'tag':
+                self.align_particles()
     
     cpdef get_carray(self, str prop):
         """
@@ -599,7 +597,8 @@ cdef class ParticleArray:
                 if data_type is None:
                     # get an array for this data
                     arr = numpy.asarray(data, dtype=numpy.double)
-                    self.properties[prop_name] = self._create_c_array_from_npy_array(arr)
+                    self.properties[prop_name] = (
+                        self._create_c_array_from_npy_array(arr))
                 else:
                     arr = self._create_carray(data_type, len(data), default)
                     arr.get_npy_array[:] = numpy.asarray(data)
@@ -616,7 +615,8 @@ cdef class ParticleArray:
                 if data_type is None:
                     # just add the property array
                     arr = numpy.asarray(data, dtype=numpy.double)
-                    self.properties[prop_name] = self._create_c_array_from_npy_array(arr)
+                    self.properties[prop_name] = (
+                        self._create_c_array_from_npy_array(arr))
                 else:
                     arr = self._create_carray(data_type, len(data), default)
                     arr.get_npy_array()[:] = numpy.asarray(data)
@@ -683,3 +683,91 @@ cdef class ParticleArray:
             raise TypeError, 'unknown numpy data type passed %s'%(np_array.dtype)
 
         return a
+
+    cpdef int align_particles(self) except -1:
+        """
+        Moves all 'LocalReal' particles to the begining of the array. 
+
+        This makes retrieving numpy slices of properties of 'LocalReal'
+        particles possible. This facility will be required frequently.
+
+        **Algorimth**::
+        
+            index_arr = LongArray(n)
+            
+            next_insert = 0
+            for i from 0 to n
+                p <- ith particle
+                if p is LocalReal
+                    if i != next_insert
+                        tmp = index_arr[next_insert]
+                        index_arr[next_insert] = i
+                        index_arr[i] = tmp
+                        next_insert += 1
+                    else
+                        index_arr[i] = i
+                        next_insert += 1
+                else
+                    index_arr[i] = i
+
+             # we now have the new index assignment.
+             # swap the required values as needed.
+             for every property array:
+                 for i from 0 to n:
+                     if index_arr[i] != i:
+                         tmp = prop[i]
+                         prop[i] = prop[index_arr[i]]
+                         prop[index_arr[i]] = tmp
+        """
+        cdef size_t i, num_particles
+        cdef size_t next_insert
+        cdef long tmp
+        cdef LongArray index_array, tag_arr
+        cdef BaseArray arr
+        cdef int num_arrays
+        cdef list arrays
+        cdef long num_real_particles = 0
+        cdef long num_moves = 0
+
+        next_insert = 0
+        num_particles = self.get_number_of_particles()
+
+        tag_arr = self.get_carray('tag')
+
+        # malloc the new index array
+        index_array = LongArray(num_particles)
+        
+        for i from 0 <= i < num_particles:
+            if tag_arr.data[i] == LocalReal:
+                num_real_particles += 1
+                if i != next_insert:
+                    tmp = index_array.data[next_insert]
+                    index_array.data[next_insert] = i
+                    index_array.data[i] = tmp
+                    next_insert += 1
+                    num_moves += 1
+                else:
+                    index_array.data[i] = i
+                    next_insert += 1
+            else:
+                index_array.data[i] = i
+
+        self.num_real_particles = num_real_particles
+        # we now have the aligned indices. Rearrage the particles particles
+        # accordingly.
+        arrays = self.properties.values()
+        num_arrays = len(arrays)
+        
+        for i from 0 <= i < num_arrays:
+            arr = arrays[i]
+            arr._align_array(index_array)
+
+        # now the temporary arrays
+        arrays = self.temporary_arrays.values()
+        num_arrays = len(arrays)
+        for i from 0 <= i < num_arrays:
+            arr = arrays[i]
+            arr._align_array(index_array)
+
+        if num_moves > 0:
+            self.is_dirty = True

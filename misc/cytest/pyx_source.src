@@ -185,3 +185,26 @@ cdef class CLASSNAME(BaseArray):
         for i in range(len):
             self.append(in_array[i])
     
+    cdef void _align_array(self, LongArray new_indices):
+        """
+	Rearrange the contents of the array according to the new indices.
+	"""
+        if new_indices.length != self.length:
+            raise ValueError, 'Unequal array lengths'
+	
+        cdef int i
+        cdef int length = self.length
+        cdef int n_bytes
+        cdef ARRAY_TYPE *temp
+        
+        n_bytes = sizeof(ARRAY_TYPE)*length
+        temp = <ARRAY_TYPE*>malloc(n_bytes)
+
+        memcpy(<void*>temp, <void*>self.data, n_bytes)
+
+        # copy the data from the resized portion to the actual positions.
+        for i from 0 <= i < length:
+            if i != new_indices.data[i]:
+                self.data[i] = temp[new_indices.data[i]]
+        
+        free(<void*>temp)

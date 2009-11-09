@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Wed Nov  4 15:47:42 2009
+# Mon Nov  9 16:13:48 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -50,8 +50,17 @@ cdef extern from "numpy/arrayobject.h":
     
     np.ndarray PyArray_SimpleNewFromData(int, int*, int, void*)
     
+
+# memcpy
+cdef extern from "stdlib.h":
+     void *memcpy(void *dst, void *src, long n)
+
 # numpy module initialization call
 import_array()
+
+# forward declaration
+cdef class BaseArray
+cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """
@@ -97,6 +106,12 @@ cdef class BaseArray:
 
     cpdef extend(self, np.ndarray in_array):
         raise NotImplementedError, 'BaseArray::extend'
+
+    cpdef align_array(self, LongArray new_indices):
+        self._align_array(new_indices)
+
+    cdef void _align_array(self, LongArray new_indices):
+        raise NotImplementedError, 'BaseArray::_align_array'	
         
     cpdef reset(self):
         """
@@ -292,6 +307,30 @@ cdef class IntArray(BaseArray):
         for i in range(len):
             self.append(in_array[i])
     
+    cdef void _align_array(self, LongArray new_indices):
+        """
+	Rearrange the contents of the array according to the new indices.
+	"""
+        if new_indices.length != self.length:
+            raise ValueError, 'Unequal array lengths'
+	
+        cdef int i
+        cdef int length = self.length
+        cdef int n_bytes
+        cdef int *temp
+        
+        n_bytes = sizeof(int)*length
+        temp = <int*>malloc(n_bytes)
+
+        memcpy(<void*>temp, <void*>self.data, n_bytes)
+
+        # copy the data from the resized portion to the actual positions.
+        for i from 0 <= i < length:
+            if i != new_indices.data[i]:
+                self.data[i] = temp[new_indices.data[i]]
+        
+        free(<void*>temp)
+
 
 ################################################################################
 # `DoubleArray` class.
@@ -480,6 +519,30 @@ cdef class DoubleArray(BaseArray):
         for i in range(len):
             self.append(in_array[i])
     
+    cdef void _align_array(self, LongArray new_indices):
+        """
+	Rearrange the contents of the array according to the new indices.
+	"""
+        if new_indices.length != self.length:
+            raise ValueError, 'Unequal array lengths'
+	
+        cdef int i
+        cdef int length = self.length
+        cdef int n_bytes
+        cdef double *temp
+        
+        n_bytes = sizeof(double)*length
+        temp = <double*>malloc(n_bytes)
+
+        memcpy(<void*>temp, <void*>self.data, n_bytes)
+
+        # copy the data from the resized portion to the actual positions.
+        for i from 0 <= i < length:
+            if i != new_indices.data[i]:
+                self.data[i] = temp[new_indices.data[i]]
+        
+        free(<void*>temp)
+
 
 ################################################################################
 # `FloatArray` class.
@@ -668,6 +731,30 @@ cdef class FloatArray(BaseArray):
         for i in range(len):
             self.append(in_array[i])
     
+    cdef void _align_array(self, LongArray new_indices):
+        """
+	Rearrange the contents of the array according to the new indices.
+	"""
+        if new_indices.length != self.length:
+            raise ValueError, 'Unequal array lengths'
+	
+        cdef int i
+        cdef int length = self.length
+        cdef int n_bytes
+        cdef float *temp
+        
+        n_bytes = sizeof(float)*length
+        temp = <float*>malloc(n_bytes)
+
+        memcpy(<void*>temp, <void*>self.data, n_bytes)
+
+        # copy the data from the resized portion to the actual positions.
+        for i from 0 <= i < length:
+            if i != new_indices.data[i]:
+                self.data[i] = temp[new_indices.data[i]]
+        
+        free(<void*>temp)
+
 
 ################################################################################
 # `LongArray` class.
@@ -856,4 +943,28 @@ cdef class LongArray(BaseArray):
         for i in range(len):
             self.append(in_array[i])
     
+    cdef void _align_array(self, LongArray new_indices):
+        """
+	Rearrange the contents of the array according to the new indices.
+	"""
+        if new_indices.length != self.length:
+            raise ValueError, 'Unequal array lengths'
+	
+        cdef int i
+        cdef int length = self.length
+        cdef int n_bytes
+        cdef long *temp
+        
+        n_bytes = sizeof(long)*length
+        temp = <long*>malloc(n_bytes)
+
+        memcpy(<void*>temp, <void*>self.data, n_bytes)
+
+        # copy the data from the resized portion to the actual positions.
+        for i from 0 <= i < length:
+            if i != new_indices.data[i]:
+                self.data[i] = temp[new_indices.data[i]]
+        
+        free(<void*>temp)
+
 

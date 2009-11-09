@@ -43,3 +43,8 @@ Sunday 08 November 2009 (04:58:54 AM)
       components of the same type can now be added to the component manager. But
       two different components having conflicting requirements cannot be added.
     - SPH function for simple density computation added.
+
+
+Mon Nov  9 18:57:21 IST 2009
+    - function to align LocalReal particles to the begining of the a particle
+      array added.
