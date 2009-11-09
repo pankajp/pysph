@@ -10,7 +10,7 @@ from pysph.solver.solver_component import SolverComponent, ComponentManager
 from pysph.solver.entity_base import EntityBase, Solid, Fluid
 from pysph.solver.entity_types import *
 from pysph.solver.dummy_components import DummyComponent1, DummyComponent2, DummyComponent3
-
+from pysph.solver.dummy_entities import DummyEntity
 
 ################################################################################
 # `TestSolverComponent` class.
@@ -200,9 +200,79 @@ class TestComponentManager(unittest.TestCase):
                          ['double', 'double', 'double', 'double', 'double', 'int'],
                          [None, None, None, 10.0, 11.0, 4])
 
-        print fluid_props
-        
+    def test_setup_entity(self):
+        """
+        Tests the setup_entity function.
+        """
+        cm = ComponentManager()
+        c1 = DummyComponent1('c1')
+        c2 = DummyComponent3('c2')
 
+        cm.add_component(c1)
+        cm.add_component(c2)
+
+        e1 = Solid()
+        e2 = Fluid()
+        cm.setup_entity(e1)
+        cm.setup_entity(e2)
+
+        # make sure the entity has the required properties.
+        self.assertEqual(e1.properties.has_key('mu'), True)
+        self.assertEqual(e2.properties.has_key('h'), True)
+        self.assertEqual(e2.properties.has_key('mu'), True)
+
+        # make sure the particle properties have been added.
+        parr = e2.get_particle_array()
+        self.assertEqual(parr.properties.has_key('c'), True)
+        self.assertEqual(parr.properties.has_key('d'), True)
+        self.assertEqual(parr.properties.has_key('e'), True)
+        self.assertEqual(parr.properties.has_key('f'), True)
+        self.assertEqual(parr.properties.has_key('f1'), True)
+        self.assertEqual(parr.properties.has_key('b'), True)
+
+    def test_get_component(self):
+        """
+        Tests the get_component function.
+        """
+        cm = ComponentManager()
+        c1 = DummyComponent1('c1')
+        c2 = DummyComponent1('c2')
+        
+        c3 = DummyComponent3('c3')
+        c4 = DummyComponent3('c4')
+        
+        cm.add_component(c1)
+        cm.add_component(c2)
+        cm.add_component(c3)
+        cm.add_component(c4)
+        
+        self.assertEqual(cm.get_component('c1'), c1)
+        self.assertEqual(cm.get_component('c2'), c2)
+        self.assertEqual(cm.get_component('c3'), c3)
+        self.assertEqual(cm.get_component('c4'), c4)
+
+    def test_add_input(self):
+        """
+        Tests the add_input function.
+        """
+        cm = ComponentManager()
+        
+        c1 = DummyComponent3('c1')
+        c2 = DummyComponent3('c2')
+
+        cm.add_component(c1, True)
+        cm.add_component(c2)
+
+        e1 = EntityBase()
+        e2 = EntityBase()
+
+        cm.add_input(e1)
+        cm.add_input(e2)
+
+        self.assertEqual(c1.entity_list, [e1, e2])
+        self.assertEqual(c2.entity_list, [])
+        
+        
 def check_particle_properties(prop_dict, prop_names, data_types, default_vals):
     """
     Checks if prop_dict has the names in prop_names and the required default

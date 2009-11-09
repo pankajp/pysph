@@ -23,8 +23,7 @@ class TestEntityBase(unittest.TestCase):
         """
 
         e = entity_base.EntityBase(properties={'a':10., 'b':3.})
-
-        self.assertEqual(e.information.get_number_of_keys(), 0)
+        self.assertEqual(e.information.get_number_of_keys(), 1)
         self.assertEqual(len(e.properties.keys()), 2)
         self.assertEqual(e.properties['a'], 10.)
         self.assertEqual(e.properties['b'], 3.)

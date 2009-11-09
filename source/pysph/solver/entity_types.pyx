@@ -12,6 +12,8 @@ cdef class EntityTypes:
     Entity_Solid = 1
     Entity_Fluid = 2
 
+    Entity_Dummy = 100
+
     def __cinit__(self):
         """
         Constructor.

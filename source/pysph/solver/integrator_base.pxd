@@ -75,7 +75,7 @@ cdef class Integrator(SolverComponent):
     cdef public list execute_list
     
     # list of entities whose properties have to be integrated.
-    cdef public set entity_list
+    cdef public list entity_list
 
     # the dimension of the velocity and position vectors.
     cpdef public int dimension
@@ -99,7 +99,7 @@ cdef class Integrator(SolverComponent):
     cdef int compute(self) except -1
     
     # setup the component once prior to execution.
-    #cpdef int setup_component(self) except -1
+    cpdef int setup_component(self) except -1
 
     # add a new property to be integrated along with arrays representing the
     # properties. 

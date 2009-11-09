@@ -555,7 +555,8 @@ cdef class ParticleArray:
         # check if the property is already present, if so display warning
         # message and exit
         if self.properties.has_key(prop_name):
-            logger.warn('Property already present, cannot add again')
+            logger.warn(
+                'Property %s already present, cannot add again'%(prop_name))
             return
 
         # make sure the size of the supplied array is consistent.

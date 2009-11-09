@@ -11,6 +11,45 @@ from pysph.base.point cimport Point
 
 from pysph.base.kernelbase cimport KernelBase
 
+
+cdef inline void make_coords_1d(DoubleArray x, Point pnt, int pid):
+    """
+    Convenient and fast function to get source and destination points within a
+    sph function.
+
+    Call it once for the source and once for the destination point.
+
+    """
+    pnt.x = x.data[pid]
+    pnt.y = 0.0
+    pnt.z = 0.0
+
+cdef inline void make_coords_2d(DoubleArray x, DoubleArray y, Point pnt, int pid):
+    """
+    Convenient and fast function to get source and destination points within a
+    sph function.
+
+    Call it once for the source and once for the destination point.
+
+    """
+    pnt.x = x.data[pid]
+    pnt.y = y.data[pid]
+    pnt.z = 0.0
+
+cdef inline void make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Point
+                                pnt, int pid): 
+    """
+    Convenient and fast function to get source and destination points within a
+    sph function.
+
+    Call it once for the source and once for the destination point.
+
+    """
+    pnt.x = x.data[pid]
+    pnt.y = y.data[pid]
+    pnt.z = z.data[pid]
+
+
 ################################################################################
 # `SPHFunctionParticle` class.
 ################################################################################
@@ -57,7 +96,8 @@ cdef class SPHFunctionParticle:
 
     """
     def __init__(self, ParticleArray dest, ParticleArray source, str h='h',
-                 str mass='m', str rho='rho', bint setup_arrays=True):
+                 str mass='m', str rho='rho', bint setup_arrays=True, *args,
+                  **kwargs):
         """
         Constructor.
 
@@ -171,9 +211,9 @@ cdef class SPHFuncParticleUser(SPHFunctionParticle):
     User defined SPHFunctionParticle.
     """
     def __init__(self, ParticleArray dest, ParticleArray source, str h='h',
-                 str mass='m', str rho='rho', bint setup_arrays=True):
-        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho,
-                                     setup_arrays)
+                 str mass='m', str rho='rho', bint setup_arrays=True, *args,
+                  **kwargs):
+        pass
 
     cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr):
@@ -214,7 +254,7 @@ cdef class SPHFunctionPoint:
 
     """
     def __init__(self, ParticleArray source, str h='h', str mass='m', str
-                 rho='rho', bint setup_arrays=True):
+                 rho='rho', bint setup_arrays=True, *args, **kwargs):
         """
         Constructor.
         """
@@ -309,8 +349,10 @@ cdef class SPHFunctionParticle1D(SPHFunctionParticle):
 
     """
     def __init__(self, ParticleArray source, ParticleArray dest, str h='h', str
-                 mass='m', rho='rho', coord_x='x', velx='u', bint setup_arrays=True):
-        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False)
+                 mass='m', rho='rho', coord_x='x', velx='u', bint
+                 setup_arrays=True, *args, **kwargs):
+        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False,
+                                     *args, **kwargs)
 
         self.coord_x = coord_x
         self.velx = velx
@@ -340,15 +382,6 @@ cdef class SPHFunctionParticle1D(SPHFunctionParticle):
         self.s_velx = self.source.get_carray(self.velx)
         self.d_velx = self.dest.get_carray(self.velx)
 
-class SPHFuncParticleUser1D(SPHFuncParticleUser, SPHFunctionParticle1D):
-    """
-    """
-    def __init__(self, source, dest, h='h', mass='m', rho='rho', coord_x='x',
-                 velx='u', setup_arrays=True):
-        SPHFuncParticleUser.__init__(self, source, dest, h, mass, rho, False)
-        SPHFunctionParticle1D.__init__(self, source, dest, h, mass, rho,
-                                       coord_x, velx, True)
-
 ################################################################################
 # `SPHFunctionPoint1D` class.
 ################################################################################
@@ -370,8 +403,9 @@ cdef class SPHFunctionPoint1D(SPHFunctionPoint):
 
     """
     def __init__(self, ParticleArray source, str h='h', str
-                 mass='m', rho='rho', coord_x='x', velx='u', bint setup_arrays=True):
-        SPHFunctionPoint.__init__(self, source, h, mass, rho, False)
+                 mass='m', rho='rho', coord_x='x', velx='u', bint
+                 setup_arrays=True, *args, **kwargs):
+        SPHFunctionPoint.__init__(self, source, h, mass, rho, False, *args, **kwargs)
 
         self.coord_x = coord_x
         self.velx = velx
@@ -424,8 +458,9 @@ cdef class SPHFunctionParticle2D(SPHFunctionParticle):
     """
     def __init__(self, ParticleArray source, ParticleArray dest, str h='h', str
                  mass='m', rho='rho', coord_x='x', coord_y='y', velx='u',
-                 vely='v', bint setup_arrays=True):
-        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False)
+                 vely='v', bint setup_arrays=True, *args, **kwargs):
+        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False,
+                                     *args, **kwargs)
 
         self.coord_x = coord_x
         self.coord_y = coord_y
@@ -489,9 +524,9 @@ cdef class SPHFunctionPoint2D(SPHFunctionPoint):
     """
     def __init__(self, ParticleArray source, str h='h', str
                  mass='m', rho='rho', coord_x='x', coord_y='y', velx='u',
-                 vely='v', bint setup_arrays=True):
+                 vely='v', bint setup_arrays=True, *args, **kwargs):
 
-        SPHFunctionPoint.__init__(self, source, h, mass, rho, False)
+        SPHFunctionPoint.__init__(self, source, h, mass, rho, False, *args, **kwargs)
 
         self.coord_x = coord_x
         self.coord_y = coord_y
@@ -562,9 +597,10 @@ cdef class SPHFunctionParticle3D(SPHFunctionParticle):
                  mass='m', rho='rho', 
                  coord_x='x', coord_y='y', coord_z='z',
                  velx='u', vely='v', velz='w', 
-                 bint setup_arrays=True):
+                 bint setup_arrays=True, *args, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False)
+        SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, False,
+                                     *args, **kwargs)
 
         self.coord_x = coord_x
         self.coord_y = coord_y
@@ -644,9 +680,10 @@ cdef class SPHFunctionPoint3D(SPHFunctionPoint):
                  str h='h', str mass='m', rho='rho', 
                  coord_x='x', coord_y='y', coord_z='z',
                  velx='u', vely='v', velz='w',
-                 bint setup_arrays=True):
+                 bint setup_arrays=True, *args, **kwargs):
 
-        SPHFunctionPoint.__init__(self, source, h, mass, rho, False)
+        SPHFunctionPoint.__init__(self, source, h, mass, rho, False, *args,
+                                  **kwargs)
 
         self.coord_x = coord_x
         self.coord_y = coord_y

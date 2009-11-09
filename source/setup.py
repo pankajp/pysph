@@ -32,7 +32,8 @@ sph = [
                   ["pysph/sph/sph_calc.pyx"]),
         Extension("pysph.sph.misc_particle_funcs",
                   ["pysph/sph/misc_particle_funcs.pyx"]),
-        
+        Extension("pysph.sph.density_funcs",
+                  ["pysph/sph/density_funcs.pyx"]),
         ]
 
 # kernel extension modules.

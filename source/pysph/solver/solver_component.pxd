@@ -80,7 +80,7 @@ cdef class ComponentManager(Base):
 
     cpdef _add_particle_property(self, dict prop, int etype, str data_type=*)
     cpdef bint _check_property(
-        self, dict prop, str access_mode, int etype) except *
+        self, SolverComponent comp, dict prop, str access_mode, int etype) except *
     cpdef _update_property_component_map(
         self, str prop, str comp_name, int etype, str access_type)
 

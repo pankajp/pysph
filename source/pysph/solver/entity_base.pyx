@@ -91,16 +91,11 @@ cdef class EntityBase(Base):
             logger.warn('This entity does not provide a particle array')
             logger.warn('Not adding integration property')
             return
-        elif parray.properties.has_key(prop_name) is False:
-            msg = 'Particle array does not have %s'%(prop_name)
-            logger.warn(msg)
         
         ip = self.information.get_list(self.INTEGRATION_PROPERTIES)
-
         if ip is None:
             ip = []
             self.information.set_list(self.INTEGRATION_PROPERTIES, ip)
-
         ip.append(prop_name)
 
 ################################################################################

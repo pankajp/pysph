@@ -274,17 +274,17 @@ cdef class ComponentManager(Base):
         """
         cdef SolverComponent c
 
-        for val in self.component_dict:
+        for val in self.component_dict.values():
             if val['notify'] == True:
                 c = val['component']
-                c.add_entity(c)
+                c.add_entity(entity)
 
     cpdef SolverComponent get_component(self, str comp_name):
         """
         Get the named component.
         """
         if self.component_dict.has_key(comp_name):
-            return <SolverComponent>self.component_dict['comp_name']['component']
+            return <SolverComponent>self.component_dict[comp_name]['component']
         else:
             logger.error('%s : no such component'%(comp_name))
             return None
@@ -367,19 +367,19 @@ cdef class ComponentManager(Base):
         for etype in p_props:
             p_list = p_props[etype]
             for p in p_list:
-                if not self._check_property(p, 'private', etype):
+                if not self._check_property(c, p, 'private', etype):
                     logger.error('Failed to add component %s'%(c.name))
                     return False
         for etype in w_props:
             p_list = w_props[etype]
             for p in p_list:
-                if not self._check_property(p, 'write', etype):
+                if not self._check_property(c, p, 'write', etype):
                     logger.error('Failed to add component %s'%(c.name))
                     return False
         for etype in flags:
             flag_list = flags[etype]
             for f in flag_list:
-                if not self._check_property(f, 'write', etype):
+                if not self._check_property(c, f, 'write', etype):
                     logger.error('Failed to add component %s'%(c.name))
                     return False
                 
@@ -527,12 +527,13 @@ cdef class ComponentManager(Base):
                     logger.warn(msg)
                     entry['default'] = prop['default']                    
         
-    cpdef bint _check_property(self, dict prop, str access_mode, int etype) except *:
+    cpdef bint _check_property(self, SolverComponent comp, dict prop, str access_mode, int etype) except *:
         """
         Check if this property is safe.
         """
         cdef str prop_name, c, c_name, access_mode_1
         cdef dict pc_map, c_inf, access
+        cdef SolverComponent existing_comp
 
         prop_name = prop['name']
         pc_map = self.information.get_dict(
@@ -550,6 +551,11 @@ cdef class ComponentManager(Base):
         # checks
         for c in c_inf.keys():
             c_name = c
+            existing_comp = self.get_component(c_name)
+            
+            if type(existing_comp) == type(comp):
+                continue
+            
             access = c_inf[c_name]['access']
 
             access_mode_1 = access.get(etype)
@@ -565,15 +571,14 @@ cdef class ComponentManager(Base):
                                                      c_name)
                     logger.error(msg)
                     return False
-                if access_mode == 'write':
-                    if (access_mode_1 == 'private'):
-                        # we cannot allow any component to write to a private
-                        # property of another component.
-                        msg = 'Property %s is %s in %s'%(prop_name, access_mode_1,
-                                                         c_name)
-                        logger.error(msg)
-                        return False
-        
+            if access_mode == 'write':
+                if (access_mode_1 == 'private'):
+                    # we cannot allow any component to write to a private
+                    # property of another component.
+                    msg = 'Property %s is %s in %s'%(prop_name, access_mode_1,
+                                                     c_name)
+                    logger.error(msg)
+                    return False
         return True
 
     cpdef setup_entity(self, EntityBase entity):

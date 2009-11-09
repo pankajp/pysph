@@ -34,3 +34,12 @@ Saturday 07 November 2009 (01:57:14 PM)
     - identifier and category added as class attributes to components.
     - Function to setup a given entity with required properties by the component
       manager.
+
+Sunday 08 November 2009 (04:58:54 AM)
+    - Integrator base class complete with tests.
+    - more tests added for component manager.
+    - tests for functions in Integrator.
+    - partile property access mode changed/corrected in component manager. Two
+      components of the same type can now be added to the component manager. But
+      two different components having conflicting requirements cannot be added.
+    - SPH function for simple density computation added.

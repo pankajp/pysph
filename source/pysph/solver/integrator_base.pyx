@@ -273,8 +273,9 @@ cdef class Integrator(SolverComponent):
         """
         Constructor.
         """
-        self.entity_list = set()
+        self.entity_list = []
         self.execute_list = []
+        self.curr_time_step = TimeStep()
 
         self.information.set_dict(self.INTEGRATION_PROPERTIES, {})
         self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
@@ -349,9 +350,10 @@ cdef class Integrator(SolverComponent):
         """
         Adds an entity whose properties are to be integrated.
         """
-        if self.filter_entity(entity):
-            self.entity_list.add(entity)
-            self.setup_done = False
+        if not self.filter_entity(entity):
+            if self.entity_list.count(entity) == 0:
+                self.entity_list.append(entity)
+                self.setup_done = False
 
     cpdef add_entity_type(self, str prop_name, int entity_type):
         """
@@ -555,7 +557,7 @@ cdef class Integrator(SolverComponent):
         io[:] = order
         self.setup_done = False
     
-    def setup_component(self):
+    cpdef int setup_component(self) except -1:
         """
         Sets up the component for execution.
 
@@ -588,7 +590,7 @@ cdef class Integrator(SolverComponent):
         """
 
         if self.setup_done:
-            return
+            return 0
 
         prop_steppers = {}
 
@@ -607,9 +609,8 @@ cdef class Integrator(SolverComponent):
 
         # now start appending components for the properties.
         io = self.information.get_list(self.INTEGRATION_ORDER)
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
 
-        for p_name in ip:
+        for p_name in io:
             stepper_list = self._setup_property(p_name)
             prop_steppers[p_name] = stepper_list
 
@@ -618,6 +619,8 @@ cdef class Integrator(SolverComponent):
         self._setup_copiers(prop_steppers)        
         
         self.setup_done = True
+        
+        return 0
 
     def _setup_property(self, prop_name):
         """
@@ -643,14 +646,15 @@ cdef class Integrator(SolverComponent):
             logger('No such property, %s'%(prop_name))
             return prop_steppers
 
-        e_types = p_info['entity_types']
+        e_types = p_info.get('entity_types')
         
         # get the pre-step components
-        psc = p_info['pre_step_components']
-        for psc_name in psc:
-            c = self.cm.get_component(psc_name)
-            if c is not None:
-                self.execute_list.append(c)
+        psc = p_info.get('pre_step_components')
+        if psc is not None:
+            for psc_name in psc:
+                c = self.cm.get_component(psc_name)
+                if c is not None:
+                    self.execute_list.append(c)
         
         # now for every entity add an appropriate stepper.
         for e in self.entity_list:
@@ -683,13 +687,23 @@ cdef class Integrator(SolverComponent):
             # entity type.
             stepper = self.get_stepper(e.type, prop_name)
             if stepper is not None:
+                stepper.name = 'stepper_'+prop_name+'_'+e.name
                 stepper.add_entity(e)
                 prop_steppers.append(stepper)
+                stepper.time_step = self.curr_time_step
                 stepper.setup_component()
                 self.execute_list.append(stepper)
             else:
                 msg = 'No stepper found for entity type (%d) for property%s'%(e.type, prop_name)
                 logger.error(msg)
+
+        # setup the post step components
+        psc = p_info.get('post_step_components')
+        if psc is not None:
+            for psc_name in psc:
+                c = self.cm.get_component(psc_name)
+                if c is not None:
+                    self.execute_list.append(c)
 
         return prop_steppers
         
@@ -719,55 +733,74 @@ cdef class Integrator(SolverComponent):
         """
         ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
         default_steppers = self.information.get_dict(self.DEFAULT_STEPPERS)
-
-        # check if the property is valid.
-        if not ip.has_key(prop_name):
-            return None
         
+        prop_info = ip.get(prop_name)
+        # check if the property is valid.
+        if prop_info is None:
+            logger.warn('Property name incorrect')
+            return None
+
+        integrand = prop_info.get('integrand')
+        integral = prop_info.get('integral')
+
+        if integral is None or integrand is None:
+            logger.warn('integrand or integral is None')
+            return None
+
         # check if any stepper specification is found for the property.
-        steppers = ip.get('steppers')
+        steppers = prop_info.get('steppers')
+        stepper_type = ''
 
         if (steppers is None or len(steppers) == 0 or
             (not steppers.has_key(entity_type) and not
              steppers.has_key('default'))):
-
             if default_steppers.has_key(entity_type):
-                return cfac.get_component('ode_stepper',
-                                          default_steppers[entity_type])
+                stepper_type = default_steppers[entity_type]
             elif default_steppers.has_key('default'):
-                return cfac.get_component('ode_stepper',
-                                          default_steppers['default'])
-            else:
-                logger.warn('No default stepper provided for integrator')
-                return None
+                stepper_type = default_steppers['default']
         else:
             # meaning, the property has some stepper specification.
             if steppers.has_key(entity_type):
-                return cfac.get_component('ode_stepper',
-                                          steppers[entity_type])
+                stepper_type = steppers[entity_type]
             else:
-                return cfac.get_component('ode_stepper',
-                                          steppers['default'])
-
-        return None
-
+                stepper_type = steppers['default']
+        
+        if stepper_type == '':
+            logger.warn('No default stepper provided for integrator')
+            return None
+        else:
+            return cfac.get_component('ode_stepper',
+                                      stepper_type,
+                                      cm=self.cm, 
+                                      prop_name=prop_name,
+                                      integrands=integrand,
+                                      integrals=integral,
+                                      time_step=self.curr_time_step)
+                    
     def _setup_copiers(self, prop_stepper_dict):
         """
         Create copiers for each property, to copy the next step values to the
         current arrays.
         """
-        ip = self.infomration.get_dict(self.INTEGRATION_PROPERTIES)
+        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        io = self.information.get_list(self.INTEGRATION_ORDER)
 
-        for prop_name in prop_stepper_dict.keys():
+        for prop_name in io:
             stepper_list = prop_stepper_dict[prop_name]
             prop_info = ip.get(prop_name)
             # create a copier for each stepper in the stepper_list.
             for stepper in stepper_list:
                 cop_name = 'copier_'+prop_name
-                copier = cfac.get_component('copier', 'copier', 
-                                            cop_name, stepper.entity_list,
+                copier = cfac.get_component('copiers', 'copier', 
+                                            cop_name, self.cm,
+                                            stepper.entity_list,
                                             stepper.next_step_names,
-                                            stepper.integral_arrays)
+                                            stepper.integral_names)
+                if copier is None:
+                    msg = 'Could not create copier for %s'%(prop_name)
+                    logger.warn('Could not create copier for %s'%(prop_name))
+                    raise SystemError, msg
+
                 self.execute_list.append(copier)
         
     cdef int compute(self) except -1:
@@ -792,4 +825,37 @@ cdef class Integrator(SolverComponent):
         All properties required will be considered as WRITEable PARTICLE
         properties.
         """
-        pass
+        cdef str prop_name
+        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+                
+        for prop_name in ip.keys():
+            prop_info = ip.get(prop_name)
+            intgnd = prop_info.get('integrand')
+            intgl = prop_info.get('integral')
+            
+            e_types = prop_info.get('entity_types')
+            if e_types is None or len(e_types) == 0:
+                e_props = wp.get(EntityTypes.Entity_Base)
+                if e_props is None:
+                    e_props = []
+                    wp[EntityTypes.Entity_Base] = e_props
+                # meaning this property is to be applied to all entity types. 
+                # add the integrand and integral arrays
+                for i in range(len(intgnd)):
+                    p = intgnd[i]
+                    e_props.append({'name':p, 'default':None})
+                    p = intgl[i]
+                    e_props.append({'name':p, 'default':None})
+                    
+            else:
+                for e_type in e_types:
+                    e_props = wp.get(e_type)
+                    if e_props is None:
+                        e_props = []
+                        wp[e_type] = e_props
+                    for i in range(len(intgnd)):
+                        p = intgnd[i]
+                        e_props.append({'name':p, 'default':None})
+                        p = intgl[i]
+                        e_props.append({'name':p, 'default':None})

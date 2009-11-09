@@ -144,3 +144,10 @@ cdef class SPHFunctionPoint3D(SPHFunctionPoint):
     cdef public str coord_x, coord_y, coord_z, velx, vely, velz
 
     cpdef setup_arrays(self)
+
+
+# some inline convenience functions.
+cdef inline void make_coords_1d(DoubleArray x, Point pnt, int pid)
+cdef inline void make_coords_2d(DoubleArray x, DoubleArray y, Point pnt, int pid)
+cdef inline void make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Point
+                           pnt, int pid)

@@ -42,9 +42,12 @@ class ComponentFactory:
         Creates and returns the requested ode stepper.
         """
         import pysph.solver.integrator_base
+        import pysph.solver.dummy_components
 
         if comp_type == 'base' or comp_type == 'euler':
-            return pysph.solver.integrator_base.ODESteper(*args, **kwargs)
+            return pysph.solver.integrator_base.ODEStepper(*args, **kwargs)
+        elif comp_type == 'ya_stepper':
+            return pysph.solver.dummy_components.YAStepper(*args, **kwargs)
         else:
             return None
         

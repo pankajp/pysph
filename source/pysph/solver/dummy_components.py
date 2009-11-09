@@ -19,7 +19,8 @@ class YAStepper(PyODEStepper):
     identifier = 'ya_stepper'
     category = 'dummy'
     def __init__(self, name='', cm=None, entity_list=[],
-                 integrand_arrays=[], integral_arrays=[], *args, **kwargs):
+                 prop_name='', integrand_arrays=[], integral_arrays=[],
+                 time_step=None, *args, **kwargs): 
         """
         Constructor.
         """
@@ -31,7 +32,7 @@ class DummyComponent1(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name=''):
+    def __init__(self, name='', cm=None):
         """
         Constructor.
         """
@@ -68,7 +69,7 @@ class DummyComponent2(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name=''):
+    def __init__(self, name='', cm=None):
         """
         Constructor.
         """
@@ -109,7 +110,7 @@ class DummyComponent3(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name=''):
+    def __init__(self, name='', cm=None):
         """
         Constructor.
         """
@@ -123,3 +124,12 @@ class DummyComponent3(SolverComponent):
         ep[EntityTypes.Entity_Solid] = [{'name':'mu', 'default':1.0}]
 
         ep[EntityTypes.Entity_Fluid] = [{'name':'nu', 'default':3.0}]    
+
+        self.entity_list = []
+
+    def add_entity(self, entity):
+        """
+        Add entity to the component.
+        """
+        if not self.filter_entity(entity):
+            self.entity_list.append(entity)
