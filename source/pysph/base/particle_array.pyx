@@ -119,7 +119,7 @@ cdef class ParticleArray:
         """
         keys = self.properties.keys() + self.temporary_arrays.keys()
         if name in keys:
-            return self.get(name)
+            return self._get_real_particle_prop(name)
         else:
             raise AttributeError, 'property %s not found'%(name)
 
@@ -219,6 +219,8 @@ cdef class ParticleArray:
             # set them to the default value
             npyarr = tagarr.get_npy_array()
             npyarr[:] = self.default_values['tag']
+
+        self.align_particles()
 
     cpdef int get_number_of_particles(self):
         """
@@ -327,6 +329,8 @@ cdef class ParticleArray:
         self.remove_particles(indices)
 
         if indices.length > 0:
+            # realign particles
+            self.align_particles()
             self.is_dirty = True
 
     def add_particles(self, **particle_props):
@@ -411,12 +415,34 @@ cdef class ParticleArray:
         """
         return self.properties.get(prop_name)
 
-    def get(self, *args):
+    cdef numpy.ndarray _get_real_particle_prop(self, str prop_name):
         """
-        Return the numpy array for the 'prop_name' property.
+        cdef'ed function to get the npy array corresponding to only real
+        particles of a given property.
+
+        No checks are performed. Only call this after making sure that the
+        property required already exists.
+        """
+        cdef BaseArray prop_array
+        prop_array = self.properties.get(prop_name)
+        if prop_array is not None:
+            return prop_array.get_npy_array()[:self.num_real_particles]
+        else:
+            prop_array = self.temporary_arrays.get(prop_name)
+            if prop_array is not None:
+                return prop_array.get_npy_array()[:self.num_real_particles]
+            else:
+                return None
+
+    def get(self, *args, only_real_particles=True):
+        """
+        Return the numpy array for the  property names in *args.
         
         **Parameters**
 
+         - only_real_particles - indicates if properties of only real particles
+           need to be returned or all particles to be returned. By default only
+           real particles will be returned.
          - args - a list of property names.
 
         **Notes**
@@ -425,21 +451,38 @@ cdef class ParticleArray:
            may be performed.
 
         """
-        nargs = len(args)
-        result = []
+        cdef int nargs = len(args)
+        cdef list result = []
+        cdef str arg
+        cdef int i
+        cdef BaseArray arg_array
+
         if nargs == 0:
-            return 
+            return
         
-        # make sure all prop names are valid names
-        for arg in args:
-            self._check_property(arg)
-        
-        for arg in args:
-            if arg in self.properties:
-                arg_array = self.properties[arg]
-                result.append(arg_array.get_npy_array())
-            elif self.temporary_arrays.has_key(arg):
-                result.append(self.temporary_arrays[arg].get_npy_array())
+        if only_real_particles == True:
+            for i from 0 <= i < nargs:
+                arg = args[i]
+                self._check_property(arg)
+            
+                if arg in self.properties:
+                    arg_array = self.properties[arg]
+                    result.append(
+                        arg_array.get_npy_array()[:self.num_real_particles])
+                elif self.temporary_arrays.has_key(arg):
+                    result.append(
+                        self.temporary_arrays[arg].get_npy_array()[
+                            :self.num_real_particles])
+        else:
+            for i from 0 <= i < nargs:
+                arg = args[i]
+                self._check_property(arg)
+            
+                if arg in self.properties:
+                    arg_array = self.properties[arg]
+                    result.append(arg_array.get_npy_array())
+                elif self.temporary_arrays.has_key(arg):
+                    result.append(self.temporary_arrays[arg].get_npy_array())
 
         if nargs == 1:
             return result[0]
@@ -555,6 +598,7 @@ cdef class ParticleArray:
         if self.properties.has_key(prop_name):
             logger.warn(
                 'Property %s already present, cannot add again'%(prop_name))
+            logger.warn('Use set() to set values for a property')
             return
 
         # make sure the size of the supplied array is consistent.
@@ -603,6 +647,8 @@ cdef class ParticleArray:
                     arr = self._create_carray(data_type, len(data), default)
                     arr.get_npy_array[:] = numpy.asarray(data)
                     self.properties[prop_name] = arr
+            # align particles.
+            self.align_particles()
         else:
             if data is None or len(data) == 0:
                 # new property is added without any initial data, resize it to

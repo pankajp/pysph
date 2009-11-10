@@ -48,3 +48,12 @@ Sunday 08 November 2009 (04:58:54 AM)
 Mon Nov  9 18:57:21 IST 2009
     - function to align LocalReal particles to the begining of the a particle
       array added.
+
+Tue Nov 10 15:39:51 IST 2009
+    - tests updated to reflect above change in particle alignment.
+    - get functions modified to get both real and all particles.
+    - by default only real particles returned, when properties are accessed 
+      as attributes.
+    - setting of given carray with smaller sized numpy array made possible to
+      incorporate setting values for only real particles.
+    

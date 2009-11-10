@@ -167,13 +167,9 @@ cdef class ODEStepper(SolverComponent):
                 continue
             
             for j from 0 <= j < num_props:
-                _an = parr.get_carray(self.integral_names[j])
-                _bn = parr.get_carray(self.integrand_names[j])
-                _an1 = parr.get_carray(self.next_step_names[j])
-
-                an = _an.get_npy_array()
-                bn = _bn.get_npy_array()
-                an1 = _an1.get_npy_array()
+                an = parr._get_real_particle_prop(self.integral_names[j])
+                bn = parr._get_real_particle_prop(self.integrand_names[j])
+                an1 = parr._get_real_particle_prop(self.next_step_names[j])
 
                 an1[:] = an + bn*self.time_step.time_step                
 

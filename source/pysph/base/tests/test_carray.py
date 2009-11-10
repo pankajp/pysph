@@ -114,7 +114,7 @@ class TestLongArray(unittest.TestCase):
         for i in range(5):
             self.assertEqual(l[i], np[i])
 
-        self.assertRaises(ValueError, l.set_data, numpy.arange(1))
+        self.assertRaises(ValueError, l.set_data, numpy.arange(10))
 
     def test_squeeze(self):
         """

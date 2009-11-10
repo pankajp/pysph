@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Mon Nov  9 16:13:48 2009
+# Tue Nov 10 15:05:03 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -91,10 +91,10 @@ cdef class BaseArray:
         cdef PyArrayObject* sarr = <PyArrayObject*>nparr
         cdef PyArrayObject* darr = <PyArrayObject*>self._npy_array
 
-        if self._npy_array is nparr:
+        if sarr.data == darr.data:
             return
-        if sarr.dimensions[0] == darr.dimensions[0]:
-            self._npy_array[:] = nparr
+        elif sarr.dimensions[0] <= darr.dimensions[0]:
+            self._npy_array[:sarr.dimensions[0]] = nparr
         else:
             raise ValueError, 'array size mismatch'
 

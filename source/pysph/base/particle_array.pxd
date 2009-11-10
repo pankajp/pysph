@@ -31,6 +31,8 @@ cdef class ParticleArray:
     cdef object _create_c_array_from_npy_array(self, np.ndarray arr)
     cdef _check_property(self, str)
 
+    cdef np.ndarray _get_real_particle_prop(self, str prop)
+
     cpdef set_dirty(self, bint val)
 
     cpdef get_carray(self, str prop)

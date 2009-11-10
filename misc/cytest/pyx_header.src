@@ -87,10 +87,10 @@ cdef class BaseArray:
         cdef PyArrayObject* sarr = <PyArrayObject*>nparr
         cdef PyArrayObject* darr = <PyArrayObject*>self._npy_array
 
-        if self._npy_array is nparr:
+        if sarr.data == darr.data:
             return
-        if sarr.dimensions[0] == darr.dimensions[0]:
-            self._npy_array[:] = nparr
+        elif sarr.dimensions[0] <= darr.dimensions[0]:
+            self._npy_array[:sarr.dimensions[0]] = nparr
         else:
             raise ValueError, 'array size mismatch'
 
