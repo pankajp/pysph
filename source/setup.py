@@ -9,7 +9,9 @@ from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 
 # base extension modules.
-base = [Extension("pysph.base.carray", 
+base = [Extension("pysph.base.attrdict",
+                  ["pysph/base/attrdict.pyx"]),
+        Extension("pysph.base.carray", 
                   ["pysph/base/carray.pyx"]),
         Extension("pysph.base.point",
                   ["pysph/base/point.pyx"]),
@@ -58,7 +60,11 @@ solver = [Extension("pysph.solver.typed_dict",
           Extension("pysph.solver.solver_component",
                     ["pysph/solver/solver_component.pyx"]),
           Extension("pysph.solver.integrator_base",
-                    ["pysph/solver/integrator_base.pyx"])
+                    ["pysph/solver/integrator_base.pyx"]),
+          Extension("pysph.solver.speed_of_sound",
+                    ["pysph/solver/speed_of_sound.pyx"]),
+          Extension("pysph.solver.pressure_components",
+                    ["pysph/solver/pressure_components.pyx"]),
           ]
 
 # all extension modules.

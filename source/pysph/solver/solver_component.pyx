@@ -55,7 +55,9 @@ cdef class SolverComponent(Base):
     
     identifier = 'base_component'
     category = 'base'
-    def __cinit__(self, str name='', ComponentManager cm = None, *args, **kwargs):
+    def __cinit__(self, str name='', ComponentManager cm = None, 
+                  list entity_list=[], 
+                  *args, **kwargs):
         """
         Constructor.
         """
@@ -63,6 +65,8 @@ cdef class SolverComponent(Base):
         self.cm = cm
         self.setup_done = False
         self.accept_input_entities = True
+        self.entity_list = []
+        self.entity_list[:] = entity_list
 
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})
@@ -195,10 +199,16 @@ cdef class SolverComponent(Base):
 
     cpdef add_entity(self, EntityBase entity):
         """
-        Add the given entity to the input if it passes all tests. This will be
-        reimplemented in the derived classes.
+        Add the given entity to the entity_list if filter_entity does not filter
+        out this entity based on the input requirements.
+
+        Derived classes may reimplement this function as needed.
+
         """
-        raise NotImplementedError, 'SolverComponent::add_entity'
+        if self.filter_entity(entity) == False:
+            if self.entity_list.count(entity) == 0:
+                self.entity_list.append(entity)
+                self.setup_done = False
 
     cdef int compute(self) except -1:
         """

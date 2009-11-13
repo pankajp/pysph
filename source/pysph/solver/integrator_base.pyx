@@ -173,14 +173,6 @@ cdef class ODEStepper(SolverComponent):
 
                 an1[:] = an + bn*self.time_step.time_step                
 
-    cpdef add_entity(self, EntityBase entity):
-        """
-        Add an entity whose properties are to be integrated.
-        """
-        if not self.filter_entity(entity):
-            self.entity_list.append(entity)
-            self.setup_done = False
-
 ################################################################################
 # `PyODEStepper` class.
 ################################################################################
@@ -364,15 +356,6 @@ cdef class Integrator(SolverComponent):
                           [EntityTypes.Entity_Base])
         self.add_property('position', vel_arrays, pos_arrays,
                           [EntityTypes.Entity_Base])
-
-    cpdef add_entity(self, EntityBase entity):
-        """
-        Adds an entity whose properties are to be integrated.
-        """
-        if not self.filter_entity(entity):
-            if self.entity_list.count(entity) == 0:
-                self.entity_list.append(entity)
-                self.setup_done = False
 
     cpdef add_entity_type(self, str prop_name, int entity_type):
         """

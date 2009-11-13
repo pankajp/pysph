@@ -29,9 +29,6 @@ cdef class ODEStepper(SolverComponent):
     """
     Class to step a given property by a given time step.
     """
-    # list of entities whose properties have to be stepped.
-    cdef public list entity_list
-
     # name of the property that is being stepped.
     cdef public str prop_name
 
@@ -49,7 +46,6 @@ cdef class ODEStepper(SolverComponent):
     cdef public TimeStep time_step
     
     cpdef int setup_component(self) except -1
-    cpdef add_entity(self, EntityBase entity)
     cdef int compute(self) except -1
     cpdef set_properties(self, str prop_name, list integrands, list integrals)
 
@@ -74,9 +70,6 @@ cdef class Integrator(SolverComponent):
     # compute().
     cdef public list execute_list
     
-    # list of entities whose properties have to be integrated.
-    cdef public list entity_list
-
     # the dimension of the velocity and position vectors.
     cpdef public int dimension
 

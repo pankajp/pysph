@@ -67,3 +67,11 @@ Thursday 12 November 2009 (10:01:26 PM)
     - convenience inline function to generate Point class from given arrays.
     - density component class added - not complete
     
+11/13/2009 (09:53:46 AM)
+    - default behaviour of add_entity in solver component changed. It now adds
+      all unfiltered entities to the solver component.
+    - AttrDict added to facilitate property access from entity.
+    - some modifications to density components - still not complete.
+    - TaitPressureComponent written.
+    - is_type_included function to EntityBase added.
+    - separate module to hold speed of sound.

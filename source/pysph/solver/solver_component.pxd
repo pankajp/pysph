@@ -30,6 +30,9 @@ cdef class SolverComponent(Base):
     # indicates if the component is ready for execution.
     cdef public bint setup_done
 
+    # list of input entities
+    cdef public list entity_list
+
     # function to perform the components computation.
     cdef int compute(self) except -1
 

@@ -7,7 +7,7 @@ import unittest
 
 # local imports
 from pysph.solver import entity_base
-
+from pysph.solver.entity_types import *
 
 ################################################################################
 # `TestEntityBase` class.
@@ -28,6 +28,37 @@ class TestEntityBase(unittest.TestCase):
         self.assertEqual(e.properties['a'], 10.)
         self.assertEqual(e.properties['b'], 3.)
 
+    def test_getattr(self):
+        """
+        Tests the __getattr__ function.
+        """
+        e = entity_base.EntityBase(properties={'a':10., 'b':4.})
+        self.assertEqual(e.properties.a, 10.)
+        self.assertEqual(e.properties.b, 4.)
+        
+        self.assertRaises(AttributeError, e.properties.__getattr__, 'c')
+
+    def test_is_type_included(self):
+        """
+        Tests the is_type_included function.
+        """
+        e = entity_base.EntityBase()
+        tlist = [EntityTypes.Entity_Fluid]
+        
+        self.assertEqual(e.is_type_included(tlist), False)
+        
+        tlist.append(EntityTypes.Entity_Base)
+        self.assertEqual(e.is_type_included(tlist), True)
+
+        e = entity_base.Fluid()
+        tlist = [EntityTypes.Entity_Base]
+        self.assertEqual(e.is_type_included(tlist), True)
+
+        tlist = [EntityTypes.Entity_Fluid]
+        self.assertEqual(e.is_type_included(tlist), True)
+        
+        tlist = [EntityTypes.Entity_Solid]
+        self.assertEqual(e.is_type_included(tlist), False)
 
 if __name__ == '__main__':
     unittest.main()

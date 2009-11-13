@@ -1,6 +1,7 @@
 """
 Base class for all physical entities involved in the simulation.
 """
+from pysph.base.attrdict cimport AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
 
@@ -14,8 +15,8 @@ cdef class EntityBase(Base):
     Base class for any physical entity involved in a simulation.    
     """
     # properties whose value is the same for the whole entity.
-    cdef public dict properties
-
+    cdef public AttrDict properties
+    
     # unique type identifier for the entity.
     cdef public int type
 
@@ -30,6 +31,8 @@ cdef class EntityBase(Base):
 
     # function to return the set of particles representing the entity.
     cpdef ParticleArray get_particle_array(self)
+
+    cpdef bint is_type_included(self, list type_list)
 
 ################################################################################
 # `Fluid` class.

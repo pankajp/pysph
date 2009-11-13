@@ -6,7 +6,11 @@ Classes to represent any physical entity in a simulation.
 import logging
 logger = logging.getLogger()
 
+# standard imports
+import types
+
 # local imports
+from pysph.base.attrdict cimport AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
 
@@ -47,7 +51,7 @@ cdef class EntityBase(Base):
         self.name = name
 
         # set the properties.
-        self.properties = {}
+        self.properties = AttrDict()
         self.properties.update(properties)
         
         self.information.set_list(self.INTEGRATION_PROPERTIES, None)
@@ -98,6 +102,16 @@ cdef class EntityBase(Base):
             self.information.set_list(self.INTEGRATION_PROPERTIES, ip)
         ip.append(prop_name)
 
+    cpdef bint is_type_included(self, list types):
+        """
+        Returns true if the entities type or any of its parent types is included
+        in the the list of types passed.
+        """
+        for e_type in types:
+            if self.is_a(e_type):
+                return True
+
+        return False
 ################################################################################
 # `Fluid` class.
 ################################################################################
