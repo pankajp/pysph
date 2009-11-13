@@ -13,7 +13,8 @@ cimport numpy
 from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.entity_types cimport EntityTypes
 from pysph.solver.entity_base cimport EntityBase, Fluid
-from pysph.solver.solver_component cimport SolverComponent
+from pysph.solver.solver_base cimport SolverComponent, SolverBase\
+    ,ComponentManager
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 
 ################################################################################
@@ -22,14 +23,31 @@ from pysph.solver.speed_of_sound cimport SpeedOfSound
 cdef class TaitPressureComponent(SolverComponent):
     """
     Component to compute pressure of fluids using the Tait equation.
+
+    **Parameters**
+
+        - gamma - gamma value to be used.
+        
+    **Keyword args that are checked for**
+        
+        - speed_of_sound - if solver is None, this key is checked for.
     """
-    def __cinit__(self, double gamma=7.0, entity_list=[], speed_of_sound=None):
+    def __cinit__(self, str name='', 
+                  SolverBase solver=None, 
+                  ComponentManager component_manager=None, 
+                  list entity_list=[], 
+                  double gamma=7.0, SpeedOfSound speed_of_sound=None, 
+                  *args, **kwargs):
         """
         Constructor.
         """
         self.gamma = gamma
         self.entity_list = set(entity_list)
-        self.speed_of_sound = speed_of_sound
+        
+        if solver is not None:
+            self.speed_of_sound = speed_of_sound
+        else:
+            self.speed_of_sound = solver.speed_of_sound
 
         # set the accepted input types of this component.
         self.add_input_entity_type(EntityTypes.Entity_Fluid)

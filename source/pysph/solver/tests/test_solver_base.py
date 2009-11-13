@@ -1,17 +1,47 @@
 """
-Tests for classes in the solver_component module.
+Tests for classes in the solver_base module.
 """
 
 # standard imports
 import unittest
 
 # local import
-from pysph.solver.solver_component import SolverComponent, ComponentManager
+from pysph.solver.solver_base import SolverComponent, ComponentManager, SolverBase
 from pysph.solver.entity_base import EntityBase, Solid, Fluid
 from pysph.solver.entity_types import *
 from pysph.solver.dummy_components import DummyComponent1, DummyComponent2, DummyComponent3
 from pysph.solver.dummy_entities import DummyEntity
 
+from pysph.base.cell import CellManager
+from pysph.base.nnps import NNPSManager
+from pysph.base.kernelbase import KernelBase
+from pysph.solver.integrator_base import Integrator
+        
+def check_particle_properties(prop_dict, prop_names, data_types, default_vals):
+    """
+    Checks if prop_dict has the names in prop_names and the required default
+    values and data types.
+    """
+    # make sure we have the exact same number of properties.
+    assert len(prop_dict.keys()) ==  len(prop_names)
+    for i in range(len(prop_names)):
+        prop = prop_dict[prop_names[i]]
+        assert prop['default'] == default_vals[i]
+        assert prop['type'] == data_types[i]
+
+def check_entity_properties(prop_dict, prop_names, default_vals):
+    """
+    Checks if prop_dict has the names in prop_names and the required default
+    values.
+    """
+    # make sure we have the exact same number of properties.
+    assert len(prop_dict.keys()) ==  len(prop_names)
+    for i in range(len(prop_names)):
+        prop = prop_dict[prop_names[i]]
+        val = prop['default'] == default_vals[i]
+        msg = '%s != %s'%(str(prop['default']), str(default_vals[i]))
+        msg += ' for property %s'%(prop_names[i])
+        assert val, msg
 ################################################################################
 # `TestSolverComponent` class.
 ################################################################################ 
@@ -313,33 +343,55 @@ class TestComponentManager(unittest.TestCase):
 
         self.assertEqual(c1.entity_list, [e1, e2])
         self.assertEqual(c2.entity_list, [])
-        
-        
-def check_particle_properties(prop_dict, prop_names, data_types, default_vals):
-    """
-    Checks if prop_dict has the names in prop_names and the required default
-    values and data types.
-    """
-    # make sure we have the exact same number of properties.
-    assert len(prop_dict.keys()) ==  len(prop_names)
-    for i in range(len(prop_names)):
-        prop = prop_dict[prop_names[i]]
-        assert prop['default'] == default_vals[i]
-        assert prop['type'] == data_types[i]
 
-def check_entity_properties(prop_dict, prop_names, default_vals):
+################################################################################
+# `TestSolverBase` class.
+################################################################################
+class TestSolverBase(unittest.TestCase):
     """
-    Checks if prop_dict has the names in prop_names and the required default
-    values.
+    Tests the SolverBase class.
     """
-    # make sure we have the exact same number of properties.
-    assert len(prop_dict.keys()) ==  len(prop_names)
-    for i in range(len(prop_names)):
-        prop = prop_dict[prop_names[i]]
-        val = prop['default'] == default_vals[i]
-        msg = '%s != %s'%(str(prop['default']), str(default_vals[i]))
-        msg += ' for property %s'%(prop_names[i])
-        assert val, msg
+    def test_constructor(self):
+        """
+        Tests the constructor.
+        """
+        s = SolverBase()
+        
+        self.assertEqual(s.cm, None)
+        self.assertEqual(s.cell_manager, None)
+        self.assertEqual(s.nnps_manager, None)
+        self.assertEqual(s.default_kernel, None)
+        self.assertEqual(s.integrator, None)
+        self.assertEqual(s.elapsed_time, 0.0)
+        self.assertEqual(s.total_simulation_time, 0.0)
+        self.assertEqual(s.current_iteration, 0)
+        self.assertEqual(s.time_step.value, 0.0)
+
+        cm = ComponentManager()
+        cell_man = CellManager()
+        nnps_manager = NNPSManager()
+        kernel = KernelBase()
+        integrator = Integrator()
+
+        s = SolverBase(component_manager=cm,
+                       nnps_manager=nnps_manager,
+                       cell_manager=cell_man,
+                       default_kernel=kernel,
+                       total_simulation_time=1.0,
+                       time_step=0.1,
+                       integrator=integrator,
+                       current_iteration=30)
+
+        self.assertEqual(s.cm, cm)
+        self.assertEqual(s.cell_manager, cell_man)
+        self.assertEqual(s.nnps_manager, nnps_manager)
+        self.assertEqual(s.default_kernel, kernel)
+        self.assertEqual(s.integrator, integrator)
+        self.assertEqual(s.elapsed_time, 0.0)
+        self.assertEqual(s.total_simulation_time, 1.0)
+        self.assertEqual(s.current_iteration, 30)
+        self.assertEqual(s.time_step.value, 0.1)
+
 
 if __name__ == '__main__':
     import logging

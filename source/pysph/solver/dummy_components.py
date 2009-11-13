@@ -4,7 +4,7 @@ Module to include dummy components used for tests etc.
 
 # local imports
 from pysph.solver.integrator_base import PyODEStepper
-from pysph.solver.solver_component import ComponentManager, SolverComponent
+from pysph.solver.solver_base import ComponentManager, SolverComponent
 from pysph.solver.entity_types import *
 
 
@@ -18,9 +18,9 @@ class YAStepper(PyODEStepper):
     """
     identifier = 'ya_stepper'
     category = 'dummy'
-    def __init__(self, name='', cm=None, entity_list=[],
-                 prop_name='', integrand_arrays=[], integral_arrays=[],
-                 time_step=None, *args, **kwargs): 
+    def __init__(self, name='', solver=None, component_manager=None,
+                 entity_list=[], prop_name='', integrand_arrays=[],
+                 integral_arrays=[], time_step=None, *args, **kwargs): 
         """
         Constructor.
         """
@@ -32,7 +32,8 @@ class DummyComponent1(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name='', cm=None):
+    def __init__(self, name='', solver=None, component_manager=None,
+                 entity_list=[], *args, **kwargs):
         """
         Constructor.
         """
@@ -69,7 +70,8 @@ class DummyComponent2(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name='', cm=None):
+    def __init__(self, name='', solver=None, component_manager=None,
+                 entity_list=[], *args, **kwargs):
         """
         Constructor.
         """
@@ -110,7 +112,8 @@ class DummyComponent3(SolverComponent):
     """
     Component for testing the ComponentManager class.
     """
-    def __init__(self, name='', cm=None):
+    def __init__(self, name='', solver=None, component_manager=None,
+                 entity_list=[], *args, **kwargs):
         """
         Constructor.
         """

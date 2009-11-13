@@ -6,8 +6,16 @@ Module to hold base classes for different solver components.
 from pysph.solver.base cimport Base
 from pysph.solver.entity_base cimport EntityBase
 
+from pysph.base.cell cimport CellManager
+from pysph.base.nnps cimport NNPSManager
+from pysph.base.kernelbase cimport KernelBase
+from pysph.solver.time_step cimport TimeStep
+from pysph.solver.speed_of_sound cimport SpeedOfSound
+
+
 # forward declaration.
 cdef class ComponentManager
+cdef class SolverBase
 
 ################################################################################
 # `SolverComponent` class.
@@ -19,6 +27,9 @@ cdef class SolverComponent(Base):
 
     # name of the component.
     cdef public str name
+
+    # the solver to which this component belongs
+    cdef public SolverBase solver
 
     # reference to the component manager.
     cdef public ComponentManager cm
@@ -107,3 +118,36 @@ cdef class ComponentManager(Base):
     cpdef get_particle_properties(self, int e_type)
 
     cpdef setup_entity(self, EntityBase entity)
+
+
+################################################################################
+# `SolverBase` class.
+################################################################################
+cdef class SolverBase(Base):
+    """
+    Base class for all solvers.
+    
+    This class essentially encapsulates all basic features/attributes required
+    of any solver. Does not do any major processing, just a single place to hold
+    lot of information required at various points in a simulation. 
+
+    Once a few solvers have been written, some abstractions can be extracted and
+    implemented in this class.
+
+    """
+    
+    cdef public ComponentManager cm
+    cdef public CellManager cell_manager
+    cdef public NNPSManager nnps_manager
+    cdef public KernelBase default_kernel
+
+    cdef public TimeStep time_step
+    cdef public SpeedOfSound speed_of_sound
+    cdef public double elapsed_time
+    cdef public double total_simulation_time
+
+    cdef public object integrator
+    cdef public int current_iteration
+
+    cpdef solve(self)
+    cpdef _setup_solver(self)

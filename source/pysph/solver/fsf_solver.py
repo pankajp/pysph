@@ -6,7 +6,7 @@ Generic free surface flow solver.
 
 
 # local imports
-
+from pysph.solver.solver_base import SolverBase
 
 class DensityComputationMode:
     """
@@ -20,16 +20,20 @@ class DensityComputationMode:
         """
         raise SystemError, 'Do not instantiate this class'
 
-class FSFSolver:
+class FSFSolver(SolverBase):
     """
     Generic solver for Free Surface Flows.
     """
-    def __init__(self):
+    def __init__(self, component_manager=None, NNPSManager nnps_manager=None,
+                 integrator=None, time_step=0.0, total_simulation_time=0.0) :
         """
         Constructor.
         """
-        self.component_manager = ComponentManager()
+        if component_manager is None:
+            self.component_manager = ComponentManager()
         
+        if nnps_manager is None:
+            self.nnps_manager = NNPSManager()
         self.density_computation_mode = (
             DensityComputationMode.Continuity_Equation_Update)
         
@@ -123,6 +127,8 @@ class FSFSolver:
 
         logger.info('Setting up entities')
         self._setup_entities()
+
+        self._setup_nnps_manager()
 
         logger.info('Setting up components inputs')
         self._setup_component_inputs()

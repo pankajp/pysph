@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger()
 
 # local import 
-from pysph.solver.solver_component import UserDefinedComponent
+from pysph.solver.solver_base import UserDefinedComponent
 
 ################################################################################
 # `ArrayCopier` class.
@@ -15,8 +15,10 @@ from pysph.solver.solver_component import UserDefinedComponent
 class ArrayCopier(UserDefinedComponent):
     """
     """
-    def __init__(self, name='', cm = None, entity_list=[],
-                 from_arrays=[], to_arrays=[]):
+    def __init__(self, name='', solver = None, component_manager=None,
+                 entity_list=[], 
+                 from_arrays=[], to_arrays=[], 
+                 *args, **kwargs):
         """
         Constructor.
 

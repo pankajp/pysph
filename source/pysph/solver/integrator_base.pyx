@@ -12,30 +12,14 @@ cimport numpy
 # local imports
 from pysph.base.carray cimport DoubleArray
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.solver_component cimport SolverComponent, ComponentManager
+from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
+    ComponentManager
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.time_step cimport TimeStep
 
 # import component factory
 from pysph.solver.component_factory import ComponentFactory as cfac
-
-################################################################################
-# `TimeStep` class.
-################################################################################
-cdef class TimeStep(Base):
-    """
-    Class to hold the current timestep.
-
-    Make this a separate class makes it easy to reference one copy of it at all
-    places needing this value.
-
-    """
-    def __cinit__(self, double time_step=0.0):
-        """
-        Constructor.
-        """
-        self.time_step = time_step    
-
 ################################################################################
 # `ODEStepper` class.
 ################################################################################
@@ -50,9 +34,10 @@ cdef class ODEStepper(SolverComponent):
     """
     category='ode_stepper'
     identifier = 'base'
-    def __cinit__(self, str name='', ComponentManager cm=None, list
-                  entity_list=[], str prop_name='', list integrands=[], list
-                  integrals=[], TimeStep time_step=None, *args, **kwargs):
+    def __cinit__(self, str name='', SolverBase solver=None, ComponentManager
+                  component_manager=None, list entity_list=[], str prop_name='',
+                  list integrands=[], list integrals=[], TimeStep
+                  time_step=None, *args, **kwargs):
         """
         Constructor.
 
@@ -171,7 +156,7 @@ cdef class ODEStepper(SolverComponent):
                 bn = parr._get_real_particle_prop(self.integrand_names[j])
                 an1 = parr._get_real_particle_prop(self.next_step_names[j])
 
-                an1[:] = an + bn*self.time_step.time_step                
+                an1[:] = an + bn*self.time_step.value
 
 ################################################################################
 # `PyODEStepper` class.
@@ -182,7 +167,8 @@ cdef class PyODEStepper(ODEStepper):
     """
     category='ode_stepper'
     identifier='py_base'
-    def __cinit__(self, name='', ComponentManager cm=None, entity_list=[], 
+    def __cinit__(self, name='', SolverBase solver=None, ComponentManager
+                  component_manager=None, entity_list=[], 
                   integrand_arrays=[], integral_arrays=[], *args, **kwargs):
         """
         Constructor.
@@ -276,14 +262,20 @@ cdef class Integrator(SolverComponent):
     
     identifier = 'euler'
     category = 'integrator'
-    def __cinit__(self, str name='', ComponentManager cm=None, int dimension=3,
+
+    def __cinit__(self, str name='', SolverBase solver=None, ComponentManager
+                  component_manager=None, list entity_list=[], int dimension=3,
                   *args, **kwargs):
         """
         Constructor.
         """
         self.entity_list = []
         self.execute_list = []
-        self.curr_time_step = TimeStep()
+
+        if solver is None:
+            self.curr_time_step = TimeStep()
+        else:
+            self.curr_time_step = solver.time_step
 
         self.information.set_dict(self.INTEGRATION_PROPERTIES, {})
         self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
@@ -887,7 +879,7 @@ cdef class Integrator(SolverComponent):
         else:
             return cfac.get_component('ode_stepper',
                                       stepper_type,
-                                      cm=self.cm, 
+                                      solver=self.solver,
                                       prop_name=prop_name,
                                       integrands=integrand,
                                       integrals=integral,
@@ -908,10 +900,11 @@ cdef class Integrator(SolverComponent):
             for stepper in stepper_list:
                 cop_name = 'copier_'+prop_name
                 copier = cfac.get_component('copiers', 'copier', 
-                                            cop_name, self.cm,
-                                            stepper.entity_list,
-                                            stepper.next_step_names,
-                                            stepper.integral_names)
+                                            name=cop_name, 
+                                            solver=self.solver,
+                                            entity_list=stepper.entity_list,
+                                            from_arrays=stepper.next_step_names,
+                                            to_arrays=stepper.integral_names)
                 if copier is None:
                     msg = 'Could not create copier for %s'%(prop_name)
                     logger.warn('Could not create copier for %s'%(prop_name))

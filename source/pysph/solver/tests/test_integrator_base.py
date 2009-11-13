@@ -12,8 +12,9 @@ from pysph.base.particle_array import ParticleArray
 
 from pysph.solver.entity_base import EntityBase, Fluid
 from pysph.solver.entity_types import EntityTypes
-from pysph.solver.integrator_base import Integrator, TimeStep, ODEStepper
-from pysph.solver.solver_component import ComponentManager
+from pysph.solver.time_step import TimeStep
+from pysph.solver.integrator_base import Integrator, ODEStepper
+from pysph.solver.solver_base import ComponentManager
 from pysph.solver.dummy_components import *
 from pysph.solver.dummy_entities import DummyEntity
 
@@ -74,21 +75,21 @@ def get_sample_integrator_setup():
 
     # create a few components to be used in the integrator and add them to the
     # component manager.
-    c1 = DummyComponent1('c1', c)
+    c1 = DummyComponent1(name='c1', component_manager=c)
     c.add_component(c1)
-    c2 = DummyComponent3('c2', c)
+    c2 = DummyComponent3(name='c2', component_manager=c)
     c.add_component(c2)
-    c3 = DummyComponent3('c3', c)
+    c3 = DummyComponent3(name='c3', component_manager=c)
     c.add_component(c3)
-    c4 = DummyComponent1('c4', c)
+    c4 = DummyComponent1(name='c4', component_manager=c)
     c.add_component(c4)
-    c5 = DummyComponent3('c5', c)
+    c5 = DummyComponent3(name='c5', component_manager=c)
     c.add_component(c5)
-    c6 = DummyComponent1('c6', c)
+    c6 = DummyComponent1(name='c6', component_manager=c)
     c.add_component(c6)
 
     # create and setup the integrator
-    i = Integrator('integrator', c)
+    i = Integrator('integrator', component_manager=c)
     prop_name = 'density'
     integrand_arrays = ['rho_rate']
     integral_arrays = ['rho']
@@ -144,7 +145,9 @@ class TestODEStepper(unittest.TestCase):
         e = get_ode_step_data()
         ts = TimeStep(1.0)
 
-        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper(name='', solver=None, entity_list=[e],
+                             prop_name='position', integrands=['u'],
+                             integrals=['x'], time_step=ts)
 
         self.assertEqual(stepper.entity_list, [e])
         self.assertEqual(stepper.prop_name, 'position')
@@ -160,7 +163,9 @@ class TestODEStepper(unittest.TestCase):
         e1 = EntityBase()
         ts = TimeStep(1.0)
 
-        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper(name='', solver=None, entity_list=[e],
+                             prop_name='position', integrands=['u'],
+                             integrals=['x'], time_step=ts)
         stepper.setup_component()
 
         self.assertEqual(stepper.setup_done, True)
@@ -170,8 +175,9 @@ class TestODEStepper(unittest.TestCase):
         self.assertEqual(parr.properties.has_key('x_next'), True)
 
         stepper = ODEStepper(
-            '', None, [e, e1], 'position', ['u', 'v'], ['x', 'y'], ts
-            )
+            name='', solver=None, entity_list=[e, e1], prop_name='position',
+            integrands=['u', 'v'], integrals=['x', 'y'], time_step=ts)
+
         stepper.setup_component()
         
         self.assertEqual(stepper.setup_done, True)
@@ -189,7 +195,9 @@ class TestODEStepper(unittest.TestCase):
         e = get_ode_step_data()
         e1 = EntityBase()
         ts = TimeStep(1.0)
-        stepper = ODEStepper('', None, [e], 'position', ['u'], ['x'], ts)
+        stepper = ODEStepper(name='', solver=None, entity_list=[e],
+                             prop_name='position', integrands=['u'],
+                             integrals=['x'], time_step=ts)
 
         stepper.py_compute()
 
@@ -202,8 +210,8 @@ class TestODEStepper(unittest.TestCase):
 
         e = get_ode_step_data()
         stepper = ODEStepper(
-            '', None, [e, e1], 'position', ['u', 'v'], ['x', 'y'], ts
-            )
+            name='', solver=None, entity_list=[e, e1], prop_name='position',
+            integrands=['u', 'v'], integrals=['x', 'y'], time_step=ts)
         stepper.py_compute()
         self.assertEqual(stepper.setup_done, True)
         parr = e.get_particle_array()
@@ -212,7 +220,7 @@ class TestODEStepper(unittest.TestCase):
         self.assertEqual(check_array(parr.y_next, y_next), True)
 
         # step by 0.5 time step
-        ts.time_step = 0.5
+        ts.value = 0.5
         stepper.py_compute()
         x_next = [-1.5, 0.5, 1.0]
         y_next = [1.0, 0.5, -0.5]

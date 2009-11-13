@@ -4,23 +4,12 @@ Contains base classes for all integrators.
 
 # local imports
 from pysph.solver.base cimport Base
-from pysph.solver.solver_component cimport SolverComponent
+from pysph.solver.solver_base cimport SolverComponent
 from pysph.solver.entity_base cimport EntityBase
+from pysph.solver.time_step cimport TimeStep
 
 # forward declarations.
 cdef class Integrator
-
-################################################################################
-# `TimeStep` class.
-################################################################################
-cdef class TimeStep(Base):
-    """
-    Class to hold the current timestep.
-
-    Making this a separate class makes it easy to reference one copy of it at
-    all places needing this value.
-    """
-    cdef public double time_step
 
 ################################################################################
 # `ODEStepper` class.

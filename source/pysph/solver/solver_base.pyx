@@ -7,11 +7,15 @@ import logging
 logger = logging.getLogger()
 
 # local imports
+from pysph.base.kernelbase cimport KernelBase
+from pysph.base.nnps cimport NNPSManager
+from pysph.base.cell cimport CellManager
+
 from pysph.solver.base cimport Base
 from pysph.solver.entity_base cimport EntityBase
-
 from pysph.solver.typed_dict cimport TypedDict
-
+from pysph.solver.time_step cimport TimeStep
+from pysph.solver.speed_of_sound cimport SpeedOfSound
 
 ################################################################################
 # `SolverComponent` class.
@@ -55,14 +59,20 @@ cdef class SolverComponent(Base):
     
     identifier = 'base_component'
     category = 'base'
-    def __cinit__(self, str name='', ComponentManager cm = None, 
-                  list entity_list=[], 
-                  *args, **kwargs):
+
+    def __cinit__(self, str name='', SolverBase solver = None, ComponentManager
+                  component_manager=None, list entity_list=[], *args, **kwargs):
         """
         Constructor.
         """
         self.name = name
-        self.cm = cm
+        self.solver = solver
+
+        if solver is not None:
+            self.cm = solver.cm
+        else:
+            self.cm = component_manager
+
         self.setup_done = False
         self.accept_input_entities = True
         self.entity_list = []
@@ -267,7 +277,8 @@ cdef class UserDefinedComponent(SolverComponent):
     """
     category = 'base'
     identifier = 'ud_component_base'
-    def __cinit__(self, str name='', ComponentManager cm=None, *args, **kwargs):
+    def __cinit__(self, str name='', SolverBase solver=None, ComponentManager
+                  component_manager=None, list entity_list=[], *args, **kwargs):
         """
         Constructor.
         """
@@ -695,3 +706,53 @@ cdef class ComponentManager(Base):
                     prop_inf = p_props[prop_name]
                     parray.add_property(prop_inf)
         
+################################################################################
+# `SolverBase` class.
+################################################################################ 
+cdef class SolverBase(Base):
+    """
+    """
+    def __cinit__(self, 
+                  ComponentManager component_manager=None,
+                  CellManager cell_manager=None,
+                  NNPSManager nnps_manager=None,
+                  KernelBase default_kernel=None,
+                  object integrator=None,
+                  double time_step=0.0,
+                  double total_simulation_time=0.0,
+                  int current_iteration=0, 
+                  *args, **kwargs
+                  ):
+
+        self.cm = component_manager
+        self.cell_manager = cell_manager
+        self.nnps_manager = nnps_manager
+        self.default_kernel = default_kernel
+        self.integrator = integrator
+        self.time_step = TimeStep(time_step)
+        self.elapsed_time = 0.0
+        self.total_simulation_time = total_simulation_time
+        self.current_iteration = current_iteration
+
+    cpdef solve(self):
+        """
+        Run the solver.
+        """
+        #from pysph.solver.integrator_base cimport Integrator
+
+        self._setup_solver()
+
+        current_time = 0.0
+
+        while current_time < self.total_simulation_time:
+            
+            self.integrator.integrate()
+
+            current_time += self.time_step.value
+            self.elapsed_time = current_time
+            
+    cpdef _setup_solver(self):
+        """
+        Function to perform solver setup.
+        """
+        raise NotImplementedError, 'SolverBase._setup_solver'

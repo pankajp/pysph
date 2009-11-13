@@ -6,7 +6,7 @@ Module to hold components to compute pressure.
 
 
 # local imports
-from pysph.solver.solver_component cimport SolverComponent
+from pysph.solver.solver_base cimport SolverComponent
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 
 cdef class TaitPressureComponent(SolverComponent):

@@ -75,3 +75,12 @@ Thursday 12 November 2009 (10:01:26 PM)
     - TaitPressureComponent written.
     - is_type_included function to EntityBase added.
     - separate module to hold speed of sound.
+
+Sat Nov 14 03:18:53 IST 2009
+    - SolverBase class created.
+    - More and meaningful parameters added the the SolverComponent constructor.
+    - SPHComponent class added - abstracts a lot of operations for any SPH
+      component.
+    - Basic SPH functions added.
+    - SPH functions for pressure gradient computations added.
+    - Tests for added source yet to be written.

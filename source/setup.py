@@ -36,6 +36,10 @@ sph = [
                   ["pysph/sph/misc_particle_funcs.pyx"]),
         Extension("pysph.sph.density_funcs",
                   ["pysph/sph/density_funcs.pyx"]),
+        Extension("pysph.sph.basic_funcs",
+                  ["pysph/sph/basic_funcs.pyx"]),
+        Extension("pysph.sph.pressure_funcs",
+                  ["pysph/sph/pressure_funcs.pyx"])
         ]
 
 # kernel extension modules.
@@ -51,20 +55,26 @@ kernels = [Extension("pysph.base.kernelbase",
 
 solver = [Extension("pysph.solver.typed_dict",
                     ["pysph/solver/typed_dict.pyx"]),
+          Extension("pysph.solver.time_step",
+                    ["pysph/solver/time_step.pyx"]),
           Extension("pysph.solver.base",
                     ["pysph/solver/base.pyx"]),
           Extension("pysph.solver.entity_base",
                     ["pysph/solver/entity_base.pyx"]),
           Extension("pysph.solver.entity_types",
                     ["pysph/solver/entity_types.pyx"]),
-          Extension("pysph.solver.solver_component",
-                    ["pysph/solver/solver_component.pyx"]),
+          Extension("pysph.solver.solver_base",
+                    ["pysph/solver/solver_base.pyx"]),
           Extension("pysph.solver.integrator_base",
                     ["pysph/solver/integrator_base.pyx"]),
           Extension("pysph.solver.speed_of_sound",
                     ["pysph/solver/speed_of_sound.pyx"]),
+          Extension("pysph.solver.sph_component",
+                    ["pysph/solver/sph_component.pyx"]),
           Extension("pysph.solver.pressure_components",
                     ["pysph/solver/pressure_components.pyx"]),
+          Extension("pysph.solver.pressure_gradient_components",
+                    ["pysph/solver/pressure_gradient_components.pyx"])
           ]
 
 # all extension modules.
