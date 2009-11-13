@@ -44,7 +44,6 @@ Sunday 08 November 2009 (04:58:54 AM)
       two different components having conflicting requirements cannot be added.
     - SPH function for simple density computation added.
 
-
 Mon Nov  9 18:57:21 IST 2009
     - function to align LocalReal particles to the begining of the a particle
       array added.
@@ -56,4 +55,15 @@ Tue Nov 10 15:39:51 IST 2009
       as attributes.
     - setting of given carray with smaller sized numpy array made possible to
       incorporate setting values for only real particles.
+    
+Thursday 12 November 2009 (10:01:26 PM)
+    - renamed/refactored add_component function from integrated to
+      add_pre_step_components, add_post_step_component,
+      add_pre_integration_component, add_post_integration_component. Now 
+      functions names are a bit more clear.
+    - convenience function "integrate" added to integraor class.
+    - accessor/modifier functions to set various meta-information for
+      components.
+    - convenience inline function to generate Point class from given arrays.
+    - density component class added - not complete
     

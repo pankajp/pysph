@@ -105,18 +105,18 @@ def get_sample_integrator_setup():
     i.add_entity_type('position', EntityTypes.Entity_Dummy)
     
     # add pre-integration components.
-    i.add_pre_integration_component('c1')
-    i.add_pre_integration_component('c2')
+    i.add_pre_integration_component(comp_name='c1')
+    i.add_pre_step_component(comp_name='c2')
 
     # add components for the velocity stepper.
-    i.add_component('velocity', 'c3', True)
-    i.add_component('velocity', 'c4', False)
+    i.add_pre_step_component(comp_name='c3', property_name='velocity')
+    i.add_post_step_component(comp_name='c4', property_name='velocity')
 
     # add components for the position stepper.
-    i.add_component('position', 'c5')
+    i.add_pre_step_component(comp_name='c5', property_name='position')
 
-    # add components for the density stepper.
-    i.add_component('density', 'c6', False)
+    # add a component to be executed after one complete integration.
+    i.add_post_integration_component(comp_name='c6')
 
     # now add the integrator to the component manager.
     c.add_component(i)
@@ -268,14 +268,14 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(density_info['steppers'][EntityTypes.Entity_Fluid],
                          'ya_stepper')
 
-    def test_add_component(self):
+    def test_add_per_step_component(self):
         """
-        Tests the add_component function.
+        Tests the add_pre_step_component and add_post_step_component function.
         """
         i = Integrator()
-        i.add_component('velocity', 'pre_v_1')
-        i.add_component('velocity', 'pre_v_2')
-        i.add_component('velocity', 'post_v_1', pre_step=False)
+        i.add_pre_step_component('pre_v_1', 'velocity')
+        i.add_pre_step_component('pre_v_2', 'velocity')
+        i.add_post_step_component('post_v_1', 'velocity')
 
         ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
         
@@ -296,7 +296,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
 
-        i.add_component('density', 'pre_den_1')
+        i.add_pre_step_component('pre_den_1', 'density')
         den_info = ip['density']
         pre_comps = den_info['pre_step_components']
         self.assertEqual(pre_comps, ['pre_den_1'])
@@ -316,6 +316,22 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(pic[0], 'comp0')
         self.assertEqual(pic[1], 'comp1')
         self.assertEqual(pic[2], 'comp2')
+
+    def test_add_post_integration_component(self):
+        """
+        Tests the add_post_step_component function.
+        """
+        i = Integrator()
+
+        i.add_post_integration_component('c1')
+        i.add_post_integration_component('c2')
+        i.add_post_integration_component(comp_name='c3', at_tail=False)
+        
+        pic = i.information.get_list(i.POST_INTEGRATION_COMPONENTS)
+        print pic
+        self.assertEqual(pic[0], 'c3')
+        self.assertEqual(pic[1], 'c1')
+        self.assertEqual(pic[2], 'c2')
 
     def test_set_integration_order(self):
         """
@@ -489,29 +505,29 @@ class TestIntegrator(unittest.TestCase):
         self.check_stepper(s5, 'density', ODEStepper, [e3], ['rho_rate'],
                            ['rho']) 
      
-        self.assertEqual(i.execute_list[10], cm.get_component('c6'))
-        
         # now test for the copiers.
-        cp1 = i.execute_list[11]
+        cp1 = i.execute_list[10]
         self.check_copier(cp1, [e1], 
                          ['u_next', 'v_next', 'w_next'], 
                          ['u', 'v', 'w'])
-        cp2 = i.execute_list[12]
+        cp2 = i.execute_list[11]
         self.check_copier(cp2, [e1],
                           ['x_next', 'y_next', 'z_next'],
                           ['x', 'y', 'z'])
-        cp3 = i.execute_list[13]
+        cp3 = i.execute_list[12]
         self.check_copier(cp3, [e2],
                           ['x_next', 'y_next', 'z_next'],
                           ['x', 'y', 'z'])
-        cp4 = i.execute_list[14]
+        cp4 = i.execute_list[13]
         self.check_copier(cp4, [e1],
                           ['rho_next'],
                           ['rho'])
-        cp5 = i.execute_list[15]
+        cp5 = i.execute_list[14]
         self.check_copier(cp5, [e3],
                           ['rho_next'],
                           ['rho'])
+
+        self.assertEqual(i.execute_list[15], cm.get_component('c6'))
 
     def check_copier(self, cp_obj, entity_list, from_arr, to_arr):
         self.assertEqual(cp_obj.entity_list, entity_list)
@@ -524,7 +540,7 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(type(s_obj), e_type)
         self.assertEqual(s_obj.entity_list, entity_list)
         self.assertEqual(s_obj.integrand_names, integrand_arr)
-        self.assertEqual(s_obj.integral_names, integral_arr)                             
+        self.assertEqual(s_obj.integral_names, integral_arr)
 
 
 if __name__ == '__main__':

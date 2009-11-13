@@ -4,13 +4,63 @@ Test the base classes from the sph_func module.
 
 # standard imports
 import unittest
+import numpy
 
 # local imports
 from pysph.sph.sph_func import *
 from pysph.sph.tests.common_data import *
+from pysph.base.point import Point
+from pysph.base.carray import DoubleArray
 
+class TestMakeCoords(unittest.TestCase):
+    """
+    Tests the make_coords_*d functions.
+    """
+    def test(self):
+        x = DoubleArray(2)
+        x.set_data(numpy.array([1.0, 3.0]))
+    
+        p = Point(-1, -1, -1)
+        
+        py_make_coords_1d(x, p, 0)
 
+        self.assertEqual(p.x, 1.0)
+        self.assertEqual(p.y, 0.0)
+        self.assertEqual(p.z, 0.0)
 
+        py_make_coords_1d(x, p, 1)
+        self.assertEqual(p.x, 3.0)
+        self.assertEqual(p.y, 0.0)
+        self.assertEqual(p.z, 0.0)
+
+        p = Point(-1, -1, -1)
+
+        y = DoubleArray(2)
+        y.set_data(numpy.array([-12. , 5.0]))
+        
+        py_make_coords_2d(x, y, p, 0)
+        self.assertEqual(p.x, 1.0)
+        self.assertEqual(p.y, -12)
+        self.assertEqual(p.z, 0.0)
+
+        py_make_coords_2d(x, y, p, 1)
+        self.assertEqual(p.x, 3.0)
+        self.assertEqual(p.y, 5.0)
+        self.assertEqual(p.z, 0.0)
+
+        p = Point(-1, -1, -1)
+        z = DoubleArray(2)
+        z.set_data(numpy.array([-4, 0.1]))
+        py_make_coords_3d(x, y, z, p, 0)
+        self.assertEqual(p.x, 1.0)
+        self.assertEqual(p.y, -12)
+        self.assertEqual(p.z, -4.0)
+
+        py_make_coords_3d(x, y, z, p, 1)
+        self.assertEqual(p.x, 3.0)
+        self.assertEqual(p.y, 5.0)
+        self.assertEqual(p.z, 0.1)
+        
 ################################################################################
 # `TestSPHFunctionParticle` class.
 ################################################################################

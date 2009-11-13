@@ -23,6 +23,10 @@ cdef class SolverComponent(Base):
     # reference to the component manager.
     cdef public ComponentManager cm
 
+    # indicates that the input entites to this component have been manually
+    # added, and add_entity should not accept any more entities.
+    cdef public bint accept_input_entities
+
     # indicates if the component is ready for execution.
     cdef public bint setup_done
 
@@ -43,6 +47,14 @@ cdef class SolverComponent(Base):
 
     # update the property requirements of this component
     cpdef int update_property_requirements(self) except -1
+
+    cpdef add_entity_name(self, str name)
+    cpdef remove_entity_name(self, str name)
+    cpdef set_entity_names(self, list entity_names)
+
+    cpdef add_input_entity_type(self, int etype)
+    cpdef remove_input_entity_type(self, int etype)
+    cpdef set_input_entity_types(self, list type_list)
 
 ################################################################################
 # `UserDefinedComponent` class.

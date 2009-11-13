@@ -62,6 +62,7 @@ cdef class SolverComponent(Base):
         self.name = name
         self.cm = cm
         self.setup_done = False
+        self.accept_input_entities = True
 
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
         self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})
@@ -79,6 +80,9 @@ cdef class SolverComponent(Base):
 
         **Algorithm**::
 
+            if accept_input_entities is set to False, no entities will be
+            accepted.
+
             if no INPUT_TYPES is specified or if this entity's type is accepted
                 input type
                 if there is not named entity requirement for entities of this
@@ -89,6 +93,11 @@ cdef class SolverComponent(Base):
             return True        
           
         """
+        # if the component has been flagged to stop accepting input entites
+        # immediately filter out entity.
+        if self.accept_input_entities == False:
+            return True
+
         cdef dict input_types = self.information.get_dict(
             SolverComponent.INPUT_TYPES)
         cdef dict entity_names = self.information.get_dict(
@@ -122,6 +131,67 @@ cdef class SolverComponent(Base):
             return False
 
         return True
+
+    cpdef add_entity_name(self, str name):
+        """
+        Add name of an entity that can be accepted as input.
+        """
+        cpdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
+
+        if not name_dict.has_key(name):
+            name_dict[name] = None
+
+    cpdef remove_entity_name(self, str name):
+        """
+        Remove name of an entity that was added.
+        """
+        cpdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
+        
+        if name_dict.has_key(name):
+            name_dict.pop(name)
+        else:
+            logger.warn('Name %s not found'%name)
+
+    cpdef set_entity_names(self, list entity_names):
+        """
+        Sets the entity names list to the given list.
+        """
+        cdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
+        name_dict.clear()
+
+        for name in entity_names:
+            name_dict[name] = None
+
+    cpdef add_input_entity_type(self, int etype):
+        """
+        Adds an entity type that will be accepted by this component.
+        """
+        cpdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
+        
+        if not type_dict.has_key(etype):
+            type_dict[etype] = None
+
+    cpdef remove_input_entity_type(self, int etype):
+        """
+        Removes a particular entity type that was added.
+        """
+        cdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
+        
+        if type_dict.has_key(etype):
+            type_dict.pop(etype)
+        else:
+            logger.warn('Type (%d) not present'%(etype))
+
+    cpdef set_input_entity_types(self, list type_list):
+        """
+        Sets the accepted entity types from the given list.
+        """
+        cdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
+
+        type_dict.clear()
+        
+        for t in type_list:
+            type_dict[t] = None
 
     cpdef add_entity(self, EntityBase entity):
         """

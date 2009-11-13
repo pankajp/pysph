@@ -93,6 +93,48 @@ class TestSolverComponent(unittest.TestCase):
         self.assertEqual(c.filter_entity(e2), False)
         self.assertEqual(c.filter_entity(e3), True)
 
+    def test_entity_name_specs(self):
+        """
+        Tests the add_entity_name, remove_entity_name and set_entity_names
+        functions. 
+        """
+        s = SolverComponent()
+        s.add_entity_name('abcd')
+        s.add_entity_name('efgh')
+
+        name_dict = s.information.get_dict(s.ENTITY_NAMES)
+        self.assertEqual(name_dict.has_key('abcd'), True)
+        self.assertEqual(name_dict.has_key('efgh'), True)
+
+        s.remove_entity_name('abcd')
+        self.assertEqual(name_dict.has_key('abcd'), False)
+        self.assertEqual(name_dict.has_key('efgh'), True)
+
+        s.set_entity_names([])
+        self.assertEqual(len(name_dict), 0)
+
+    def test_entity_type_specs(self):
+        """
+        Tests the add_input_entity_type, remove_input_entity_type and
+        set_input_entity_types functions.
+        """
+        s = SolverComponent()
+        s.add_input_entity_type(EntityTypes.Entity_Solid)
+        s.add_input_entity_type(EntityTypes.Entity_Dummy)
+        
+        type_dict = s.information.get_dict(s.INPUT_TYPES)
+        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Dummy), True)
+        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Solid), True)
+
+        s.remove_input_entity_type(EntityTypes.Entity_Solid)
+        
+        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Dummy), True)
+        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Solid), False)
+
+        s.set_input_entity_types([EntityTypes.Entity_Fluid])
+        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Fluid), True)
+        self.assertEqual(len(type_dict), 1)                         
+
 ################################################################################
 # `TestComponentManager` class.
 ################################################################################

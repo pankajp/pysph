@@ -50,6 +50,25 @@ cdef inline void make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Poi
     pnt.z = z.data[pid]
 
 
+def py_make_coords_1d(DoubleArray x, Point pnt, int pid):
+    """
+    Convenience functions to tests the inline functions in the module.
+    """
+    make_coords_1d(x, pnt, pid)
+
+def py_make_coords_2d(DoubleArray x, DoubleArray y, Point pnt, int pid):
+    """
+    Convenience functions to tests the inline functions in the module.
+    """
+    make_coords_2d(x, y, pnt, pid)
+
+def py_make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Point
+                      pnt, int pid):
+    """
+    Convenience functions to test the inline functions in the module.
+    """
+    make_coords_3d(x, y, z, pnt, pid)
+
 ################################################################################
 # `SPHFunctionParticle` class.
 ################################################################################
@@ -95,7 +114,7 @@ cdef class SPHFunctionParticle:
        required in the constructor.
 
     """
-    def __init__(self, ParticleArray dest, ParticleArray source, str h='h',
+    def __init__(self, ParticleArray source, ParticleArray dest, str h='h',
                  str mass='m', str rho='rho', bint setup_arrays=True, *args,
                   **kwargs):
         """
@@ -135,6 +154,9 @@ cdef class SPHFunctionParticle:
         self.d_mass = None
         self.d_h = None
         self.d_rho = None
+
+        self._pnt1 = Point()
+        self._pnt2 = Point()
 
         if setup_arrays:
             self.setup_arrays()
@@ -202,6 +224,7 @@ cdef class SPHFunctionParticle:
 
         free(<void*>_nr)
         free(<void*>_dnr)
+    
 
 ################################################################################
 # `SPHFuncParticleUser` class.
@@ -266,7 +289,9 @@ cdef class SPHFunctionPoint:
         self.s_mass = None
         self.s_h = None
         self.s_rho = None
-
+        
+        self._pnt1 = Point()
+        self._pnt2 = Point()
         
         if setup_arrays:
             self.setup_arrays()

@@ -3,6 +3,7 @@ Various 3d kernels.
 """
 
 cimport numpy
+import numpy
 
 from pysph.base.point cimport Point
 from pysph.base.kernelbase cimport Kernel3D

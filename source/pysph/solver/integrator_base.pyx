@@ -206,6 +206,23 @@ cdef class PyODEStepper(ODEStepper):
         """
         """
         self.py_compute()
+
+
+################################################################################
+# `StepperInfo` class.
+################################################################################
+cdef class StepperInfo:
+    """
+    Contains information about stepping a particular property.
+    """
+    def __cinit__(self, str property_name, 
+                  list y_arrays=[], list dydt_arrays=[], 
+                  list pre_step_components=[], list post_step_components=[],
+                  steppers={}):
+        """
+        """
+        pass
+    
 ################################################################################
 # `Integrator` class.
 ################################################################################
@@ -258,7 +275,10 @@ cdef class Integrator(SolverComponent):
     """
     # list of information keys provided by this class.
     INTEGRATION_PROPERTIES = 'INTEGRATION_PROPERTIES'
+    PRE_STEP_COMPONENTS = 'PRE_STEP_COMPONENTS'
+    POST_STEP_COMPONENTS = 'POST_STEP_COMPONENTS'
     PRE_INTEGRATION_COMPONENTS = 'PRE_INTEGRATION_COMPONENTS'
+    POST_INTEGRATION_COMPONENTS = 'POST_INTEGRATION_COMPONENTS'
     DEFAULT_STEPPERS = 'DEFAULT_STEPPERS'
     INTEGRATION_ORDER = 'INTEGRATION_ORDER'
     
@@ -277,6 +297,9 @@ cdef class Integrator(SolverComponent):
         self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
         self.information.set_list(self.INTEGRATION_ORDER, [])
         self.information.set_dict(self.DEFAULT_STEPPERS, {})
+        self.information.set_list(self.POST_INTEGRATION_COMPONENTS, [])
+        self.information.set_list(self.PRE_STEP_COMPONENTS, [])
+        self.information.set_list(self.POST_STEP_COMPONENTS,[])
 
         # setup the velocity and position properties according to dimension
         self.set_dimension(dimension)
@@ -467,46 +490,108 @@ cdef class Integrator(SolverComponent):
                 )
         self.setup_done = False
 
-    cpdef add_component(self, str prop_name, str comp_name, bint pre_step=True):
-        """
-        Adds a component to be executed before or after the property is stepped.
+    # cpdef add_component(self, str prop_name, str comp_name, bint pre_step=True):
+    #     """
+    #     Adds a component to be executed before or after the property is stepped.
 
-        **Parameters**
+    #     **Parameters**
         
-            - prop_name - the property for whom a component is to be added.
-            - comp_name - name of the component to be added. The actual
-              component will be got from the component manager. 
-            - pre_step - if True, add the component before the property is
-              stepped, else add the component after the property is stepped.
+    #         - prop_name - the property for whom a component is to be added.
+    #         - comp_name - name of the component to be added. The actual
+    #           component will be got from the component manager. 
+    #         - pre_step - if True, add the component before the property is
+    #           stepped, else add the component after the property is stepped.
 
+    #     """
+    #     cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+    #     cdef dict p_dict = ip.get(prop_name)
+    #     cdef list prop_components
+        
+    #     if p_dict is None:
+    #         logger.error('Property %s does not exist'%(prop_name))
+    #         raise ValueError, 'Property %s does not exist'%(prop_name)
+        
+    #     if pre_step == True:
+    #         prop_components = p_dict.get('pre_step_components')
+    #         if prop_components is None:
+    #             prop_components = []
+    #             p_dict['pre_step_components'] = prop_components
+    #     else:
+    #         prop_components = p_dict.get('post_step_components')
+    #         if prop_components is None:
+    #             prop_components = []
+    #             p_dict['post_step_components'] = prop_components
+
+    #     prop_components.append(comp_name)
+    #     self.setup_done = False
+
+    cpdef add_pre_step_component(self, str comp_name, str property_name=''):
+        """
+        Adds a component to be executed before stepping of the property given by
+        property_name. If property_name name is '', the component is added at a
+        point before stepping of any property is done.
         """
         cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        cdef dict p_dict = ip.get(prop_name)
+        cdef list psc = self.information.get_list(
+            self.PRE_STEP_COMPONENTS)
+        cdef dict p_dict = ip.get(property_name)
         cdef list prop_components
+
+        if property_name == '':
+            psc.append(comp_name)
+        else:
+            if p_dict is None:
+                logger.error('Property %s does not exist'%(property_name))
+                raise ValueError, 'Property %s does not exist'%(property_name)
         
-        if p_dict is None:
-            logger.error('Property %s does not exist'%(prop_name))
-            raise ValueError, 'Property %s does not exist'%(prop_name)
-        
-        if pre_step == True:
             prop_components = p_dict.get('pre_step_components')
+
             if prop_components is None:
                 prop_components = []
                 p_dict['pre_step_components'] = prop_components
+            
+            prop_components.append(comp_name)
+
+        self.setup_done = False
+
+    cpdef add_post_step_component(self, str comp_name, str property_name=''):
+        """
+        Adds a component to be executed after stepping of the property given by
+        property_name. If the property_name is '', the component is added after
+        stepping of all properties are done.
+        """
+        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+
+        cdef list psc = self.information.get_list(
+            self.POST_STEP_COMPONENTS)
+
+        cdef dict p_dict = ip.get(property_name)
+        cdef list prop_components
+
+        if property_name == '':
+            if psc.count(comp_name) == 0:
+                psc.append(comp_name)
         else:
+            if p_dict is None:
+                logger.error('Property %s does not exist'%(property_name))
+                raise ValueError, 'Property %s does not exist'%(property_name)
+        
             prop_components = p_dict.get('post_step_components')
+
             if prop_components is None:
                 prop_components = []
                 p_dict['post_step_components'] = prop_components
+            
+            prop_components.append(comp_name)
+                
+        self.setup_done = False        
 
-        prop_components.append(comp_name)
-        self.setup_done = False
-        
     cpdef add_pre_integration_component(self,  str comp_name, bint
                                         at_tail=True):
         """
         Adds a component to be executed before integration of any property can
-        begin.
+        begin. For multi-step integrators, this should add a component before
+        the first step begins. It should _NOT_ be inserted before every step.
 
         **Parameters**
             
@@ -527,6 +612,33 @@ cdef class Integrator(SolverComponent):
 
         self.setup_done = False
 
+    cpdef add_post_integration_component(self, str comp_name, bint
+                                         at_tail=True):
+        """
+        Adds a component to be executed after integration of all properties has
+        been done. For multi-step integrators, this should add a component after
+        all steps of the integrator are done. This should _NOT_ be called after
+        each step is done.
+
+        **Parameters**
+        
+            - comp_name - name of the component to be added. The actual
+            component will be got from the component manager.
+            - at_tail - if True the component will be appended to the list of
+            post integration components already present. Otherwise if will be
+            prepended to the list of pre integration components.
+
+        """
+        cdef list pic = self.information.get_list(
+            self.POST_INTEGRATION_COMPONENTS)
+
+        if at_tail == False:
+            pic.insert(0, comp_name)
+        else:
+            pic.append(comp_name)
+
+        self.setup_done = False
+    
     cpdef set_integration_order(self, list order):
         """
         Sets the order of integration of the properties.
@@ -603,6 +715,14 @@ cdef class Integrator(SolverComponent):
             if c is not None:
                 self.execute_list.append(c)
 
+        # add the all PER-step components that are to be executed before
+        # stepping of any proeprty begins.
+        psc = self.information.get_list(self.PRE_STEP_COMPONENTS)
+        for c_name in psc:
+            c = self.cm.get_component(c_name)
+            if c is not None:
+                self.execute_list.append(c)
+
         # now start appending components for the properties.
         io = self.information.get_list(self.INTEGRATION_ORDER)
 
@@ -612,7 +732,23 @@ cdef class Integrator(SolverComponent):
 
         # now add copier to copy the values from the _next arrays to the main
         # arrays.     
-        self._setup_copiers(prop_steppers)        
+        self._setup_copiers(prop_steppers)
+
+        # set all the PER-step components that are to be executed after stepping
+        # of all proeprties.
+        psc = self.information.get_list(self.POST_STEP_COMPONENTS)
+        for c_name in psc:
+            c = self.cm.get_component(c_name)
+            if c is not None:
+                self.execute_list.append(c)
+
+        # now add any post integration components to be executed. For one step
+        # integrators post-step and post integration components are the same.
+        pic = self.information.get_list(self.POST_INTEGRATION_COMPONENTS)
+        for c_name in pic:
+            c = self.cm.get_component(c_name)
+            if c is not None:
+                self.execute_list.append(c)
         
         self.setup_done = True
         
@@ -690,7 +826,8 @@ cdef class Integrator(SolverComponent):
                 stepper.setup_component()
                 self.execute_list.append(stepper)
             else:
-                msg = 'No stepper found for entity type (%d) for property%s'%(e.type, prop_name)
+                msg = 'No stepper found for entity type'
+                msg += ' (%d) for property%s'%(e.type, prop_name)
                 logger.error(msg)
 
         # setup the post step components
@@ -813,7 +950,21 @@ cdef class Integrator(SolverComponent):
         for i from 0 <= i < n_comps:
             comp = self.execute_list[i]
             comp.compute()
-        
+
+        return 0
+
+    cdef int _integrate(self) except -1:
+        """
+        cdefed wrapper for the compute function.
+        """
+        self.compute()
+
+    def integrate(self):
+        """
+        Python visible version of _integrate.
+        """
+        self._integrate()
+
     cpdef int update_property_requirements(self) except -1:
         """
         Updates the property requirements of the integrator.

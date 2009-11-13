@@ -38,7 +38,7 @@ cdef class Fluid(EntityBase):
     """
     Base class for all fluids.
     """
-    cdef ParticleArray particle_array    
+    cdef ParticleArray particle_array
 
 ################################################################################
 # `Solid` class.

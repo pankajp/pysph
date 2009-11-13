@@ -8,6 +8,14 @@ from pysph.base.point cimport Point
 
 from pysph.base.kernelbase cimport KernelBase
 
+
+
+################################################################################
+# `MakeCoords` class.
+################################################################################
+cdef class MakeCoords:
+    pass
+
 ################################################################################
 # `SPHFunctionParticle` class.
 ################################################################################
@@ -17,6 +25,9 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_h, d_h
     cdef public DoubleArray s_mass, d_mass    
     cdef public DoubleArray s_rho, d_rho
+
+    cdef public Point _pnt1
+    cdef public Point _pnt2
 
     cpdef setup_arrays(self)
 
@@ -42,6 +53,8 @@ cdef class SPHFunctionPoint:
     cdef public ParticleArray source
     cdef public str h, mass, rho
     cdef public DoubleArray s_h, s_mass, s_rho
+
+    cdef public Point _pnt1, _pnt2
     
     cpdef setup_arrays(self)
     cpdef int output_fields(self) except -1

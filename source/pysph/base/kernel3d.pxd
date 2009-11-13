@@ -4,7 +4,7 @@ Various 3d kernels declarations.
 
 from pysph.base.kernelbase cimport Kernel3D
 
-cdef class Poly6Kernel(Kernel3D):
+cdef class Poly6Kernel3D(Kernel3D):
     """
     This class represents a polynomial kernel with support 1.0
     """

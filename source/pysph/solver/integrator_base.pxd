@@ -87,16 +87,28 @@ cdef class Integrator(SolverComponent):
     cpdef add_entity(self, EntityBase entity)
 
     # add a component to be executed before integration of this property.
-    cpdef add_component(self, str property, str comp_name, bint pre_step=*)
+    #cpdef add_component(self, str property, str comp_name, bint pre_step=*)
+    
+    # add a component to be executed before stepping of a particular property.
+    cpdef add_pre_step_component(self, str comp_name, str property_name=*)
+
+    # add a component to be executed after a particular property has been
+    # stepped. 
+    cpdef add_post_step_component(self, str comp_name, str property_name=*)
     
     # add a component to be exectued before integration of any property is done.
     cpdef add_pre_integration_component(self, str comp_name, bint
                                         at_tail=*)
+    # add a component to be executed after integration has been done - for
+    # multi-step components this should add the component after the steps are
+    # over.
+    cpdef add_post_integration_component(self, str comp_name, bint at_tail=*)
     
     # set the order in which properties should be integrated.
     cpdef set_integration_order(self, list order)
     
     cdef int compute(self) except -1
+    cdef int _integrate(self) except -1
     
     # setup the component once prior to execution.
     cpdef int setup_component(self) except -1

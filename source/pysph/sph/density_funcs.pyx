@@ -20,14 +20,14 @@ cdef class SPHRho3D(SPHFunctionParticle3D):
     All 3 coordinate arrays should be available.
     """
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 str h='h', str mass='m', 
+                 str h='h', str mass='m', str rho='rho',
                  str coord_x='x', str coord_y='y', str coord_z='z',
-                 str velx='u', str vely='v', str velz='z', setup_arrays=True,
+                 str velx='u', str vely='v', str velz='z', bint setup_arrays=True,
                  *args, **kwargs):
         """
         Constructor.
         """
-        SPHFunctionParticle3D.__init__(self, source, dest, h, mass, 
+        SPHFunctionParticle3D.__init__(self, source, dest, h, mass, rho,
                                        coord_x, coord_y, coord_z,
                                        velx, vely, velz, setup_arrays, *args,
                                        **kwargs)        
@@ -39,8 +39,8 @@ cdef class SPHRho3D(SPHFunctionParticle3D):
         dest_pid.
         """
         cdef double h = 0.5*(self.s_h.data[source_pid] + self.d_h.data[dest_pid])
-        cdef Point src_position = Point()
-        cdef Point dst_position = Point()
+        cdef Point src_position = self._pnt1
+        cdef Point dst_position = self._pnt2
 
         make_coords_3d(self.s_x, self.s_y, self.s_z, src_position, source_pid)
         make_coords_3d(self.d_x, self.d_y, self.d_z, dst_position, dest_pid)
@@ -54,8 +54,3 @@ cdef class SPHRho3D(SPHFunctionParticle3D):
         Returns 1 - this computes a scalar quantity.
         """
         return 1
-
-
-        
-    
-
