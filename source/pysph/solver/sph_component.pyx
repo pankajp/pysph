@@ -70,11 +70,13 @@ cdef class SPHComponent(SolverComponent):
         self.source_types[:] = source_types
         self.dest_types[:] = dest_types
 
+        self.sph_calcs = []
+
         if kernel is not None:
             self.kernel = kernel
         else:
             if solver is not None:
-                self.kernel = self.solver.default_kernel
+                self.kernel = self.solver.kernel
 
         if solver is not None:
             self.nnps_manager = solver.nnps_manager

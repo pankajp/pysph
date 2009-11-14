@@ -25,7 +25,6 @@ class TestSPHDensityComponent(unittest.TestCase):
         """
         c = SPHDensityComponent()
 
-        self.assertEqual(c.summation_mode, c.entity_separate)
         self.assertEqual(c.sph_calcs, [])
         self.assertEqual(c.dest_list, [])
 

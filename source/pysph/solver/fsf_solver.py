@@ -14,6 +14,7 @@ class DensityComputationMode:
     """
     Simple_Summation = 0
     Continuity_Equation_Update = 1
+
     def __init__(self, *args, **kwargs):
         """
         Constructor.
@@ -24,16 +25,16 @@ class FSFSolver(SolverBase):
     """
     Generic solver for Free Surface Flows.
     """
-    def __init__(self, component_manager=None, NNPSManager nnps_manager=None,
-                 integrator=None, time_step=0.0, total_simulation_time=0.0) :
+    def __init__(self, component_manager=None, 
+                 cell_manager=None, nnps_manager=None, 
+                 kernel=None, 
+                 integrator=None,
+                 time_step=0.0, 
+                 total_simulation_time=0.0, 
+                 *args, **kwargs):
         """
         Constructor.
         """
-        if component_manager is None:
-            self.component_manager = ComponentManager()
-        
-        if nnps_manager is None:
-            self.nnps_manager = NNPSManager()
         self.density_computation_mode = (
             DensityComputationMode.Continuity_Equation_Update)
         
@@ -57,7 +58,7 @@ class FSFSolver(SolverBase):
 
         self.integrator = RK2XSPHIntegrator()
         
-        self.entity_list = []
+        self.entity_dict = {}
 
         self.g = 9.81
 
@@ -68,12 +69,6 @@ class FSFSolver(SolverBase):
     ######################################################################
     # `Public` interface
     ######################################################################
-    def add_entity(self, Entity e):
-        """
-        Adds a physical entity to be included in the simulation.
-        """
-        pass
-
     def add_inflow(self, inflow):
         """
         Adds an inflow component to be included in the simulation.
@@ -86,10 +81,38 @@ class FSFSolver(SolverBase):
         """
         pass
 
-    def add_actuator(self, actuator):
+    def add_actuator(self, acts_on=None, actuator):
         """
-        Adds a component that modifies velocities of some entity in the
-        simulation.
+        Adds a component that modifies velocities of the entity in the
+        simulation. This will be added to extra acceleration components.
+
+        **Parameters**
+        
+            - actuator - a component to add.
+            - acts_on - a list of entity names which should be the inputs of
+              this actuator. If this is None, it is assumed that the actuator is
+              already setup with its inputs.
+        """
+        pass
+
+    def create_entity(self, entity_type='fluid', entity_name='', *args,
+                   **kwargs):
+        """
+        Adds a new entity to be included in the simulation.
+        """
+        pass
+
+    def add_particles(self, entity='', particles=None, particle_group_id=0):
+        """
+        Adds the given particles (in a ParticleArray) to the said entity. If a
+        paricle group property is already present in the particle array, nothing
+        is done, else their group property is set to particle_group_id.
+        """
+        pass
+    
+    def add_entity(self, entity):
+        """
+        Adds a pre-created entity to be included in the simulation.
         """
         pass
 
@@ -127,8 +150,6 @@ class FSFSolver(SolverBase):
 
         logger.info('Setting up entities')
         self._setup_entities()
-
-        self._setup_nnps_manager()
 
         logger.info('Setting up components inputs')
         self._setup_component_inputs()

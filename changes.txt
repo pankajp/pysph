@@ -84,3 +84,8 @@ Sat Nov 14 03:18:53 IST 2009
     - Basic SPH functions added.
     - SPH functions for pressure gradient computations added.
     - Tests for added source yet to be written.
+
+Sat Nov 14 15:47:37 IST 2009
+    - one example problem added.
+    - changes to solver api done - add_entity, create_entity, add_particles etc. 
+    

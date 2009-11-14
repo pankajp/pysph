@@ -8,7 +8,7 @@ Module containing various density components.
 # local imports
 from pysph.sph.sph_calc import SPHBase
 from pysph.sph.density_funcs import SPHRho3D
-from pysph.solver.sph_component import SPHComponent
+from pysph.solver.sph_component import *
 from pysph.solver.entity_types import EntityTypes
 
 ################################################################################

@@ -716,23 +716,36 @@ cdef class SolverBase(Base):
                   ComponentManager component_manager=None,
                   CellManager cell_manager=None,
                   NNPSManager nnps_manager=None,
-                  KernelBase default_kernel=None,
+                  KernelBase kernel=None,
                   object integrator=None,
                   double time_step=0.0,
                   double total_simulation_time=0.0,
-                  int current_iteration=0, 
                   *args, **kwargs
                   ):
+        
+        if component_manager is None:
+            self.cm = ComponentManager()
+        else:
+            self.cm = component_manager
 
-        self.cm = component_manager
-        self.cell_manager = cell_manager
-        self.nnps_manager = nnps_manager
-        self.default_kernel = default_kernel
+        if cell_manager is None:
+            self.cell_manager = CellManager(initialize=False)
+        else:
+            self.cell_manager = cell_manager
+        
+        if nnps_manager is None:
+            self.nnps_manager = NNPSManager(cell_manager=self.cell_manager)
+        else:
+            self.nnps_manager = nnps_manager
+
+        self.kernel = kernel
         self.integrator = integrator
+
         self.time_step = TimeStep(time_step)
+
         self.elapsed_time = 0.0
         self.total_simulation_time = total_simulation_time
-        self.current_iteration = current_iteration
+        self.current_iteration = 0
 
     cpdef solve(self):
         """

@@ -139,7 +139,7 @@ cdef class SolverBase(Base):
     cdef public ComponentManager cm
     cdef public CellManager cell_manager
     cdef public NNPSManager nnps_manager
-    cdef public KernelBase default_kernel
+    cdef public KernelBase kernel
 
     cdef public TimeStep time_step
     cdef public SpeedOfSound speed_of_sound

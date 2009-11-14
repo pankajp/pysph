@@ -24,32 +24,32 @@ cdef class SPHComponent(SolverComponent):
     """
     """
     # list of SPHBase objects created for this component.
-    cdef list sph_calcs
+    cdef public list sph_calcs
     
     # list of sources.
-    cdef list source_list
+    cdef public list source_list
     
     # list of dests.
-    cdef list dest_list
+    cdef public list dest_list
 
     # indicates if the source destinations are to be infered automatically from
     # the input entity list.
-    cdef bint source_dest_setup_auto
+    cdef public bint source_dest_setup_auto
 
     # indcates the way to use the source_list and entity_list to create the sph
     # functions and calculators.
-    cdef int source_dest_mode
+    cdef public int source_dest_mode
 
     # the kernel to use.
-    cdef KernelBase kernel
+    cdef public KernelBase kernel
 
     # the nnps manager to use.
-    cpdef NNPSManager nnps_manager
+    cpdef public NNPSManager nnps_manager
 
     # the type of sph summation class to create for the summation.
-    cdef type sph_class
+    cdef public type sph_class
     # the type of the sph function class to create.
-    cdef type sph_func_class
+    cdef public type sph_func_class
 
     cpdef _setup_sources_dests(self)
     cpdef _setup_sph_objs(self)

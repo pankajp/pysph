@@ -357,10 +357,10 @@ class TestSolverBase(unittest.TestCase):
         """
         s = SolverBase()
         
-        self.assertEqual(s.cm, None)
-        self.assertEqual(s.cell_manager, None)
-        self.assertEqual(s.nnps_manager, None)
-        self.assertEqual(s.default_kernel, None)
+        self.assertEqual(s.cm != None, True)
+        self.assertEqual(s.cell_manager != None, True)
+        self.assertEqual(s.nnps_manager != None, True)
+        self.assertEqual(s.kernel, None)
         self.assertEqual(s.integrator, None)
         self.assertEqual(s.elapsed_time, 0.0)
         self.assertEqual(s.total_simulation_time, 0.0)
@@ -376,20 +376,18 @@ class TestSolverBase(unittest.TestCase):
         s = SolverBase(component_manager=cm,
                        nnps_manager=nnps_manager,
                        cell_manager=cell_man,
-                       default_kernel=kernel,
-                       total_simulation_time=1.0,
-                       time_step=0.1,
+                       kernel=kernel,
                        integrator=integrator,
-                       current_iteration=30)
-
+                       time_step=0.1,
+                       total_simulation_time=1.0)
+                       
         self.assertEqual(s.cm, cm)
         self.assertEqual(s.cell_manager, cell_man)
         self.assertEqual(s.nnps_manager, nnps_manager)
-        self.assertEqual(s.default_kernel, kernel)
+        self.assertEqual(s.kernel, kernel)
         self.assertEqual(s.integrator, integrator)
         self.assertEqual(s.elapsed_time, 0.0)
         self.assertEqual(s.total_simulation_time, 1.0)
-        self.assertEqual(s.current_iteration, 30)
         self.assertEqual(s.time_step.value, 0.1)
 
 
