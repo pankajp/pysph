@@ -56,7 +56,7 @@ cdef class EntityBase(Base):
         
         self.information.set_list(self.INTEGRATION_PROPERTIES, None)
 
-    cpdef add_property(self, str prop_name, double default_value=0.0):
+    cpdef add_entity_property(self, str prop_name, double default_value=0.0):
         """
         Add a physical property for the entity which is common to the whole
         entity.
@@ -85,7 +85,7 @@ cdef class EntityBase(Base):
         if EntityTypes.Entity_Base == type:
             return True
 
-    def add_integration_property(self, str prop_name):
+    def set_properties_to_integrate(self, list prop_names):
         """
         Adds a integration property requirement for use by an integrator class.
         """
@@ -100,7 +100,8 @@ cdef class EntityBase(Base):
         if ip is None:
             ip = []
             self.information.set_list(self.INTEGRATION_PROPERTIES, ip)
-        ip.append(prop_name)
+
+        ip.extend(list(set(prop_names)))
 
     cpdef bint is_type_included(self, list types):
         """
@@ -112,50 +113,22 @@ cdef class EntityBase(Base):
                 return True
 
         return False
-################################################################################
-# `Fluid` class.
-################################################################################
-cdef class Fluid(EntityBase):
-    """
-    Base class to represent fluids.
-    """
-    def __cinit__(self, str name='', dict properties={}, dict particle_props={},
-                  *args, **kwargs):
-        """
-        Constructor.
-        """
-        self.type = EntityTypes.Entity_Fluid
-        self.particle_array = ParticleArray(name=self.name, **particle_props)
 
-    cpdef ParticleArray get_particle_array(self):
+    cpdef add_actuator(self, object actuator):
         """
-        Returns the ParticleArray representing this entity.
+        Adds an acceleration modifier to the entity.
         """
-        return self.particle_array
-
-    cpdef bint is_a(self, int type):
-        """
-        Check if this entity is of the given type.
-        """
-        return (EntityTypes.Entity_Fluid == type or
-                EntityBase.is_a(self, type))
-
-################################################################################
-# `Solid` class.
-################################################################################
-cdef class Solid(EntityBase):
-    """
-    Base class to represent solids.
-    """
-    def __cinit__(self, str name='', dict properties={}, *args, **Kwargs):
-        """
-        Constructor.
-        """
-        self.type = EntityTypes.Entity_Solid
+        cdef list accel_modifier = self.modifier_components['acceleration']
         
-    cpdef bint is_a(self, int type):
+        if accel_modifier is None:
+            accel_modifier = []
+            self.modifier_components['acceleration'] = accel_modifier
+
+        if accel_modifier.count(actuator) == 0:
+            accel_modifier.append(actuator)
+
+    cpdef add_particles(self, ParticleArray particles):
         """
-        Check if this entity is of the given type.
+        Adds the given particles into the entities particle array.
         """
-        return (EntityTypes.Entity_Solid == type or
-                EntityBase.is_a(self, type))
+        pass

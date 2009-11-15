@@ -22,7 +22,6 @@ class SPHDensityComponent(SPHComponent):
     category = 'density_component'
     identifier = 'sph_density'
 
-
     def __init__(self, name='', solver=None, 
                  component_manager=None,
                  entity_list=[], 
@@ -30,16 +29,16 @@ class SPHDensityComponent(SPHComponent):
                  kernel=None,
                  source_list=[],
                  dest_list=[],
-                 source_types=[EntityTypes.Entity_Fluid],
-                 dest_types=[EntityTypes.Entity_Fluid],
                  source_dest_setup_auto=True,
                  source_dest_mode=SPHSourceDestMode.Group_None,
-                 sph_class=SPHBase,
-                 sph_func_class=SPHRho3D,
                  *args, **kwargs):
         """
         Constructor.
         """
+        self.source_types=[EntityTypes.Entity_Fluid]
+        self.dest_types=[EntityTypes.Entity_Fluid]
+
+        self.sph_func_class = SPHRho3D
 
         self.add_input_entity_type(EntityTypes.Entity_Fluid)
 
@@ -55,9 +54,6 @@ class SPHDensityComponent(SPHComponent):
         inp_types = self.information.get_dict(self.INPUT_TYPES)
         wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
         rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        
-        rp.clear()
-        wp.clear()
 
         for key in input_types.keys():
             rp[key] = [{'name':'m', 'default':1.0},

@@ -32,6 +32,12 @@ cdef class SPHComponent(SolverComponent):
     # list of dests.
     cdef public list dest_list
 
+    # list of types accepted as sources
+    cdef public list source_types
+
+    # list of types accepted as dests.
+    cdef public list dest_types
+
     # indicates if the source destinations are to be infered automatically from
     # the input entity list.
     cdef public bint source_dest_setup_auto

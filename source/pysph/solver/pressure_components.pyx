@@ -12,7 +12,8 @@ cimport numpy
 # local imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.entity_types cimport EntityTypes
-from pysph.solver.entity_base cimport EntityBase, Fluid
+from pysph.solver.entity_base cimport EntityBase
+from pysph.solver.fluid cimport Fluid
 from pysph.solver.solver_base cimport SolverComponent, SolverBase\
     ,ComponentManager
 from pysph.solver.speed_of_sound cimport SpeedOfSound

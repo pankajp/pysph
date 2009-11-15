@@ -30,8 +30,8 @@ class TestSPHDensityComponent(unittest.TestCase):
 
         self.assertEqual(c.kernel, None)
         self.assertEqual(c.name, '')
-        self.assertEqual(c.source_entity_types, [EntityTypes.Entity_Fluid])
-        self.assertEqual(c.dest_entity_types, [EntityTypes.Entity_Fluid])
+        self.assertEqual(c.source_types, [EntityTypes.Entity_Fluid])
+        self.assertEqual(c.dest_types, [EntityTypes.Entity_Fluid])
         
 
 if __name__ == '__main__':

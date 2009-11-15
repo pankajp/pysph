@@ -7,8 +7,10 @@ import unittest
 import numpy
 
 # local import
+from pysph.base.particle_array import ParticleArray
 from pysph.solver.array_copier import ArrayCopier
-from pysph.solver.entity_base import EntityBase, Fluid
+from pysph.solver.entity_base import EntityBase
+from pysph.solver.fluid import Fluid
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -81,9 +83,9 @@ class TestArrayCopier(unittest.TestCase):
         self.assertEqual(ac.setup_done, True)
         self.assertEqual(ac.entity_list, [])
 
-        f1 = Fluid(particle_props={'a':{'data':[1., 2., 3, 4]},
-                                   'b':{'data':[4., 4., 3, 3]},
-                                   'c':{'default':-1.}})
+        f1 = Fluid(particles=ParticleArray(**{'a':{'data':[1., 2., 3, 4]},
+                                              'b':{'data':[4., 4., 3, 3]},
+                                              'c':{'default':-1.}}))
         ac.add_entity(f1)
         self.assertEqual(ac.setup_done, False)
         ac.setup_component()
@@ -101,12 +103,12 @@ class TestArrayCopier(unittest.TestCase):
         Tests the compute function.
         """
         ac = ArrayCopier()
-        f1 = Fluid(particle_props={'a':{'data':[1., 2., 3, 4]},
-                                   'b':{'data':[4., 4., 3, 3]},
-                                   'c':{'default':-1.}})
+        f1 = Fluid(particles=ParticleArray(**{'a':{'data':[1., 2., 3, 4]},
+                                              'b':{'data':[4., 4., 3, 3]},
+                                              'c':{'default':-1.}}))
 
-        f2 = Fluid(particle_props={'a':{'data':[1, 2]},
-                                   'b':{'data':[4, 4]}})
+        f2 = Fluid(particles=ParticleArray(**{'a':{'data':[1, 2]},
+                                              'b':{'data':[4, 4]}}))
 
         ac.add_entity(f1)
         ac.add_entity(f2)

@@ -88,4 +88,11 @@ Sat Nov 14 03:18:53 IST 2009
 Sat Nov 14 15:47:37 IST 2009
     - one example problem added.
     - changes to solver api done - add_entity, create_entity, add_particles etc. 
-    
+
+Mon Nov 16 01:57:01 IST 2009
+    - few classes to represent solids added - geometry, solid
+    - plane class added from old code.
+    - separate file for fluid.
+    - constructor changes to EntityBase, Fluid and Solid.
+    - XSPH integrator components, integrator, stepper added.
+    - Runge Kutta integrator added.

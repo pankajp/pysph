@@ -7,6 +7,7 @@ import unittest
 
 # local imports
 from pysph.solver import entity_base
+from pysph.solver.fluid import Fluid
 from pysph.solver.entity_types import *
 
 ################################################################################
@@ -50,7 +51,7 @@ class TestEntityBase(unittest.TestCase):
         tlist.append(EntityTypes.Entity_Base)
         self.assertEqual(e.is_type_included(tlist), True)
 
-        e = entity_base.Fluid()
+        e = Fluid()
         tlist = [EntityTypes.Entity_Base]
         self.assertEqual(e.is_type_included(tlist), True)
 

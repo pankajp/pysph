@@ -107,5 +107,4 @@ cdef class Integrator(SolverComponent):
     cpdef remove_entity_type(self, str prop_name, int entity_type)
 
     # updates internal data structures about property requirements.
-    cpdef int update_property_requirements(self) except -1
-    
+    cpdef int update_property_requirements(self) except -1    

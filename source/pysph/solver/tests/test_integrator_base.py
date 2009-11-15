@@ -10,7 +10,8 @@ import numpy
 # local imports
 from pysph.base.particle_array import ParticleArray
 
-from pysph.solver.entity_base import EntityBase, Fluid
+from pysph.solver.entity_base import EntityBase
+from pysph.solver.fluid import Fluid
 from pysph.solver.entity_types import EntityTypes
 from pysph.solver.time_step import TimeStep
 from pysph.solver.integrator_base import Integrator, ODEStepper
@@ -473,8 +474,8 @@ class TestIntegrator(unittest.TestCase):
         """
         cm, i, e1, e2, e3 = get_sample_integrator_setup()
 
-        e2.add_integration_property('position')
-        e3.add_integration_property('density')
+        e2.set_properties_to_integrate(['position'])
+        e3.set_properties_to_integrate(['density'])
 
         i.add_entity(e1)
         i.add_entity(e2)

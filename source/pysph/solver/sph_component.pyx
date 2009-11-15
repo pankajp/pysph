@@ -43,7 +43,6 @@ cdef class SPHComponent(SolverComponent):
     """
     Base class for components doing SPH summations.
     """
-    
     def __cinit__(self, SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],
@@ -51,12 +50,8 @@ cdef class SPHComponent(SolverComponent):
                   KernelBase kernel=None,
                   list source_list=[],
                   list dest_list=[],
-                  list source_types=[],
-                  list dest_types=[],
                   bint source_dest_setup_auto=True,
                   int source_dest_mode=SPHSourceDestMode.Group_None,
-                  type sph_class=None,
-                  type sph_func_class=None,
                   *args, **kwargs):
         """
         Constructor.
@@ -67,8 +62,11 @@ cdef class SPHComponent(SolverComponent):
         self.source_types = []
         self.dest_types = []
 
-        self.source_types[:] = source_types
-        self.dest_types[:] = dest_types
+        self.source_list = []
+        self.dest_list = []
+
+        self.source_list[:] = source_list
+        self.dest_list[:] = dest_list
 
         self.sph_calcs = []
 
@@ -83,8 +81,8 @@ cdef class SPHComponent(SolverComponent):
         else:
             self.nnps_manager = nnps_manager
 
-        self.sph_class = sph_class
-        self.sph_func_class = sph_func_class
+        self.sph_class = SPHBase
+        self.sph_func_class = None
 
     cpdef int setup_component(self) except -1:
         """

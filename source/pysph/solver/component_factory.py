@@ -2,6 +2,9 @@
 Factory to create any component.
 """
 
+import logging
+logger = logging.getLogger()
+
 class ComponentFactory:
     """
     Factory class to create any component.
@@ -34,6 +37,7 @@ class ComponentFactory:
             return ComponentFactory.get_dummy_component(comp_type, *args,
                                                         **kwargs)
         else:        
+            logger.warn('Cannot produce %s'%(comp_type))
             return None
 
     @staticmethod
@@ -43,12 +47,17 @@ class ComponentFactory:
         """
         import pysph.solver.integrator_base
         import pysph.solver.dummy_components
+        import pysph.solver.xsph_component
 
         if comp_type == 'base' or comp_type == 'euler':
             return pysph.solver.integrator_base.ODEStepper(*args, **kwargs)
         elif comp_type == 'ya_stepper':
             return pysph.solver.dummy_components.YAStepper(*args, **kwargs)
+        elif comp_type == 'euler_xsph_position_stepper':
+            return pysph.solver.xsph_component.EulerXSPHPositionStepper(*args,
+                                                                         **kwargs)
         else:
+            logger.warn('Cannot produce %s'%(comp_type))
             return None
         
     @staticmethod
@@ -61,6 +70,7 @@ class ComponentFactory:
         if comp_type == 'base' or comp_type =='euler':
             return pysph.solver.integrator_base.Integrator(*args, **kwargs)
         else:
+            logger.warn('Cannot produce %s'%(comp_type))
             return None
 
     @staticmethod
@@ -73,6 +83,7 @@ class ComponentFactory:
         if comp_type == 'copier':
             return pysph.solver.array_copier.ArrayCopier(*args, **kwargs)
         else:
+            logger.warn('Cannot produce %s'%(comp_type))
             return None
 
     @staticmethod
@@ -86,4 +97,5 @@ class ComponentFactory:
         if comp_type == 'ya_stepper':
             return pysph.solver.dummy_components.YAStepper(args, kwargs)
         else:
+            logger.warn('Cannot produce %s'%(comp_type))
             return None

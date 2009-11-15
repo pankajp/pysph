@@ -7,9 +7,13 @@ import unittest
 
 # local import
 from pysph.solver.solver_base import SolverComponent, ComponentManager, SolverBase
-from pysph.solver.entity_base import EntityBase, Solid, Fluid
+from pysph.solver.entity_base import EntityBase
+from pysph.solver.fluid import Fluid
+from pysph.solver.solid import Solid
 from pysph.solver.entity_types import *
-from pysph.solver.dummy_components import DummyComponent1, DummyComponent2, DummyComponent3
+from pysph.solver.dummy_components import DummyComponent1, \
+    DummyComponent2, DummyComponent3
+from pysph.base.particle_array import ParticleArray
 from pysph.solver.dummy_entities import DummyEntity
 
 from pysph.base.cell import CellManager
@@ -283,8 +287,8 @@ class TestComponentManager(unittest.TestCase):
         cm.add_component(c1)
         cm.add_component(c2)
 
-        e1 = Solid()
-        e2 = Fluid()
+        e1 = Solid(particles=ParticleArray())
+        e2 = Fluid(particles=ParticleArray())
         cm.setup_entity(e1)
         cm.setup_entity(e2)
 
