@@ -12,8 +12,6 @@ logger = logging.getLogger()
 from pysph.solver.runge_kutta_integrator import *
 from pysph.solver.tests.test_integrator_base import get_sample_integrator_setup
 
-
-
 ################################################################################
 # `TestRK2SecondStep` class.
 ################################################################################

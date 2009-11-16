@@ -35,36 +35,47 @@ class FSFSolver(SolverBase):
         """
         Constructor.
         """
-        self.density_computation_mode = (
-            DensityComputationMode.Continuity_Equation_Update)
-        
-        self.density_components = []
-        self.pressure_components = [TaitPressureComponent()]
-        
-        self.pressure_gradient_components = [SymmetricPressureGradientComponent()]
-        self.viscosity_components = [MonaghanArtViscComponent()]
-        self.boundary_force_components = [SPHBoundaryForceComponent()]
-        self.density_rate_components = []
-
-        self.time_step_update_components = []
-
-        self.extra_pre_step_components = []
-        self.extra_post_step_components = []
-
-        self.pre_integration_components = []
-        self.post_integration_components = []
-
-        self.extra_acceleration_components  = []
-
-        self.integrator = RK2XSPHIntegrator()
-        
-        self.entity_dict = {}
-
         self.g = 9.81
 
-        self.total_simulation_time = 1.0
-        self.elapsed_time = 0.0
-        self.time_step = TimeStep(0.1)
+        # setup the various categories of components required.
+        self.component_categories['density'] = []
+        self.component_categories['pressure'] = []
+        self.component_categories['pressure_gradient'] = []
+        self.component_categories['viscosity_components'] = []
+        self.component_categories['boundary_force'] = []
+        self.component_categories['density_rate'] = []
+        self.component_categories['pre_step'] = []
+        self.component_categories['post_step'] = []
+        self.component_categories['pre_integration'] = []
+        self.component_categories['post_integration'] = []
+        self.component_categories['time_step_update'] = []
+        self.component_categories['inflows'] = []
+        self.component_categories['outflows'] = []
+
+        self.density_computation_mode = (
+            DensityComputationMode.Continuity_Equation_Update)
+
+        # setup the default components
+        self.component_categories['density'].append(
+            SPHDensityComponent(solver=self))
+
+        self.component_categories['pressure'].append(
+            TaitPressureComponent(solver=self))
+        
+        self.component_categories['pressure_gradient'].append(
+            SymmetricPressureGradientComponent(solver=self))
+
+        self.component_categories['viscosity_components'].append(
+            MonaghanArtViscComponent(solver=self))
+        
+        self.component_categories['boundary_force'].append(
+            SPHBoundaryForceComponent(solver=self))
+
+        self.component_categories['density_rate'].append(
+            SPHDensityRateComponent(solver=self))
+
+        if self.integrator is None:
+            self.integrator = RK2XSPHIntegrator(solver=self)
     
     ######################################################################
     # `Public` interface
@@ -80,121 +91,9 @@ class FSFSolver(SolverBase):
         Adds an outflow component to be included in the simulation.
         """
         pass
-
-    def add_actuator(self, acts_on=None, actuator):
-        """
-        Adds a component that modifies velocities of the entity in the
-        simulation. This will be added to extra acceleration components.
-
-        **Parameters**
-        
-            - actuator - a component to add.
-            - acts_on - a list of entity names which should be the inputs of
-              this actuator. If this is None, it is assumed that the actuator is
-              already setup with its inputs.
-        """
-        pass
-
-    def create_entity(self, entity_type='fluid', entity_name='', *args,
-                   **kwargs):
-        """
-        Adds a new entity to be included in the simulation.
-        """
-        pass
-
-    def add_particles(self, entity='', particles=None, particle_group_id=0):
-        """
-        Adds the given particles (in a ParticleArray) to the said entity. If a
-        paricle group property is already present in the particle array, nothing
-        is done, else their group property is set to particle_group_id.
-        """
-        pass
-    
-    def add_entity(self, entity):
-        """
-        Adds a pre-created entity to be included in the simulation.
-        """
-        pass
-
-    def solve(self):
-        """
-        Run the solver.
-        """
-
-        # setup the solver for execution.
-        self._setup_solver()
-
-        current_time = 0.0
-        while current_time < self.total_simulation_time:
-            
-            self.integrator.integrate()
-
-            # call backs could come here or within the post integration
-            # components of the integrator.
-
-            current_time += self.time_step.time_step
-            self.elapsed_time = current_time
-        
     ######################################################################
     # Non-public interface
     ######################################################################
-    def _setup_solver(self):
-        """
-        Sets up the solver before final interations begin.
-        """
-        logger.info('Setting up component manager')
-        self._setup_component_manager()
-
-        logger.info('Setting up integrator')
-        self._setup_integrator()
-
-        logger.info('Setting up entities')
-        self._setup_entities()
-
-        logger.info('Setting up components inputs')
-        self._setup_component_inputs()
-
-    def _setup_component_manager(self):
-        """
-        Adds all components to the component manager.
-        """
-        map(self.component_manager.add_component,
-            self.extra_pre_integration_components)
-        
-        map(self.component_manager.add_component, 
-            self.extra_pre_integration_components)
-        
-        map(self.component_manager.add_component,
-            extra_post_integration_components) 
-        
-        map(self.component_manager.add_component, 
-            self.extra_acceleration_components)
-        
-        map(self.component_manager.add_component, 
-            self.exteral_force_components)
-        
-        map(self.component_manager.add_component, 
-            self.density_components)
-        
-        map(self.component_manager.add_component, 
-            self.pressure_components)
-        
-        map(self.component_manager.add_component, 
-            self.pressure_gradient_components)
-        
-        map(self.component_manager.add_component, 
-            self.viscosity_components)
-        
-        map(self.component_manager.add_component, 
-            self.boundary_force_components)
-        
-    def _setup_component_inputs(self):
-        """
-        Sets up the inputs of all the components.
-        """
-        for e in self.entity_list:
-            self.component_manager.add_input(e)        
-
     def _setup_integrator(self):
         """
         Function to setup the integrator before running the solver.
@@ -235,18 +134,85 @@ class FSFSolver(SolverBase):
             - finally add the integrator to the component manager.
 
         """
-        pass
+        # add the pre-integration components.
+        for c in self.component_categories['pre_integration']:
+            self.integrator.add_pre_integration_component(c.name)
 
-    def _setup_entities(self):
+        # add the inflow and outflow componets.
+        for c in self.component_categories['inflow']:
+            self.integrator.add_pre_step_component(c.name)
+
+        for c in self.component_categories['outflow']:
+            self.integrator.add_pre_step_component(c.name)
+
+        # add the pre-step components
+        for c in self.component_categories['pre_step']:
+            self.integrator.add_pre_step_component(c.name)
+
+        # setup the density components.
+        self._setup_density_component()
+
+        # add pressure components to the pre-step components
+        for c in self.component_categories['pressure']:
+            self.integrator.add_pre_step_component(c.name)
+
+        # now add the acceleration computers.
+        for c in self.component_categories['pressure_gradient']:
+            self.integrator.add_pre_step_component(c.name, 'velocity')
+
+        for c in self.component_categories['viscosity_components']:
+            self.integrator.add_pre_step_component(c.name, 'velocity')
+            
+        for c in self.component_categories['boundary_force']:
+            self.integrator.add_pre_step_component(c.name, 'velocity')
+
+        self._setup_gravity_component()
+        
+        # add post step components if any.
+        for c in self.component_categories['post_step']:
+            self.integrator.add_post_step_component(c)
+
+        # add time step updater component.
+        for c in self.component_categories['time_step_update']:
+            self.integrator.add_post_integration_component(c.name)
+
+        # setup initializer components
+        self._setup_initializer_components()
+
+    def _setup_density_component(self):
         """
-        Function to setup the array requirements of entities.
-
-        **Algorithm**
-
-            - for each entity that has been added using the add_entity function,
-            pass them to the setup_entity function of the component manager to
-            setup the arrays of the entity.
+        Depending on the density computation mode, either add a density
+        component as pre-step components, or add the rho-rate integration
+        property and add density rate components if any.
 
         """
-        pass
+        if (self.density_computation_mode ==
+            DensityComputationMode.Simple_Summation):
+            
+            d_list = if self.component_categories['density']
+            
+            if len(d_list) == 0:
+                raise SystemError, 'No density components specified'
+            else:
+                for c in d_list:
+                    self.integration.add_pre_step_component(c.name)
+        else:
+            # if a stepper for density does not exist already
+            # add one.
+            if self.integrator.get_property_step_info('density') is None:
+                # add a stepper for density - this will not be there in the
+                # integrator by default.
+                i = self.integrator
+                i.add_property_step_info(prop_name='density',
+                                         integrand_arrays=['rho_rate'],
+                                         integral_arrays=['rho'],
+                                         entity_types=[EntityTypes.Entity_Fluid])
 
+            # now add the density rate components.
+            d_list = self.component_categories['density_rate']
+    
+            if len(d_list) == 0:
+                raise SystemError, 'No density rate components specified'
+            else:
+                for c in d_list:
+                    self.integrator.add_pre_step_component(c.name, 'density')

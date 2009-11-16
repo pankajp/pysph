@@ -5,6 +5,14 @@ Module contains various basic RK integrators.
 # local imports
 from pysph.solver.integrator_base cimport *
 
+cdef class RK2TimeStepSetter(SolverComponent):
+    """
+    Component to set the time step.
+    """
+    cdef Integrator integrator
+    cdef TimeStep time_step
+    cdef int step_num
+
 cdef class RK2Integrator(Integrator):
     """
     Runge Kutta 2 Integrator.

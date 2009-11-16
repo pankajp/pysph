@@ -12,7 +12,7 @@ from pysph.base.point cimport Point
 from pysph.solver.entity_base cimport *
 from pysph.solver.entity_types cimport EntityTypes
 
-
+from pysph.base.cell cimport CellManager
 
 ################################################################################
 # `SolidMotionType` class.
@@ -56,7 +56,9 @@ cdef class Solid(EntityBase):
         self.type = EntityTypes.Entity_Solid
 
         if self.sph_particles is None:
-            self.sph_particles = ParticleArray()
+            self.sph_particles = ParticleArray(name=self.name)
+
+        self.sph_particles.name = self.name
 
         # add any default properties that must be there for solids.        
         
@@ -95,3 +97,12 @@ cdef class Solid(EntityBase):
 
         """
         pass
+
+    cpdef add_arrays_to_cell_manager(self, CellManager cell_manager):
+        """
+        Add all arrays that need to be binned for this entity to the cell
+        manager.
+
+        Currently only the sph_particles array is added.
+        """
+        cell_manager.add_array_to_bin(self.sph_particles)

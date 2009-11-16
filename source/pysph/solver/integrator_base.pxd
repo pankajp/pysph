@@ -63,20 +63,19 @@ cdef class Integrator(SolverComponent):
     cpdef public int dimension
 
     # the time step to use for stepping.
-    cpdef public TimeStep curr_time_step
+    cpdef public TimeStep time_step
 
     # add an entity whose properties have to be integrated.
     cpdef add_entity(self, EntityBase entity)
 
-    # add a component to be executed before integration of this property.
-    #cpdef add_component(self, str property, str comp_name, bint pre_step=*)
-    
     # add a component to be executed before stepping of a particular property.
-    cpdef add_pre_step_component(self, str comp_name, str property_name=*)
+    cpdef add_pre_step_component(self, str comp_name, str property_name=*, bint
+                                 at_tail=*)
 
     # add a component to be executed after a particular property has been
     # stepped. 
-    cpdef add_post_step_component(self, str comp_name, str property_name=*)
+    cpdef add_post_step_component(self, str comp_name, str property_name=*, bint
+                                  at_tail=*)
     
     # add a component to be exectued before integration of any property is done.
     cpdef add_pre_integration_component(self, str comp_name, bint
@@ -99,6 +98,9 @@ cdef class Integrator(SolverComponent):
     # properties. 
     cpdef add_property(self, str prop_name, list integrand_arrays, list
                        integral_arrays, list entity_types=*, dict steppers=*)
+
+    # return the dict containing prop_name stepping information.
+    cpdef dict get_property_step_info(self, str prop_name)
 
     cpdef set_dimension(self, int dimension)
 

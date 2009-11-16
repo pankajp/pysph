@@ -26,3 +26,14 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
     cdef public double epsilon
     cdef public XSPHVelocityComponent xsph_component
 
+cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
+    """
+    Class for implementing the first step of RK2 integration.
+    """
+    cdef public list prev_correct_velocity_names
+
+cdef class RK2Step2XSPHPositionStepper(EulerXSPHPositionStepper):
+    """
+    Class for implementing the second step of RK2 integration.
+    """
+    pass

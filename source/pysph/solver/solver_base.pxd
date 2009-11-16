@@ -142,12 +142,37 @@ cdef class SolverBase(Base):
     cdef public KernelBase kernel
 
     cdef public TimeStep time_step
+
     cdef public SpeedOfSound speed_of_sound
     cdef public double elapsed_time
     cdef public double total_simulation_time
 
     cdef public object integrator
     cdef public int current_iteration
+    
+    # a dictionary containing list of components for various categories.
+    # derived classes should categories as required.
+    cdef public dict component_categories
+
+    # a dictionary containing all kernels used in the solver.
+    cdef public dict kernels_used
+
+    # a list containing all the entities involved in the simulation.
+    cdef public list entity_list
+
+    # inform the solver that this kernel is being used.
+    cpdef register_kernel(self, KernelBase kernel)
+
+    # add a new entity to be included into the simulation.
+    cpdef add_entity(self, EntityBase entity)
 
     cpdef solve(self)
+    cpdef next_iteration(self)
+    
     cpdef _setup_solver(self)
+    cpdef _setup_components(self)
+    cpdef _setup_entities(self)
+    cpdef _setup_components_input(self)
+    cpdef _setup_integrator(self)
+    cpdef _setup_nnps(self)
+    cpdef _compute_cell_sizes(self)

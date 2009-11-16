@@ -5,6 +5,8 @@ Base class for all solver components.
 # logger imports
 import logging
 logger = logging.getLogger()
+cimport numpy
+import numpy
 
 # local imports
 from pysph.base.kernelbase cimport KernelBase
@@ -738,15 +740,43 @@ cdef class SolverBase(Base):
         else:
             self.nnps_manager = nnps_manager
 
+        # default kernel to be used by all components.
         self.kernel = kernel
-        self.integrator = integrator
-
+        # the time step variable accessed throughout the solver.
         self.time_step = TimeStep(time_step)
 
+        # total simulation time that has be completed.
         self.elapsed_time = 0.0
+        # total time to run the simulation for.
         self.total_simulation_time = total_simulation_time
+        # current iteration.
         self.current_iteration = 0
 
+        # list of entities participating in the simulation.
+        self.entity_list=[]
+
+        # the integrator.
+        self.integrator = integrator
+        if self.integrator is not None:
+            self.integrator.time_step = self.time_step
+
+    cpdef add_entity(self, EntityBase entity):
+        """
+        Add a new entity to be included in the simulation.
+        """
+        if self.entity_list.count(entity) == 0:
+            self.entity_list.append(entity)
+
+    cpdef register_kernel(self, KernelBase kernel):
+        """
+        Adds the given kernel into the dict kernels_used.
+        """
+        if kernel is None:
+            return
+
+        if not self.kernels_used.has_key(type(kernel)):
+            self.kernels_used[type(kernel)] = kernel
+            
     cpdef solve(self):
         """
         Run the solver.
@@ -762,10 +792,116 @@ cdef class SolverBase(Base):
             self.integrator.integrate()
 
             current_time += self.time_step.value
-            self.elapsed_time = current_time
-            
+            self.elapsed_time = current_time    
+
+    cpdef next_iteration(self):
+        """
+        Advance simulation by one time step.
+        """
+        cdef double t = self.elapsed_time
+        
+        if t < self.total_simulation_time:
+            if abs(t - self.total_simulation_time) < 1e-12:
+                pass
+            else:
+                self.integrator.integrate()
+                self.elapsed_time += self.time_step.value
+
     cpdef _setup_solver(self):
         """
         Function to perform solver setup.
         """
-        raise NotImplementedError, 'SolverBase._setup_solver'
+        self._setup_components()
+
+        self._setup_entites()
+
+        self._setup_nnps()
+
+        self._setup_components_input()
+
+        self._setup_integrator()
+
+    cpdef _setup_components(self):
+        """
+        Add all the components (in component_categories) into the component
+        manager.
+
+        Make sure the "solver" attribute of each component is set to "self".
+        
+        """
+        for comp_list in self.component_categories.values():
+            for c in comp_list:
+                c.solver = self
+                self.component_manager.add_component(c)
+                
+        # add the integrator to the component manager
+        self.integrator.solver = self
+        self.component_manager.add_component(self.integrator)
+
+    cpdef _setup_entities(self):
+        """
+        For each entity in the entity_dict, set the required properties in the
+        entities using the component manager.
+        """
+        for e in self.entity_list:
+            self.component_manager.setup_entity(e)
+
+    cpdef _setup_nnps(self):
+        """
+        Setup the nnps and the cell manager.
+
+        Operations involved.
+        
+            - Add all possible particle arrays to the cell manager to be binned.
+            - Compute the cell size to be used in the cell manager.
+            
+        """
+        for e in self.entity_list:
+            e.add_arrays_to_cell_manager(self.cell_manager)
+
+        min_cell_size, max_cell_size = self._compute_cell_sizes()
+        
+        self.cell_manager.min_cell_size = min_cell_size
+        self.cell_manager.max_cell_size = max_cell_size
+
+    cpdef _setup_components_input(self):
+        """
+        Add each entity in the entity_list to all components.
+        
+        The entities will be appropriately filtered based on how the component
+        is setup.
+        """
+        for e in self.entity_list:
+            self.component_manager.add_input(e)
+
+    cpdef _compute_cell_sizes(self):
+        """
+        Find the minimum 'h' value from all particle arrays of all entities.
+        Use twice the size as the cell size.
+
+        This is very simplistic method to find the cell sizes, derived solvers
+        may want to use something more sophisticated or probably set the cell
+        sizes manually.
+        """
+        cdef double min_h = 100.0
+        
+        for e in self.entity_list:
+            parr = e.get_particle_array()
+            if parr is None:
+                continue
+            h = parr.h
+            if h is None:
+                continue
+            min_h1 = numpy.min(h)*2.0
+            if min_h1 < min_h:
+                min_h = min_h1
+
+        logger.info('using cell size of %f'%(min_h))
+        return min_h, min_h
+
+    cpdef _setup_integrator(self):
+        """
+        Setup the integrator as required. This will be done in the derived
+        classes depending on the problem/domain etc.
+        """
+        raise NotImplementedError, 'SolverBase::_setup_integrator'        

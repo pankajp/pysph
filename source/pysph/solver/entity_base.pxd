@@ -4,6 +4,7 @@ Base class for all physical entities involved in the simulation.
 from pysph.base.attrdict cimport AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
+from pysph.base.cell cimport CellManager
 
 from pysph.solver.base cimport Base
 
@@ -45,4 +46,7 @@ cdef class EntityBase(Base):
 
     # add more particles to the particle array.
     cpdef add_particles(self, ParticleArray parray)
+
+    # add all arrays that need to be binned for search to the cell manager.
+    cpdef add_arrays_to_cell_manager(self, CellManager cell_manager)
 

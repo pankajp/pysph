@@ -116,7 +116,7 @@ cdef class XSPHVelocityComponent(SPHComponent):
                           {'name':'del_v', 'default':1.0},
                           {'name':'del_w', 'default':1.0}]
         
-    cpdef int py_compute(self) except -1:
+    cdef int compute(self) except -1:
         """
         """
         for i in range(len(self.dest_list)):
@@ -229,3 +229,223 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
                 correction = dels[i]
 
                 an1[:] = an + (bn + correction)*self.time_step.value        
+
+################################################################################
+# `RK2Step1XSPHPositionStepper` class.
+################################################################################
+cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
+    """
+    Position stepper with XSPH correction.
+    """
+    def __cinit__(self, str name='', SolverBase solver=None,
+                  ComponentManager component_manager=None,
+                  list entity_list=[],
+                  str prop_name='',
+                  list integrands=[], list integrals=[],
+                  TimeStep time_step=None,
+                  double epsilon=0.5,
+                  *args, **kwargs):
+        """
+        Constructor.
+        """
+        self.epsilon = epsilon
+        self.prev_correct_velocity_names = []
+
+    cpdef int setup_component(self) except -1:
+        """
+        Sets up the component before executing.
+        """
+        cdef int i, num_props
+        cdef int num_entities
+        cdef ParticleArray parr
+
+        if self.setup_done == True:
+            return 0
+
+        if self.prop_name != 'position':
+            logger.warn(
+                'XSPHPositionStepper used for stepping %s',self.prop_name)
+
+        # array setup will be the same as done by the ODEStepper
+        ODEStepper.setup_component(self)
+
+        # create the xsph component and add arrays to the entities as required.
+        self.xsph_component = XSPHVelocityComponent(name=self.name+'comp',
+                                                    solver=self.solver,
+                                                    component_manager=self.cm,
+                                                    entity_list=self.entity_list,
+                                                    source_dest_setup_auto=True,
+                                                    epsilon=self.epsilon)
+
+        # add u_correct_prev, v_correct_prev and w_correct_prev arrays to all
+        # the entities in the input. These arrays will store the corrected
+        # values of velocity used to step position.        
+        num_props = len(self.integrand_names)
+        self.prev_correct_velocity_names = []
+
+        for i from 0 <= i < num_props:
+            arr_name = self.integrand_names[i]
+            self.prev_correct_velocity_names.append(arr_name+'_correct_prev')
+
+        num_entities = len(self.entity_list)
+
+        for i from 0 <= i < num_entities:
+            e = self.entity_list[i]
+            parr = e.get_particle_array()
+            for j from 0 <= j < num_props:
+                arr_name = self.prev_correct_velocity_names[i]
+                if not parr.properties.has_key(arr_name):
+                    parr.add_property({'name':arr_name})
+        
+        self.setup_done = True
+
+        return 0
+
+    cdef int compute(self) except -1:
+        """
+        Performs simple euler integration by the time_step, for the said arrays
+        for each entity. The XSPH velocity correction is added to the rate
+        before stepping.
+
+        Each entity 'MUST' have a particle array representation. Otherwise
+        stepping won't be done currently.
+
+        """
+        cdef EntityBase e
+        cdef int i, num_entities
+        cdef int num_props, p, j
+        cpdef ParticleArray parr
+        cdef numpy.ndarray an, bn, an1, correction, prev_array
+        cdef DoubleArray _an, _bn, _an1
+        
+        # make sure the component has been setup
+        self.setup_component()
+
+        # compute the velocity corrections.
+        self.xsph_component.compute()
+
+        num_entities = len(self.entity_list)
+        num_props = len(self.integrand_names)
+
+        for i from 0 <= i < num_entities:
+            e = self.entity_list[i]
+            
+            parr = e.get_particle_array()
+            dels = self.xsph_component.get_velocity_corrections(parr)
+
+            if parr is None:
+                logger.warn('no particle array for %s'%(e.name))
+                continue
+            
+            for j from 0 <= j < num_props:
+                an = parr._get_real_particle_prop(self.integral_names[j])
+                bn = parr._get_real_particle_prop(self.integrand_names[j])
+                an1 = parr._get_real_particle_prop(self.next_step_names[j])
+                prev_array = parr._get_real_particle_prop(
+                    self.prev_correct_velocity_names[j])
+
+                correction = dels[i]
+                
+                # store the corrected value in the prev array for use
+                # in the second step.
+                prev_array[:] = bn + correction
+
+                an1[:] = an + (prev_array)*self.time_step.value
+
+################################################################################
+# `RK2Step2XSPHPositionStepper` class.
+################################################################################
+cdef class RK2Step2XSPHPositionStepper(EulerXSPHPositionStepper):
+    """
+    Position stepper with XSPH correction.
+    """
+    def __cinit__(self, str name='', SolverBase solver=None,
+                  ComponentManager component_manager=None,
+                  list entity_list=[],
+                  str prop_name='',
+                  list integrands=[], list integrals=[],
+                  TimeStep time_step=None,
+                  double epsilon=0.5,
+                  *args, **kwargs):
+        """
+        Constructor.
+        """
+        self.epsilon = epsilon
+
+    cpdef int setup_component(self) except -1:
+        """
+        Sets up the component before executing.
+        """
+        cdef int i, num_props
+        cdef int num_entities
+        cdef ParticleArray parr
+
+        if self.setup_done == True:
+            return 0
+
+        if self.prop_name != 'position':
+            logger.warn(
+                'XSPHPositionStepper used for stepping %s',self.prop_name)
+
+        # array setup will be the same as done by the ODEStepper
+        ODEStepper.setup_component(self)
+
+        # create the xsph component and add arrays to the entities as required.
+        self.xsph_component = XSPHVelocityComponent(name=self.name+'comp',
+                                                    solver=self.solver,
+                                                    component_manager=self.cm,
+                                                    entity_list=self.entity_list,
+                                                    source_dest_setup_auto=True,
+                                                    epsilon=self.epsilon)        
+        self.setup_done = True
+
+        return 0
+
+    cdef int compute(self) except -1:
+        """
+        Performs simple euler integration by the time_step, for the said arrays
+        for each entity. The XSPH velocity correction is added to the rate
+        before stepping.
+
+        Each entity 'MUST' have a particle array representation. Otherwise
+        stepping won't be done currently.
+
+        """
+        cdef EntityBase e
+        cdef int i, num_entities
+        cdef int num_props, p, j
+        cpdef ParticleArray parr
+        cdef numpy.ndarray an, bn, an1, correction, prev_array
+        cdef DoubleArray _an, _bn, _an1
+        
+        # make sure the component has been setup
+        self.setup_component()
+
+        # compute the velocity corrections.
+        self.xsph_component.compute()
+
+        num_entities = len(self.entity_list)
+        num_props = len(self.integrand_names)
+
+        for i from 0 <= i < num_entities:
+            e = self.entity_list[i]
+            
+            parr = e.get_particle_array()
+            dels = self.xsph_component.get_velocity_corrections(parr)
+
+            if parr is None:
+                logger.warn('no particle array for %s'%(e.name))
+                continue
+            
+            for j from 0 <= j < num_props:
+                an = parr._get_real_particle_prop(self.integral_names[j])
+                bn = parr._get_real_particle_prop(self.integrand_names[j])
+                an1 = parr._get_real_particle_prop(self.next_step_names[j])
+
+                prev_array = parr._get_real_particle_prop(
+                    self.integrand_names[j]+'_correct_prev')
+
+                correction = dels[j]
+
+                an1[:] = an + (prev_array +
+                               (correction+bn))*(0.5*self.time_step.value) 

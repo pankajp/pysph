@@ -13,6 +13,7 @@ import types
 from pysph.base.attrdict cimport AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
+from pysph.base.cell cimport CellManager
 
 from pysph.solver.base cimport Base
 from pysph.solver.entity_types cimport EntityTypes
@@ -132,3 +133,9 @@ cdef class EntityBase(Base):
         Adds the given particles into the entities particle array.
         """
         pass
+
+    cpdef add_arrays_to_cell_manager(self, CellManager cell_manager):
+        """
+        Add all arrays that need to be binned for this entity to the cell manager.
+        """
+        raise NotImplementedError, 'EntityBase::add_arrays_to_cell_manager'

@@ -1,6 +1,7 @@
 from pysph.base.point cimport *
 from pysph.base.carray cimport *
 
+from pysph.base.particle_array cimport ParticleArray
 # forward declaration for CellManager
 cdef class CellManager
 
@@ -79,6 +80,8 @@ cdef class CellManager:
     cdef public list hierarchy_list
     cdef public double min_cell_size, max_cell_size
     cdef public int jump_tolerance
+
+    cdef public bint initialized
     
     cdef public str coord_x, coord_y, coord_z
 
@@ -88,6 +91,7 @@ cdef class CellManager:
     cdef int update_status(self) except -1
     cdef initialize(self)
     cdef void clear(self)
+    cpdef add_array_to_bin(self, ParticleArray parr)
 
     cdef void compute_cell_sizes(self, double, double, int, DoubleArray)
     cdef void update_cell_hierarchy_list(self)

@@ -48,14 +48,24 @@ class ComponentFactory:
         import pysph.solver.integrator_base
         import pysph.solver.dummy_components
         import pysph.solver.xsph_component
+        import pysph.solver.runge_kutta_integrator
 
         if comp_type == 'base' or comp_type == 'euler':
             return pysph.solver.integrator_base.ODEStepper(*args, **kwargs)
         elif comp_type == 'ya_stepper':
             return pysph.solver.dummy_components.YAStepper(*args, **kwargs)
         elif comp_type == 'euler_xsph_position_stepper':
-            return pysph.solver.xsph_component.EulerXSPHPositionStepper(*args,
-                                                                         **kwargs)
+            return pysph.solver.xsph_component.EulerXSPHPositionStepper(
+                *args, **kwargs)
+        elif comp_type == 'rk2_second_step':
+            return pysph.solver.runge_kutta_integrator.RK2SecondStep(
+                *args, **kwargs)
+        elif comp_type == 'rk2_xsph_step1_position_stepper':
+            return pysph.solver.xsph_component.RK2Step1XSPHPositionStepper(
+                *args, **kwargs)
+        elif comp_type == 'rk2_xsph_step2_position_stepper':
+            return pysph.solver.xsph_component.RK2Step2XSPHPositionStepper(
+                *args, **kwargs)
         else:
             logger.warn('Cannot produce %s'%(comp_type))
             return None

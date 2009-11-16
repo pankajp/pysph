@@ -272,9 +272,9 @@ cdef class Integrator(SolverComponent):
         self.execute_list = []
 
         if solver is None:
-            self.curr_time_step = TimeStep()
+            self.time_step = TimeStep()
         else:
-            self.curr_time_step = solver.time_step
+            self.time_step = solver.time_step
 
         self.information.set_dict(self.INTEGRATION_PROPERTIES, {})
         self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
@@ -284,6 +284,7 @@ cdef class Integrator(SolverComponent):
         self.information.set_list(self.PRE_STEP_COMPONENTS, [])
         self.information.set_list(self.POST_STEP_COMPONENTS,[])
 
+        #self.setup_defualt_steppers()
         # setup the velocity and position properties according to dimension
         self.set_dimension(dimension)
 
@@ -291,6 +292,7 @@ cdef class Integrator(SolverComponent):
                  entity_list=[], dimension=3, *args, **kwargs):
         """
         """
+        #pass
         self.setup_defualt_steppers()
 
     def setup_defualt_steppers(self):
@@ -390,6 +392,28 @@ cdef class Integrator(SolverComponent):
             logger.warn(msg)
             raise SystemError, msg            
 
+    cpdef dict get_property_step_info(self, str prop_name):
+        """
+        Returns the dict associated with the property prop_name, containing the
+        stepping information of the said property.
+        """
+        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        
+        return ip.get(prop_name)
+
+    def add_property_step_info(self, prop_name, list integrand_arrays, list
+                               integral_arrays, list entity_types=[], dict
+                               steppers={}):
+        """
+        """
+        # FIXME
+        # remove the add_property function and make this the primary function.
+        self.add_property(prop_name=prop_name,
+                          integrand_arrays=integrand_arrays,
+                          integral_arrays=integral_arrays,
+                          entity_types=entity_types,
+                          steppers=steppers)        
+
     cpdef add_property(self, str prop_name, list integrand_arrays, list
                        integral_arrays, list entity_types=[], dict steppers={}):
         """
@@ -463,7 +487,8 @@ cdef class Integrator(SolverComponent):
                 )
         self.setup_done = False
 
-    cpdef add_pre_step_component(self, str comp_name, str property_name=''):
+    cpdef add_pre_step_component(self, str comp_name, str property_name='',
+                                 bint at_tail=True):
         """
         Adds a component to be executed before stepping of the property given by
         property_name. If property_name name is '', the component is added at a
@@ -476,7 +501,11 @@ cdef class Integrator(SolverComponent):
         cdef list prop_components
 
         if property_name == '':
-            psc.append(comp_name)
+            if psc.count(comp_name) == 0:
+                if at_tail == True:
+                    psc.append(comp_name)
+                else:
+                    psc.insert(0, comp_name)
         else:
             if p_dict is None:
                 logger.error('Property %s does not exist'%(property_name))
@@ -488,11 +517,15 @@ cdef class Integrator(SolverComponent):
                 prop_components = []
                 p_dict['pre_step_components'] = prop_components
             
-            prop_components.append(comp_name)
+            if at_tail:
+                prop_components.append(comp_name)
+            else:
+                prop_components.insert(0, comp_name)
 
         self.setup_done = False
 
-    cpdef add_post_step_component(self, str comp_name, str property_name=''):
+    cpdef add_post_step_component(self, str comp_name, str property_name='',
+                                  bint at_tail=True):
         """
         Adds a component to be executed after stepping of the property given by
         property_name. If the property_name is '', the component is added after
@@ -508,7 +541,10 @@ cdef class Integrator(SolverComponent):
 
         if property_name == '':
             if psc.count(comp_name) == 0:
-                psc.append(comp_name)
+                if at_tail == True:
+                    psc.append(comp_name)
+                else:
+                    psc.insert(0, comp_name)
         else:
             if p_dict is None:
                 logger.error('Property %s does not exist'%(property_name))
@@ -520,9 +556,12 @@ cdef class Integrator(SolverComponent):
                 prop_components = []
                 p_dict['post_step_components'] = prop_components
             
-            prop_components.append(comp_name)
+            if at_tail == True:
+                prop_components.append(comp_name)
+            else:
+                prop_components.insert(0, comp_name)
                 
-        self.setup_done = False        
+        self.setup_done = False 
 
     cpdef add_pre_integration_component(self,  str comp_name, bint
                                         at_tail=True):
@@ -778,7 +817,7 @@ cdef class Integrator(SolverComponent):
                 stepper.name = 'stepper_'+prop_name+'_'+e.name
                 stepper.add_entity(e)
                 prop_steppers.append(stepper)
-                stepper.time_step = self.curr_time_step
+                stepper.time_step = self.time_step
                 stepper.setup_component()
                 self.execute_list.append(stepper)
             else:
@@ -864,7 +903,7 @@ cdef class Integrator(SolverComponent):
                                       prop_name=prop_name,
                                       integrands=integrand,
                                       integrals=integral,
-                                      time_step=self.curr_time_step)
+                                      time_step=self.time_step)
                     
     def _setup_copiers(self, prop_stepper_dict):
         """

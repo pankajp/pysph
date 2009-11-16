@@ -1,3 +1,13 @@
+
+# standard imports
+import logging
+logger = logging.getLogger()
+
+# local imports
+from pysph.base.point cimport *
+from pysph.base.carray cimport *
+from pysph.base.particle_array cimport ParticleArray
+
 cdef extern from 'math.h':
     int abs(int)
 
@@ -7,10 +17,6 @@ cdef extern from 'limits.h':
     cdef double floor(double)
     cdef double fabs(double)
 
-# local imports
-from pysph.base.point cimport *
-from pysph.base.carray cimport *
-from pysph.base.particle_array cimport ParticleArray
 
 # numpy import
 cimport numpy
@@ -885,6 +891,15 @@ cdef class RootCell(NonLeafCell):
 cdef class CellManager:
     """
     """
+    # FIXME:
+    # 1. Simple API function to add an array to bin _BEFORE_ the cell manager
+    # has been initialized.
+    #
+    # 2. Provision to add new array to bin  _AFTER_ the cell manager has once
+    # been initialized. Will require some dirty changes to all cells that have
+    # already been created. Whether this feature is required can be thought over
+    # again. 
+
     def __init__(self, list arrays_to_bin=[], object particle_manager=None, double
                   min_cell_size=0.1, double max_cell_size=0.5, Point
                   origin=Point(0., 0., 0), int num_levels=1, str coord_x='x',
@@ -918,6 +933,8 @@ cdef class CellManager:
 
         self.is_dirty = True
 
+        self.initialized = False
+
         if initialize == True:
             self.initialize()
         
@@ -950,6 +967,20 @@ cdef class CellManager:
 
         return 0
 
+    cpdef add_array_to_bin(self, ParticleArray parr):
+        """
+        """
+        if self.initialized == True:
+            msg = 'Cannot add array to bin\n'
+            msg +='cell manager already initialized'
+            logger.error(msg)
+            raise SystemError, msg
+        else:
+            if self.arrays_to_bin.could(parr) == 0:
+                self.arrays_to_bin.append(parr)
+                if parr.name == '':
+                    logger.warn('particle array (%s) name not set'%(parr))
+        
     cdef int update_status(self):
         """
         Updates the is_dirty flag to indicate is an update is required.
@@ -994,7 +1025,11 @@ cdef class CellManager:
            update_cell_manager_hierarchy_list function.
            
     	"""
-        
+
+        if self.initialized == True:
+            logger.warn('Trying to initialize cell manager more than once')
+            return
+
         # clear current data.
         self.clear()
 
@@ -1020,6 +1055,8 @@ cdef class CellManager:
         # we do not want particles to jump across
         # multiple cells.
         self._reset_jump_tolerance()        
+
+        self.initialized = True
 
     cdef void clear(self):
         """

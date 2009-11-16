@@ -39,7 +39,11 @@ class ArrayCopier(UserDefinedComponent):
 
         # make sure the lengths of the arrays are the same.
         if len(from_arrays) != len(to_arrays):
-            raise ValueError, 'From and To array lengths unequal'
+            msg = 'From and To array lengths unequal\n'
+            msg += str(from_arrays) + '\n'
+            msg += str(to_arrays) + '\n'
+            raise ValueError, msg
+            
 
         self.from_arrays[:] = from_arrays
         self.to_arrays[:] = to_arrays
@@ -86,7 +90,11 @@ class ArrayCopier(UserDefinedComponent):
                     if pa.has_array(fa) and pa.has_array(ta):
                         continue
                     else:
-                        raise AttributeError, 'Required properties not present'
+                        msg = 'Required properties not present\n'
+                        msg += fa + '\n'
+                        msg += ta + '\n'
+                        logger.error(msg)
+                        raise AttributeError, msg
 
             # remove entities that were marked for removal.
             for e in to_remove:
@@ -119,3 +127,5 @@ class ArrayCopier(UserDefinedComponent):
                 to_arr = parray.get_carray(ta_name).get_npy_array()
 
                 from_arr[:] = to_arr
+
+        return 0

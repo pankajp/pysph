@@ -15,6 +15,47 @@ from pysph.solver.integrator_base cimport *
 from pysph.solver.solver_base cimport *
 from pysph.solver.component_factory import ComponentFactory as cfac
 
+
+################################################################################
+# `RK2TimeStepSetter` class.
+################################################################################
+cdef class RK2TimeStepSetter(SolverComponent):
+    """
+    """
+    def __cinit__(self, str name='', SolverBase solver=None,
+                  ComponentManager component_manager=None,
+                  list entity_list=[],
+                  Integrator i=None,
+                  int step_num=1, *args, **kwargs):
+
+        self.integrator = i
+        self.step_num = step_num
+        if i is not None:
+            self.time_step = i.time_step
+
+    cpdef int setup_component(self) except -1:
+        """
+        """
+        if self.setup_done == True:
+            return 0
+
+        if self.integrator is not None:
+            self.time_step = self.integrator.time_step
+
+        self.setup_done = True
+
+    cdef int compute(self) except -1:
+        """
+        """
+        self.setup_component()
+
+        if self.step_num == 1:
+            self.time_step.value *= 0.5
+        else:
+            self.time_step.value *= 2.0
+
+        return 0
+
 ################################################################################
 # `RK2Integrator` class.
 ################################################################################
@@ -39,6 +80,14 @@ cdef class RK2Integrator(Integrator):
                                   self._step1_default_steppers)
         self.step_being_setup = 1
 
+    def __init__(self, name='', solver=None, component_manager=None,
+                 entity_list=[], dimension=3, *args, **kwargs):
+        
+        Integrator.__init__(self, name=name, solver=solver,
+                            component_manager=component_manager,
+                            entity_list=entity_list, dimension=dimension, *args,
+                            **kwargs)
+
     def setup_defualt_steppers(self):
         """
         Sets up the default integrator to be used by this integrator, when no
@@ -60,12 +109,19 @@ cdef class RK2Integrator(Integrator):
         # init internal data for setting up the first step.
         self._init_for_step_setup(1)
 
+        # add a time step setter component.
+        self.execute_list.append(RK2TimeStepSetter(integrator=self, step_num=1))
+        
         # setup the first step.
         self._setup_step()
 
         # init internal data for setting up the second step.
         self._init_for_step_setup(2)
 
+        
+        # add a time step setter component.
+        self.execute_list.append(RK2TimeStepSetter(integrator=self, step_num=2))
+        
         # setup the second step.
         self._setup_step()
 
@@ -118,24 +174,29 @@ cdef class RK2Integrator(Integrator):
             self._setup_property_copiers_for_second_step(prop_stepper_dict)
 
     def _setup_property_copiers_for_first_step(self, prop_stepper_dict):
+
         """
         Setup property copiers for the 1st step.
         """
         ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
         io = self.information.get_list(self.INTEGRATION_ORDER)
 
-        prev_steppers = {}
+        for prop_name in io:
+            stepper_list = prop_stepper_dict[prop_name]
+            prop_info = ip.get(prop_name)
+            for stepper in stepper_list:
+                self._add_prev_copiers(stepper, stepper.integral_names, prop_name,
+                                       '_lhs')
+        for prop_name in io:
+            stepper_list = prop_stepper_dict[prop_name]
+            prop_info = ip.get(prop_name)
+            for stepper in stepper_list:
+                self._add_prev_copiers(stepper, stepper.integrand_names, prop_name,
+                                       '_rhs')
         
         for prop_name in io:
             stepper_list = prop_stepper_dict[prop_name]
             prop_info = ip.get(prop_name)
-
-            for stepper in stepper_list:
-                self._add_prev_copiers(stepper, stepper.integral_names, prop_name,
-                                       '_lhs')
-                self._add_prev_copiers(stepper, stepper.integrand_names,
-                                       prop_name, '_rhs')
-
             # now copy the next values of integrals (lhs) into current values.
             for stepper in stepper_list:
                 cop_name = 'next_copier_'+prop_name
@@ -153,6 +214,7 @@ cdef class RK2Integrator(Integrator):
 
                 self.execute_list.append(copier)
 
+
     def _add_prev_copiers(self, stepper_obj, array_names, prop_name,
                           copier_tag):
         """
@@ -160,23 +222,24 @@ cdef class RK2Integrator(Integrator):
         """        
         cop_name='prev_copier_'+prop_name+copier_tag
         prev_names = []
+
         for a_name in array_names:
             prev_name = a_name + '_prev'
             prev_names.append(prev_name)
             
-            copier = cfac.get_component('copiers', 'copier',
-                                        name=cop_name,
-                                        solver=self.solver,
-                                        component_manager=self.cm,
-                                        entity_list=stepper_obj.entity_list,
-                                        from_arrays=array_names,
-                                        to_arrays=prev_names)
-            if copier is None:
-                msg = 'Could not create copier for %s'%(prop_name)
-                logger.warn('Could not create copier for %s'%(prop_name))
-                raise SystemError, msg
-            
-            self.execute_list.append(copier)                    
+        copier = cfac.get_component('copiers', 'copier',
+                                    name=cop_name,
+                                    solver=self.solver,
+                                    component_manager=self.cm,
+                                    entity_list=stepper_obj.entity_list,
+                                    from_arrays=array_names,
+                                    to_arrays=prev_names)
+        if copier is None:
+            msg = 'Could not create copier for %s'%(prop_name)
+            logger.warn('Could not create copier for %s'%(prop_name))
+            raise SystemError, msg
+        
+        self.execute_list.append(copier)                    
 
     def _setup_property_copiers_for_second_step(self, prop_stepper_dict):
         """

@@ -96,3 +96,13 @@ Mon Nov 16 01:57:01 IST 2009
     - constructor changes to EntityBase, Fluid and Solid.
     - XSPH integrator components, integrator, stepper added.
     - Runge Kutta integrator added.
+
+Tue Nov 17 00:11:46 IST 2009
+    - add_arrays_to_bin function for CellManager 
+    - initialized status for CellManager
+    - add_arrays_to_cell_manager in Entities.
+    - Various solver abstractions in SolverBase
+    - FSFSolver updated to reflect changes in SolverBase.
+    - at_tail parameter added to pre/post_step_components.
+    - RK2TimeStepSetter.
+    - Integrator classes and steppers for XSPHRK2 integration.
