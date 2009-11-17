@@ -407,6 +407,8 @@ cdef class ParticleArray:
         for arr in self.temporary_arrays.values():
             arr.resize(new_size)
 
+        self.align_particles()
+
     def get_property_index(self, prop_name):
         """
         Get the index into the property array where the prop_name property is

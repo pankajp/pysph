@@ -14,7 +14,7 @@ from pysph.solver.entity_types import EntityTypes
 ################################################################################
 # `SPHDensityComponent` class.
 ################################################################################
-class SPHDensityComponent(SPHComponent):
+class SPHDensityComponent(PYSPHComponent):
     """
     Basic SPH density computing component.
 
@@ -55,11 +55,12 @@ class SPHDensityComponent(SPHComponent):
         wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
         rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
 
-        for key in input_types.keys():
-            rp[key] = [{'name':'m', 'default':1.0},
-                       {'name':'h', 'default':1.0}]
+        for key in inp_types.keys():
+            rp[key] = ['m', 'h']
             wp[key] = [{'name':'rho', 'default':1000.0},
                        {'name':'_tmp1', 'default':0.0}]
+
+        return 0
 
     def py_compute(self):
         """
@@ -74,3 +75,5 @@ class SPHDensityComponent(SPHComponent):
             
             # copy values from _tmp1 to rho
             parr.rho[:] = parr._tmp1
+            
+        return 0

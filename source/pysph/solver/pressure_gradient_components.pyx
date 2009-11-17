@@ -18,7 +18,8 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
     Computes the pressure gradient using the SPHSymmetricPressureGradient3D
     function.
     """
-    def __cinit__(self, SolverBase solver=None, 
+    def __cinit__(self, str name='',
+                  SolverBase solver=None, 
                   ComponentManager component_manager=None, 
                   list entity_list=[],
                   NNPSManager nnps_manager=None,
@@ -58,6 +59,8 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
                                         {'name':'pacclr_y', 'default':0.},
                                         {'name':'pacclr_z', 'default':0.}]
 
+        return 0
+
     cdef int compute(self) except -1:
         """
         """
@@ -78,3 +81,5 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
             parr.ax += parr.pacclr_x
             parr.ay += parr.pacclr_y
             parr.az += parr.pacclr_z
+
+        return 0

@@ -26,7 +26,7 @@ cdef class ParticleArray:
     cdef public bint is_dirty
 
     # the number of real particles.
-    cdef long num_real_particles
+    cdef public long num_real_particles
 
     cdef object _create_c_array_from_npy_array(self, np.ndarray arr)
     cdef _check_property(self, str)

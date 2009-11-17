@@ -976,7 +976,7 @@ cdef class CellManager:
             logger.error(msg)
             raise SystemError, msg
         else:
-            if self.arrays_to_bin.could(parr) == 0:
+            if self.arrays_to_bin.count(parr) == 0:
                 self.arrays_to_bin.append(parr)
                 if parr.name == '':
                     logger.warn('particle array (%s) name not set'%(parr))

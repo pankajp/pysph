@@ -18,6 +18,7 @@ from pysph.solver.integrator_base import Integrator, ODEStepper
 from pysph.solver.solver_base import ComponentManager
 from pysph.solver.dummy_components import *
 from pysph.solver.dummy_entities import DummyEntity
+from pysph.solver.array_initializer import ArrayInitializer
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -487,56 +488,62 @@ class TestIntegrator(unittest.TestCase):
             print c.name
         
         # make sure the execute_list was setup properly.
-        self.assertEqual(len(i.execute_list), 16)
+        self.assertEqual(len(i.execute_list), 17)
         
         self.assertEqual(i.execute_list[0], cm.get_component('c1'))
         self.assertEqual(i.execute_list[1], cm.get_component('c2'))
-        self.assertEqual(i.execute_list[2], cm.get_component('c3'))
 
+        self.assertEqual(type(i.execute_list[2]), ArrayInitializer)
+        ai = i.execute_list[2]
+        self.assertEqual(ai.array_names, ['ax', 'ay', 'az'])
+        self.assertEqual(ai.array_values, [0, 0, 0])
+        self.assertEqual(ai.entity_list, [e1])
 
-        s1 = i.execute_list[3]
+        self.assertEqual(i.execute_list[3], cm.get_component('c3'))
+        
+        s1 = i.execute_list[4]
         self.check_stepper(s1, 'velocity', ODEStepper, [e1], ['ax', 'ay', 'az'],
                            ['u', 'v', 'w'])
 
-        self.assertEqual(i.execute_list[4], cm.get_component('c4'))
-        self.assertEqual(i.execute_list[5], cm.get_component('c5'))
+        self.assertEqual(i.execute_list[5], cm.get_component('c4'))
+        self.assertEqual(i.execute_list[6], cm.get_component('c5'))
         
-        s2 = i.execute_list[6]
+        s2 = i.execute_list[7]
         self.check_stepper(s2, 'position', ODEStepper, [e1], ['u', 'v', 'w'],
                            ['x', 'y', 'z'])
-        s3 = i.execute_list[7]
+        s3 = i.execute_list[8]
         self.check_stepper(s3, 'position', ODEStepper, [e2], ['u', 'v', 'w'],
                            ['x', 'y', 'z'])
-        s4 = i.execute_list[8]
+        s4 = i.execute_list[9]
         self.check_stepper(s4, 'density', YAStepper, [e1], ['rho_rate'],
                            ['rho']) 
-        s5 = i.execute_list[9]
+        s5 = i.execute_list[10]
         self.check_stepper(s5, 'density', ODEStepper, [e3], ['rho_rate'],
                            ['rho']) 
      
         # now test for the copiers.
-        cp1 = i.execute_list[10]
+        cp1 = i.execute_list[11]
         self.check_copier(cp1, [e1], 
                          ['u_next', 'v_next', 'w_next'], 
                          ['u', 'v', 'w'])
-        cp2 = i.execute_list[11]
+        cp2 = i.execute_list[12]
         self.check_copier(cp2, [e1],
                           ['x_next', 'y_next', 'z_next'],
                           ['x', 'y', 'z'])
-        cp3 = i.execute_list[12]
+        cp3 = i.execute_list[13]
         self.check_copier(cp3, [e2],
                           ['x_next', 'y_next', 'z_next'],
                           ['x', 'y', 'z'])
-        cp4 = i.execute_list[13]
+        cp4 = i.execute_list[14]
         self.check_copier(cp4, [e1],
                           ['rho_next'],
                           ['rho'])
-        cp5 = i.execute_list[14]
+        cp5 = i.execute_list[15]
         self.check_copier(cp5, [e3],
                           ['rho_next'],
                           ['rho'])
 
-        self.assertEqual(i.execute_list[15], cm.get_component('c6'))
+        self.assertEqual(i.execute_list[16], cm.get_component('c6'))
 
     def check_copier(self, cp_obj, entity_list, from_arr, to_arr):
         self.assertEqual(cp_obj.entity_list, entity_list)

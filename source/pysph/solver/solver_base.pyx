@@ -71,7 +71,7 @@ cdef class SolverComponent(Base):
         self.solver = solver
 
         if solver is not None:
-            self.cm = solver.cm
+            self.cm = solver.component_manager
         else:
             self.cm = component_manager
 
@@ -89,7 +89,13 @@ cdef class SolverComponent(Base):
         self.information.set_dict(SolverComponent.OUTPUT_PROPERTIES, {})
         self.information.set_dict(SolverComponent.INPUT_TYPES, {})
         self.information.set_dict(SolverComponent.ENTITY_NAMES, {})
-        
+    
+    def __init__(self,  *args, **kwargs):
+        """
+        Python constructor.
+        """
+        pass
+
     cpdef bint filter_entity(self, EntityBase entity):
         """
         Returns true if this entity fails any input requirement checks.
@@ -269,7 +275,7 @@ cdef class SolverComponent(Base):
         the component has been added to the component manager.
 
         """
-        pass
+        return 0
 
 ################################################################################
 # `UserDefinedComponent` class.
@@ -283,6 +289,12 @@ cdef class UserDefinedComponent(SolverComponent):
                   component_manager=None, list entity_list=[], *args, **kwargs):
         """
         Constructor.
+        """
+        pass
+
+    def __init__(self, *args, **kwargs):
+        """
+        Python constructor.
         """
         pass
 
@@ -726,9 +738,9 @@ cdef class SolverBase(Base):
                   ):
         
         if component_manager is None:
-            self.cm = ComponentManager()
+            self.component_manager = ComponentManager()
         else:
-            self.cm = component_manager
+            self.component_manager = component_manager
 
         if cell_manager is None:
             self.cell_manager = CellManager(initialize=False)
@@ -752,9 +764,10 @@ cdef class SolverBase(Base):
         # current iteration.
         self.current_iteration = 0
 
-        # list of entities participating in the simulation.
         self.entity_list=[]
-
+        self.component_categories = {}
+        self.kernels_used = {}
+        
         # the integrator.
         self.integrator = integrator
         if self.integrator is not None:
@@ -811,41 +824,58 @@ cdef class SolverBase(Base):
         """
         Function to perform solver setup.
         """
-        self._setup_components()
+        self._setup_integrator()
 
-        self._setup_entites()
+        self._setup_component_manager()
+
+        self._setup_entities()
 
         self._setup_nnps()
 
         self._setup_components_input()
 
-        self._setup_integrator()
-
-    cpdef _setup_components(self):
+    cpdef _setup_component_manager(self):
         """
         Add all the components (in component_categories) into the component
         manager.
 
-        Make sure the "solver" attribute of each component is set to "self".
+        - If no component name is given for the component, generate a name
+        before adding the component to the component manager.
+
+        - Make sure the "solver" attribute of each component is set to "self".
         
         """
-        for comp_list in self.component_categories.values():
+        for comp_category in self.component_categories.keys():
+            comp_list = self.component_categories[comp_category]
+            i=0
             for c in comp_list:
                 c.solver = self
-                self.component_manager.add_component(c)
+                if c.name == '':
+                    c.name = comp_category+'_'+str(i)
+                logger.info('Component %s added'%(c.name))
+                self.component_manager.add_component(c, notify=True)
                 
         # add the integrator to the component manager
         self.integrator.solver = self
-        self.component_manager.add_component(self.integrator)
+        if self.integrator.name == '':
+            self.integrator.name = 'integrator_default'
+        self.component_manager.add_component(self.integrator, notify=True)
 
     cpdef _setup_entities(self):
         """
         For each entity in the entity_dict, set the required properties in the
         entities using the component manager.
+
+        If any entity has not been named, raise an error here.
         """
         for e in self.entity_list:
-            self.component_manager.setup_entity(e)
+            if e.name == '':
+                msg = 'Name not set for entity %s'%(e)
+                logger.error(msg)
+                raise ValueError, msg
 
+            self.component_manager.setup_entity(e)
+            
     cpdef _setup_nnps(self):
         """
         Setup the nnps and the cell manager.
@@ -863,6 +893,9 @@ cdef class SolverBase(Base):
         
         self.cell_manager.min_cell_size = min_cell_size
         self.cell_manager.max_cell_size = max_cell_size
+
+        # initialize the cell manager.
+        self.cell_manager.initialize()
 
     cpdef _setup_components_input(self):
         """

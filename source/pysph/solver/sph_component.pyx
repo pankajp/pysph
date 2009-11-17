@@ -43,7 +43,9 @@ cdef class SPHComponent(SolverComponent):
     """
     Base class for components doing SPH summations.
     """
-    def __cinit__(self, SolverBase solver=None,
+    def __cinit__(self, 
+                  str name='',
+                  SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],
                   NNPSManager nnps_manager=None,
@@ -283,3 +285,52 @@ cdef class SPHComponent(SolverComponent):
         dest objects that those provided by this class.
         """
         raise NotImplementedError, 'SPHComponent::setup_sph_objs'
+
+    cdef int compute(self) except -1:
+        """
+        """
+        raise NotImplementedError, 'SPHComponent::compute'
+################################################################################
+# `PYSPHComponent` class.
+################################################################################
+cdef class PYSPHComponent(SPHComponent):
+    """
+    Component to implement SPH components from pure python.
+    """
+    def __cinit__(self, str name='',
+                  SolverBase solver=None,
+                  ComponentManager component_manager=None,
+                  list entity_list=[],
+                  NNPSManager nnps_manager=None,
+                  KernelBase kernel=None,
+                  list source_list=[],
+                  list dest_list=[],
+                  bint source_dest_setup_auto=True,
+                  int source_dest_mode=SPHSourceDestMode.Group_None,
+                  *args, **kwargs):
+        pass
+
+    def __init__(self, str name='',
+                 SolverBase solver=None,
+                 ComponentManager component_manager=None,
+                 list entity_list=[],
+                 NNPSManager nnps_manager=None,
+                 KernelBase kernel=None,
+                 list source_list=[],
+                 list dest_list=[],
+                 bint source_dest_setup_auto=True,
+                 int source_dest_mode=SPHSourceDestMode.Group_None,
+                 *args, **kwargs):
+        pass
+
+    cpdef int py_compute(self) except -1:
+        """
+        Function where the core logic of a python component is to be implemented.
+        """
+        raise NotImplementedError, 'UserDefinedComponent::py_compute'
+
+    cdef int compute(self) except -1:
+        """
+        Call the py_compute method.
+        """
+        return self.py_compute()

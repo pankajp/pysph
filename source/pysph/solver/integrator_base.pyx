@@ -17,6 +17,8 @@ from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.entity_types cimport EntityTypes
 from pysph.solver.time_step cimport TimeStep
+from pysph.solver.array_initializer import ArrayInitializer
+from utils import *
 
 # import component factory
 from pysph.solver.component_factory import ComponentFactory as cfac
@@ -345,7 +347,7 @@ cdef class Integrator(SolverComponent):
             
         # now add the velocity and position properties to be stepped.
         self.add_property('velocity', accel_arrays, vel_arrays,
-                          [EntityTypes.Entity_Base])
+                          [EntityTypes.Entity_Base], integrand_initial_values=[0.])
         self.add_property('position', vel_arrays, pos_arrays,
                           [EntityTypes.Entity_Base])
 
@@ -403,7 +405,7 @@ cdef class Integrator(SolverComponent):
 
     def add_property_step_info(self, prop_name, list integrand_arrays, list
                                integral_arrays, list entity_types=[], dict
-                               steppers={}):
+                               steppers={}, integrand_initial_values=None):
         """
         """
         # FIXME
@@ -412,10 +414,12 @@ cdef class Integrator(SolverComponent):
                           integrand_arrays=integrand_arrays,
                           integral_arrays=integral_arrays,
                           entity_types=entity_types,
-                          steppers=steppers)        
+                          steppers=steppers,
+                          integrand_initial_values=integrand_initial_values)        
 
     cpdef add_property(self, str prop_name, list integrand_arrays, list
-                       integral_arrays, list entity_types=[], dict steppers={}):
+                       integral_arrays, list entity_types=[], dict steppers={},
+                       list integrand_initial_values=None):
         """
         Adds a new property that has to be integrated to the
         INTEGRATION_PROPERTIES dictionary in the components information.
@@ -436,6 +440,10 @@ cdef class Integrator(SolverComponent):
             - steppers - Optional information about the stepper class to use
               while stepping this property for each entity. Defaults will be
               used if this information is not present.
+            - integrand_initial_values - An array having one value for each
+              array in the integrand array. If this is present, an array
+              initializer will be added as the first component of the pre-step
+              component of this property.
 
         Format of information to specified as part of 'steppers'
         
@@ -474,6 +482,11 @@ cdef class Integrator(SolverComponent):
         p_dict['entity_types'][:] = entity_types        
         p_dict['steppers'] = {}
         p_dict['steppers'].update(steppers)
+        if integrand_initial_values is not None:
+            p_dict['integrand_initial_values'] = []
+            p_dict['integrand_initial_values'][:] = integrand_initial_values
+        else:
+            p_dict['integrand_initial_values'] = None
         
         # also append the property name to the integraion_order information.
         if io.count(prop_name) == 0:
@@ -774,6 +787,30 @@ cdef class Integrator(SolverComponent):
             return prop_steppers
 
         e_types = p_info.get('entity_types')
+
+        # setup initializers for each entity that requires this property to be
+        # stepped. 
+        integrand_initial_values = p_info.get('integrand_initial_values')
+        if integrand_initial_values != None:
+            e_list = []
+            for e in self.entity_list:
+                e_ip = e.information.get_list(e.INTEGRATION_PROPERTIES)
+                if len(e_types) > 0:
+                    if e.is_type_included(e_types):
+                        if e_ip is not None:
+                            if len(e_ip) == 0 or not(prop_name in e_ip):
+                                continue
+                        else:
+                            e_list.append(e)
+            # we have the list of entities that are to be considered for 
+            # the integration of this property.
+            ai_name=extract_entity_names(e_list)
+            ai = ArrayInitializer(name='init_'+ai_name,
+                                  solver=self.solver,
+                                  entity_list=e_list,
+                                  array_names=p_info.get('integrand'),
+                                  array_values=integrand_initial_values)
+            self.execute_list.append(ai)
         
         # get the pre-step components
         psc = p_info.get('pre_step_components')
@@ -917,7 +954,8 @@ cdef class Integrator(SolverComponent):
             stepper_list = prop_stepper_dict[prop_name]
             # create a copier for each stepper in the stepper_list.
             for stepper in stepper_list:
-                cop_name = 'copier_'+prop_name
+                e_names = extract_entity_names(stepper.entity_list)
+                cop_name = 'copier_'+prop_name+'_'+e_names
                 copier = cfac.get_component('copiers', 'copier', 
                                             name=cop_name, 
                                             solver=self.solver,
@@ -944,21 +982,16 @@ cdef class Integrator(SolverComponent):
         
         for i from 0 <= i < n_comps:
             comp = self.execute_list[i]
+            print str(comp), comp.name
             comp.compute()
 
         return 0
 
-    cdef int _integrate(self) except -1:
+    cpdef int integrate(self) except -1:
         """
         cdefed wrapper for the compute function.
         """
         self.compute()
-
-    def integrate(self):
-        """
-        Python visible version of _integrate.
-        """
-        self._integrate()
 
     cpdef int update_property_requirements(self) except -1:
         """
@@ -1001,3 +1034,4 @@ cdef class Integrator(SolverComponent):
                         e_props.append({'name':p, 'default':None})
                         p = intgl[i]
                         e_props.append({'name':p, 'default':None})
+        return 0

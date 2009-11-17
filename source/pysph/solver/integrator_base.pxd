@@ -88,8 +88,7 @@ cdef class Integrator(SolverComponent):
     # set the order in which properties should be integrated.
     cpdef set_integration_order(self, list order)
     
-    cdef int compute(self) except -1
-    cdef int _integrate(self) except -1
+    cpdef int integrate(self) except -1
     
     # setup the component once prior to execution.
     cpdef int setup_component(self) except -1
@@ -97,7 +96,8 @@ cdef class Integrator(SolverComponent):
     # add a new property to be integrated along with arrays representing the
     # properties. 
     cpdef add_property(self, str prop_name, list integrand_arrays, list
-                       integral_arrays, list entity_types=*, dict steppers=*)
+                       integral_arrays, list entity_types=*, dict steppers=*,
+                       list integrand_initial_values=*)
 
     # return the dict containing prop_name stepping information.
     cpdef dict get_property_step_info(self, str prop_name)

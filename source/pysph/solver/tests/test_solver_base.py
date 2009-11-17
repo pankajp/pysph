@@ -361,7 +361,7 @@ class TestSolverBase(unittest.TestCase):
         """
         s = SolverBase()
         
-        self.assertEqual(s.cm != None, True)
+        self.assertEqual(s.component_manager != None, True)
         self.assertEqual(s.cell_manager != None, True)
         self.assertEqual(s.nnps_manager != None, True)
         self.assertEqual(s.kernel, None)
@@ -385,7 +385,7 @@ class TestSolverBase(unittest.TestCase):
                        time_step=0.1,
                        total_simulation_time=1.0)
                        
-        self.assertEqual(s.cm, cm)
+        self.assertEqual(s.component_manager, cm)
         self.assertEqual(s.cell_manager, cell_man)
         self.assertEqual(s.nnps_manager, nnps_manager)
         self.assertEqual(s.kernel, kernel)

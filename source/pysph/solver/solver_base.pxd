@@ -136,14 +136,13 @@ cdef class SolverBase(Base):
 
     """
     
-    cdef public ComponentManager cm
+    cdef public ComponentManager component_manager
     cdef public CellManager cell_manager
     cdef public NNPSManager nnps_manager
     cdef public KernelBase kernel
 
     cdef public TimeStep time_step
 
-    cdef public SpeedOfSound speed_of_sound
     cdef public double elapsed_time
     cdef public double total_simulation_time
 
@@ -170,7 +169,7 @@ cdef class SolverBase(Base):
     cpdef next_iteration(self)
     
     cpdef _setup_solver(self)
-    cpdef _setup_components(self)
+    cpdef _setup_component_manager(self)
     cpdef _setup_entities(self)
     cpdef _setup_components_input(self)
     cpdef _setup_integrator(self)

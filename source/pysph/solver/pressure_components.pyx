@@ -8,6 +8,7 @@ logger = logging.getLogger()
 
 # standard imports
 cimport numpy
+import numpy
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray
@@ -37,18 +38,17 @@ cdef class TaitPressureComponent(SolverComponent):
                   SolverBase solver=None, 
                   ComponentManager component_manager=None, 
                   list entity_list=[], 
-                  double gamma=7.0, SpeedOfSound speed_of_sound=None, 
+                  double gamma=7.0, SpeedOfSound speed_of_sound=None,
                   *args, **kwargs):
         """
         Constructor.
         """
         self.gamma = gamma
-        self.entity_list = set(entity_list)
         
         if solver is not None:
-            self.speed_of_sound = speed_of_sound
-        else:
             self.speed_of_sound = solver.speed_of_sound
+        else:
+            self.speed_of_sound = speed_of_sound
 
         # set the accepted input types of this component.
         self.add_input_entity_type(EntityTypes.Entity_Fluid)
@@ -91,10 +91,15 @@ cdef class TaitPressureComponent(SolverComponent):
 
         logger.info('Setting up component %s'%(self.name))
 
+        err = True
         if self.speed_of_sound is None:
-            msg = 'Speed of sound has not been set'
-            logger.error(msg)
-            raise ValueError, msg
+            if self.solver is not None:
+                if hasattr(self.solver, 'speed_of_sound'):
+                    self.speed_of_sound = self.solver.speed_of_sound
+                    err = False
+        if err:
+            self.speed_of_sound = SpeedOfSound(100.)
+            logger.warn('Using speed of sound of 100')
             
         cdef double fac = (
             self.speed_of_sound.value*self.speed_of_sound.value/self.gamma)
@@ -112,6 +117,7 @@ cdef class TaitPressureComponent(SolverComponent):
             logger.info(msg)
 
         self.setup_done = True
+
         return 0
 
     cdef int compute(self) except -1:
@@ -140,3 +146,5 @@ cdef class TaitPressureComponent(SolverComponent):
             parr.p[:] = numpy.power(parr.p, self.gamma)
             parr.p -= 1.0
             parr.p *= e_B
+        
+        return 0

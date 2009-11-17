@@ -57,6 +57,8 @@ cdef class SPHComponent(SolverComponent):
     # the type of the sph function class to create.
     cdef public type sph_func_class
 
+    cdef int compute(self) except -1
+
     cpdef _setup_sources_dests(self)
     cpdef _setup_sph_objs(self)
 
@@ -74,3 +76,9 @@ cdef class SPHComponent(SolverComponent):
     cpdef setup_sph_summation_object(self, list source_list, EntityBase dest,
                              SPHBase sph_sum)
     
+cdef class PYSPHComponent(SPHComponent):
+    """
+    Component to implement SPH components from pure python.
+    """
+    cpdef int py_compute(self) except -1
+    cdef int compute(self) except -1
