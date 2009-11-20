@@ -116,3 +116,15 @@ Tuesday 17 November 2009 (07:02:42 PM)
     - initialization of integrands in the integrator.
     - change in order of operations in the _setup_solver function.
     - utils module.
+
+Friday 20 November 2009 (11:45:59 PM)
+    - brute force nnps added.
+    - group property aded to particle arrays
+    - append_parray function to particle array to add particles from other
+      ParticleArrays. 	   
+    - particle generators added. (line and rectangles).
+    - add_particles added to EntityBase.
+    - file_writer_component base class added.
+    - vtk_writer added
+    - compute speed of sound in fsf solver.
+    - iteration_skip_component to execute components after specific iterations.

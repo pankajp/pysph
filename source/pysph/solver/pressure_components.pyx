@@ -113,7 +113,7 @@ cdef class TaitPressureComponent(SolverComponent):
                 raise ValueError, msg
 
             e.properties.B = e.properties.rho*fac
-            msg = 'B for %s is %d'%(e.name, e.properties.B)
+            msg = 'B for %s is %f'%(e.name, e.properties.B)
             logger.info(msg)
 
         self.setup_done = True

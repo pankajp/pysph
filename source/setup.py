@@ -55,7 +55,9 @@ kernels = [Extension("pysph.base.kernelbase",
                      ["pysph/base/kernel3d.pyx"]),
            ]
 
-solver = [Extension("pysph.solver.typed_dict",
+solver = [Extension("pysph.solver.fast_utils",
+                    ["pysph/solver/fast_utils.pyx"]),
+          Extension("pysph.solver.typed_dict",
                     ["pysph/solver/typed_dict.pyx"]),
           Extension("pysph.solver.time_step",
                     ["pysph/solver/time_step.pyx"]),
@@ -89,6 +91,12 @@ solver = [Extension("pysph.solver.typed_dict",
                     ["pysph/solver/xsph_component.pyx"]),
           Extension("pysph.solver.xsph_integrator",
                     ["pysph/solver/xsph_integrator.pyx"]),
+          Extension("pysph.solver.particle_generator",
+                    ["pysph/solver/particle_generator.pyx"]),
+          Extension("pysph.solver.iteration_skip_component",
+                    ["pysph/solver/iteration_skip_component.pyx"]),
+          Extension("pysph.solver.file_writer_component",
+                    ["pysph/solver/file_writer_component.pyx"])
           ]
 
 # all extension modules.

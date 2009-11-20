@@ -2,7 +2,9 @@
 Various 2D kernels.
 """
 
+import numpy
 cimport numpy
+
 
 from pysph.base.point cimport Point
 from pysph.base.kernelbase cimport Kernel2D

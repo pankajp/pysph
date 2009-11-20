@@ -824,14 +824,19 @@ cdef class SolverBase(Base):
         """
         Function to perform solver setup.
         """
+        logger.info('Setting up integrator ...')
         self._setup_integrator()
 
+        logger.info('Setting up component manager ...')
         self._setup_component_manager()
 
+        logger.info('Setting up entities ...')
         self._setup_entities()
 
+        logger.info('Setting up nnps ...')
         self._setup_nnps()
 
+        logger.info('Setting up component inputs ...')
         self._setup_components_input()
 
     cpdef _setup_component_manager(self):

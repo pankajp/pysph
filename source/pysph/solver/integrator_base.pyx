@@ -982,7 +982,6 @@ cdef class Integrator(SolverComponent):
         
         for i from 0 <= i < n_comps:
             comp = self.execute_list[i]
-            print str(comp), comp.name
             comp.compute()
 
         return 0

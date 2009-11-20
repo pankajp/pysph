@@ -45,7 +45,7 @@ cdef class EntityBase(Base):
     cpdef add_actuator(self, object actuator)
 
     # add more particles to the particle array.
-    cpdef add_particles(self, ParticleArray parray)
+    cpdef add_particles(self, ParticleArray parray, int group_id=*)
 
     # add all arrays that need to be binned for search to the cell manager.
     cpdef add_arrays_to_cell_manager(self, CellManager cell_manager)

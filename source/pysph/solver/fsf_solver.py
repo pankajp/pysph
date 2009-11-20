@@ -3,7 +3,9 @@ Generic free surface flow solver.
 """
 
 # standard imports
-
+import numpy
+import logging
+logger = logging.getLogger()
 
 # local imports
 from pysph.solver.solver_base import SolverBase
@@ -39,13 +41,14 @@ class FSFSolver(SolverBase):
                  kernel=None, 
                  integrator=None,
                  time_step=0.0, 
-                 total_simulation_time=0.0, 
+                 total_simulation_time=0.0,
+                 max_fluid_density_variation=0.01,
                  *args, **kwargs):
         """
         Constructor.
         """
         self.g = 9.81
-
+        self.max_fluid_density_variation = max_fluid_density_variation
         self.speed_of_sound = SpeedOfSound(0.0)
 
         # setup the various categories of components required.
@@ -245,3 +248,32 @@ class FSFSolver(SolverBase):
             else:
                 for c in d_list:
                     self.integrator.add_pre_step_component(c.name, 'density')
+
+    def _setup_solver(self):
+        """
+        Performs some extra setup in addition to the base class function.
+        """
+        
+        SolverBase._setup_solver(self)
+
+        self._setup_speed_of_sound()
+        
+    def _setup_speed_of_sound(self):
+        """
+        Computes the speed of sound using the fluid particles in the list of
+        entities.
+        """
+        y_max = -1.0
+
+        for e in self.entity_list:
+            if e.is_a(EntityTypes.Entity_Fluid):
+                particles = e.get_particle_array()
+                y = numpy.max(particles.y)
+                if y > y_max:
+                    y_max = y
+        
+        v = numpy.sqrt(2*9.81*y_max)
+        speed = v/numpy.sqrt(self.max_fluid_density_variation)
+        self.speed_of_sound.value = speed
+        logger.info('Using speed of sound %f'%(speed))
+                

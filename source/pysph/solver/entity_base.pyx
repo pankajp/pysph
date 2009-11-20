@@ -128,11 +128,24 @@ cdef class EntityBase(Base):
         if accel_modifier.count(actuator) == 0:
             accel_modifier.append(actuator)
 
-    cpdef add_particles(self, ParticleArray particles):
+    cpdef add_particles(self, ParticleArray particles, int group_id=0):
         """
-        Adds the given particles into the entities particle array.
+        Adds the given particles into the entities particle array. This by
+        default adds the particles to the particle array returned by the
+        get_particle_array call.
+
         """
-        pass
+        parray = self.get_particle_array()
+        if parray is None:
+            logger.warn('No particle array returned by %s'%(self.name))
+            return
+
+        # first set the group id of the new particles if requested.
+        if group_id != 0:
+            group = particles.get('group', only_real_particles=False)
+            group[:] = group_id
+            
+        parray.append_parray(particles)        
 
     cpdef add_arrays_to_cell_manager(self, CellManager cell_manager):
         """

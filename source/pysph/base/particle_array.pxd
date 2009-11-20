@@ -65,3 +65,6 @@ cdef class ParticleArray:
 
     # aligns all the real particles in contiguous positions starting from 0
     cpdef int align_particles(self) except -1
+
+    # add particles from the parray to self.
+    cpdef int append_parray(self, ParticleArray parray) except -1

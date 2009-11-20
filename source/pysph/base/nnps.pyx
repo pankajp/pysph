@@ -8,6 +8,36 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager, Cell, LeafCell, NonLeafCell
 from pysph.base.polygon_array cimport PolygonArray
 
+cimport numpy
+import numpy as np
+
+cdef inline double square(double dx, double dy, double dz):
+    return dx*dx + dy*dy + dz*dz
+
+################################################################################
+# `get_nearest_particles_brute_force` function.
+################################################################################
+cpdef brute_force_nnps(Point pnt, double search_radius,
+                       numpy.ndarray xa, numpy.ndarray ya, numpy.ndarray za, 
+                       LongArray neighbor_indices, 
+                       DoubleArray neighbor_distances,
+                       long exclude_index=-1):
+    """
+    Brute force search for neighbors, used occasionaly when nnps, cell manager
+    may not be available.
+    """
+    cdef long n = len(xa)
+    cdef double r2 = search_radius*search_radius
+    cdef long i
+    cdef double dist
+    
+    for i from 0 <= i < n:
+        dist = square(pnt.x - xa[i], pnt.y - ya[i], pnt.z - za[i])
+        if dist <= r2 and i != exclude_index:
+            neighbor_indices.append(i)
+            neighbor_distances.append(dist)
+    return
+
 ################################################################################
 # `CellCache` class.
 ################################################################################

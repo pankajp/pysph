@@ -12,4 +12,4 @@ cdef class SpeedOfSound:
     different classes needing this.
 
     """
-    cdef double value
+    cdef public double value

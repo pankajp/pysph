@@ -96,9 +96,9 @@ cdef class ParticleArray:
          - props - dictionary of properties for every particle in this array.
 
     	"""
-        self.properties = {'tag':LongArray(0)}
-        self.default_values = {'tag':default_particle_tag}
-
+        self.properties = {'tag':LongArray(0), 'group':LongArray(0)}
+        self.default_values = {'tag':default_particle_tag, 'group':0}
+        
         self.temporary_arrays = {}
 
         self.particle_manager = particle_manager
@@ -152,7 +152,10 @@ cdef class ParticleArray:
         """
         Clear all data held by this array.
         """
-        self.properties = {'tag':LongArray(0)}
+        self.properties = {'tag':LongArray(0), 'group':LongArray(0)}
+        tag_def_values = self.default_values['tag']
+        self.default_values.clear()
+        self.default_values = {'tag':tag_def_values, 'group':0}
         self.temporary_arrays.clear()
         self.is_dirty = True
 
@@ -191,34 +194,33 @@ cdef class ParticleArray:
             return 
 
         # check if the 'tag' array has been given as part of the properties.
-        if props.has_key('tag'):
-            tag_prop = props['tag']
-            a = numpy.asarray(tag_prop['data'], dtype=numpy.long)
-            self.properties['tag'].resize(a.size)
-            self.properties['tag'].set_data(a)
-            props.pop('tag')
-            tag_present = True
+        # if props.has_key('tag'):
+        #     tag_prop = props['tag']
+        #     data = tag_prop.get('data')
+        #     a = numpy.asarray(tag_prop['data'], dtype=numpy.long)
+        #     self.properties['tag'].resize(a.size)
+        #     self.properties['tag'].set_data(a)
+        #     props.pop('tag')
         
         # add the property names to the properties dict and the arrays to the
         # property array.
         for prop in props.keys():
-            if self.properties.has_key(prop):
-                raise ValueError, 'property %s already exists'%(prop)
-
+            # if self.properties.has_key(prop):
+            #     raise ValueError, 'property %s already exists'%(prop)
             prop_info = props[prop]
             prop_info['name'] = prop
             self.add_property(prop_info)
             
         # if tag was not present in the input set of properties, add tag with
         # default value.
-        if (tag_present == False and
-            self.get_number_of_particles() > 0):
-            nparticles = self.get_number_of_particles()
-            tagarr = self.properties['tag']
-            tagarr.resize(nparticles)
-            # set them to the default value
-            npyarr = tagarr.get_npy_array()
-            npyarr[:] = self.default_values['tag']
+        # if (tag_present == False and
+        #     self.get_number_of_particles() > 0):
+        #     nparticles = self.get_number_of_particles()
+        #     tagarr = self.properties['tag']
+        #     tagarr.resize(nparticles)
+        #     # set them to the default value
+        #     npyarr = tagarr.get_npy_array()
+        #     npyarr[:] = self.default_values['tag']
 
         self.align_particles()
 
@@ -356,7 +358,7 @@ cdef class ParticleArray:
 
     	"""
         if len(particle_props) == 0:
-            return
+            return 0
 
         # check if the input properties are valid.
         for prop in particle_props.keys():
@@ -370,7 +372,9 @@ cdef class ParticleArray:
             arr = self.properties[prop]
 
             if prop in particle_props.keys():
-                arr.extend(particle_props[prop])
+                d_type = arr.get_npy_array().dtype
+                s_arr = numpy.asarray(particle_props[prop], dtype=d_type)
+                arr.extend(s_arr)
             else:
                 arr.resize(new_num_particles)
                 # set the properties of the new particles to the default ones.
@@ -385,6 +389,46 @@ cdef class ParticleArray:
             # make sure particles are aligned properly.
             self.align_particles()
             self.is_dirty = True
+
+        return 0
+
+    cpdef int append_parray(self, ParticleArray parray):
+        """
+        Similar to add_particles above, except that particles come from a
+        particle array.
+
+        New properties - that are not there in self, will be added.
+        """
+        if parray.get_number_of_particles() == 0:
+            return 0
+        
+        num_extra_particles = parray.get_number_of_particles()
+        old_num_particles = self.get_number_of_particles()
+        new_num_particles = num_extra_particles + old_num_particles
+
+        # extend current arrays by the required number of particles
+        self.extend(num_extra_particles)
+        
+        for prop_name in parray.properties.keys():
+            arr = self.properties.get(prop_name)
+            if arr is not None:
+                nparr_source = parray.get_carray(prop_name).get_npy_array()
+                nparr_dest = arr.get_npy_array()
+                nparr_dest[old_num_particles:] = nparr_source
+            else:
+                # meaning this property is not there in self.
+                self.add_property({'name':prop_name,
+                                   'default':parray.default_values[prop_name]})
+                # now add the values to the end of the created array
+                nparr_dest = self.properties[prop_name].get_npy_array()
+                nparr_source = parray.get_carray(prop_name).get_npy_array()
+                nparr_dest[old_num_particles:] = nparr_source
+
+        if num_extra_particles > 0:
+            self.align_particles()
+            self.is_dirty = True
+
+        return 0
 
     cpdef extend(self, int num_particles):
         """
@@ -581,6 +625,20 @@ cdef class ParticleArray:
             is added with a different number of particles, then an error will be
             raised.
 
+        **Issue**
+
+            - it is best not to add properties with dat when you already have
+              particles in the particle array. Reason is that, the particles in
+              the particle array will be stored so that the 'Real' particles are
+              in the top of the list and later the dummy ones. The data in your
+              property array should be matched to the particles appropriately.
+              This may not always be possible when there are particles of
+              different type in the particle array. 
+            - Properties without any values can be added anytime.
+            - While initializing particle arrays only using the add_property
+              function, you will have to call align_particles manually to make
+              sure particles are aligned properly.
+
         """
         cdef str prop_name, data_type
         cdef object data, default
@@ -597,11 +655,11 @@ cdef class ParticleArray:
 
         # check if the property is already present, if so display warning
         # message and exit
-        if self.properties.has_key(prop_name):
-            logger.warn(
-                'Property %s already present, cannot add again'%(prop_name))
-            logger.warn('Use set() to set values for a property')
-            return
+        # if self.properties.has_key(prop_name):
+        #     logger.warn(
+        #         'Property %s already present, cannot add again'%(prop_name))
+        #     logger.warn('Use set() to set values for a property')
+        #     return
 
         # make sure the size of the supplied array is consistent.
         if (data is None or self.get_number_of_particles() == 0 or   
@@ -617,17 +675,23 @@ cdef class ParticleArray:
         
         # setup the default values
         if default is None:
-            default = 0
-
+            if not self.properties.has_key(prop_name):
+                default = 0
+            else:
+                default = self.default_values[prop_name]
+                
         self.default_values[prop_name] = default
 
         # array sizes are compatible, now resize the required arrays
         # appropriately and add.
         if self.get_number_of_particles() == 0:
             if data is None or len(data) == 0:
-                # just add the property with a zero array.
-                self.properties[prop_name] = self._create_carray(
-                    data_type, 0, default)
+                # if a property with that name already exists, do not do
+                # anything.
+                if not self.properties.has_key(prop_name):
+                    # just add the property with a zero array.
+                    self.properties[prop_name] = self._create_carray(
+                        data_type, 0, default)
             else:
                 # new property has been added with some particles, while no
                 # particles are currently present. First resize the current
@@ -637,38 +701,50 @@ cdef class ParticleArray:
                     arr = self.properties[prop]
                     arr.resize(len(data))
                     arr.get_npy_array()[:] = self.default_values[prop]
-
-                # now add the new property array
-                # if a type was specifed create that type of array
-                if data_type is None:
-                    # get an array for this data
-                    arr = numpy.asarray(data, dtype=numpy.double)
-                    self.properties[prop_name] = (
-                        self._create_c_array_from_npy_array(arr))
+                
+                if self.properties.has_key(prop_name):
+                    # just add the particles to the already existing array.
+                    d_type = self.properties[prop_name].get_npy_array().dtype
+                    arr = numpy.asarray(data, dtype=d_type)
+                    self.properties[prop_name].set_data(arr)
                 else:
-                    arr = self._create_carray(data_type, len(data), default)
-                    arr.get_npy_array[:] = numpy.asarray(data)
-                    self.properties[prop_name] = arr
-            # align particles.
-            self.align_particles()
+                    # now add the new property array
+                    # if a type was specifed create that type of array
+                    if data_type is None:
+                        # get an array for this data
+                        arr = numpy.asarray(data, dtype=numpy.double)
+                        self.properties[prop_name] = (
+                            self._create_c_array_from_npy_array(arr))
+                    else:
+                        arr = self._create_carray(data_type, len(data), default)
+                        arr.get_npy_array[:] = numpy.asarray(data)
+                        self.properties[prop_name] = arr
         else:
             if data is None or len(data) == 0:
                 # new property is added without any initial data, resize it to
                 # current particle count.
-                arr = self._create_carray(data_type,
-                                          self.get_number_of_particles(),
-                                          default)
-                self.properties[prop_name] = arr
-            else:
-                if data_type is None:
-                    # just add the property array
-                    arr = numpy.asarray(data, dtype=numpy.double)
-                    self.properties[prop_name] = (
-                        self._create_c_array_from_npy_array(arr))
-                else:
-                    arr = self._create_carray(data_type, len(data), default)
-                    arr.get_npy_array()[:] = numpy.asarray(data)
+                if not self.properties.has_key(prop_name):
+                    arr = self._create_carray(data_type,
+                                              self.get_number_of_particles(),
+                                              default)
                     self.properties[prop_name] = arr
+            else:
+                if self.properties.has_key(prop_name):
+                    d_type = self.properties[prop_name].get_npy_array().dtype
+                    arr = numpy.asarray(data, dtype=d_type)
+                    self.properties[prop_name].set_data(arr)
+                    # realign the particles if the tag variable is being set.
+                else:
+                    if data_type is None:
+                        # just add the property array
+                        arr = numpy.asarray(data, dtype=numpy.double)
+                        self.properties[prop_name] = (
+                            self._create_c_array_from_npy_array(arr))
+                    else:
+                        arr = self._create_carray(data_type, len(data), default)
+                        arr.get_npy_array()[:] = numpy.asarray(data)
+                        self.properties[prop_name] = arr
+
     ######################################################################
     # Non-public interface
     ######################################################################
