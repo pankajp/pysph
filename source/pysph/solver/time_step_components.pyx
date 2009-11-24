@@ -292,7 +292,9 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
             for j from 0 <= j < np:
                 
                 indices.reset()
-                s_loc.get_nearest_particles(j, indices, True)
+
+                s_loc.get_nearest_particles(j, indices, 1.0, True)
+
                 d_pnt.x = d_x.data[j]
                 d_pnt.y = d_y.data[j]
                 d_pnt.z = d_z.data[j]
@@ -303,7 +305,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
                     s_pnt.x = s_x.data[idx]
                     s_pnt.y = s_y.data[idx]
                     s_pnt.z = s_z.data[idx]
-                    
+
                     r_ab.x = d_pnt.x - s_pnt.x
                     r_ab.y = d_pnt.y - s_pnt.y
                     r_ab.z = d_pnt.z - s_pnt.z

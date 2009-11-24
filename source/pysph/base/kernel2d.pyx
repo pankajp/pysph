@@ -62,8 +62,14 @@ cdef class CubicSpline2D(Kernel2D):
         cdef Point r = p1-p2
         cdef double l2_norm_r = sqrt(r.norm())
         cdef double q = l2_norm_r/h
-        cdef double factor = (-5.0)/(14.0*PI*(h**3.0)*l2_norm_r)
-        cdef double temp = 0.0
+        cdef double factor, temp
+
+        if l2_norm_r < 1e-12:
+            grad.x = grad.y = grad.z = 0.0
+            return
+
+        factor = (-5.0)/(14.0*PI*(h**3.0)*l2_norm_r)
+        temp = 0.0
         
         if l2_norm_r < 1e-12:
             grad.x = grad.y = grad.z = 0.0

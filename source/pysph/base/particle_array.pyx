@@ -719,7 +719,8 @@ cdef class ParticleArray:
                             self._create_c_array_from_npy_array(arr))
                     else:
                         arr = self._create_carray(data_type, len(data), default)
-                        arr.get_npy_array[:] = numpy.asarray(data)
+                        np_arr = arr.get_npy_array()
+                        np_arr[:] = numpy.asarray(data)
                         self.properties[prop_name] = arr
         else:
             if data is None or len(data) == 0:
@@ -744,9 +745,10 @@ cdef class ParticleArray:
                             self._create_c_array_from_npy_array(arr))
                     else:
                         arr = self._create_carray(data_type, len(data), default)
+                        np_arr = arr.get_npy_array()
                         arr.get_npy_array()[:] = numpy.asarray(data)
                         self.properties[prop_name] = arr
-
+                        
     ######################################################################
     # Non-public interface
     ######################################################################

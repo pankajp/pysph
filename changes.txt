@@ -147,3 +147,9 @@ Tue Nov 24 15:54:56 IST 2009
     - nnps_updater component to update NNPS information every time step.
     - time step updation components added.
     - viscoity components. 
+
+Wed Nov 25 00:40:28 IST 2009
+    - changes to carray numpy handling - was passing incorrect type to 
+      PyArray_SimpleNewFromData.
+    - get_nearest_particles call from time_step_component corrected.
+    - zero checks in 2d kernel at correct points. 

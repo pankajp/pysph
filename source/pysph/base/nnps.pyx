@@ -775,7 +775,7 @@ cdef class ConstHCachedNbrParticleLocator(
                 # cell cache is also not present, just call the base class
                 # method to get nearest neighbors.
                 return self._locator.get_nearest_particles(
-                    dest_p_index, output_array, radius_scale, exclude_self)
+                    dest_p_index, output_array, self.radius_scale, exclude_self)
             else:
                 
                 pnt = Point()

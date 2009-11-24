@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Nov 10 15:05:03 2009
+# Tue Nov 24 23:55:32 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -163,9 +163,9 @@ cdef class IntArray(BaseArray):
         Create the numpy array.
         """
         cdef int nd = 1
-        cdef int *dims = [self.length]
+        cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NPY_INT, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_INT, self.data)
 
     cdef int* get_data_ptr(self):
         """
@@ -375,9 +375,9 @@ cdef class DoubleArray(BaseArray):
         Create the numpy array.
         """
         cdef int nd = 1
-        cdef int *dims = [self.length]
+        cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NPY_DOUBLE, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_DOUBLE, self.data)
 
     cdef double* get_data_ptr(self):
         """
@@ -587,9 +587,9 @@ cdef class FloatArray(BaseArray):
         Create the numpy array.
         """
         cdef int nd = 1
-        cdef int *dims = [self.length]
+        cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NPY_FLOAT, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_FLOAT, self.data)
 
     cdef float* get_data_ptr(self):
         """
@@ -799,9 +799,9 @@ cdef class LongArray(BaseArray):
         Create the numpy array.
         """
         cdef int nd = 1
-        cdef int *dims = [self.length]
+        cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NPY_LONG, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_LONG, self.data)
 
     cdef long* get_data_ptr(self):
         """

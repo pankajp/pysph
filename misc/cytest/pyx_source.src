@@ -41,9 +41,9 @@ cdef class CLASSNAME(BaseArray):
         Create the numpy array.
         """
         cdef int nd = 1
-        cdef int *dims = [self.length]
+        cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, dims, NUMPY_TYPENAME, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NUMPY_TYPENAME, self.data)
 
     cdef ARRAY_TYPE* get_data_ptr(self):
         """
