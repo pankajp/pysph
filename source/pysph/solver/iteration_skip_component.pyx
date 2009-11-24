@@ -2,6 +2,9 @@
 Include classes to enalbe execution of certain components every few iterations.
 """
 
+import logging
+logger = logging.getLogger()
+
 # local import
 from pysph.solver.base cimport Base
 from pysph.solver.solver_base cimport *
@@ -15,7 +18,7 @@ cdef class ComponentIterationSpec(Base):
     Holds information about a component to be executed in an
     IterationSkipComponent.
     """
-    def __cinit__(self, SolverComponent component, int skip_iteration=0, *args,
+    def __cinit__(self, SolverComponent component=None, int skip_iteration=0, *args,
                   **kwargs):
         """
         Constructor.
@@ -27,7 +30,7 @@ cdef class ComponentIterationSpec(Base):
 
         self.skip_iteration = skip_iteration
 
-    def __init__(self, SolverComponent c, int skip_iteration=0, *args,
+    def __init__(self, SolverComponent c=None, int skip_iteration=0, *args,
                  **kwargs):
         """
         Python constructor.
@@ -88,6 +91,13 @@ cdef class IterationSkipComponent(SolverComponent):
         """
         Call compute of each component according to its skip iteration.
         """
+        self.setup_component()
+
+        cdef SolverComponent c
+
         for cinfo in self.component_spec_list:
             if (self.solver.current_iteration % cinfo.skip_iteration) == 0:
-                cinfo.component.compute()
+                logger.info('Calling component %s'%(cinfo.component.name))
+                c = cinfo.component
+                c.compute()
+                

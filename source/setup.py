@@ -96,7 +96,15 @@ solver = [Extension("pysph.solver.fast_utils",
           Extension("pysph.solver.iteration_skip_component",
                     ["pysph/solver/iteration_skip_component.pyx"]),
           Extension("pysph.solver.file_writer_component",
-                    ["pysph/solver/file_writer_component.pyx"])
+                    ["pysph/solver/file_writer_component.pyx"]),
+          Extension("pysph.solver.viscosity_components",
+                    ["pysph/solver/viscosity_components.pyx"]),
+          Extension("pysph.solver.boundary_force_components",
+                    ["pysph/solver/boundary_force_components.pyx"]),
+          Extension("pysph.solver.nnps_updater",
+                    ["pysph/solver/nnps_updater.pyx"]),
+          Extension("pysph.solver.time_step_components",
+                    ["pysph/solver/time_step_components.pyx"])
           ]
 
 # all extension modules.

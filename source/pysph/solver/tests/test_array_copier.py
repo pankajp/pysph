@@ -120,9 +120,9 @@ class TestArrayCopier(unittest.TestCase):
         self.assertEqual(ac.entity_list, [f1, f2])
 
         parr = f1.get_particle_array()
-        self.assertEqual(check_array(parr.a, parr.b), True)
+        self.assertEqual(check_array(parr.b, [1., 2, 3, 4]), True)
         parr = f2.get_particle_array()
-        self.assertEqual(check_array(parr.a, parr.b), True)
+        self.assertEqual(check_array(parr.b, [1, 2]), True)
 
         ac.add_array_pair('c', 'd')
         self.assertRaises(AttributeError, ac.setup_component)

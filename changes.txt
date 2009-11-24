@@ -128,3 +128,22 @@ Friday 20 November 2009 (11:45:59 PM)
     - vtk_writer added
     - compute speed of sound in fsf solver.
     - iteration_skip_component to execute components after specific iterations.
+
+Saturday 21 November 2009 (11:11:54 AM)
+    - sph_calc bug discovered and rectified (outputs were being added to arrays
+    rather than just being set)
+    - bug in array copier and test of array copier found and rectified.
+Tue Nov 24 15:54:56 IST 2009
+    - nnps enable_caching function in Cached particle locator changed.
+    - particle arrays are set to dirty if coordinates are set().
+    - bug in rectangle generator in basic generators removed.
+    - boundary force component added.
+    - add_*_property_requirement added to SolverComponent - a neat interface
+      to add different kinds of property requirements to a solver component.
+    - SPH density rate component added.
+    - Some restructuring of the fsf_solver and the solver_base.Solver
+    - Component name check function to check names of componet before adding
+      them to the component manager.
+    - nnps_updater component to update NNPS information every time step.
+    - time step updation components added.
+    - viscoity components. 

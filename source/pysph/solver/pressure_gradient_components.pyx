@@ -32,6 +32,7 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
         """
         Constructor.
         """
+        self.source_dest_mode = SPHSourceDestMode.Group_By_Type
         self.source_types = [EntityTypes.Entity_Fluid]
         self.dest_types = [EntityTypes.Entity_Fluid]
         
@@ -44,32 +45,36 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
         """
         Update the components property requirements.
         """
-        cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        cdef dict pp = self.information.get_dict(
-            self.PARTICLE_PROPERTIES_PRIVATE)
-        cpdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
-        
-        rp[EntityTypes.Entity_Fluid] = ['p', 'h', 'm']
+        for t in self.source_types:
+            self.add_read_prop_requirement(t, ['m', 'p', 'h', 'rho'])
 
-        wp[EntityTypes.Entity_Fluid] = [{'name':'ax', 'default':0.0},
-                                        {'name':'ay', 'default':0.0},
-                                        {'name':'az', 'default':0.0}]
+        for t in self.dest_types:
+            self.add_read_prop_requirement(t, ['p', 'h', 'rho'])
 
-        pp[EntityTypes.Entity_Fluid] = [{'name':'pacclr_x', 'default':0.},
-                                        {'name':'pacclr_y', 'default':0.},
-                                        {'name':'pacclr_z', 'default':0.}]
+            self.add_write_prop_requirement(t, 'ax')
+            self.add_write_prop_requirement(t, 'ay')
+            self.add_write_prop_requirement(t, 'az')
 
+            self.add_private_prop_requirement(t, 'pacclr_x')
+            self.add_private_prop_requirement(t, 'pacclr_y')
+            self.add_private_prop_requirement(t, 'pacclr_z')
+            
         return 0
 
     cdef int compute(self) except -1:
         """
         """
-        cdef int num_dest = len(self.dest_list)
+        cdef int num_dest
         cdef int i
         
         cdef Fluid fluid
         cdef SPHBase calc
         cdef ParticleArray parr
+        
+        # call setup component.
+        self.setup_component()
+
+        num_dest = len(self.dest_list)
         
         for i from 0 <= i < num_dest:
             fluid = self.dest_list[i]
@@ -78,6 +83,10 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
 
             calc.sph3('pacclr_x', 'pacclr_y', 'pacclr_z', True)
             
+            parr.pacclr_x *= -1.0
+            parr.pacclr_y *= -1.0
+            parr.pacclr_z *= -1.0
+
             parr.ax += parr.pacclr_x
             parr.ay += parr.pacclr_y
             parr.az += parr.pacclr_z

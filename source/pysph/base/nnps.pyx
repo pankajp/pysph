@@ -1,6 +1,10 @@
 cdef extern from 'math.h':
     cdef double fabs(double)
 
+# logger imports
+import logging
+logger = logging.getLogger()
+
 # local imports
 from pysph.base.carray cimport LongArray, DoubleArray
 from pysph.base.point cimport Point
@@ -598,8 +602,9 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
         """
         Enable caching.
         """
-        self.caching_enabled = True
-        self.is_dirty = True
+        if self.caching_enabled ==  False:
+            self.caching_enabled = True
+            self.is_dirty = True
                  
     cpdef disable_caching(self):
         """
@@ -750,7 +755,7 @@ cdef class ConstHCachedNbrParticleLocator(
         if self.caching_enabled:
             # return data from cache.
             index_array = self.particle_cache[dest_p_index]
-            
+
             output_array.resize(index_array.length)
             output_array.set_data(index_array.get_npy_array())
             data = output_array.get_data_ptr()
@@ -772,7 +777,7 @@ cdef class ConstHCachedNbrParticleLocator(
                 return self._locator.get_nearest_particles(
                     dest_p_index, output_array, radius_scale, exclude_self)
             else:
-
+                
                 pnt = Point()
 
                 pnt.x = self.d_x.get(dest_p_index)
@@ -983,7 +988,8 @@ cdef class CachedNbrParticleLocatorManager:
         else:
             # meaning this interaction was already present.
             # just enable caching for it.
-            loc.enable_caching()            
+            loc.enable_caching()
+            
 
     cpdef CachedNbrParticleLocator get_cached_locator(self, str source_name,
                                                       str dest_name, double
@@ -1115,6 +1121,9 @@ cdef class NNPSManager:
     cdef int update(self) except -1:
         """
         """
+        # update the status of the cell manager.
+        self.cell_manager.update_status()
+
         self.cell_cache_manager.update()
         
         self.particle_cache_manager.update()

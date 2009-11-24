@@ -11,7 +11,7 @@ cdef class EulerXSPHIntegrator(Integrator):
     """
     Class to perform position stepping by applying xsph velocity correction.
     """
-    pass
+    cpdef int update_property_requirements(self) except -1
 
 cdef class RK2XSPHIntegrator(RK2Integrator):
     """

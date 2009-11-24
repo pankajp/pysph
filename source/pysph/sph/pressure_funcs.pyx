@@ -39,7 +39,7 @@ cdef class SPHSymmetricPressureGradient3D(SPHFunctionParticle3D):
 
         SPHFunctionParticle3D.setup_arrays(self)
         
-        self.d_pressure = self.source.get_carray(self.pressure)
+        self.d_pressure = self.dest.get_carray(self.pressure)
         self.s_pressure = self.source.get_carray(self.pressure)
 
     cpdef int output_fields(self) except -1:
@@ -55,11 +55,10 @@ cdef class SPHSymmetricPressureGradient3D(SPHFunctionParticle3D):
         cdef double h = 0.5*(self.s_h.data[source_pid] +
                              self.d_h.data[dest_pid])
         cdef double temp = 0.0
-        cdef Point src_position = self._pnt1
-        cdef Point dst_position = self._pnt2
+        cdef Point grad = Point()
 
-        make_coords_3d(self.s_x, self.s_y, self.s_z, src_position, source_pid)
-        make_coords_3d(self.d_x, self.d_y, self.d_z, dst_position, dest_pid)
+        make_coords_3d(self.s_x, self.s_y, self.s_z, self._pnt1, source_pid)
+        make_coords_3d(self.d_x, self.d_y, self.d_z, self._pnt2, dest_pid)
         
         temp = self.s_pressure.data[source_pid]/(
             self.s_rho.data[source_pid]*self.s_rho.data[source_pid])
@@ -68,10 +67,9 @@ cdef class SPHSymmetricPressureGradient3D(SPHFunctionParticle3D):
             self.d_rho.data[dest_pid]*self.d_rho.data[dest_pid])
 
         temp *= self.s_mass.data[source_pid]
-        self._grad.x = self._grad.y = self._grad.z = 0.0
+        
+        kernel.gradient(self._pnt2, self._pnt1, h, grad)
 
-        kernel.gradient(dst_position, src_position, h, self._grad)
-
-        nr[0] += temp*self._grad.x
-        nr[1] += temp*self._grad.y
-        nr[2] += temp*self._grad.z
+        nr[0] += temp*grad.x
+        nr[1] += temp*grad.y
+        nr[2] += temp*grad.z

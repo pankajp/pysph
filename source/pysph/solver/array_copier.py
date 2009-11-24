@@ -77,30 +77,34 @@ class ArrayCopier(UserDefinedComponent):
         Makes sure the arrays are found in all entities, otherwise raises an
         exception. Entities not providing any particle arrays will be removed.
         """
+        if self.setup_done == True:
+            return 0
+
         to_remove = []
-        if not self.setup_done:
-            for e in self.entity_list:
-                pa = e.get_particle_array()
-                if pa is None:
-                    to_remove.append(e)
+        for e in self.entity_list:
+            pa = e.get_particle_array()
+            if pa is None:
+                to_remove.append(e)
+                continue
+            for i in range(len(self.from_arrays)):
+                fa = self.from_arrays[i]
+                ta = self.to_arrays[i]
+                if pa.has_array(fa) and pa.has_array(ta):
                     continue
-                for i in range(len(self.from_arrays)):
-                    fa = self.from_arrays[i]
-                    ta = self.to_arrays[i]
-                    if pa.has_array(fa) and pa.has_array(ta):
-                        continue
-                    else:
-                        msg = 'Required properties not present\n'
-                        msg += fa + '\n'
-                        msg += ta + '\n'
-                        logger.error(msg)
-                        raise AttributeError, msg
+                else:
+                    msg = 'Required properties not present\n'
+                    msg += fa + '\n'
+                    msg += ta + '\n'
+                    logger.error(msg)
+                    raise AttributeError, msg
 
-            # remove entities that were marked for removal.
-            for e in to_remove:
-                self.entity_list.remove(e)
+        # remove entities that were marked for removal.
+        for e in to_remove:
+            self.entity_list.remove(e)
 
-            self.setup_done = True
+        self.setup_done = True
+        
+        return 0
         
     def py_compute(self):
         """
@@ -126,6 +130,6 @@ class ArrayCopier(UserDefinedComponent):
                 from_arr = parray.get_carray(fa_name).get_npy_array()
                 to_arr = parray.get_carray(ta_name).get_npy_array()
 
-                from_arr[:] = to_arr
+                parray.set(**{ta_name:from_arr})
 
         return 0

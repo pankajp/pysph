@@ -52,6 +52,7 @@ cdef class Solid(EntityBase):
         """
         Constructor.
         """
+        self.type = EntityTypes.Entity_Fluid
         self.sph_particles = particles
         self.type = EntityTypes.Entity_Solid
 
@@ -62,12 +63,12 @@ cdef class Solid(EntityBase):
 
         # add any default properties that must be there for solids.        
         
-    cpdef bint is_a(self, int type):
+    cpdef bint is_a(self, int e_type):
         """
         Check if this entity is of the given type.
         """
-        return (EntityTypes.Entity_Solid == type or
-                EntityBase.is_a(self, type))
+        return (EntityTypes.Entity_Solid == e_type or
+                EntityBase.is_a(self, e_type))
 
     cpdef ParticleArray get_particle_array(self):
         """

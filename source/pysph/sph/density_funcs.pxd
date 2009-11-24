@@ -13,6 +13,9 @@ cdef class SPHRho3D(SPHFunctionParticle3D):
     SPH function to compute density for 3d particles.
     """
     pass
-        
-    
 
+cdef class SPHDensityRate3D(SPHFunctionParticle3D):
+    """
+    SPH function tom compute density rate for 3d particles.
+    """
+    pass

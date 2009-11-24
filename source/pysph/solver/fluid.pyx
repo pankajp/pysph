@@ -29,7 +29,7 @@ cdef class Fluid(EntityBase):
 
         # add any default properties that are requiered of fluids in all kinds
         # of simulations.
-        self.add_entity_property('rest_density', 1000.)
+        self.add_entity_property('rho', 1000.)
         self.add_entity_property('max_density_variation', 1.0)
         self.add_entity_property('actual_density_variation', 1.0)
 

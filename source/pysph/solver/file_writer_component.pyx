@@ -32,6 +32,11 @@ cdef class FileWriterComponent(SolverComponent):
                                  entity_list=entity_list,
                                  *args, **kwargs)
 
+    cpdef int setup_component(self) except -1:
+        """
+        """
+        return 0
+
     cdef int compute(self) except -1:
         """
         """

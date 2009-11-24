@@ -97,6 +97,8 @@ cdef class SPHComponent(SolverComponent):
         self._setup_sources_dests()
 
         self._setup_sph_objs()
+        
+        self.setup_done = True
 
     cpdef _setup_sources_dests(self):
         """
@@ -117,10 +119,14 @@ cdef class SPHComponent(SolverComponent):
         self.dest_list[:] = []
 
         for e in self.entity_list:
+            logger.debug('Adding entity : %s'%(e.name))
             if e.is_type_included(self.source_types):
                 self.source_list.append(e)
             if e.is_type_included(self.dest_types):
                 self.dest_list.append(e)
+
+        logger.info('(%s)source entities : %s'%(self.name, self.source_list))
+        logger.info('(%s)dest entities : %s'%(self.name, self.dest_list))
 
     cpdef _setup_sph_objs(self):
         """
@@ -205,7 +211,7 @@ cdef class SPHComponent(SolverComponent):
                 self.setup_sph_function(s, d, func)
                 func_list.append(func)
 
-            calc = sph_class(source=s_parr_list, dest=d_parr,
+            calc = sph_class(sources=s_parr_list, dest=d_parr,
                              kernel=self.kernel, sph_funcs=func_list,
                              nnps_manager=self.nnps_manager)
 
@@ -233,6 +239,8 @@ cdef class SPHComponent(SolverComponent):
             s_parr_list = []
             s_parr = None
     
+            logger.debug('Source list now : %s'%(source_list))
+
             for s in source_list:
                 s_parr = s.get_particle_array()
                     
@@ -248,7 +256,7 @@ cdef class SPHComponent(SolverComponent):
                 self.setup_sph_function(s, d, func)
                 func_list.append(func)
 
-            calc = sph_class(source=s_parr_list, dest=d_parr,
+            calc = sph_class(sources=s_parr_list, dest=d_parr,
                              kernel=self.kernel, sph_funcs=func_list,
                              nnps_manager=self.nnps_manager)
 

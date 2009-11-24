@@ -10,12 +10,18 @@ logger = logging.getLogger()
 # local imports
 from pysph.solver.solver_base import SolverBase
 from pysph.solver.entity_types import EntityTypes
-from pysph.solver.density_components import SPHDensityComponent
+from pysph.solver.density_components import SPHDensityComponent\
+    , SPHDensityRateComponent
 from pysph.solver.pressure_components import TaitPressureComponent
+from pysph.solver.viscosity_components import MonaghanArtViscComponent
 from pysph.solver.pressure_gradient_components import \
     SPHSymmetricPressureGradientComponent
+from pysph.solver.boundary_force_components import \
+    SPHRepulsiveBoundaryForceComponent 
+from pysph.solver.integrator_base import Integrator
 from pysph.solver.adder_component import AdderComponent
-from pysph.solver.xsph_integrator import RK2XSPHIntegrator
+from pysph.solver.xsph_integrator import RK2XSPHIntegrator, EulerXSPHIntegrator
+from pysph.solver.runge_kutta_integrator import RK2Integrator
 from pysph.solver.speed_of_sound import SpeedOfSound
 
 
@@ -47,7 +53,7 @@ class FSFSolver(SolverBase):
         """
         Constructor.
         """
-        self.g = 9.81
+        self.g = -9.81
         self.max_fluid_density_variation = max_fluid_density_variation
         self.speed_of_sound = SpeedOfSound(0.0)
 
@@ -58,10 +64,10 @@ class FSFSolver(SolverBase):
         self.component_categories['viscosity'] = []
         self.component_categories['boundary_force'] = []
         self.component_categories['density_rate'] = []
-        self.component_categories['pre_step'] = []
-        self.component_categories['post_step'] = []
-        self.component_categories['pre_integration'] = []
-        self.component_categories['post_integration'] = []
+        #self.component_categories['pre_step'] = []
+        #self.component_categories['post_step'] = []
+        #self.component_categories['pre_integration'] = []
+        #self.component_categories['post_integration'] = []
         self.component_categories['time_step_update'] = []
         self.component_categories['inflow'] = []
         self.component_categories['outflow'] = []
@@ -80,18 +86,23 @@ class FSFSolver(SolverBase):
             SPHSymmetricPressureGradientComponent(name='pg_default',
                                                   solver=self))
 
-        #self.component_categories['viscosity'].append(
-        #    MonaghanArtViscComponent(name='art_visc_default', solver=self))
+        self.component_categories['viscosity'].append(
+            MonaghanArtViscComponent(name='art_visc_default', solver=self))
         
-        #self.component_categories['boundary_force'].append(
-        #    SPHBoundaryForceComponent(name='boundary_default', solver=self))
+        self.component_categories['boundary_force'].append(
+            SPHRepulsiveBoundaryForceComponent(name='boundary_default',
+                                               solver=self))
 
-        #self.component_categories['density_rate'].append(
-        #    SPHDensityRateComponent(name='density_rate_default',solver=self))
+        self.component_categories['density_rate'].append(
+            SPHDensityRateComponent(name='density_rate_default',solver=self))
 
         if self.integrator is None:
-            self.integrator = RK2XSPHIntegrator(name='integrator_default',
-                                                solver=self)
+            #self.integrator = RK2XSPHIntegrator(name='integrator_default',
+            #solver=self)
+            self.integrator = Integrator(name='integrator_default', solver=self)
+            #self.integrator = EulerXSPHIntegrator(name='integrator_default', solver=self)
+            #self.integrator = RK2Integrator(name='integrator_default',
+            #                                solver=self)
     
     ######################################################################
     # `Public` interface
@@ -152,17 +163,21 @@ class FSFSolver(SolverBase):
         """
         # add the pre-integration components.
         for c in self.component_categories['pre_integration']:
+            self._component_name_check(c)
             self.integrator.add_pre_integration_component(c.name)
 
         # add the inflow and outflow componets.
         for c in self.component_categories['inflow']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name)
 
         for c in self.component_categories['outflow']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name)
 
         # add the pre-step components
         for c in self.component_categories['pre_step']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name)
 
         # setup the density components.
@@ -170,26 +185,36 @@ class FSFSolver(SolverBase):
 
         # add pressure components to the pre-step components
         for c in self.component_categories['pressure']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name)
 
         # now add the acceleration computers.
         for c in self.component_categories['pressure_gradient']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name, 'velocity')
 
         for c in self.component_categories['viscosity']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name, 'velocity')
             
         for c in self.component_categories['boundary_force']:
+            self._component_name_check(c)
             self.integrator.add_pre_step_component(c.name, 'velocity')
 
         self._setup_gravity_component()
         
         # add post step components if any.
         for c in self.component_categories['post_step']:
+            self._component_name_check(c)
             self.integrator.add_post_step_component(c)
 
         # add time step updater component.
         for c in self.component_categories['time_step_update']:
+            self._component_name_check(c)
+            self.integrator.add_post_integration_component(c.name)
+
+        for c in self.component_categories['post_integration']:
+            self._component_name_check(c)
             self.integrator.add_post_integration_component(c.name)
 
     def _setup_gravity_component(self):
@@ -220,6 +245,8 @@ class FSFSolver(SolverBase):
         if (self.density_computation_mode ==
             DensityComputationMode.Simple_Summation):
             
+            logger.info('Density Computation : Simple Summation')
+
             d_list = self.component_categories['density']
             
             if len(d_list) == 0:
@@ -228,6 +255,7 @@ class FSFSolver(SolverBase):
                 for c in d_list:
                     self.integrator.add_pre_step_component(c.name)
         else:
+            logger.info('Density Computation : Continuity Equation')
             # if a stepper for density does not exist already
             # add one.
             if self.integrator.get_property_step_info('density') is None:

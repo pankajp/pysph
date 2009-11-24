@@ -4,14 +4,15 @@ Script for setting up a 2d dam break problem.
 # setup logging
 import logging
 logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, filename='/tmp/log_pysph',
+logging.basicConfig(level=logging.DEBUG, filename='/tmp/temp5/log_pysph',
+                    format='%(module)s : %(levelname)s : %(message)s',
                     filemode='w')
 logger.addHandler(logging.StreamHandler())
 
 # local imports
 from pysph.base.kernel2d import CubicSpline2D
 from pysph.base.point import Point
-from pysph.solver.fsf_solver import FSFSolver
+from pysph.solver.fsf_solver import FSFSolver, DensityComputationMode
 from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 from pysph.solver.particle_generator import DensityComputationMode as Dcm
@@ -24,22 +25,21 @@ from pysph.solver.xsph_integrator import *
 
 # Parameters for the simulation.
 dam_width=3.2196
-dam_height=1.
-solid_particle_h=0.1
-dam_particle_spacing=0.1
+dam_height=1.8
+solid_particle_h=0.03
+dam_particle_spacing=0.005
 solid_particle_mass=1.0
 origin_x=origin_y=0.0
 
-fluid_particle_h=0.1
+fluid_particle_h=0.03
 fluid_density=1000.
-fluid_column_height=0.5
-fluid_column_width=2.0
-fluid_particle_spacing=0.05
+fluid_column_height=0.6
+fluid_column_width=1.2
+fluid_particle_spacing=0.03
 
 # Create a solver instance using default parameters and some small changes.
-solver = FSFSolver(time_step=0.0001, total_simulation_time=10.0,
+solver = FSFSolver(time_step=0.00001, total_simulation_time=10.0,
                    kernel=CubicSpline2D())
-
 
 # Generate the dam wall entity
 dam_wall = Solid(name='dam_wall')
@@ -75,17 +75,22 @@ solver.add_entity(dam_fluid)
 
 # create a vtk writer to write an output file.
 vtk_writer = VTKWriter(solver=solver, entity_list=[dam_wall, dam_fluid],
-                       file_name_prefix='/tmp/test',
+                       file_name_prefix='/tmp/temp5/test',
                        scalars=['rho', 'p', 'm', 'rho_rate'],
                        vectors={'velocity':['u', 'v', 'w'],
                                 'acceleration':['ax', 'ay', 'az'],
                                 'pressure_acclr':['pacclr_x', 'pacclr_y', 'pacclr_z'],
                                 'visc_acclr':['avisc_x', 'avisc_y', 'avisc_z'],
-                                'boundary':['bacclr_x', 'bacclr_y', 'bacclr_z']}
+                                'boundary':['bacclr_x', 'bacclr_y', 'bacclr_z']})
 it_skipper = ISkipper(solver=solver)
-it_skipper.add_component(vtk_writer, skip_iteration=20)
+it_skipper.add_component(vtk_writer, skip_iteration=100)
 pic = solver.component_categories['post_integration']
 pic.append(it_skipper)
 
+# viscosity component setting
+visc = solver.component_categories['viscosity'][0]
+visc.alpha = 0.03
 # start the solver.
+solver.nnps_manager.disable_particle_caching()
+solver.nnps_manager.disable_cell_caching()
 solver.solve()

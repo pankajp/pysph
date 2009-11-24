@@ -579,6 +579,8 @@ cdef class ParticleArray:
             # changed.                 
             if prop == 'tag':
                 self.align_particles()
+            if prop == 'x' or prop == 'y' or prop == 'z':
+                self.set_dirty(True)
     
     cpdef get_carray(self, str prop):
         """

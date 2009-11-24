@@ -57,23 +57,17 @@ cdef class TaitPressureComponent(SolverComponent):
         """
         Setup the property requirements of this component.
         """
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
-        cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        cdef dict ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        cdef dict in_types = self.information.get_dict(self.INPUT_TYPES)
+        
+        for t in in_types.keys():
+            self.add_read_prop_requirement(t, ['rho'])
+            self.add_write_prop_requirement(t, 'p')
+            
+            self.add_entity_prop_requirement(t, 'B')
+            self.add_entity_prop_requirement(t, 'rho')
+            self.add_entity_prop_requirement(t, 'max_density_variation', 0.01)
 
-        wp.clear()
-        rp.clear()
-
-        # needs property/array named 'p' and will write into it.
-        wp[EntityTypes.Entity_Fluid] = [{'name':'p', 'default':0.0}]
-        # needs property/array named 'rho' to read values from.
-        rp[EntityTypes.Entity_Fluid] = ['rho']
-
-        # requires and entity property called 'B' for fluids.
-        ep[EntityTypes.Entity_Fluid] = [{'name':'B', 'default':1.0},
-                                        {'name':'rho', 'default':1000.0},
-                                        {'name':'max_density_variation',
-                                         'default':0.01}]
+        return 0
     
     cpdef int setup_component(self) except -1:
         """
@@ -92,15 +86,10 @@ cdef class TaitPressureComponent(SolverComponent):
         logger.info('Setting up component %s'%(self.name))
 
         err = True
+
         if self.speed_of_sound is None:
-            if self.solver is not None:
-                if hasattr(self.solver, 'speed_of_sound'):
-                    self.speed_of_sound = self.solver.speed_of_sound
-                    err = False
-        if err:
-            self.speed_of_sound = SpeedOfSound(100.)
-            logger.warn('Using speed of sound of 100')
-            
+            self.speed_of_sound = self.solver.speed_of_sound
+
         cdef double fac = (
             self.speed_of_sound.value*self.speed_of_sound.value/self.gamma)
 
@@ -115,6 +104,8 @@ cdef class TaitPressureComponent(SolverComponent):
             e.properties.B = e.properties.rho*fac
             msg = 'B for %s is %f'%(e.name, e.properties.B)
             logger.info(msg)
+            logger.info('Entity Rho : %f'%(e.properties.rho))
+            logger.info('Max density var : %f'%(e.properties.max_density_variation))
 
         self.setup_done = True
 
@@ -136,6 +127,7 @@ cdef class TaitPressureComponent(SolverComponent):
         num_entities = len(self.entity_list)
         
         for i from 0 <= i < num_entities:
+
             entity = self.entity_list[i]
             parr = entity.get_particle_array()
 
@@ -146,5 +138,5 @@ cdef class TaitPressureComponent(SolverComponent):
             parr.p[:] = numpy.power(parr.p, self.gamma)
             parr.p -= 1.0
             parr.p *= e_B
-        
+
         return 0

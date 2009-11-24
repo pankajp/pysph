@@ -74,7 +74,7 @@ class VTKWriter(FileWriterComponent):
             self.add_scalar(s, s)
 
         for v_name in vectors.keys():
-            v_arrays = vectors[v]
+            v_arrays = vectors[v_name]
             self.add_vector(v_name, v_arrays)
 
     def enable_xml_output(self, enable=True):
@@ -121,6 +121,9 @@ class VTKWriter(FileWriterComponent):
         """
         self.coords[:] = coords
 
+    def compute(self):
+        self.write()
+
     def write(self):
         """
         Function to write.
@@ -134,6 +137,10 @@ class VTKWriter(FileWriterComponent):
                 file_name = self.file_name_prefix + '_' + e.name
                 file_name += '_' + file_num + '.' + self.file_ext
                 self._write(parr, file_name)
+        
+        self.write_count += 1
+
+        return 0
 
     def _write(self, particle_array, file_name):
         """

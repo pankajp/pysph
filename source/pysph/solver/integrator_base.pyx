@@ -85,42 +85,49 @@ cdef class ODEStepper(SolverComponent):
         cdef ParticleArray parr
         cdef list to_remove = []
 
-        if self.setup_done == False:
+        if self.setup_done == True:
+            return 0
 
-            # make sure timestep is setup properly
-            if self.time_step is None:
-                raise ValueError, 'time_step not set'
+        # make sure timestep is setup properly
+        if self.time_step is None:
+            raise ValueError, 'time_step not set'
 
-            self.next_step_names[:] = []
+        self.next_step_names[:] = []
         
-            num_props = len(self.integral_names)
+        num_props = len(self.integral_names)
         
-            for i from 0 <= i < num_props:
-                arr_name = self.integral_names[i]
-                self.next_step_names.append(
-                    arr_name + '_next')
+        for i from 0 <= i < num_props:
+            arr_name = self.integral_names[i]
+            self.next_step_names.append(
+                arr_name + '_next')
 
-            # now make sure that all the entities have the _next property.
-            num_entities = len(self.entity_list)
-            for i from 0 <= i < num_entities:
-                e = self.entity_list[i]
-                parr = e.get_particle_array()
-                if parr is not None:
-                    # make sure all the _next arrays are present, if not add
-                    # them.
-                    for j from 0 <= j < num_props:
-                        arr_name = self.next_step_names[j]
-                        if not parr.properties.has_key(arr_name):
-                            parr.add_property({'name':arr_name})
-                else:
-                    to_remove.append(e)
+        # now make sure that all the entities have the _next property.
+        num_entities = len(self.entity_list)
+        for i from 0 <= i < num_entities:
+            e = self.entity_list[i]
+            logger.debug('Setting up %s'%(e.name))
+            parr = e.get_particle_array()
+            if parr is not None:
+                # make sure all the _next arrays are present, if not add
+                # them.
+                for j from 0 <= j < num_props:
+                    arr_name = self.next_step_names[j]
+                    logger.debug('adding property %s '%(arr_name))
+                    if not parr.properties.has_key(arr_name):
+                        parr.add_property({'name':arr_name})
+            else:
+                logger.warn('No parr of entity (%s)'%(e.name))
+                logger.warn('Removing from entity_list')
+                to_remove.append(e)
 
-            # remove entities that did not provide a particle array.
-            for e in to_remove:
-                self.entity_list.remove(e)
+        # remove entities that did not provide a particle array.
+        for e in to_remove:
+            self.entity_list.remove(e)
             
-            # mark component setup as done.
-            self.setup_done = True
+        # mark component setup as done.
+        self.setup_done = True
+            
+        return 0
         
     cdef int compute(self) except -1:
         """
@@ -157,9 +164,10 @@ cdef class ODEStepper(SolverComponent):
                 an = parr._get_real_particle_prop(self.integral_names[j])
                 bn = parr._get_real_particle_prop(self.integrand_names[j])
                 an1 = parr._get_real_particle_prop(self.next_step_names[j])
-
+                
                 an1[:] = an + bn*self.time_step.value
 
+        return 0
 ################################################################################
 # `PyODEStepper` class.
 ################################################################################
@@ -709,6 +717,9 @@ cdef class Integrator(SolverComponent):
             c = self.cm.get_component(c_name)
             if c is not None:
                 self.execute_list.append(c)
+            else:
+                logger.error('Post integration component %s not found'%(
+                        c_name))
 
     def _setup_pre_stepping_components(self):
         """
@@ -805,6 +816,9 @@ cdef class Integrator(SolverComponent):
             # we have the list of entities that are to be considered for 
             # the integration of this property.
             ai_name=extract_entity_names(e_list)
+            logger.info('Adding initializer for %s'%(prop_name))
+            logger.info('Initial values : %s'%(integrand_initial_values))
+            logger.info('Integrand is : %s'%(p_info.get('integrand')))
             ai = ArrayInitializer(name='init_'+ai_name,
                                   solver=self.solver,
                                   entity_list=e_list,
@@ -830,8 +844,8 @@ cdef class Integrator(SolverComponent):
                     if e.is_a(e_type):
                         accept = True
                         break
-                else:
-                    accept = True
+            else:
+                accept = True
 
             if accept == False:
                 msg = 'Entity type (%d) not accepted for %s'%(e.type, prop_name)
@@ -908,6 +922,9 @@ cdef class Integrator(SolverComponent):
         integrand = prop_info.get('integrand')
         integral = prop_info.get('integral')
 
+        logger.debug('Adding stepper for %s, %s'%(
+                str(integrand), str(integral)))
+
         if integral is None or integrand is None:
             logger.warn('integrand or integral is None')
             return None
@@ -967,6 +984,8 @@ cdef class Integrator(SolverComponent):
                     logger.warn('Could not create copier for %s'%(prop_name))
                     raise SystemError, msg
 
+                logger.info('Adding copier : %s'%(copier))
+                logger.info('From : %s to %s'%(copier.from_arrays, copier.to_arrays))
                 self.execute_list.append(copier)
         
     cdef int compute(self) except -1:
@@ -990,7 +1009,7 @@ cdef class Integrator(SolverComponent):
         """
         cdefed wrapper for the compute function.
         """
-        self.compute()
+        return self.compute()
 
     cpdef int update_property_requirements(self) except -1:
         """
@@ -1001,7 +1020,6 @@ cdef class Integrator(SolverComponent):
         """
         cdef str prop_name
         cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
                 
         for prop_name in ip.keys():
             prop_info = ip.get(prop_name)
@@ -1009,28 +1027,19 @@ cdef class Integrator(SolverComponent):
             intgl = prop_info.get('integral')
             
             e_types = prop_info.get('entity_types')
+
             if e_types is None or len(e_types) == 0:
-                e_props = wp.get(EntityTypes.Entity_Base)
-                if e_props is None:
-                    e_props = []
-                    wp[EntityTypes.Entity_Base] = e_props
                 # meaning this property is to be applied to all entity types. 
                 # add the integrand and integral arrays
                 for i in range(len(intgnd)):
-                    p = intgnd[i]
-                    e_props.append({'name':p, 'default':None})
-                    p = intgl[i]
-                    e_props.append({'name':p, 'default':None})
-                    
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base, 
+                                                    intgnd[i])
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base,
+                                                    intgl[i])
             else:
                 for e_type in e_types:
-                    e_props = wp.get(e_type)
-                    if e_props is None:
-                        e_props = []
-                        wp[e_type] = e_props
                     for i in range(len(intgnd)):
-                        p = intgnd[i]
-                        e_props.append({'name':p, 'default':None})
-                        p = intgl[i]
-                        e_props.append({'name':p, 'default':None})
+                        self.add_write_prop_requirement(e_type, intgnd[i])
+                        self.add_write_prop_requirement(e_type, intgl[i])
+                        
         return 0

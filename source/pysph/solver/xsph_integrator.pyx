@@ -35,6 +35,11 @@ cdef class EulerXSPHIntegrator(Integrator):
                  entity_list=[],
                  dimension=3,
                  *args, **kwargs):
+
+        Integrator.__init__(self, name=name, solver=solver,
+                            component_manager=component_manager,
+                            entity_list=entity_list,
+                            dimension=dimension, *args, **kwargs)
         
         self.setup_position_stepper()
 
@@ -56,6 +61,8 @@ cdef class EulerXSPHIntegrator(Integrator):
         fluid_props.extend([{'name':'del_u', 'default':0.0},
                             {'name':'del_v', 'default':0.0},
                             {'name':'del_w', 'default':0.0}])
+
+        return 0
 
     def setup_position_stepper(self):
         """

@@ -8,6 +8,9 @@ logger = logging.getLogger()
 cimport numpy
 import numpy
 
+# package imports
+import random
+
 # local imports
 from pysph.base.kernelbase cimport KernelBase
 from pysph.base.nnps cimport NNPSManager
@@ -18,7 +21,14 @@ from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.typed_dict cimport TypedDict
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
+from pysph.solver.nnps_updater cimport NNPSUpdater
 
+# FIXME
+# 1. The compute function finally implemented by the USER should not require
+# him/her to call the setup_component function. It should be done
+# internally. This could be done by implementing the base class compute to call
+# setup_component and then call a compute_def function - which will be written
+# by the user.
 ################################################################################
 # `SolverComponent` class.
 ################################################################################
@@ -215,6 +225,87 @@ cdef class SolverComponent(Base):
         for t in type_list:
             type_dict[t] = None
 
+    cpdef add_read_prop_requirement(self, int e_type, list prop_list):
+        """
+        Adds a property requirement for the given type.
+
+        prop_list is a list of strings, one for each property.
+        """
+        cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
+        cdef list t_rp = rp.get(e_type)
+        
+        if t_rp is None:
+            t_rp = []
+            rp[e_type] = t_rp
+
+        for prop in prop_list:
+            if t_rp.count(prop) == 0:
+                t_rp.append(prop)
+
+    cpdef add_write_prop_requirement(self, int e_type, str prop_name, double
+                                     default_value=0.0):
+        """
+        Adds a property requirement for the given type.
+        """
+        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        cdef list t_wp = wp.get(e_type)
+        
+        if t_wp is None:
+            t_wp = []
+            wp[e_type] = t_wp
+
+        e = {'name':prop_name, 'default':default_value}
+
+        t_wp.append(e)
+
+    cpdef add_private_prop_requirement(self, int e_type, str prop_name, double
+                                       default_value=0.0):
+        """
+        Adds a property requirement for the given type.
+        """
+        cdef dict pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
+        cdef list t_pp = pp.get(e_type)
+        
+        if t_pp is None:
+            t_pp = []
+            pp[e_type] = t_pp
+
+        e = {'name':prop_name, 'default':default_value}
+
+        t_pp.append(e)
+
+    cpdef add_flag_requirement(self, int e_type, str flag_name, int
+                               default_value=0):
+        """
+        Adds a flag property requirement for the given type.
+        """
+        cdef dict f = self.information.get_dict(self.PARTICLE_FLAGS)
+        cdef list t_f = f.get(e_type)
+        
+        if t_f is None:
+            t_f = []
+            f[e_type] = t_f
+
+        e = {'name':flag_name, 'default':default_value}
+
+        t_f.append(e)
+        
+    cpdef add_entity_prop_requirement(self, int e_type, str prop_name, double
+                                      default_value=0.0):
+        """
+        Add a property requirement of the entity.
+        """
+        cdef dict ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        cdef list t_ep = ep.get(e_type)
+
+        if t_ep is None:
+            t_ep = []
+            ep[e_type] = t_ep
+
+        e = {'name':prop_name, 'default':default_value}
+        
+        t_ep.append(e)
+
     cpdef add_entity(self, EntityBase entity):
         """
         Add the given entity to the entity_list if filter_entity does not filter
@@ -371,6 +462,7 @@ cdef class ComponentManager(Base):
         """
         return self.information.get_dict(
             ComponentManager.PARTICLE_PROPERTIES)[e_type]
+
 
     cpdef add_input(self, EntityBase entity):
         """
@@ -766,6 +858,18 @@ cdef class SolverBase(Base):
 
         self.entity_list=[]
         self.component_categories = {}
+
+        # setup some standard component categories.
+        self.component_categories['pre_integration'] = []
+        self.component_categories['post_integration'] = []
+        self.component_categories['pre_step'] = []
+        self.component_categories['post_step'] = []
+
+        # add a nnps_updater component to the pre-step components.
+        psc = self.component_categories['pre_step']
+        nnps_updater = NNPSUpdater(solver=self)
+        psc.append(nnps_updater)
+
         self.kernels_used = {}
         
         # the integrator.
@@ -804,8 +908,12 @@ cdef class SolverBase(Base):
             
             self.integrator.integrate()
 
+            logger.info('Iteration %d done %f'%(
+                    self.current_iteration, self.elapsed_time))
+
             current_time += self.time_step.value
             self.elapsed_time = current_time    
+            self.current_iteration += 1
 
     cpdef next_iteration(self):
         """
@@ -819,6 +927,7 @@ cdef class SolverBase(Base):
             else:
                 self.integrator.integrate()
                 self.elapsed_time += self.time_step.value
+                self.current_iteration += 1
 
     cpdef _setup_solver(self):
         """
@@ -855,10 +964,10 @@ cdef class SolverBase(Base):
             i=0
             for c in comp_list:
                 c.solver = self
-                if c.name == '':
-                    c.name = comp_category+'_'+str(i)
-                logger.info('Component %s added'%(c.name))
+                self._component_name_check(c)
+                logger.info('Adding component %s to component manager'%(c.name))
                 self.component_manager.add_component(c, notify=True)
+                i += 1
                 
         # add the integrator to the component manager
         self.integrator.solver = self
@@ -902,6 +1011,20 @@ cdef class SolverBase(Base):
         # initialize the cell manager.
         self.cell_manager.initialize()
 
+    def _component_name_check(self, SolverComponent c):
+        """
+        """
+        if c.name == '':
+            c.name = self._gen_random_name_for_component(c)
+            logger.warn('Using name %s for component %s'%(
+                    c.name, c))
+    
+    def _gen_random_name_for_component(self, SolverComponent c):
+        """
+        """
+        r = int(random.random()*100)
+        return c.category+'_'+c.identifier+'_'+str(r)
+        
     cpdef _setup_components_input(self):
         """
         Add each entity in the entity_list to all components.
@@ -939,7 +1062,12 @@ cdef class SolverBase(Base):
 
     cpdef _setup_integrator(self):
         """
-        Setup the integrator as required. This will be done in the derived
-        classes depending on the problem/domain etc.
+        Setup the integrator as required. 
+        Some basic setup is done here if needed.
+
+        The most important parts will be domain specific and be done in the
+        derived solver classes.
         """
-        raise NotImplementedError, 'SolverBase::_setup_integrator'        
+        logger.warn('No integrator setup in SolverBase')
+        
+        

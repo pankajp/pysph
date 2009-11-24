@@ -22,6 +22,8 @@ from pysph.solver.component_factory import ComponentFactory as cfac
 cdef class RK2TimeStepSetter(SolverComponent):
     """
     """
+    identifier='rk2_time_step_setter'
+    categorty='time_step_setter'
     def __cinit__(self, str name='', SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],
@@ -44,6 +46,8 @@ cdef class RK2TimeStepSetter(SolverComponent):
 
         self.setup_done = True
 
+        return 0
+
     cdef int compute(self) except -1:
         """
         """
@@ -63,6 +67,7 @@ cdef class RK2Integrator(Integrator):
     """
     Runge-Kutta-2 integrator class.
     """
+    identifier='rk2_integrator'
     def __cinit__(self, str name='', SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],
@@ -103,6 +108,9 @@ cdef class RK2Integrator(Integrator):
         Setup the runge kutta 2 integrator.
         """
 
+        if self.setup_done == True:
+            return 0
+
         # setup pre-integration components
         self._setup_pre_integration_components()
 
@@ -110,7 +118,8 @@ cdef class RK2Integrator(Integrator):
         self._init_for_step_setup(1)
 
         # add a time step setter component.
-        self.execute_list.append(RK2TimeStepSetter(integrator=self, step_num=1))
+        self.execute_list.append(RK2TimeStepSetter(name='first_time_step_setter',
+                                                   integrator=self, step_num=1))
         
         # setup the first step.
         self._setup_step()
@@ -120,13 +129,18 @@ cdef class RK2Integrator(Integrator):
 
         
         # add a time step setter component.
-        self.execute_list.append(RK2TimeStepSetter(integrator=self, step_num=2))
+        self.execute_list.append(RK2TimeStepSetter(name='second_time_step_setter',
+                                                   integrator=self, step_num=2))
         
         # setup the second step.
         self._setup_step()
 
         # setup post-integration components.
         self._setup_post_integration_components()
+        
+        self.setup_done = True
+
+        return 0
 
     def _init_for_step_setup(self, step_num):
         """
@@ -272,7 +286,6 @@ cdef class RK2Integrator(Integrator):
         """
         cdef str prop_name
         cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
                 
         for prop_name in ip.keys():
             prop_info = ip.get(prop_name)
@@ -282,37 +295,27 @@ cdef class RK2Integrator(Integrator):
             e_types = prop_info.get('entity_types')
 
             if e_types is None or len(e_types) == 0:
-                e_props = wp.get(EntityTypes.Entity_Base)
-                if e_props is None:
-                    e_props = []
-                    wp[EntityTypes.Entity_Base] = e_props
-                # meaning this property is to be applied to all entity types. 
-                # add the integrand and integral arrays
                 for i in range(len(intgnd)):
                     p = intgnd[i]
-                    e_props.append({'name':p, 'default':None})
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
                     p = p+'_prev'
-                    e_props.append({'name':p, 'default':None})
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
                     p = intgl[i]
-                    e_props.append({'name':p, 'default':None})
-                    p = p+'_prev'
-                    e_props.append({'name':p, 'default':None})
-                    
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
+                    p = p +'_prev'
+                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
             else:
                 for e_type in e_types:
-                    e_props = wp.get(e_type)
-                    if e_props is None:
-                        e_props = []
-                        wp[e_type] = e_props
                     for i in range(len(intgnd)):
                         p = intgnd[i]
-                        e_props.append({'name':p, 'default':None})
+                        self.add_write_prop_requirement(e_type, p)
                         p = p+'_prev'
-                        e_props.append({'name':p, 'default':None})
+                        self.add_write_prop_requirement(e_type, p)
                         p = intgl[i]
-                        e_props.append({'name':p, 'default':None})
-                        p = p+'_prev'
-                        e_props.append({'name':p, 'default':None})
+                        self.add_write_prop_requirement(e_type, p)
+                        p = p +'_prev'
+                        self.add_write_prop_requirement(e_type, p)
+
         return 0
 
 ################################################################################
@@ -322,6 +325,7 @@ cdef class RK2SecondStep(ODEStepper):
     """
     Class to perform the 2nd step of runge kutta 2 integrator.
     """
+    identifier='rk2_second_step_stepper'
     def __cinit__(self, str name='', SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],

@@ -331,7 +331,7 @@ class RectangleGenerator(ParticleGenerator):
             start_x1 = self.end_point.x
             end_x1 = self.start_point.x
 
-        if self.start_point.x < self.end_point.y:
+        if self.start_point.y < self.end_point.y:
             start_x2 = self.start_point.y
             end_x2 = self.end_point.y
         else:
@@ -438,7 +438,7 @@ class RectangleGenerator(ParticleGenerator):
                                                           self.end_points_exact,
                                                       tolerance=self.tolerance)
         
-        new_spacing2, n2 = find_best_particle_spacing(length=width,
+        new_spacing2, n2 = find_best_particle_spacing(length=height,
                                                       initial_spacing=spacing2,
                                                       end_points_exact=\
                                                           self.end_points_exact,

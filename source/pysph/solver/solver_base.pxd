@@ -70,6 +70,17 @@ cdef class SolverComponent(Base):
     cpdef remove_input_entity_type(self, int etype)
     cpdef set_input_entity_types(self, list type_list)
 
+    cpdef add_read_prop_requirement(self, int e_type, list prop_list)
+    cpdef add_write_prop_requirement(self, int e_type, str prop_name, double
+                                     default_value=*)
+    cpdef add_private_prop_requirement(self, int e_type, str prop_name, double
+                                       default_value=*)
+    cpdef add_flag_requirement(self, int e_type, str flag_name, int
+                               default_value=*)
+    cpdef add_entity_prop_requirement(self, int e_type, str prop_name, double
+                                      default_value=*)
+    
+
 ################################################################################
 # `UserDefinedComponent` class.
 ################################################################################

@@ -35,11 +35,16 @@ include "stdlib.pxd"
 
 cimport numpy
 
+# logging import
+import logging
+logger=logging.getLogger()
+
 # local imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.point cimport Point
 from pysph.base.carray cimport DoubleArray, LongArray
 from pysph.base.nnps cimport NNPSManager, FixedDestinationNbrParticleLocator
+from pysph.base.nnps cimport NbrParticleLocatorBase
 from pysph.base.particle_tags cimport *
 
 from pysph.sph.sph_func cimport SPHFunctionParticle
@@ -97,7 +102,14 @@ cdef class SPHBase:
         # check if the data is sane.
         if (len(self.sources) == 0 or self.nnps_manager is None
             or self.dest is None or self.kernel is None or len(self.sph_funcs)
-            == 0): 
+            == 0):
+            logger.warn('invalid input to setup_internals')
+            logger.info('sources : %s'%(self.sources))
+            logger.info('nnps_manager : %s'%(self.nnps_manager))
+            logger.info('dest : %s'%(self.dest))
+            logger.info('kernel : %s'%(self.kernel))
+            logger.info('sph_funcs : %s'%(self.sph_funcs))                        
+            
             return
 
         # we need one sph_func for each source.
@@ -134,11 +146,13 @@ cdef class SPHBase:
             self.valid_call = -1
         
         # create the neighbor locators
+        cdef NbrParticleLocatorBase loc
         self.nbr_locators[:] = []
         for src in self.sources:
-            self.nbr_locators.append(
-                self.nnps_manager.get_neighbor_particle_locator(
-                    src, self.dest, self.kernel.radius()))            
+            loc = self.nnps_manager.get_neighbor_particle_locator(
+                src, self.dest, self.kernel.radius())
+            logger.info('Using locator : %s, %s, %s'%(src.name, self.dest.name, loc))
+            self.nbr_locators.append(loc)
     
     cpdef sph1(self, str output_array, bint exclude_self=False):
         """
@@ -201,7 +215,6 @@ cdef class SPHBase:
         for i from 0 <= i < nsrc:
             nbr_loc = self.nbr_locators[i]
             func = self.sph_funcs[i]
-
             for j from 0 <= j < np:
 
                 if tag[j] != LocalReal:
@@ -219,9 +232,9 @@ cdef class SPHBase:
                     func.eval(s_idx, j, self.kernel, &nr, &dnr)
 
                 if dnr != 0.0:
-                    output.data[j] += nr/dnr
+                    output.data[j] = nr/dnr
                 else:
-                    output.data[j] += nr
+                    output.data[j] = nr
     
     cpdef sph2(self, str output_array1, str output_array2, bint exclude_self=False):
         """
@@ -314,14 +327,14 @@ cdef class SPHBase:
                     func.eval(s_idx, j, self.kernel, &nr[0], &dnr[0])
 
                 if dnr[0] != 0.0:
-                    output1.data[j] += nr[0]/dnr[0]
+                    output1.data[j] = nr[0]/dnr[0]
                 else:
-                    output1.data[j] += nr[0]
+                    output1.data[j] = nr[0]
 
                 if dnr[1] != 0.0:
-                    output2.data[j] += nr[1]/dnr[1]
+                    output2.data[j] = nr[1]/dnr[1]
                 else:
-                    output2.data[j] += nr[1]
+                    output2.data[j] = nr[1]
 
     cpdef sph3(self, str output_array1, str output_array2, str output_array3,
                bint exclude_self=False): 
@@ -402,17 +415,17 @@ cdef class SPHBase:
                     func.eval(s_idx, j, self.kernel, &nr[0], &dnr[0])
 
                 if dnr[0] != 0.0:
-                    output1.data[j] += nr[0]/dnr[0]
+                    output1.data[j] = nr[0]/dnr[0]
                 else:
-                    output1.data[j] += nr[0]
+                    output1.data[j] = nr[0]
                 if dnr[1] != 0.0:
-                    output2.data[j] += nr[1]/dnr[1]
+                    output2.data[j] = nr[1]/dnr[1]
                 else:
-                    output2.data[j] += nr[1]
+                    output2.data[j] = nr[1]
                 if dnr[2] != 0.0:
-                    output3.data[j] += nr[2]/dnr[2]
+                    output3.data[j] = nr[2]/dnr[2]
                 else:
-                    output3.data[j] += nr[2]
+                    output3.data[j] = nr[2]
 
     cpdef sphn(self, list op_names, bint exclude_self=False):
         """
@@ -518,9 +531,9 @@ cdef class SPHBase:
                 for k from 0 <= k < num_fields:
                     output_array = op_arrays[k]
                     if dnr[k] != 0.0:
-                        output_array.data[j] += nr[k]/dnr[k]
+                        output_array.data[j] = nr[k]/dnr[k]
                     else:
-                        output_array.data[j] += nr[k]
+                        output_array.data[j] = nr[k]
         
         # free data
         free(<void*>nr)

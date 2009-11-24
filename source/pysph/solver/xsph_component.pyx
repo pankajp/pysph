@@ -46,9 +46,9 @@ cdef class XSPHFunction3D(SPHFunctionParticle3D):
         h = 0.5*(self.s_h.data[source_pid] + self.d_h.data[dest_pid])
         w = kernel.function(d_pos, s_pos, h)
         
-        vel.x = self.s_u.data[source_pid] - self.d_u.data[dest_pid]
-        vel.y = self.s_v.data[source_pid] - self.d_v.data[dest_pid]
-        vel.z = self.s_w.data[source_pid] - self.d_w.data[dest_pid]
+        vel.x = self.s_velx.data[source_pid] - self.d_velx.data[dest_pid]
+        vel.y = self.s_vely.data[source_pid] - self.d_vely.data[dest_pid]
+        vel.z = self.s_velz.data[source_pid] - self.d_velz.data[dest_pid]
         rho_bar = (self.d_rho[dest_pid] + self.s_rho[source_pid])*0.5
         rho_bar = 1./rho_bar
 
@@ -108,17 +108,23 @@ cdef class XSPHVelocityComponent(SPHComponent):
         cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
         cdef dict pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
 
-        fluid_props_read = rp[EntityTypes.Entity_Fluid]
-        fluid_props_read.extend(['u', 'v', 'w', 'm', 'rho'])
-
-        fluid_props_pr = pp[EntityTypes.Entity_Fluid]
-        fluid_props_pr = [{'name':'del_u', 'default':1.0},
-                          {'name':'del_v', 'default':1.0},
-                          {'name':'del_w', 'default':1.0}]
         
+        for t in self.source_types:
+            self.add_read_prop_requirement(t, ['u', 'v', 'w', 'm', 'rho'])
+        
+        for t in self.dest_types:
+            self.add_write_prop_requirement(t, 'del_u')
+            self.add_write_prop_requirement(t, 'del_v')
+            self.add_write_prop_requirement(t, 'del_w')
+
+        return 0
+
     cdef int compute(self) except -1:
         """
         """
+
+        self.setup_component()
+
         for i in range(len(self.dest_list)):
             e = self.dest_list[i]
             calc = self.sph_calcs[i]
@@ -129,6 +135,8 @@ cdef class XSPHVelocityComponent(SPHComponent):
             parr.del_u *= self.epsilon
             parr.del_v *= self.epsilon
             parr.del_w *= self.epsilon
+
+        return 0
 
     def get_velocity_corrections(self, particle_array):
         """
@@ -175,7 +183,7 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
         ODEStepper.setup_component(self)
 
         # create the xsph component and add arrays to the entities as required.
-        self.xsph_component = XSPHVelocityComponent(name=self.name+'comp',
+        self.xsph_component = XSPHVelocityComponent(name=self.name+'xsph_comp',
                                                     solver=self.solver,
                                                     component_manager=self.cm,
                                                     entity_list=self.entity_list,
@@ -228,7 +236,9 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
 
                 correction = dels[i]
 
-                an1[:] = an + (bn + correction)*self.time_step.value        
+                an1[:] = an + (bn + correction)*self.time_step.value
+
+        return 0
 
 ################################################################################
 # `RK2Step1XSPHPositionStepper` class.
@@ -352,6 +362,8 @@ cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
 
                 an1[:] = an + (prev_array)*self.time_step.value
 
+        return 0
+
 ################################################################################
 # `RK2Step2XSPHPositionStepper` class.
 ################################################################################
@@ -449,3 +461,4 @@ cdef class RK2Step2XSPHPositionStepper(EulerXSPHPositionStepper):
 
                 an1[:] = an + (prev_array +
                                (correction+bn))*(0.5*self.time_step.value) 
+        return 0
