@@ -21,7 +21,7 @@ cdef class XSPHFunction3D(SPHFunctionParticle3D):
     def __init__(self, ParticleArray source, ParticleArray dest, str h='h', str
                  mass='m', str rho='rho',
                  str coord_x='x', str coord_y='y', str coord_z='z',
-                 str velx='u', str vely='v', str velz='z', bint
+                 str velx='u', str vely='v', str velz='w', bint
                  setup_arrays=True, *args, **kwargs):
         """
         Constructor.
@@ -49,7 +49,7 @@ cdef class XSPHFunction3D(SPHFunctionParticle3D):
         vel.x = self.s_velx.data[source_pid] - self.d_velx.data[dest_pid]
         vel.y = self.s_vely.data[source_pid] - self.d_vely.data[dest_pid]
         vel.z = self.s_velz.data[source_pid] - self.d_velz.data[dest_pid]
-        rho_bar = (self.d_rho[dest_pid] + self.s_rho[source_pid])*0.5
+        rho_bar = (self.d_rho.data[dest_pid] + self.s_rho.data[source_pid])*0.5
         rho_bar = 1./rho_bar
 
         fac = rho_bar*self.s_mass.data[source_pid]*w
@@ -105,10 +105,6 @@ cdef class XSPHVelocityComponent(SPHComponent):
             - private - del_u, del_v, del_w
 
         """
-        cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        cdef dict pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
-
-        
         for t in self.source_types:
             self.add_read_prop_requirement(t, ['u', 'v', 'w', 'm', 'rho'])
         
@@ -123,14 +119,21 @@ cdef class XSPHVelocityComponent(SPHComponent):
         """
         """
 
+        cdef int i, num_entities
+        cdef EntityBase e
+        cdef ParticleArray parr
+        cdef SPHBase calc
+
         self.setup_component()
 
-        for i in range(len(self.dest_list)):
+        num_entities = len(self.dest_list)
+
+        for i from 0 <= i < num_entities:
             e = self.dest_list[i]
             calc = self.sph_calcs[i]
             parr = e.get_particle_array()
 
-            calc.sph3('del_u', 'del_v', 'del_w', exclude_self=True)
+            calc.sph3('del_u', 'del_v', 'del_w', True)
 
             parr.del_u *= self.epsilon
             parr.del_v *= self.epsilon
