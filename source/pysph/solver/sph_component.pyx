@@ -89,11 +89,11 @@ cdef class SPHComponent(SolverComponent):
     cpdef int setup_component(self) except -1:
         """
         """
-        logger.info('SPHComponent : setting up %s'%(self.name))
-        logger.info('Component object : %s'%(self))
-                    
         if self.setup_done == True:
             return 0
+
+        logger.info('SPHComponent : setting up %s'%(self.name))
+        logger.info('Component object : %s'%(self))
 
         self.sph_calcs[:] = []
         
