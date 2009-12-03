@@ -4,6 +4,7 @@ Tests for the basic_generators module.
 
 # standard imports
 import unittest
+import logging
 
 
 # local imports
@@ -235,5 +236,104 @@ class TestRectangleGenerator(unittest.TestCase):
         self.assertEqual(check_array(p.rho, [1000.]*8), True)
         self.assertEqual(check_array(p.m, [1.0]*8), True)
 
+
+################################################################################
+# `TestCuboidGenerator` class.
+################################################################################
+class TestCuboidGenerator(unittest.TestCase):
+    """
+    Tests for the CuboidGenerator class.
+    """
+    def test_constructor(self):
+        """
+        Tests for the constructor.
+        """
+        c = CuboidGenerator()
+
+        self.assertEqual(c.start_point, Point(0, 0, 0))
+        self.assertEqual(c.end_point, Point(1, 1, 1))
+        self.assertEqual(c.particle_mass, -1.)
+        self.assertEqual(c.mass_computation_mode, MCM.Compute_From_Density)
+        self.assertEqual(c.particle_density, 1000.)
+        self.assertEqual(c.density_computation_mode, DCM.Set_Constant)
+        self.assertEqual(c.particle_h, 0.1)
+        self.assertEqual(c.kernel, None)
+        self.assertEqual(c.filled, True)
+        self.assertEqual(c.exclude_top, False)
+        self.assertEqual(c.start_point, Point(0, 0, 0))
+        self.assertEqual(c.end_point, Point(1, 1, 1))
+        self.assertEqual(c.particle_spacing_x, 0.1)
+        self.assertEqual(c.particle_spacing_y, 0.1)
+        self.assertEqual(c.particle_spacing_z, 0.1)
+        self.assertEqual(c.end_points_exact, True)
+        self.assertEqual(c.tolerance, 1e-09)
+                         
+    def test_get_coords(self):
+        """
+        Tests the get_coords function.
+        """
+        c = CuboidGenerator(particle_spacing_x=1.0,
+                            particle_spacing_y=1.0,
+                            particle_spacing_z=1.0,
+                            mass_computation_mode=MCM.Ignore)
+
+        x1, y1, z1 = c.get_coords()
+        self.assertEqual(len(x1), 8)
+        self.assertEqual(len(y1), 8)
+        self.assertEqual(len(z1), 8)
+
+        # make sure the particles are correct.
+        x = [0, 0, 0, 0, 1, 1, 1, 1]
+        y = [0, 0, 1, 1, 0, 0, 1, 1]
+        z = [0, 1, 0, 1, 0, 1, 0, 1]
+
+        self.assertEqual(check_array(x, x1), True)
+        self.assertEqual(check_array(y, y1), True)
+        self.assertEqual(check_array(z, z1), True)
+
+    def test_get_coords_empty(self):
+        """
+        Test the get_coords function for the empty cube case.
+        """
+        c = CuboidGenerator(particle_spacing_x=1.0,
+                            particle_spacing_y=1.0,
+                            particle_spacing_z=1.0,
+                            filled=False)
+
+        x1, y1, z1 = c.get_coords()
+
+        self.assertEqual(len(x1), 8)
+        self.assertEqual(len(y1), 8)
+        self.assertEqual(len(z1), 8)
+
+        x = [0, 0, 1, 1, 0, 0, 1, 1]
+        y = [0, 1, 0, 1, 0, 1, 0, 1]
+        z = [0, 0, 0, 0, 1, 1, 1, 1]
+
+        self.assertEqual(check_array(x, x1), True)
+        self.assertEqual(check_array(y, y1), True)
+        self.assertEqual(check_array(z, z1), True)
+
+        # now test with the top excluded
+
+        c.exclude_top = True
+
+        x1, y1, z1 = c.get_coords()
+
+        self.assertEqual(len(x1), 4)
+        self.assertEqual(len(y1), 4)
+        self.assertEqual(len(z1), 4)
+
+        x = [0, 1, 0, 1]
+        y = [0, 0, 0, 0]
+        z = [0, 0, 1, 1]
+
+        self.assertEqual(check_array(x, x1), True)
+        self.assertEqual(check_array(y, y1), True)
+        self.assertEqual(check_array(z, z1), True)
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, filename='/tmp/pysph_tests',
+                        filemode='a')
+    logger.addHandler(logging.StreamHandler())
     unittest.main()

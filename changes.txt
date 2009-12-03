@@ -153,3 +153,8 @@ Wed Nov 25 00:40:28 IST 2009
       PyArray_SimpleNewFromData.
     - get_nearest_particles call from time_step_component corrected.
     - zero checks in 2d kernel at correct points. 
+Thursday 03 December 2009 (11:40:08 AM)
+    - added check to ignore zero sized arrays in _setup_nnps in solver_base
+    - added CuboidGenerator class.
+    - NNPSManager will not enable cell-caching by default
+    - corner break 3d example added.

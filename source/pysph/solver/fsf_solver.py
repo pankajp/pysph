@@ -97,12 +97,7 @@ class FSFSolver(SolverBase):
             SPHDensityRateComponent(name='density_rate_default',solver=self))
 
         if self.integrator is None:
-            #self.integrator = RK2XSPHIntegrator(name='integrator_default',
-            #solver=self)
             self.integrator = Integrator(name='integrator_default', solver=self)
-            #self.integrator = EulerXSPHIntegrator(name='integrator_default', solver=self)
-            #self.integrator = RK2Integrator(name='integrator_default',
-            #                                solver=self)
     
     ######################################################################
     # `Public` interface
@@ -292,16 +287,25 @@ class FSFSolver(SolverBase):
         entities.
         """
         y_max = -1.0
+        particles_present = False
 
         for e in self.entity_list:
             if e.is_a(EntityTypes.Entity_Fluid):
                 particles = e.get_particle_array()
+                if particles.get_number_of_particles() == 0:
+                    logger.info('No particles found for %s'%(e.name))
+                    continue
                 y = numpy.max(particles.y)
+                particles_present = True
                 if y > y_max:
                     y_max = y
         
-        v = numpy.sqrt(2*9.81*y_max)
-        speed = v/numpy.sqrt(self.max_fluid_density_variation)
-        self.speed_of_sound.value = speed
-        logger.info('Using speed of sound %f'%(speed))
+        if particles_present is False:
+            self.speed_of_sound.value = 20.
+            logger.info('No particles found, using value of 20.')
+        else:
+            v = numpy.sqrt(2*9.81*y_max)
+            speed = v/numpy.sqrt(self.max_fluid_density_variation)
+            self.speed_of_sound.value = speed
+            logger.info('Using speed of sound %f'%(speed))
                 

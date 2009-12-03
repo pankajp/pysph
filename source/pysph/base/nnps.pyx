@@ -1020,7 +1020,7 @@ cdef class NNPSManager:
      - variable_h - indicates if variable-h computations are needed.
 
     """
-    def __init__(self, CellManager cell_manager=None, bint cell_caching=True,
+    def __init__(self, CellManager cell_manager=None, bint cell_caching=False,
                  bint particle_caching=True, polygon_caching=True, bint
                  variable_h=False, str h='h'):
         """

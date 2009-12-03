@@ -39,3 +39,15 @@ cdef class Solid(EntityBase):
 
     cdef void _get_relative_velocity_linear_motion(self, Point pos, Point vel,
                                                    Point res)
+
+
+
+cdef class RigidBody(EntityBase):
+    """
+    Class to represent rigid bodies.
+
+    It can be considered an improvement over the Solid class above.
+    """
+    cdef public ParticleArray particles
+    
+    cpdef ParticleArray get_particle_array(self)
