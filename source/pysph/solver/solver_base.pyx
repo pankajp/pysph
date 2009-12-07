@@ -1005,7 +1005,7 @@ cdef class SolverBase(Base):
 
         min_cell_size, max_cell_size = self._compute_cell_sizes()
 
-        if max_cell_size != -1 or max_cell_size != -1:
+        if min_cell_size != -1 and max_cell_size != -1:
             self.cell_manager.min_cell_size = min_cell_size
             self.cell_manager.max_cell_size = max_cell_size
 

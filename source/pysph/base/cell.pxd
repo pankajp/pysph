@@ -34,7 +34,7 @@ cdef class Cell:
     
     # Member functions.
     cdef int add_particles(self, Cell cell) except -1
-    cdef int update(self, dict data) except -1
+    cpdef int update(self, dict data) except -1
     cdef long get_number_of_particles(self)
     cdef bint is_empty(self)
     cdef void get_centroid(self, Point pnt)
@@ -44,6 +44,7 @@ cdef class Cell:
     cdef void update_cell_manager_hierarchy_list(self)
     cdef void clear(self)
     cdef bint is_leaf(self)
+    cpdef Cell get_new_sibling(self, IntPoint id)
 
 cdef class LeafCell(Cell):
     """
@@ -52,12 +53,14 @@ cdef class LeafCell(Cell):
     cdef public list index_lists
     cdef _init_index_lists(self)
     cpdef set_cell_manager(self, CellManager cell_manager)
+    cpdef Cell get_new_sibling(self, IntPoint id)
 
 cdef class NonLeafCell(Cell):
     """
     Class to represent any cell above the leaf cell.
     """
-    cdef public dict cell_dict    
+    cdef public dict cell_dict
+    cpdef Cell get_new_sibling(self, IntPoint id)
 
 cdef class RootCell(NonLeafCell):
     """
@@ -87,7 +90,7 @@ cdef class CellManager:
 
     cdef public RootCell root_cell
     
-    cdef int update(self) except -1
+    cpdef int update(self) except -1
     cdef int update_status(self) except -1
     cdef initialize(self)
     cdef void clear(self)

@@ -118,7 +118,12 @@ cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
     neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
     neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
 
-
+def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
+                                         include_self=True):
+    construct_immediate_neighbor_list(cell_id,
+                                      neighbor_list,
+                                      include_self) 
+                                      
 def py_cell_encloses_sphere(IntPoint id, Point world_origin, double cell_size,
                             Point pnt, double radius):
     """
@@ -216,8 +221,9 @@ cdef class Cell:
     """
     The cell base class.
     """
-    def __init__(self, IntPoint id, CellManager cell_manager=None, double cell_size=0.1,
-                  int level=1, str coord_x='x', str coord_y='y', str coord_z='z'):
+    def __init__(self, IntPoint id, CellManager cell_manager=None, double
+                 cell_size=0.1, int level=1, str coord_x='x', str coord_y='y',
+                 str coord_z='z', *args, **kwargs):
 
         self.id = IntPoint()
 
@@ -252,16 +258,23 @@ cdef class Cell:
             self.origin.x = cell_manager.origin.x
             self.origin.y = cell_manager.origin.y
             self.origin.z = cell_manager.origin.z
-
+                         
     cdef void get_centroid(self, Point centroid):
         """
         Returns the centroid of this cell in 'centroid'.
     	"""
-        centroid.x = (<double>self.id.x + 0.5)*self.cell_size
-        centroid.y = (<double>self.id.y + 0.5)*self.cell_size
-        centroid.z = (<double>self.id.z + 0.5)*self.cell_size
+        centroid.x = self.origin.x + (<double>self.id.x + 0.5)*self.cell_size
+        centroid.y = self.origin.y + (<double>self.id.y + 0.5)*self.cell_size
+        centroid.z = self.origin.z + (<double>self.id.z + 0.5)*self.cell_size
 
-    cdef int update(self, dict data) except -1:
+    cpdef Cell get_new_sibling(self, IntPoint id):
+        """
+        Create a new cell and return.
+        """
+        cdef Cell cell = Cell(id, self.cell_manager, self.cell_size, self.level)
+        return cell
+
+    cpdef int update(self, dict data) except -1:
         """
         """
         raise NotImplementedError, 'Cell::update called'
@@ -337,9 +350,20 @@ cdef class LeafCell(Cell):
     """
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
                   cell_size=0.1, int level=0, int jump_tolerance=1): 
-        Cell.__init__(self, id, cell_manager, cell_size, level)
+        Cell.__init__(self, id=id, cell_manager=cell_manager,
+                      cell_size=cell_size, level=level)
         
         self.jump_tolerance = jump_tolerance
+
+    cpdef Cell get_new_sibling(self, IntPoint id):
+        """
+        Create a new LeafCell and return.
+        """
+        cdef LeafCell cell = LeafCell(id=id, cell_manager=self.cell_manager,
+                                      cell_size=self.cell_size, 
+                                      level=self.level,
+                                      jump_tolerance=self.jump_tolerance)
+        return <Cell>cell
 
     cdef bint is_leaf(self):
         """
@@ -380,6 +404,9 @@ cdef class LeafCell(Cell):
             self.coord_x = self.cell_manager.coord_x
             self.coord_y = self.cell_manager.coord_y
             self.coord_z = self.cell_manager.coord_z
+            self.origin.x = self.cell_manager.origin.x
+            self.origin.y = self.cell_manager.origin.y
+            self.origin.z = self.cell_manager.origin.z
             self._init_index_lists()
 
     cdef int add_particles(self, Cell cell1) except -1:
@@ -424,7 +451,7 @@ cdef class LeafCell(Cell):
 
         return 0
             
-    cdef int update(self, dict data) except -1:
+    cpdef int update(self, dict data) except -1:
         """
         Finds particles that have escaped this cell.
     
@@ -498,7 +525,7 @@ cdef class LeafCell(Cell):
 
                     # find the cell containing this point
                     find_cell_id(self.origin, pnt, self.cell_size, id)
-
+                    
                     if id.is_equal(self.id):
                         continue
 
@@ -523,10 +550,11 @@ cdef class LeafCell(Cell):
                     cell = data.get(id)
                     if cell is None:
                         # create a leaf cell and add it to dict.
-                        cell = LeafCell(id, self.cell_manager, self.cell_size,
-                                        self.level, self.jump_tolerance)
+                        # cell = LeafCell(id, self.cell_manager, self.cell_size,
+                        #                 self.level, self.jump_tolerance)
+                        cell = self.get_new_sibling(id)
                         data[id.copy()] = cell
-
+                        
                     index_array1 = cell.index_lists[i]
                     index_array1.append(indices[j])
 
@@ -592,10 +620,21 @@ cdef class NonLeafCell(Cell):
     """
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
                   cell_size=0.1, int level=1):
-        Cell.__init__(self, id, cell_manager, cell_size, level)
+        Cell.__init__(self, id=id, cell_manager=cell_manager,
+                      cell_size=cell_size, level=level)
 
         self.cell_dict = {}
 
+    cpdef Cell get_new_sibling(self, IntPoint id):
+        """
+        Create and return a new cell at the same level.
+        """
+        cdef NonLeafCell cell = NonLeafCell(id=id,
+                                            cell_manager=self.cell_manager,
+                                            cell_size=self.cell_size,
+                                            level=self.level)
+        return <Cell>cell
+                                            
     cdef int add_particles(self, Cell cell) except -1:
         """
         Add particles from given cell, into this cell.
@@ -636,7 +675,7 @@ cdef class NonLeafCell(Cell):
 
         return 0
     
-    cdef int update(self, dict data) except -1:
+    cpdef int update(self, dict data) except -1:
         """
         Update the particles under this cell, returning all
         particles that have created a new cell outside the
@@ -713,8 +752,9 @@ cdef class NonLeafCell(Cell):
                 cell = output_data.get(cell_id)
                 if cell is None:
                     # Create a non-leaf node
-                    cell = NonLeafCell(cell_id, self.cell_manager,
-                                       self.cell_size, self.level)
+                    # cell = NonLeafCell(cell_id, self.cell_manager,
+                    #                    self.cell_size, self.level)
+                    cell = self.get_new_sibling(cell_id)
                     output_data[cell_id.copy()] = cell
 
                     # add the escaped smaller cell to this cell.
@@ -823,11 +863,20 @@ cdef class RootCell(NonLeafCell):
     """
     def __init__(self, CellManager cell_manager=None, double
                   cell_size=0.1):
-        NonLeafCell.__init__(self, IntPoint(0, 0, 0), cell_manager, cell_size,
-                              level=-1) 
+        NonLeafCell.__init__(self, id=IntPoint(0, 0, 0),
+                             cell_manager=cell_manager, cell_size=cell_size,
+                             level=-1)
+        pass
 
+    cpdef Cell get_new_sibling(self, IntPoint id):
+        """
+        Create and return a new cell at the same level as this.
+        """
+        cdef RootCell cell = RootCell(cell_manager=self.cell_manager,
+                                      cell_size=self.cell_size)
+        return <Cell>cell
         
-    cdef int update(self, dict data) except -1:
+    cpdef int update(self, dict data) except -1:
         """
         Update particle information.
     
@@ -929,16 +978,17 @@ cdef class CellManager:
         self.jump_tolerance = 1
         self.cell_sizes = DoubleArray(0)
         
-        self.root_cell = RootCell(cell_manager=self)
-
         self.is_dirty = True
+
+        # create the root cell.
+        self.root_cell = RootCell(cell_manager=self)
 
         self.initialized = False
 
         if initialize == True:
             self.initialize()
         
-    cdef int update(self) except -1:
+    cpdef int update(self) except -1:
         """
         Update the cell manager.
         """
@@ -946,7 +996,7 @@ cdef class CellManager:
         cdef ParticleArray parray
                 
         if self.is_dirty:
-            
+
             # update the cells.
             self.root_cell.update(None)
         
@@ -1067,7 +1117,8 @@ cdef class CellManager:
         # clear the hierarchy dict.
         self.hierarchy_list[:] = []
 
-        self.root_cell.clear()
+        if self.root_cell is not None:
+            self.root_cell.clear()
 
     cdef void _setup_hierarchy_list(self):
         """
@@ -1113,7 +1164,7 @@ cdef class CellManager:
             arr.set(0, min_size)
             self.cell_size_step = 0
         elif num_levels == 2:
-            arr.resize(1)
+            arr.resize(2)
             arr.set(0, min_size)
             arr.set(1, max_size)
             self.cell_size_step = max_size-min_size
@@ -1158,10 +1209,9 @@ cdef class CellManager:
         cdef double leaf_size = self.cell_sizes.get(0)
  
         # create a leaf cell with all particles.
-        leaf_cell = LeafCell(IntPoint(0, 0, 0), cell_manager=self,
+        leaf_cell = LeafCell(id=IntPoint(0, 0, 0), cell_manager=self,
                              cell_size=leaf_size, level=0,
                              jump_tolerance=INT_MAX)
-       
         num_arrays = len(leaf_cell.arrays_to_bin)
         # now add all particles of all arrays to this cell.
         for i from 0 <= i < num_arrays:
@@ -1446,3 +1496,6 @@ cdef class CellManager:
     def py_get_potential_cells(self, Point pnt, double radius, list cell_list,
                                bint single_layer=True):
         self.get_potential_cells(pnt, radius, cell_list, single_layer)
+
+    def py_reset_jump_tolerance(self):
+        self._reset_jump_tolerance()

@@ -158,3 +158,16 @@ Thursday 03 December 2009 (11:40:08 AM)
     - added CuboidGenerator class.
     - NNPSManager will not enable cell-caching by default
     - corner break 3d example added.
+
+Monday 07 December 2009 (01:11:30 AM)
+    - get_centroid in cell.pyx changed - it was not taking into account the
+    origin coords.
+    - get_new_sibling function to all cells.
+    - update function cpdefed.
+    - __reduce__ and __setstate__ functions for IntPoint and Point classes.
+    - parallel modules - work in progress - will not work now.
+	- parallel_cell
+	- parallel_controller
+	- processor map
+	- dummy parallel fsf solver.
+  

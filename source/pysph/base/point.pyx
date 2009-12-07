@@ -33,6 +33,22 @@ cdef class Point:
         self.y = y
         self.z = z
 
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling of the Point extension type.
+        """
+        d = {}
+        d['x'] = self.x
+        d['y'] = self.y
+        d['z'] = self.z
+
+        return (Point, (), d)
+
+    def __setstate__(self, d):
+        self.x = d['x']
+        self.y = d['y']
+        self.z = d['z']
+
     def __str__(self):
         return '(%f, %f, %f)'%(self.x, self.y, self.z)
 
@@ -142,6 +158,22 @@ cdef class IntPoint:
         self.x = x
         self.y = y
         self.z = z
+
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling of the IntPoint extension type.
+        """
+        d = {}
+        d['x'] = self.x
+        d['y'] = self.y
+        d['z'] = self.z
+
+        return (IntPoint, (), d)
+
+    def __setstate__(self, d):
+        self.x = d['x']
+        self.y = d['y']
+        self.z = d['z']
 
     cpdef set(self, int x, int y, int z):
         self.x = x
