@@ -975,7 +975,7 @@ class TestNNPSManager(unittest.TestCase):
         """
         nm = NNPSManager()
 
-        self.assertEqual(nm.cell_caching, True)
+        self.assertEqual(nm.cell_caching, False)
         self.assertEqual(nm.particle_caching, True)
         self.assertEqual(nm.polygon_caching, True)
         self.assertEqual(nm.cell_manager, None)

@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Nov 24 23:55:32 2009
+# Tue Dec  8 14:28:33 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -69,6 +69,12 @@ cdef class BaseArray:
     def __cinit__(self, *args, **kwargs):
         pass
 
+    cpdef str get_c_type(self):
+        """
+	Return the c data type of this array.
+        """
+        raise NotImplementedError, 'BaseArray::get_c_type'
+
     cpdef reserve(self, int size):
         raise NotImplementedError, 'BaseArray::reserve'
 
@@ -120,7 +126,12 @@ cdef class BaseArray:
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
         self.length = 0
         arr.dimensions[0] = self.length        
-        ################################################################################
+        
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+        Copy values of selected particles in indices from self to dest.
+        """
+        raise NotImplementedError, 'BaseArray::copy_values'################################################################################
 # `IntArray` class.
 ################################################################################
 cdef class IntArray(BaseArray):
@@ -166,6 +177,12 @@ cdef class IntArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_INT, self.data)
+
+    cpdef str get_c_type(self):
+        """
+        Return the c data type for this array.
+        """
+        return 'int'
 
     cdef int* get_data_ptr(self):
         """
@@ -331,6 +348,19 @@ cdef class IntArray(BaseArray):
         
         free(<void*>temp)
 
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+	Copies values of indices in indices from self to dest.
+
+	No size check if performed, we assume the dest to of proper size
+        i.e. atleast as long as indices.
+        """
+        cdef IntArray dest_array = <IntArray>dest
+        cdef int i, num_values
+        num_values = indices.length
+        
+        for i from 0 <= i < num_values:
+            dest_array.data[i] = self.data[indices.data[i]]
 
 ################################################################################
 # `DoubleArray` class.
@@ -378,6 +408,12 @@ cdef class DoubleArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_DOUBLE, self.data)
+
+    cpdef str get_c_type(self):
+        """
+        Return the c data type for this array.
+        """
+        return 'double'
 
     cdef double* get_data_ptr(self):
         """
@@ -543,6 +579,19 @@ cdef class DoubleArray(BaseArray):
         
         free(<void*>temp)
 
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+	Copies values of indices in indices from self to dest.
+
+	No size check if performed, we assume the dest to of proper size
+        i.e. atleast as long as indices.
+        """
+        cdef DoubleArray dest_array = <DoubleArray>dest
+        cdef int i, num_values
+        num_values = indices.length
+        
+        for i from 0 <= i < num_values:
+            dest_array.data[i] = self.data[indices.data[i]]
 
 ################################################################################
 # `FloatArray` class.
@@ -590,6 +639,12 @@ cdef class FloatArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_FLOAT, self.data)
+
+    cpdef str get_c_type(self):
+        """
+        Return the c data type for this array.
+        """
+        return 'float'
 
     cdef float* get_data_ptr(self):
         """
@@ -755,6 +810,19 @@ cdef class FloatArray(BaseArray):
         
         free(<void*>temp)
 
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+	Copies values of indices in indices from self to dest.
+
+	No size check if performed, we assume the dest to of proper size
+        i.e. atleast as long as indices.
+        """
+        cdef FloatArray dest_array = <FloatArray>dest
+        cdef int i, num_values
+        num_values = indices.length
+        
+        for i from 0 <= i < num_values:
+            dest_array.data[i] = self.data[indices.data[i]]
 
 ################################################################################
 # `LongArray` class.
@@ -802,6 +870,12 @@ cdef class LongArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NPY_LONG, self.data)
+
+    cpdef str get_c_type(self):
+        """
+        Return the c data type for this array.
+        """
+        return 'long'
 
     cdef long* get_data_ptr(self):
         """
@@ -967,4 +1041,17 @@ cdef class LongArray(BaseArray):
         
         free(<void*>temp)
 
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+	Copies values of indices in indices from self to dest.
+
+	No size check if performed, we assume the dest to of proper size
+        i.e. atleast as long as indices.
+        """
+        cdef LongArray dest_array = <LongArray>dest
+        cdef int i, num_values
+        num_values = indices.length
+        
+        for i from 0 <= i < num_values:
+            dest_array.data[i] = self.data[indices.data[i]]
 

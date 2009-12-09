@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Nov 24 23:55:32 2009
+# Tue Dec  8 14:28:33 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -34,7 +34,8 @@ cdef class BaseArray:
 
     cpdef align_array(self, LongArray new_indices)
     cdef void _align_array(self, LongArray new_indices)
-################################################################################
+    cpdef str get_c_type(self)
+    cpdef copy_values(self, LongArray indices, BaseArray dest)################################################################################
 # `IntArray` class.
 ################################################################################
 cdef class IntArray(BaseArray):

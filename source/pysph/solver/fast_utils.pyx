@@ -3,6 +3,8 @@ Some utitlty functions written in cython.
 """
 import numpy
 
+from pysph.base.carray cimport LongArray
+
 cpdef make_nd_array(arrays=[]):
     """
     Makes a proper array of shape (len(a), len(arrays)), from the passed arrays.
@@ -26,3 +28,27 @@ cpdef make_nd_array(arrays=[]):
             a[j][i] = _a[j]
 
     return a
+
+
+cpdef LongArray arange_long(long start, long stop=-1):
+    """
+    Creates a long array of size range and fills in values from 0-range-1 into
+    it. 
+    """
+    
+    cdef LongArray arange
+    cdef int i = 0
+    cdef int size = 0
+    
+    if stop == -1:
+        arange = LongArray(start)
+        for i from 0 <= i < start:
+            arange.data[i] = i
+        return arange
+    else:
+        size = stop-start+1
+        arange = LongArray(size)
+        for i from 0 <= i < size:
+            arange.data[i] = start + i
+        return arange
+        

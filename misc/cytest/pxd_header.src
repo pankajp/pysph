@@ -30,3 +30,5 @@ cdef class BaseArray:
 
     cpdef align_array(self, LongArray new_indices)
     cdef void _align_array(self, LongArray new_indices)
+    cpdef str get_c_type(self)
+    cpdef copy_values(self, LongArray indices, BaseArray dest)

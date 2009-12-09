@@ -13,9 +13,57 @@ logger = logging.getLogger()
 
 # local imports
 from pysph.base.point import Point, IntPoint
+from pysph.base.particle_tags import get_dummy_tag
 from pysph.solver.base import Base
+from pysph.solver.fast_utils import arange_long
 from pysph.base import cell
 from pysph.parallel.parallel_controller import ParallelController
+
+TAG_PROC_MAP_UPDATE = 1
+TAG_CELL_ID_EXCHANGE = 2
+TAG_CROSSING_PARTICLES = 3
+TAG_NEW_CELL_PARTICLES = 4
+TAG_REMOTE_CELL_REQUEST = 5
+TAG_REMOTE_CELL_REPLY = 6
+
+def share_data(mypid, sorted_procs, data, comm, tag=0, multi=False):
+    """
+    Shares the given data among the processors in nbr_proc_list. Returns a
+    dictionary containing data from each other processor.
+
+    **Parameters**
+    
+        - mypid - pid where the function is being called.
+        - sorted_procs - list of processors to share data with.
+        - data - the data to be shared.
+        - comm - the MPI communicator to use.
+        - tag - a tag for the MPI send/recv calls if needed.
+        - multi - indicates if 'data' contains data specific to each nbr_proc or
+          not. True -> separate data for each nbr proc, False -> Send same data
+          to all nbr_procs.
+    """
+    if mypid not in sorted_procs:
+        return {}
+    proc_data = {}
+    
+    for pid in sorted_procs:
+        proc_data[pid] = None
+    
+    for pid in sorted_procs:
+        if pid == mypid:
+            for dest in sorted_procs:
+                if dest == mypid:
+                    continue
+                else:
+                    if multi:
+                        comm.send(data[dest], dest=dest, tag=tag)
+                    else:
+                        comm.send(data, dest=dest, tag=tag)
+        else:
+            recv_data = comm.recv(source=pid, tag=tag)
+            proc_data[pid] = recv_data
+
+    return proc_data
 
 ################################################################################
 # `ProcessorMap` class.
@@ -135,7 +183,155 @@ class ProcessorMap(Base):
             rep += '\n'
         rep += 'Region neighbors : %s'%(self.nbr_procs)
         return rep
-            
+
+
+################################################################################
+# `ParallelCellInfo` class.
+################################################################################
+class ParallelCellInfo(Base):
+    """
+    Class to hold information to be maintained with any parallel cell.
+
+    This will be typically used only for those cells that are involved in the
+    parallel level. Any cell under this cell behaves just like a serial cell.
+
+    """
+    def __init__(self, cell=None):
+        self.cell = cell
+        self.neighbor_cell_pids = {}
+        self.remote_pid_cell_count = {}
+        self.num_remote_neighbors = 0
+        self.num_local_neighbors = 0
+
+    def update_neighbor_information(self, glb_nbr_cell_pids):
+        """
+        Updates the remote neighbor information from the glb_nbr_cell_pids.
+
+        glb_nbr_cell_pids also contains cell ids from the same processor.
+        """
+        id = self.cell.id
+        nbr_ids = []
+        cell.py_construct_immediate_neighbor_list(cell_id=id,
+                                                  neighbor_list=nbr_ids,
+                                                  include_self=False)
+
+        # clear previous information.
+        self.neighbor_cell_pids.clear()
+        
+        for nbr_id in nbr_ids:
+            nbr_pid = glb_nbr_cell_pids.get(nbr_id)
+            if nbr_pid is not None:
+                self.neighbor_cell_pids[nbr_id.py_copy()] = nbr_pid
+        
+    def compute_neighbor_counts(self):
+        """
+        Find the number of local and remote neighbors of this cell.
+        """
+        self.remote_pid_cell_count.clear()
+        self.num_remote_neighbors = 0
+        self.num_local_neighbors = 0
+        mypid = self.pid
+        for cid, pid in self.neighbor_cell_pids.iteritems():
+            if pid == mypid:
+                self.num_local_neighbors += 1
+            else:
+                self.num_remote_neighbors += 1
+                cnt = self.remote_pid_cell_count.get(pid)
+                if cnt is None:
+                    self.remote_pid_cell_count[pid] = 1
+                else:
+                    self.remote_pid_cell_count[pid] = cnt + 1
+
+################################################################################
+# `ParallelLeafCell` class.
+################################################################################
+class ParallelLeafCell(cell.LeafCell):
+    """
+    Leaf cell to be used in parallel computations.
+    """
+    def __init__(self, id, cell_manager=None, cell_size=0.1, level=0,
+                 jump_tolerance=1, pid=-1):
+        cell.LeafCell.__init__(self, id=id, cell_manager=cell_manager,
+                               cell_size=cell_size, level=level,
+                               jump_tolerance=jump_tolerance)
+
+        self.pid = pid
+        
+        self.parallel_cell_info = ParallelCellInfo(cell=self)
+
+    def get_new_sibling(self, id):
+        """
+        """
+        cell = ParallelLeafCell(id=id, cell_manager=self.cell_manager,
+                                cell_size=self.cell_size, level=self.level,
+                                jump_tolerance=self.jump_tolerance,
+                                pid=self.pid)
+        return cell
+
+class ParallelLeafCellRemoteCopy(ParallelLeafCell):
+    """
+    Leaf cells holding information from another processor.
+    """
+    def __init__(self, id, cell_manager=None, cell_size=0.1, level=0,
+                 jump_tolerance=1, pid=-1):
+        ParallelLeafCell.__init__(self, id=id, cell_manager=cell_manager,
+                                  cell_size=cell_size, level=level,
+                                  jump_tolerance=jump_tolerance, pid=pid)
+
+        self.particle_start_indices = []
+        self.particle_end_indices = []
+        self.num_particles = 0
+################################################################################
+# `ParallelNonLeafCell` class.
+################################################################################
+class ParallelNonLeafCell(cell.NonLeafCell):
+    """
+    NonLeafCell to be used in parallel computations.
+    """
+    def __init__(self, id, cell_manager=None, cell_size=0.1, level=1,
+                 pid=-1):
+        cell.NonLeafCell.__init__(self, id=id, cell_manager=cell_manager,
+                                  cell_size=cell_size, level=level)
+        self.pid = pid
+        self.parallel_cell_info = ParallelCellInfo(cell=self)
+
+    def get_new_sibling(self, id):
+        """
+        """
+        cell = ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
+                                   cell_size=self.cell_size, level=self.level,
+                                   pid=self.pid)
+        return cell
+
+    def get_new_child(self, id):
+        """
+        """
+        num_levels = self.cell_manager.num_levels
+        cell_sizes = self.cell_manager.cell_sizes
+        if (num_levels - self.level) == num_levels-1:
+            return ParallelLeafCell(id=id, cell_manager=self.cell_manager,
+                                    cell_size=cell_sizes.get(self.level-1),
+                                    level=self.level-1,
+                                    jump_tolerance=1, pid=self.pid)
+        else:
+            return ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
+                                       cell_size=cell_sizes.get(self.level-1),
+                                       level=self.level-1, pid=self.pid)
+
+################################################################################
+# `ParallelNonLeafCellRemoteCopy` class.
+################################################################################
+class ParallelNonLeafCellRemoteCopy(ParallelNonLeafCell):
+    """
+    NonLeafCell holding information from another processor
+    """
+    def __init__(self, id, cell_manager=None, cell_size=0.1, level=1, pid=-1):
+        ParallelNonLeafCell.__init__(self, id=id, cell_manager=cell_manager,
+                                     cell_size=cell_size, level=level, pid=pid)
+        self.particle_start_indices = []
+        self.particle_end_indices = []
+        self.num_particles = 0
+
 ################################################################################
 # `ParallelRootCell` class.
 ################################################################################
@@ -149,22 +345,306 @@ class ParallelRootCell(cell.RootCell):
                  pid=0, *args, **kwargs):
         cell.RootCell.__init__(self, cell_manager=cell_manager,
                                cell_size=cell_size)
+
+        self.initial_redistribution_done = False
+
+        # the list of remote cells that cells under this root cell are
+        # adjoining. The dictionary is indexed on processor ids, and contains a
+        # list of cell ids of neighbors from those processors.
+        self.adjacent_remote_cells = {}
+
+        # adjacent processors - list of processors that share a cell boundary
+        # with this processor.
+        self.adjacent_processors = []
+
+        # a dict containing information about which processor each neighbor cell
+        # is located.
+        self.nbr_cell_info = {}
+
+        # dict of new particles to be sent to each neighbor proc.
+        self.new_particles_for_neighbors = {}
+        
+        # dict of new particles going into unknown region.
+        self.new_region_particles = {}
+
+        # list of new cells that were added in a iteration.
+        self.new_cells_added = {}
+
         if cell_manager is None:
             self.pid = pid
         else:
             self.pid = cell_manager.pid
             self.parallel_controller = cell_manager.parallel_controller
 
+    def get_new_child(self, id):
+        """
+        """
+        num_levels = self.cell_manager.num_levels
+        cell_sizes = self.cell_manager.cell_sizes
+
+        if num_levels == 1:
+            return ParallelLeafCell(id=id, cell_manager=self.cell_manager,
+                                    cell_size=cell_sizes.get(0),
+                                    level=0,
+                                    jump_tolerance=1,
+                                    pid=self.pid)
+        else:
+            return ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
+                                       cell_size=cell_sizes.get(self.level-1),
+                                       level=self.level-1,
+                                       pid=self.pid)
+
+    def get_new_child_for_copy(self, id, pid):
+        """
+        """
+        num_levels = self.cell_manager.num_levels
+        cell_sizes = self.cell_manager.cell_sizes
+
+        if num_levels == 1:
+            return ParallelLeafCellRemoteCopy(
+                id=id,
+                cell_manager=self.cell_manager, 
+                cell_size=cell_sizes.get(0),
+                level=0,
+                jump_tolerance=1,
+                pid=pid)
+        else:
+            return ParallelNonLeafCellRemoteCopy(
+                id=id,
+                cell_manager=self.cell_manager,  
+                cell_size=cell_sizes.get(self.level-1),
+                level=self.level-1,
+                pid=pid)
+        
+    def find_adjacent_remote_cells(self):
+        """
+        Finds all cells from other processors that are adjacent to cells handled
+        by this processor. 
+
+        This also updates the adjacent_processors list.
+        
+        **Note**
+            - assumes the neighbor information of all cells to be up-to-date.
+
+        """
+        self.adjacent_remote_cells.clear()
+        arc = self.adjacent_remote_cells
+
+        for cell in self.cell_dict.values():
+            pci = cell.parallel_cell_info
+            
+            for cid, pid in pci.neighbor_cell_pids.iteritems():
+                if pid == self.pid:
+                    continue
+                
+                info = arc.get(pid)
+                if info is None:
+                    info = []
+                    arc[pid] = info
+                # add cellid to the list of cell from processor pid.
+                info.append(cid.py_copy())
+                
+        self.adjacent_processors[:] = self.adjacent_remote_cells.keys()
+        sorted(self.adjacent_processors)
+
+        logger.debug('Adjacent processors : %s'%(self.adjacent_processors))
+        logger.debug('Adjacent neigbors cells')
+        for pid , cell_list in self.adjacent_remote_cells.iteritems():
+            for c in cell_list:
+                logger.debug('Cell %s with proc %d'%(c, pid))
+        
+    def update_cell_neighbor_information(self):
+        """
+        Update each cells neighbor information.
+        Requires communication among proc_map neighbors.
+
+        **Algorithm**
+            
+            - send and receive self information to and from all neighbors in
+              proc_map.
+            - invert this list to get a large dict of cells and pids containing
+              those cells.
+            - for each child cell update their neighbor list using this global
+              cell dict.
+
+        **Note**
+            - The processor map should be up-to-date before this function is called.
+            
+        """
+        comm = self.parallel_controller.comm
+        p_map = self.cell_manager.proc_map
+        nbr_procs = p_map.nbr_procs
+        
+        sorted_nbr_proces = sorted(nbr_procs)
+        
+        cell_list = self.cell_dict.keys()
+        
+        nbr_proc_cell_list = share_data(mypid=self.pid,
+                                        sorted_procs=sorted_nbr_proces,
+                                        data=cell_list, comm=comm, 
+                                        tag=TAG_CELL_ID_EXCHANGE,
+                                        multi=False)
+        
+        # add this pids information also here.
+        nbr_proc_cell_list[self.pid] = cell_list
+
+        # from this data, construct the nbr_cell_info.
+        nbr_cell_info = {}
+        for pid, cell_list in nbr_proc_cell_list.iteritems():
+            for cid in cell_list:
+                n_info = nbr_cell_info.get(cid)
+                if n_info is None:
+                    nbr_cell_info[cid.py_copy()] = pid
+                else:
+                    logger.error('Cell %s in more than one processor : %d, %d'%(
+                            cid, pid, n_info))
+        
+        # update the neighbor information of all the children cells.
+        for cell in self.cell_dict.values():
+            cell.parallel_cell_info.update_neighbor_information(nbr_cell_info)
+
+        # store to nbr_cell_info for later use.
+        self.nbr_cell_info.clear()
+        self.nbr_cell_info.update(nbr_cell_info)
+
+        # update the adjacent cell information of the root.
+        self.find_adjacent_remote_cells()
+
     def update(self, data):
         """
         Update particle information.
         """
-        collected_data = {}
+        logger.debug('++++++++++++++++++++++++++++++++++++++++++++++++')
+        # bin the particles and find the new_cells and remote_cells.
+        new_cells, remote_cells = self.bin_particles()
+
+        # clear the list of new cells added.
+        self.new_cells_added.clear()
+
+        # create a copy of the particles in the new cells and mark those
+        # particles as remote.
+        self.new_particles_for_neighbors = self.create_new_particle_copies(
+            remote_cells)
+        self.new_region_particles = self.create_new_particle_copies(
+            new_cells)
+
+        # exchange particles moving into a region assigned to a known
+        # processors. 
+        self.exchange_new_particles_with_neighbors(
+            remote_cells,
+            self.new_particles_for_neighbors
+            )
+        
+        # remove the current copies of remote cells with us.
+        self.cell_manager.remove_remote_particles()
+
+        # make sure each new cell is with exactly one processor.
+        self.assign_new_cells(new_cells, self.new_region_particles)
+
+        # all new particles entering this processors region and in regions
+        # assigned to this processor have been added to the respective particles
+        # arrays. The data in the particles arrays is stale and the indices
+        # invalid. Perform a top down insertion of all particles into the
+        # hierarchy tree.
+        self.bin_particles_top_down()
+
+        logger.debug('Roots cells : %s'%(self.cell_dict))
+
+        # now update the processor map.
+        self.cell_manager.glb_update_proc_map()
+        
+        # re-compute the neighbor information
+        self.update_cell_neighbor_information()
+
+        # call a load balancer function.
+        #self.cell_manager.load_balance()
+
+        # wait till all processors have reached this point.
+        self.parallel_controller.comm.Barrier()
+
+        # at this point each processor has all the real particles it is supposed
+        # to handle. We can now exchange neighbors particle data with the
+        # neighbors.
+        self.exchange_neighbor_particles()
+        logger.debug('++++++++++++++++++++++++++++++++++++++++++++++++')
+        return 0
+
+    def bin_particles_top_down(self):
+        """
+        Clears the tree and re-inserts particles.
+
+        **Algorithm**
+
+            - clear the indices of all the particle arrays that need to be
+              binned.
+            - reinsert particle indices of all particle arrays that are to be
+              binned. 
+        """
+        logger.debug('BINNING PARTICLES TOP DOWN')
+
+        for i in range(len(self.cell_manager.arrays_to_bin)):
+            self.clear_indices(i)
+
+        # we now have a skeleton tree without any particle indices.
+        i = 0
+        for parr in self.cell_manager.arrays_to_bin:
+            num_particles = parr.get_number_of_particles()
+            logger.debug('parray %s with %d particles'%(
+                    parr.name, num_particles))
+            indices = arange_long(num_particles)
+            self.insert_particles(i, indices)
+            i += 1
+
+        logger.debug('PARTICLES INSERTED')
+        # delete any empty cells.
+        self.py_delete_empty_cells()
+
+        logger.debug('CHILDREN INFO AFTER BINNING')
+        for cid in self.cell_dict:
+            logger.debug('CELL %s'%(cid))
+        logger.debug('CHILDREN INFO AFTER BINNING')
+        
+    def local_update(self):
+        """
+        Perform a local update - were are sure that all particles WILL be within
+        our region, hence this update can be performed just like the RootCell
+        would do it.
+
+        We however could check the cells actually created to be sure that
+        nothing wrong is going on.
+
+        """
+        RootCell.update(self, None)
+
+    def bin_particles(self):
+        """
+        Find the cell configurations caused by the particles moving. Returns the
+        list of cell created in unassigned regions and those created in regions
+        already occupied by some other processor.
+        
+        """
         new_cells = {}
         remote_cells = {}
+        collected_data = {}
 
         for cid, smaller_cell in self.cell_dict.iteritems():
-            smaller_cell.update(collected_data)
+            if smaller_cell.pid == self.pid:
+                smaller_cell.update(collected_data)
+
+        # if the cell from the base hierarchy creation exists and initial
+        # re-distribution is yet to be done, add that to the list of new cells.
+        if self.initial_redistribution_done is False:
+
+            # update the processor map once - no neighbor information is
+            # available at this point.
+            self.cell_manager.glb_update_proc_map()
+
+            c = self.cell_dict.values()[0]
+            if c.py_get_number_of_particles() > 0:
+                collected_data[c.id.py_copy()] = c
+            # remove it from the cell_dict
+            self.cell_dict.clear()
+            self.initial_redistribution_done = True
             
         # we have a list of all new cells created by the smaller cells.
         for cid, smaller_cell in collected_data.iteritems():
@@ -176,23 +656,421 @@ class ParallelRootCell(cell.RootCell):
                     # add it to the remote cells.
                     r_cell = remote_cells.get(cid)
                     if r_cell is None:
-                        remote_cells[cid] = r_cell
+                        smaller_cell.pid = smaller_cell_1.pid
+                        remote_cells[cid.py_copy()] = smaller_cell
                     else:
                         r_cell.add_particles(smaller_cell)
                 else:
                     # add it to the current cells.
                     smaller_cell_1.add_particles(smaller_cell)
             else:
-                # check if this cell is is new cells
+                # check if this cell is in new cells
                 smaller_cell_1 = new_cells.get(cid)
                 if smaller_cell_1 is None:
-                    new_cells[cid] = smaller_cell
+                    new_cells[cid.py_copy()] = smaller_cell
                 else:
                     smaller_cell_1.add_particles(smaller_cell)
 
-        # we now have two lists - remote_cells and new_cells.
+        logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
+        for cid in new_cells:
+            logger.debug('new cell (%s)'%(cid))
+        logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
+
+        logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
+        for cid in remote_cells:
+            logger.debug('remote cell (%s)'%(cid))
+        logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
+
+        return new_cells, remote_cells
+
+    def create_new_particle_copies(self, cell_dict):
+        """
+        Copies all particles in cell_dict to new particle arrays - one for each
+        cell and returns a dictionary indexed on cell_id, containing the newly
+        created particles.
+
+        **Algorithm**
+
+            - for each cell in cell_dict
+                - get indices of all particles in this cell.
+                - remove any particles marked as non-local from this set of
+                  particles. 
+                - create a particle array for each set of particles, including
+                  in it only the required particles.
+                - mark these particles as remote in the main particle array.
+                
+        """
+        copies = {}
+        props_to_extract = self.cell_manager.properties_to_copy
+        for cid, c in cell_dict.iteritems():
+            index_lists = []
+            parrays = []
+            c.get_particle_ids(index_lists)
+            logger.debug('NUM_PARTICLES : %d'%(c.py_get_number_of_particles()))
+            logger.debug('INDEX LISTS : %s'%(index_lists))
+            logger.debug('ARRAYS TO BIN : %s, %s'%(self, self.arrays_to_bin))
+
+            for i in range(len(index_lists)):
+                index_array = index_lists[i]
+                parr = c.arrays_to_bin[i]
+                
+                parr_new = parr.extract_particles(index_array,
+                                                  props=props_to_extract)
+                parr_new.set_name(parr.name)
+                parrays.append(parr_new)
+                
+                # mark the particles as remote in the particle array.
+                parr.set_flag('local', 0, index_array)
+                # also set them as dummy particles.
+                parr.set_tag(get_dummy_tag(), index_array)
+
+            copies[cid.py_copy()] = parrays
+
+        logger.debug('<<<<<<<<<<<<<create_new_particle_copies>>>>>>>>>>>')
+        for cid, parrays in copies.iteritems():
+            logger.debug('Cell (%s) has :'%(cid))
+            for parr in parrays:
+                logger.debug('   %s containing - %d particles'%(
+                        parr.name, parr.get_number_of_particles()))
+        logger.debug('<<<<<<<<<<<<<create_new_particle_copies>>>>>>>>>>>')
         
+        return copies
+        
+    def assign_new_cells(self, new_cell_dict, new_particles):
+        """
+        Assigns cells created in new regions (i.e. regions not assigned to any
+        processor) to some processor. Conflicts are resolved using a
+        deterministic scheme which returns the same winner in all processors.
+        
+        **Parameters**
+            
+            - new_cell_dict - dictionary of new cells created during a bottom-up
+            update of the current tree.
+            - new_particles - a set of ParticleArrays for each new cell that was
+            created.
+
+        **Algorithm**
+        
+            - share new particles with all neighbor procs in the proc map.
+            - resolve conflict.
+            - add data assigned to self into the local particle arrays.
+
+        """
+        comm = self.parallel_controller.comm
+        nbr_procs = self.cell_manager.proc_map.nbr_procs
+
+        logger.debug('SHARING NEW CELLS WITH : %s'%(nbr_procs))
+
+        proc_data = share_data(mypid=self.pid, 
+                               sorted_procs=nbr_procs,
+                               data=new_particles,
+                               comm=comm,
+                               tag=TAG_NEW_CELL_PARTICLES, 
+                               multi=False)
+
+        proc_data[self.pid] = new_particles
+
+        logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')
+        for pid, cells in proc_data.iteritems():
+            logger.debug('FROM PID %d'%(pid))
+            for cid in cells:
+                logger.debug('  received : (%s)'%(cid))
+        logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')
+
+        
+        # we now have data for all the new cells that were created.
+        # invert the data - we have a dictionary indexed on pids, and then on
+        # cids. - make it indexed on cid and then pids
+        # along with this get the number of particles contributed to each cell
+        # by each processor.
+        cell_data = {}
+        num_particles = {}
+
+        for pid, cell_dict in proc_data.iteritems():
+            for cid, parr_list in cell_dict.iteritems():
+                c = cell_data.get(cid)
+                if c is None:
+                    c = {}
+                    cell_data[cid.py_copy()] = c
+                    num_particles[cid.py_copy()] = {}
+                c[pid] = parr_list
+                np = 0
+                for p in parr_list:
+                    np += p.get_number_of_particles()
+                num_particles[cid][pid] = np
+
+        winning_procs = self._resolve_conflicts(num_particles)
+
+        # now add the particles in the cells assigned to self into corresponding
+        # particle arrays.
+        for cid, pid in winning_procs.iteritems():
+            if pid != self.pid:
+                continue
+            
+            c_data = cell_data[cid]
+            
+            for p in c_data.values():
+                self.add_particles_to_parray({cid.py_copy():p})
+
+    def _resolve_conflicts(self, data):
+        """
+        Resolve conflicts when multiple processors are competing for a region
+        occupied by the same cell.
+
+        **Parameters**
+            
+            - data - a dictionary indexed on cellids. Each entry contains a
+            dictionary indexed on process id, containing the number of particles
+            that proc adds to that cell.
+
+        **Algorithm**
+
+            - for each cell
+                - if only on pid is occupying that region, that pid is the
+                  winner. 
+                - sort the competing pids on pid.
+                - find the maximum number of particles any processor is
+                  contributing to the region.
+                - if more than one processor contribute the same number of
+                  particles, choose the one with the larger pid.
+        """
+        winning_procs = {}
+                
+        for cid, p_data in data.iteritems():
+            if len(p_data) == 1:
+                winning_procs[cid.py_copy()] = p_data.keys()[0]
+                continue
+            pids = p_data.keys()
+            num_particles = p_data.values()
+            pids = sorted(pids)
+            max_contribution = max(num_particles)
+            procs = []
+            for pid in pids:
+                if p_data[pid] == max_contribution:
+                    procs.append(pid)
+            winning_procs[cid.py_copy()] = max(procs)
+
+        for cid, proc in winning_procs.iteritems():
+            logger.debug('Cell %s assigned to proc %d'%(cid, proc))
+
+        return winning_procs
+
+    def exchange_new_particles_with_neighbors(self, remote_cells, particles):
+        """
+        Send all particles that crossed into a known neighbors region, receive
+        particles that got into our region from a neighbors.
+
+        **Parameters**
+        
+            - remote_cells - dictionary of cells that are to be sent to some
+              remote neighbour.
+            - particles - particle arrays to be sent to each of these cells.
+
+        **Algorithm**
+            
+            - invert the remote_cells list, i.e. find the list of cells to be
+              sent to each processor.
+            - prepare this data for sending.
+            - exchange this data with all processors in adjacent_processors.
+            - we now have a set of particles (in particle arrays) that entered
+              our domain.
+            - add these particles as real particles into the corresponding
+              particle arrays.
+
+        **Data sent to and received from each processor**
+
+            - 'cell_id' - the cell that they have to create.
+            - 'particles' - the particles they have to add to the said cells.
+        
+        """
+        proc_data = {}
+        comm = self.parallel_controller.comm
+        
+        # create one entry here for each neighbor processor.
+        for proc_id in self.adjacent_processors:
+            proc_data[proc_id] = {}
+
+        for cid, c in remote_cells.iteritems():
+            p_data = proc_data[c.pid]
+            parrays = particles[cid]
+            
+            p_data[cid.py_copy()] = parrays
+            
+        # for each processor we now have a dictionary indexed on cell id,
+        # containing the particles that need to be sent to that processor.
+        # share data
+        new_particles = share_data(mypid=self.pid,
+                                   sorted_procs=self.adjacent_processors,
+                                   data=proc_data, comm=comm,
+                                   tag=TAG_CROSSING_PARTICLES, multi=True)
+        
+        # for each neigbor processor, there is one entry in new_particles
+        # containing all new cells that processor sent to us.
+        self.add_entering_particles_from_neighbors(new_particles)
+
+    def add_entering_particles_from_neighbors(self, new_particles):
+        """
+        Add particles that entered into our parrays from other processors
+        regions.
+
+        **Parameter**
+        
+            - new_particles - a dictionary having one entry per processor.
+              each entry has a dictionary indexed on the cells into which the
+              particles are entering.
+
+        **Algorithm**
+            
+             - for data from each processor
+                 - add the particle arrays.
+        
+        """
+        for pid, particle_list in new_particles.iteritems():
+            self.add_particles_to_parray(particle_list)
+
+    def add_particles_to_parray(self, particle_list):
+        """
+        Adds the given particles to the local parrays as local particles.
+                
+        """
+        for cid, parrays in particle_list.iteritems():
+            count = 0
+            logger.debug('Adding particles entering cell %s, %s'%(cid, parrays))
+            
+            for i in range(len(self.cell_manager.arrays_to_bin)):
+                s_parr = parrays[i]
+                d_parr = self.cell_manager.arrays_to_bin[i]
+                
+                # set the local property to '1'
+                s_parr.local[:] = 1
+                d_parr.append_parray(s_parr)
+                count += s_parr.get_number_of_particles()
+
+            cnt = self.new_cells_added.get(cid)
+            if cnt is None:
+                self.new_cells_added[cid.py_copy()] = count
+            else:
+                self.new_cells_added[cid.py_copy()] += count
+
+    def exchange_neighbor_particles(self):
+        """
+        Exchange neighbor particles.
+
+        **Algorithm**
+
+            - get all required particles from neighbors.
+            - send neighbors their required information.
+            
+            - for each remote cell just received
+                - create a new cell
+                - append the particles of this cell as remote and dummy
+                  particles to the particle arrays. These particles WILL be
+                  appended and will not violate the particle indices.
+                - bin the new particles into this cell.
+
+        """
+        nbr_procs = []
+        nbr_procs[:] = self.adjacent_processors
+        arc = self.adjacent_remote_cells
+        remote_cell_data = {}
+        props_to_copy = self.cell_manager.properties_to_copy
+        comm = self.parallel_controller.comm
+        
+        if nbr_procs.count(self.pid) == 0:
+            nbr_procs.append(self.pid)
+            nbr_procs = sorted(nbr_procs)
+        
+        # get data from all procs and send data to all procs.
+        logger.debug('neighbor proces are : %s'%(nbr_procs))
+        for pid in nbr_procs:
+            if pid == self.pid:
+                for dest in nbr_procs:
+                    if self.pid == dest:
+                        continue
+                    # our turn to send request for cells.
+                    comm.send(arc[dest], dest=dest, tag=TAG_REMOTE_CELL_REQUEST)
+                    remote_cell_data[dest] = comm.recv(source=dest,
+                                                       tag=TAG_REMOTE_CELL_REPLY)
+            else:
+                requested_cells = comm.recv(source=pid,
+                                            tag=TAG_REMOTE_CELL_REQUEST) 
+                data = self._get_cell_data_for_neighbor(requested_cells,
+                                                        props_to_copy)
+                comm.send(data, dest=pid, tag=TAG_REMOTE_CELL_REPLY)
+
+        logger.debug('Remote data received')
+
+        # we now have all the cells we require from the remote processors.
+        # create new cells and add the particles to the particle array and the
+        # cell.
+        for pid, cell_dict in remote_cell_data.iteritems():
+            for cid, cell_particles in cell_dict.iteritems():
+                c = self.cell_dict.get(cid)
+                
+                if c is not None:
+                    msg = 'Cell %s should not be present %d'%(cid, self.pid)
+                    logger.error(msg)
+                    raise SystemError, msg
+                
+                c = self.get_new_child_for_copy(cid, pid)
+                logger.debug('Created cells pid :%s, %s'%(c, pid))
+
+                for i in range(len(self.cell_manager.arrays_to_bin)):
+                    d_parr = self.cell_manager.arrays_to_bin[i]
+                    s_parr = cell_particles[i]
                     
+                    si = d_parr.get_number_of_particles()
+                    ei = si = s_parr.get_number_of_particles() -1
+                    c.particle_start_indices.append(si)
+                    c.particle_end_indices.append(ei)
+                    
+                    d_parr.append_parray(s_parr)
+
+                    indices = arange_long(start=si, stop=ei)
+                    c.insert_particles(i, indices)
+
+                # add this cell to the cell_dict
+                self.cell_dict[cid.py_copy()] = c
+                
+    def _get_cell_data_for_neighbor(self, cell_list, props):
+        """
+        Return new particle arrays created for particles contained in each of
+        the requested cells.
+
+        """
+        data = {}
+        for cid in cell_list:
+
+            logger.debug('Requsted cell %s'%(cid))
+
+            c = self.cell_dict.get(cid)
+
+            if c is None:
+                msg = 'Requested cell (%s) not with proc %d'%(cid, self.pid)
+                logger.error(msg)
+                raise SystemError, msg
+
+            index_lists = []
+            parrays = []
+            
+            # get all particles ids of this cell.
+            c.get_particle_ids(index_lists)
+            
+            for i in range(len(index_lists)):
+                index_array = index_lists[i]
+                parr = c.cell_manager.arrays_to_bin[i]
+                parr_new = parr.extract_particles(index_array,
+                                                  props=props)
+                parr_new.set_name(parr.name)
+                parrays.append(parr_new)
+
+                # make the particles as remote in the particle array
+                parr_new.local[:] = 0
+                parr_new.tag[:] = get_dummy_tag()
+
+            data[cid.py_copy()] = parrays
+
+        return data
 
 ################################################################################
 # `ParallelCellManager` class.
@@ -201,12 +1079,12 @@ class ParallelCellManager(cell.CellManager):
     """
     Cell manager for parallel invocations.
     """
-    TAG_PROC_MAP_UPDATE = 1
     def __init__(self, arrays_to_bin=[], particle_manager=None,
                  min_cell_size=0.1, max_cell_size=0.5, origin=Point(0, 0, 0),
                  num_levels=2, initialize=True,
                  parallel_controller=None,
-                 max_radius_scale=2.0):
+                 max_radius_scale=2.0,
+                 properties_to_copy=['x', 'y', 'z', 'u', 'v', 'w', 'rho', 'p']):
         """
         Constructor.
         """
@@ -225,6 +1103,9 @@ class ParallelCellManager(cell.CellManager):
         self.glb_max_h = 0
         self.max_radius_scale = max_radius_scale
         self.pid = 0
+        self.parallel_cell_level = 0
+        self.properties_to_copy = []
+        self.properties_to_copy[:] = properties_to_copy
 
         # set the parallel controller.
         if parallel_controller is None:
@@ -266,22 +1147,26 @@ class ParallelCellManager(cell.CellManager):
         self.setup_origin()
         self.setup_cell_sizes()
 
-
         # setup array indices.
         self.py_rebuild_array_indices()
 
         # setup the hierarchy list
         self.py_setup_hierarchy_list()
 
+        self.root_cell.level = self.num_levels
+
         self.py_compute_cell_sizes(self.min_cell_size, self.max_cell_size,
                                    self.num_levels, self.cell_sizes)
+        
+        # setup the parallel cell level
+        self.parallel_cell_level = self.num_levels - 2
 
         # setup information for the processor map.
         self.setup_processor_map()
 
         # buid a basic hierarchy with one cell at each level, and all
         # particles in the leaf cell.
-        self.py_build_base_hierarchy()
+        self.build_base_hierarchy()
         
         pc = self.parallel_controller
         logger.info('(%d) cell sizes: %s'%(pc.rank,
@@ -302,14 +1187,60 @@ class ParallelCellManager(cell.CellManager):
             for k in k_list:
                 logger.info('Cell id : %s'%(l[k].id))
                 if l[k].py_is_leaf():
-                    logger.info('Particle ids : %s'%(l[k].index_lists[0].get_npy_array()))
+                    logger.info('Particle ids : %s'%(
+                            l[k].index_lists[0].get_npy_array()))
                 logger.info('Cell num particles : %d'%(
                         l[k].py_get_number_of_particles()))
                 logger.info('Cell size : %f'%(l[k].cell_size))
 
         # update the processor maps now.
         self.glb_update_proc_map()
-                
+
+    def build_base_hierarchy(self):
+        """
+        Build the initial hierachy tree.
+        
+        This function is similar to the function in the CellManager, except that
+        the cells used are the Parallel variants.
+        """
+        leaf_size = self.cell_sizes.get(0)
+        cell_list = []
+
+        # create a leaf with all the particles.
+        leaf_cell = ParallelLeafCell(id=IntPoint(0, 0, 0), cell_manager=self,
+                                     cell_size=leaf_size, level=0,
+                                     jump_tolerance=cell.INT_INF(), pid=self.pid)
+
+        num_arrays = len(leaf_cell.arrays_to_bin)
+
+        for i in range(num_arrays):
+            parray = leaf_cell.arrays_to_bin[i]
+            num_particles = parray.get_number_of_particles()
+            index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
+            index_arr = leaf_cell.index_lists[i]
+            index_arr.resize(num_particles)
+            index_arr.set_data(index_arr_source)
+
+        cell_list.append(leaf_cell)
+
+        # for each intermediate level in the hierarchy create a
+        # ParallelNonLeafCell
+        for i in range(1, self.num_levels):
+            inter_cell = ParallelNonLeafCell(id=IntPoint(0, 0, 0),
+                                             cell_manager=self,
+                                             cell_size=self.cell_sizes.get(i),
+                                             level=i, pid=self.pid)
+            # add the previous level cell to this cell.
+            inter_cell.cell_dict[IntPoint(0, 0, 0)] = cell_list[i-1]
+            cell_list.append(inter_cell)
+
+        self.root_cell.py_clear()
+        self.root_cell.cell_dict[IntPoint(0, 0, 0)] = \
+            cell_list[self.num_levels-1]
+
+        # build the hierarchy list also
+        self.py_update_cell_hierarchy_list()        
+        
     def initial_info_exchange(self):
         """
         Initial information exchange among processors.
@@ -430,16 +1361,16 @@ class ParallelCellManager(cell.CellManager):
         # merge data from all children proc maps.
         for c_rank in pc.children_proc_ranks:
             c_proc_map = comm.recv(source=c_rank, 
-                                   tag=self.TAG_PROC_MAP_UPDATE)
+                                   tag=TAG_PROC_MAP_UPDATE)
             self.proc_map.merge(c_proc_map)
 
         # we now have partially merged data, send it to parent is not root.
         if pc.parent_rank > -1:
             comm.send(self.proc_map, dest=pc.parent_rank,
-                      tag=self.TAG_PROC_MAP_UPDATE)
+                      tag=TAG_PROC_MAP_UPDATE)
             # receive updated proc map from parent
             updated_proc_map = comm.recv(source=pc.parent_rank,
-                                         tag=self.TAG_PROC_MAP_UPDATE)
+                                         tag=TAG_PROC_MAP_UPDATE)
             # set our proc data with the updated data.
             self.proc_map.p_map.clear()
             self.proc_map.p_map.update(updated_proc_map.p_map)
@@ -447,7 +1378,7 @@ class ParallelCellManager(cell.CellManager):
         # send updated data to children.
         for c_rank in pc.children_proc_ranks:
             comm.send(self.proc_map, dest=c_rank, 
-                      tag=self.TAG_PROC_MAP_UPDATE)
+                      tag=TAG_PROC_MAP_UPDATE)
 
         # setup the region neighbors.
         self.proc_map.find_region_neighbors()
@@ -460,7 +1391,17 @@ class ParallelCellManager(cell.CellManager):
         """
         Update without regard to if particle arrays are dirty or not.
         """
-        pass
+        self.is_dirty = True
+        CellManager.update(self)
+
+    def remove_remote_particles(self):
+        """
+        Remove all remote particles from the particle arrays.
+        These particles are those that have their 'local' flag set to 0.
+        
+        """
+        for parray in self.arrays_to_bin:
+            parray.remove_flagged_particles(flag_name='local', flag_value=0)
 
     def update_neighbor_information(self, *props):
         """

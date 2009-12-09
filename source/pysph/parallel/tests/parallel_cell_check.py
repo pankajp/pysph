@@ -97,5 +97,16 @@ elif rank == 3:
                            h={'data':None, 'default':0.5})
 
 # add parray to the cell manager
+parray.add_property({'name':'u'})
+parray.add_property({'name':'v'})
+parray.add_property({'name':'w'})
+parray.add_property({'name':'rho'})
+parray.add_property({'name':'p'})
 pcm.add_array_to_bin(parray)
 pcm.initialize()
+
+pcm.root_cell.update(None)
+
+logger.debug('hierarchy :%s'%(pcm.hierarchy_list))
+logger.debug('roots cells : %s'%(pcm.root_cell.cell_dict))
+logger.debug('num particles : %d'%(parray.get_number_of_particles()))

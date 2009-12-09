@@ -22,6 +22,7 @@ class DummyGenerator(ParticleGenerator):
         self.num = 1
 
     def num_output_arrays(self):
+        print 'returning %d'%(self.num)
         return self.num
 
 ################################################################################
@@ -37,7 +38,6 @@ class TestParticleGenerator(unittest.TestCase):
         """
         pg = ParticleGenerator()
 
-        self.assertEqual(pg.input_particle_arrays, [])
         self.assertEqual(pg.output_particle_arrays, [])
         self.assertEqual(pg.density_computation_mode, DCM.Set_Constant)
         self.assertEqual(pg.particle_density, 1000.0)
@@ -74,7 +74,8 @@ class TestParticleGenerator(unittest.TestCase):
         self.assertEqual(oa.properties.has_key('h'), True)
 
         p = ParticleArray(x={'data':[1, 2, 3]})
-        dg.input_particle_arrays.append(p)
+        dg = DummyGenerator()
+        dg.output_particle_arrays.append(p)
         dg._setup_outputs()
 
         self.assertEqual(len(dg.output_particle_arrays), 1)

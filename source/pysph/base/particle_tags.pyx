@@ -37,3 +37,6 @@ cpdef long get_remote_real_tag():
 
 cpdef long get_remote_dummy_tag():
     return RemoteDummy
+
+cpdef long get_dummy_tag():
+    return Dummy

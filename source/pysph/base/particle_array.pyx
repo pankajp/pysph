@@ -96,8 +96,9 @@ cdef class ParticleArray:
          - props - dictionary of properties for every particle in this array.
 
     	"""
-        self.properties = {'tag':LongArray(0), 'group':LongArray(0)}
-        self.default_values = {'tag':default_particle_tag, 'group':0}
+        self.properties = {'tag':LongArray(0), 'group':LongArray(0),
+                           'local':IntArray(0)}
+        self.default_values = {'tag':default_particle_tag, 'group':0, 'local':1}
         
         self.temporary_arrays = {}
 
@@ -105,6 +106,7 @@ cdef class ParticleArray:
 
         self.name = name
         self.is_dirty = True
+        self.indices_invalid = True
 
         if props:
             self.initialize(**props)
@@ -133,6 +135,46 @@ cdef class ParticleArray:
         else:
             raise AttributeError, 'property %s not found'%(name)
 
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling of extension types.
+        """
+        d = {}
+        # we want only the names of temporary arrays.
+        d['name'] = self.name
+        d['temporary_arrays'] = self.temporary_arrays.keys()
+        props = {}
+        default_values = {}
+
+        for prop, arr in self.properties.iteritems():
+            pinfo = {}
+            pinfo['name'] = prop
+            pinfo['type'] = arr.get_c_type()
+            pinfo['data'] = arr.get_npy_array()
+            pinfo['default'] = self.default_values[prop]
+            props[prop] = pinfo
+        
+        d['properties'] = props
+
+        return (ParticleArray, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the particle array object from the saved dictionary.
+        """
+        self.properties = {}
+        self.property_arrays = []
+        self.default_values = {}
+        self.temporary_arrays = {}
+        self.is_dirty = True
+        self.indices_invalid = True
+        self.num_real_particles = 0
+
+        self.name = d['name']
+        props = d['properties']
+        for prop in props:
+            self.add_property(props[prop])        
+        
     ######################################################################
     # `Public` interface
     ######################################################################
@@ -141,6 +183,12 @@ cdef class ParticleArray:
         Set the is_dirty variable to given value
         """
         self.is_dirty = value
+
+    cpdef set_indices_invalid(self, bint value):
+        """
+        Set the indices_invalid to the given value.
+        """
+        self.indices_invalid = value
 
     cpdef has_array(self, str arr_name):
         """
@@ -152,12 +200,17 @@ cdef class ParticleArray:
         """
         Clear all data held by this array.
         """
-        self.properties = {'tag':LongArray(0), 'group':LongArray(0)}
+        self.properties = {'tag':LongArray(0),
+                           'group':LongArray(0), 'local':IntArray(0)}
         tag_def_values = self.default_values['tag']
         self.default_values.clear()
-        self.default_values = {'tag':tag_def_values, 'group':0}
+        self.default_values = {'tag':tag_def_values, 'group':0, 'local':0}
         self.temporary_arrays.clear()
         self.is_dirty = True
+        self.indices_invalid = True
+
+    def set_name(self, str name):
+        self.name = name
 
     def initialize(self, **props):
         """
@@ -305,8 +358,11 @@ cdef class ParticleArray:
         for i from 0 <= i < num_arrays:
             prop_array = temp_arrays[i]
             prop_array.remove(sorted_indices, 1)
-
-        self.is_dirty = True
+            
+        if index_list.length > 0:
+            self.align_particles()
+            self.is_dirty = True
+            self.indices_invalid = True
     
     cpdef remove_tagged_particles(self, long tag):
         """
@@ -330,10 +386,25 @@ cdef class ParticleArray:
         # remove the particles.
         self.remove_particles(indices)
 
-        if indices.length > 0:
-            # realign particles
-            self.align_particles()
-            self.is_dirty = True
+    cpdef remove_flagged_particles(self, str flag_name, int
+                                   flag_value):
+        """
+        Remove all particles that have the value of property flag_name set to
+        flag_value.
+
+        """
+        cdef LongArray indices = LongArray()
+        cdef IntArray flag_array = self.properties[flag_name]
+        cdef int *flagarrptr = flag_array.get_data_ptr()
+        cdef int i
+
+        # find the indices of the particles to be removed.
+        for i from 0 <= i < flag_array.length:
+            if flagarrptr[i] == flag_value:
+                indices.append(i)
+
+        # remove the particles.
+        self.remove_particles(indices)
 
     def add_particles(self, **particle_props):
         """
@@ -389,7 +460,7 @@ cdef class ParticleArray:
             # make sure particles are aligned properly.
             self.align_particles()
             self.is_dirty = True
-
+            
         return 0
 
     cpdef int append_parray(self, ParticleArray parray):
@@ -433,6 +504,9 @@ cdef class ParticleArray:
     cpdef extend(self, int num_particles):
         """
         Increase the total number of particles by the requested amount.
+
+        New particles are added at the end of the list, you may have to manually
+        call align_particles later.
         """
         if num_particles <= 0:
             return
@@ -450,8 +524,6 @@ cdef class ParticleArray:
 
         for arr in self.temporary_arrays.values():
             arr.resize(new_size)
-
-        self.align_particles()
 
     def get_property_index(self, prop_name):
         """
@@ -899,3 +971,82 @@ cdef class ParticleArray:
 
         if num_moves > 0:
             self.is_dirty = True
+            self.indices_invalid = True
+
+    cpdef ParticleArray extract_particles(self, LongArray index_array, list
+                                          props=None):
+        """
+        Creates a new particle array with the particle indices mentioned in
+        index_array, and with properties mentioned in props.
+
+        **Parameters**
+
+            - index_array - indices of particles to be extracted.
+            - props - the list of properties to extract, if None all properties
+              are extracted.
+
+         **Algorithm**
+
+             - create a new particle array with the required properties.
+             - resize the new array to the desired length (index_array.length)
+             - copy the properties from the existing array to the new array.
+
+        """
+        cdef ParticleArray result_array = ParticleArray()
+        cdef list prop_names
+        cdef long* idx_data
+        cdef BaseArray dst_prop_array, src_prop_array
+        
+        if props is None:
+            prop_names = self.properties.keys()
+        else:
+            prop_names = props
+        
+        for prop in prop_names:
+            prop_type = self.properties[prop].get_c_type()
+            prop_default = self.default_values[prop]
+            result_array.add_property({'name':prop,
+                                       'type':prop_type,
+                                       'default':prop_default})
+        
+        # now we have the result array setup.
+        # resize it
+        if index_array.length == 0:
+            return result_array
+        
+        result_array.extend(index_array.length)
+
+        # now copy the values.
+        idx_data = index_array.get_data_ptr()
+
+        # copy the required indices for each property.
+        for prop in prop_names:
+            src_prop_array = self.get_carray(prop)
+            dst_prop_array = result_array.get_carray(prop)
+            src_prop_array.copy_values(index_array, dst_prop_array)
+        
+        result_array.align_particles()
+        return result_array
+
+    cpdef set_flag(self, str flag_name, int flag_value, LongArray indices):
+        """
+        Sets the value of the property flag_name to flag_value for the particles
+        specified in indices.
+        
+        """
+        cdef IntArray flag_arr = self.get_carray(flag_name)
+        cdef int i
+
+        for i from 0 <= i < indices.length:
+            flag_arr.data[indices.data[i]] = flag_value
+
+    cpdef set_tag(self, long tag_value, LongArray indices):
+        """
+        Sets the value of tag to tag_value for the particles specified in
+        indices.
+        """
+        cdef LongArray tag_array = self.get_carray('tag')
+        cdef int i
+        
+        for i from 0 <= i < indices.length:
+            tag_array.data[indices.data[i]] = tag_value

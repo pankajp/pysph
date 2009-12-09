@@ -16,6 +16,7 @@ modules can directly use the enum name.
 
 cdef enum ParticleTag:
     LocalReal = 0
+    Dummy
     LocalDummy
     RemoteReal
     RemoteDummy
@@ -26,6 +27,7 @@ cpdef bint is_remote_real(long tag)
 cpdef bint is_remote_dummy(long tag)
 
 cpdef long get_local_real_tag()
+cpdef long get_dummy_tag()
 cpdef long get_local_dummy_tag()
 cpdef long get_remote_real_tag()
 cpdef long get_remote_dummy_tag()

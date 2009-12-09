@@ -149,7 +149,7 @@ cdef class ParticleGenerator(Base):
         Setup the output arrays as needed.
         """
         num_outputs = self.num_output_arrays()
-        if self.num_output_arrays != num_outputs:
+        if len(self.output_particle_arrays) != num_outputs:
             # create one particle array each for each output.
             num_outputs = self.num_output_arrays()
             self.output_particle_arrays[:] = [None]*num_outputs

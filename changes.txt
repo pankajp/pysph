@@ -170,4 +170,23 @@ Monday 07 December 2009 (01:11:30 AM)
 	- parallel_controller
 	- processor map
 	- dummy parallel fsf solver.
-  
+
+Wednesday 09 December 2009 (05:16:55 AM)
+    - carray.pyx
+        - added the get_c_type function
+	- add copy_values function
+    - cell.pyx
+        - added get_particle_ids to return indices of all particles in cell.
+	- added get_new_child return child classes of cell.
+	- added insert_particles to perform top-down additions of particles into
+	  a cell hierarchy.
+   	- added clear_indices to clear all indices in the cell hierarchy.
+    - particle_array.pyx
+        - added remove_flagged_particles function.
+	- added set_flag, set_tag functions.
+	- added extract_particles function.
+	- 'local' property added to all particles arrays.
+	- pickling routines.
+    - parallel
+        - new_cells exchanged properly.
+	- neibhbor data exchanged properly.

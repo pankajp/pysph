@@ -310,6 +310,106 @@ cdef class Cell:
         """
         raise NotImplementedError, 'Cell::delete_empty_cells'
 
+    cpdef double get_child_size(self):
+        """
+        Return the size of the child cell.
+        """
+        return self.cell_manager.cell_sizes.data[self.level-1]
+
+    cpdef insert_particles(self, int parray_id, LongArray indices):
+        """
+        Does a top-down insertion of particles into the hierarchy.
+        """
+        cdef ParticleArray parray = self.cell_manager.arrays_to_bin[parray_id]
+        cdef dict particles_for_children = dict()
+        cdef int num_particles = parray.get_number_of_particles()
+        cdef int i
+        cdef DoubleArray x, y, z
+        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
+        cdef double child_size = self.get_child_size()
+        cdef IntPoint id = IntPoint()
+        cdef Point pnt = Point()
+        cdef LongArray child_indices, la
+        cdef Cell child
+        cdef IntPoint cid
+        
+        x = parray.get_carray(self.coord_x)
+        y = parray.get_carray(self.coord_y)
+        z = parray.get_carray(self.coord_z)
+        
+        for i from 0 <= i < indices.length:
+            if indices.data[i] >= num_particles:
+                # invalid particle being added.
+                # raise error and exit
+                msg = 'Particle %d does not exist'%(indices.data[i])
+                logger.error(msg)
+                raise ValueError, msg
+            
+            pnt.x = x.data[indices.data[i]]
+            pnt.y = y.data[indices.data[i]]
+            pnt.z = z.data[indices.data[i]]
+
+            # find the cell at the lower level, to which this particle belongs
+            # to. 
+            find_cell_id(self.origin, pnt, child_size, id)
+            child_indices = particles_for_children.get(id)
+
+            if child_indices is None:
+                child_indices = LongArray()
+                particles_for_children[id.copy()] = child_indices
+
+            child_indices.append(indices.data[i])
+
+        num_children = len(particles_for_children)
+        
+        for cid, la in particles_for_children.iteritems():
+            child = self.cell_dict.get(cid)
+
+            if child is None:
+                # create a child with the given id.
+                child = self.get_new_child(cid)
+                logger.debug('Creating child : %s'%(child))
+                self.cell_dict[cid.copy()] = child
+
+            child.insert_particles(parray_id, la)        
+
+    cpdef get_particle_ids(self, list particle_id_list):
+        """
+        Finds the indices of particle ids for each particle array in
+        arrays_to_bin.
+
+        **Parameters**
+
+            - particle_id_list - output parameter, should contain one 
+              LongArray for each array in arrays_to_bin. Particle ids will be
+              appended to the LongArrays
+
+        """
+        raise NotImplementedError, 'Cell::get_particle_ids'
+     
+    cpdef Cell get_new_child(self, IntPoint id):
+        """
+        Create a new child node depending on this nodes level in the hierarchy.
+        """
+        cdef int num_levels = self.cell_manager.num_levels
+        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
+        
+        if (num_levels - self.level) == num_levels-1:
+            return LeafCell(id=id, cell_manager=self.cell_manager,
+                            cell_size=cell_sizes.data[self.level-1],
+                            level=self.level-1,
+                            jump_tolerance=1)
+        else:
+            return NonLeafCell(id=id, cell_manager=self.cell_manager,
+                               cell_size=cell_sizes.data[self.level-1],
+                               level=self.level-1)
+
+    cpdef clear_indices(self, int parray_id):
+        """
+        Clear the particles ids of parray_id stored in the hierarchy.
+        """
+        raise NotImplementedError, 'Cell::clear_indices'
+
     cdef bint is_leaf(self):
         """
         """
@@ -365,10 +465,26 @@ cdef class LeafCell(Cell):
                                       jump_tolerance=self.jump_tolerance)
         return <Cell>cell
 
+    cpdef Cell get_new_child(self, IntPoint id):
+        """
+        Raises an error if this is called.
+        """
+        msg='Cannot create child node for LeafCell'
+        logger.error(msg)
+        raise SystemError, msg
+
     cdef bint is_leaf(self):
         """
         """
         return True
+
+    cpdef double get_child_size(self):
+        """
+        Return the size of the child cell.
+        """
+        msg = 'get_child_size called on leaf node'
+        logger.error(msg)
+        raise SystemError, msg
 
     cdef _init_index_lists(self):
         """
@@ -384,6 +500,33 @@ cdef class LeafCell(Cell):
         
         for i from 0 <= i < num_arrays:
             self.index_lists.append(LongArray())
+
+    cpdef get_particle_ids(self, list particle_id_list):
+        """
+        Finds the indices of particle ids for each particle array in
+        arrays_to_bin.
+
+        **Parameters**
+        
+            - particle_id_list - output parameter, should contain one 
+              LongArray for each array in arrays_to_bin. Particle ids will be
+              appended to the LongArrays
+        """
+        cdef int num_arrays = 0
+        cdef int i = 0
+        cdef LongArray source, dest
+
+        num_arrays = len(self.arrays_to_bin)
+
+        if len(particle_id_list) == 0:
+            # create num_arrays LongArrays
+            for i from 0 <= i < num_arrays:
+                particle_id_list.append(LongArray())
+        
+        for i from 0 <= i < num_arrays:
+            dest = particle_id_list[i]
+            source = self.index_lists[i]
+            dest.extend(source.get_npy_array())
 
     cpdef set_cell_manager(self, CellManager cell_manager):
         """
@@ -563,6 +706,20 @@ cdef class LeafCell(Cell):
 
         return 0
 
+    cpdef insert_particles(self, int parray_id, LongArray indices):
+        """
+        Insert the particles in indices into the leaf cell.
+        """
+        cdef LongArray index_array = self.index_lists[parray_id]
+        index_array.extend(indices.get_npy_array())
+
+    cpdef clear_indices(self, int parray_id):
+        """
+        Clear the particles ids of parray_id stored in the hierarchy.
+        """
+        cdef LongArray index_array = self.index_lists[parray_id]
+        index_array.reset()
+
     cdef bint is_empty(self):
         """
         """
@@ -674,6 +831,45 @@ cdef class NonLeafCell(Cell):
                 curr_smaller_cell.add_particles(smaller_cell)
 
         return 0
+
+    cpdef get_particle_ids(self, list particle_id_list):
+        """
+        Finds the indices of particle ids for each particle array in
+        arrays_to_bin.
+
+        **Parameters**
+        
+            - particle_id_list - output parameter, should contain one 
+              LongArray for each array in arrays_to_bin. Particle ids will be
+              appended to the LongArrays
+        """
+        cdef int i, num_children, num_arrays
+        cdef list children = self.cell_dict.values()
+        cdef Cell cell
+        num_children = len(children)
+
+        if len(particle_id_list) == 0:
+            num_arrays = len(self.arrays_to_bin)
+            # create num_arrays LongArrays
+            for i from 0 <= i < num_arrays:
+                particle_id_list.append(LongArray())
+        
+        for i from 0 <= i < num_children:
+            cell = children[i]
+            cell.get_particle_ids(particle_id_list)        
+
+    cpdef clear_indices(self, int parray_id):
+        """
+        Clear the particles ids of parray_id stored in the hierarchy.
+        """
+        cdef int i, num_children
+        cdef list child_list = self.cell_dict.values()
+        num_children = len(child_list)
+        cdef Cell child
+
+        for i from 0 <= i < num_children:
+            child = child_list[i]
+            child.clear_indices(parray_id)
     
     cpdef int update(self, dict data) except -1:
         """
@@ -875,7 +1071,22 @@ cdef class RootCell(NonLeafCell):
         cdef RootCell cell = RootCell(cell_manager=self.cell_manager,
                                       cell_size=self.cell_size)
         return <Cell>cell
-        
+
+    cpdef Cell get_new_child(self, IntPoint id):
+        """
+        Create and return a new cell at one level lower in the cell hierarchy.
+        """
+        cdef int num_levels = self.cell_manager.num_levels
+        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
+        if num_levels == 1:
+            return LeafCell(id=id, cell_manager=self.cell_manager, 
+                            cell_size=cell_sizes.data[0],
+                            level=0, jump_tolerance=1)
+        else:
+            return NonLeafCell(id=id, cell_manager=self.cell_manager,
+                               cell_size=cell_sizes.data[num_levels-1],
+                               level=num_levels-1)
+
     cpdef int update(self, dict data) except -1:
         """
         Update particle information.
@@ -1499,3 +1710,7 @@ cdef class CellManager:
 
     def py_reset_jump_tolerance(self):
         self._reset_jump_tolerance()
+
+    def py_update_cell_hierarchy_list(self):
+        self.update_cell_hierarchy_list()
+    

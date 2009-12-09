@@ -45,6 +45,12 @@ cdef class CLASSNAME(BaseArray):
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NUMPY_TYPENAME, self.data)
 
+    cpdef str get_c_type(self):
+        """
+        Return the c data type for this array.
+        """
+        return 'ARRAY_TYPE'
+
     cdef ARRAY_TYPE* get_data_ptr(self):
         """
         Return the internal data pointer.
@@ -208,3 +214,17 @@ cdef class CLASSNAME(BaseArray):
                 self.data[i] = temp[new_indices.data[i]]
         
         free(<void*>temp)
+
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+	Copies values of indices in indices from self to dest.
+
+	No size check if performed, we assume the dest to of proper size
+        i.e. atleast as long as indices.
+        """
+        cdef CLASSNAME dest_array = <CLASSNAME>dest
+        cdef int i, num_values
+        num_values = indices.length
+        
+        for i from 0 <= i < num_values:
+            dest_array.data[i] = self.data[indices.data[i]]

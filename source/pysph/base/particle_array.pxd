@@ -24,6 +24,9 @@ cdef class ParticleArray:
 
     # indicates if coordinates of particles has changed.
     cdef public bint is_dirty
+    
+    # indicate if the particle configuration has changed.
+    cdef public bint indices_invalid
 
     # the number of real particles.
     cdef public long num_real_particles
@@ -34,6 +37,7 @@ cdef class ParticleArray:
     cdef np.ndarray _get_real_particle_prop(self, str prop)
 
     cpdef set_dirty(self, bint val)
+    cpdef set_indices_invalid(self, bint val)
 
     cpdef get_carray(self, str prop)
 
@@ -49,8 +53,8 @@ cdef class ParticleArray:
 
     cpdef has_array(self, str arr_name)
 
-    # function to remove particles with particular value of a flag property.
-    #cpdef remove_flagged_particles(self, str flag_name, int flag_value)
+    #function to remove particles with particular value of a flag property.
+    cpdef remove_flagged_particles(self, str flag_name, int flag_value)
 
     # function to get indices of particles that have a particle integer property
     # set to the specified value.
@@ -68,3 +72,13 @@ cdef class ParticleArray:
 
     # add particles from the parray to self.
     cpdef int append_parray(self, ParticleArray parray) except -1
+
+    # create a new particle array with the given particles indices and the
+    # properties. 
+    cpdef ParticleArray extract_particles(self, LongArray index_array, list
+                                          props=*)
+
+    # sets the value of the property flag_name to flag_value for the particles
+    # in indices.
+    cpdef set_flag(self, str flag_name, int flag_value, LongArray indices)
+    cpdef set_tag(self, long tag_value, LongArray indices)

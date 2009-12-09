@@ -65,6 +65,12 @@ cdef class BaseArray:
     def __cinit__(self, *args, **kwargs):
         pass
 
+    cpdef str get_c_type(self):
+        """
+	Return the c data type of this array.
+        """
+        raise NotImplementedError, 'BaseArray::get_c_type'
+
     cpdef reserve(self, int size):
         raise NotImplementedError, 'BaseArray::reserve'
 
@@ -117,3 +123,8 @@ cdef class BaseArray:
         self.length = 0
         arr.dimensions[0] = self.length        
         
+    cpdef copy_values(self, LongArray indices, BaseArray dest):
+        """
+        Copy values of selected particles in indices from self to dest.
+        """
+        raise NotImplementedError, 'BaseArray::copy_values'

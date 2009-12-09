@@ -224,11 +224,13 @@ class ParticleArrayTest(unittest.TestCase):
 
         p.clear()
 
-        self.assertEqual(len(p.properties), 2)
+        self.assertEqual(len(p.properties), 3)
         self.assertEqual(p.properties.has_key('tag'), True)
         self.assertEqual(p.properties['tag'].length, 0)
         self.assertEqual(p.properties.has_key('group'), True)
         self.assertEqual(p.properties['group'].length, 0)
+        self.assertEqual(p.properties.has_key('local'), True)
+        self.assertEqual(p.properties['local'].length, 0)
         self.assertEqual(p.is_dirty, True)
         self.assertEqual(p.temporary_arrays, {})
 
