@@ -190,3 +190,12 @@ Wednesday 09 December 2009 (05:16:55 AM)
     - parallel
         - new_cells exchanged properly.
 	- neibhbor data exchanged properly.
+Tuesday 15 December 2009 (03:55:23 PM)
+    - set_jump_tolerance function in CellManager.
+    - 'local' flag added to ParticleArrays.
+    - share_data bug removed. (When no data is available from a processor, and
+      empty dict is returne in the data, instead of None.)
+    - ParacellCellInfo.adjacent_processors now has the current nodes processors
+      id also.
+    - start_index and end_index bug in *RemoteCopy cells resolved.
+    - update_status for ParallelCellManager - always sets the is_dirty to True.

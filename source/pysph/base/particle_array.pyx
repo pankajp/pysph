@@ -204,7 +204,7 @@ cdef class ParticleArray:
                            'group':LongArray(0), 'local':IntArray(0)}
         tag_def_values = self.default_values['tag']
         self.default_values.clear()
-        self.default_values = {'tag':tag_def_values, 'group':0, 'local':0}
+        self.default_values = {'tag':tag_def_values, 'group':0, 'local':1}
         self.temporary_arrays.clear()
         self.is_dirty = True
         self.indices_invalid = True

@@ -368,7 +368,6 @@ cdef class Cell:
             if child is None:
                 # create a child with the given id.
                 child = self.get_new_child(cid)
-                logger.debug('Creating child : %s'%(child))
                 self.cell_dict[cid.copy()] = child
 
             child.insert_particles(parray_id, la)        
@@ -687,6 +686,7 @@ cdef class LeafCell(Cell):
                         msg += 'self id : (%d, %d, %d)\n'%(self.id.x, self.id.y,
                                                          self.id.z)
                         msg += 'new id  : (%d, %d, %d)\n'%(id.x, id.y, id.z)
+                        msg += 'Jump tolerance is : %s, %d\n'%(self, self.jump_tolerance)
                         raise RuntimeError, msg
 
                     # add this particle to the particles that are to be removed.
@@ -989,7 +989,7 @@ cdef class NonLeafCell(Cell):
 
         for i from 0 <= i < num_cells:
             cell = cell_list[i]
-            cell.update_cell_manager_hierarchy_list()        
+            cell.update_cell_manager_hierarchy_list()   
 
     cdef void clear(self):
         """
@@ -1081,7 +1081,8 @@ cdef class RootCell(NonLeafCell):
         if num_levels == 1:
             return LeafCell(id=id, cell_manager=self.cell_manager, 
                             cell_size=cell_sizes.data[0],
-                            level=0, jump_tolerance=1)
+                            level=0,
+                            jump_tolerance=self.cell_manager.jump_tolerance)
         else:
             return NonLeafCell(id=id, cell_manager=self.cell_manager,
                                cell_size=cell_sizes.data[num_levels-1],
@@ -1198,7 +1199,25 @@ cdef class CellManager:
 
         if initialize == True:
             self.initialize()
+
+    def set_jump_tolerance(self, int jump_tolerance):
+        """
+        Sets the jump tolerance value of the cells.
+        """
+        self.jump_tolerance = jump_tolerance
+
+        if len(self.hierarchy_list) == 0:
+            logger.debug('Hierarchy list empty')
+            return
+
+        leaf_dict = self.hierarchy_list[0]
+        num_leaves = len(leaf_dict)
+        leaf_list = leaf_dict.values()
         
+        for i from 0 <= i < num_leaves:
+            leaf_cell = leaf_list[i]
+            leaf_cell.jump_tolerance = jump_tolerance
+
     cpdef int update(self) except -1:
         """
         Update the cell manager.
@@ -1259,6 +1278,12 @@ cdef class CellManager:
             if parray.is_dirty:
                 self.is_dirty = True
                 break
+
+    def set_dirty(self, bint value):
+        """
+        Sets/Resets the dirty bit.
+        """
+        self.is_dirty = value
 
     cdef initialize(self):
         """
@@ -1668,6 +1693,8 @@ cdef class CellManager:
         cdef LeafCell leaf_cell
         cdef int i, num_leaves
 
+        self.jump_tolerance = 1
+
         if len(self.hierarchy_list) == 0:
             return
 
@@ -1677,8 +1704,8 @@ cdef class CellManager:
         
         for i from 0 <= i < num_leaves:
             leaf_cell = leaf_list[i]
-            leaf_cell.jump_tolerance = 1        
-
+            leaf_cell.jump_tolerance = 1       
+ 
     # python functions for each corresponding cython function for testing purposes.
     def py_update(self):
         return self.update()

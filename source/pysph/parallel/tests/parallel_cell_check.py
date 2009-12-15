@@ -27,6 +27,8 @@ logger.addHandler(logging.StreamHandler())
 from pysph.base.particle_array import ParticleArray
 from pysph.parallel.parallel_cell import ParallelCellManager
 from pysph.solver.basic_generators import LineGenerator
+from pysph.base.cell import INT_INF
+from pysph.base.point import *
 
 pcm = ParallelCellManager(initialize=False)
 
@@ -105,8 +107,32 @@ parray.add_property({'name':'p'})
 pcm.add_array_to_bin(parray)
 pcm.initialize()
 
-pcm.root_cell.update(None)
 
-logger.debug('hierarchy :%s'%(pcm.hierarchy_list))
+
+pcm.set_jump_tolerance(INT_INF())
+
+# on processor 1 move all particles from cell (7, 5, 5) to cell (8, 5, 5).
+if rank == 1:
+    root = pcm.root_cell
+    c_7_5_5 = root.cell_dict.get(IntPoint(7, 5, 5))
+    logger.debug('Cell (7, 5, 5) is %s'%(c_7_5_5))
+    indices = []
+    c_7_5_5.get_particle_ids(indices)
+    indices = indices[0]
+    logger.debug('NuM particles in (7, 5, 5) is %d'%(indices.length))
+    parr = pcm.arrays_to_bin[0]
+    x, y, z = parr.get('x', 'y', 'z')
+    for i in range(indices.length):
+        x[indices[i]] += c_7_5_5.cell_size
+
+    parr.set_dirty(True)
+
+pcm.update_status()
+logger.debug('Calling cell manager update')
+logger.debug('Is dirty %s'%(pcm.is_dirty))
+pcm.update()
+
+#logger.debug('hierarchy :%s'%(pcm.hierarchy_list))
 logger.debug('roots cells : %s'%(pcm.root_cell.cell_dict))
 logger.debug('num particles : %d'%(parray.get_number_of_particles()))
+logger.debug('real particles : %d'%(parray.num_real_particles))
