@@ -316,6 +316,9 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
 
                     dist = s_pnt.distance(d_pnt)
 
+                    if dist < 1e-12:
+                        continue
+
                     val = fabs(r_ab.dot(v_ab)*_h.data[j]/(dist))
 
                     if val > d_sigma.data[j]:

@@ -122,7 +122,7 @@ class ParallelFsfSolver(FSFSolver):
         local_max = {'y':y_max}
         local_min = {'y':-1e20}
         
-        glb_max, glb_min = pc.get_glb_min_max(local_min, local_max)
+        glb_min, glb_max = pc.get_glb_min_max(local_min, local_max)
         
         y_max = glb_max['y']
 

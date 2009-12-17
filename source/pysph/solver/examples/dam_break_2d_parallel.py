@@ -27,6 +27,11 @@ from pysph.solver.particle_generator import MassComputationMode as Mcm
 from pysph.solver.basic_generators import RectangleGenerator, LineGenerator
 from pysph.solver.iteration_skip_component import IterationSkipComponent as\
     IterSkipper
+from pysph.solver.time_step_components import \
+    MonaghanKosForceBasedTimeStepComponent
+from pysph.solver.parallel_time_step_update import \
+    ParallelTimeStepUpdateComponent
+
 from pysph.solver.vtk_writer import VTKWriter
 
 #pcm = ParallelCellManager(initialize=False)
@@ -136,6 +141,18 @@ vtk_writer = VTKWriter(solver=solver, entity_list=[dam_wall, dam_fluid],
                        vectors={'velocity':['u', 'v', 'w']})
 
 #parr_vtk_writer = ParallelVTKWriter(rank=rank, collector=0)
+
+# add a time step component
+ts = MonaghanKosForceBasedTimeStepComponent(name='ts',
+                                            solver=solver,
+                                            min_time_step=0.00001,
+                                            max_time_step=-1.0)
+solver.component_manager.add_component(ts, notify=True)
+
+pts = ParallelTimeStepUpdateComponent(name='p_ts', solver=solver,
+                                      time_step_component=ts)
+pic = solver.component_categories['post_integration']
+pic.append(pts)
 
 # add the parr_vtk_writer to an iteration skipper component.
 iter_skipper = IterSkipper(solver=solver)
