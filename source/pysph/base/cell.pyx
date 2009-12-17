@@ -259,7 +259,7 @@ cdef class Cell:
             self.origin.y = cell_manager.origin.y
             self.origin.z = cell_manager.origin.z
                          
-    cdef void get_centroid(self, Point centroid):
+    cpdef get_centroid(self, Point centroid):
         """
         Returns the centroid of this cell in 'centroid'.
     	"""
@@ -279,33 +279,33 @@ cdef class Cell:
         """
         raise NotImplementedError, 'Cell::update called'
 
-    cdef long get_number_of_particles(self):
+    cpdef long get_number_of_particles(self):
         """
         """
         raise NotImplementedError, 'Cell::get_number_of_particles called'
 
-    cdef bint is_empty(self):
+    cpdef bint is_empty(self):
         """
     	"""
         raise NotImplementedError, 'Cell::is_empty called'
 
-    cdef int add_particles(self, Cell cell) except -1:
+    cpdef int add_particles(self, Cell cell) except -1:
         """
         """
         raise NotImplementedError, 'Cell::add_particles'
 
     
-    cdef void update_cell_manager_hierarchy_list(self):
+    cpdef int update_cell_manager_hierarchy_list(self) except -1:
         """
         """
         raise NotImplementedError, 'Cell::update_cell_manager_hierarchy_list'
 
-    cdef void clear(self):
+    cpdef int clear(self) except -1:
         """
         """
         raise NotImplementedError, 'Cell::clear'
 
-    cdef void delete_empty_cells(self):
+    cpdef int delete_empty_cells(self) except -1:
         """
         """
         raise NotImplementedError, 'Cell::delete_empty_cells'
@@ -409,7 +409,7 @@ cdef class Cell:
         """
         raise NotImplementedError, 'Cell::clear_indices'
 
-    cdef bint is_leaf(self):
+    cpdef bint is_leaf(self):
         """
         """
         return False
@@ -472,7 +472,7 @@ cdef class LeafCell(Cell):
         logger.error(msg)
         raise SystemError, msg
 
-    cdef bint is_leaf(self):
+    cpdef bint is_leaf(self):
         """
         """
         return True
@@ -551,7 +551,7 @@ cdef class LeafCell(Cell):
             self.origin.z = self.cell_manager.origin.z
             self._init_index_lists()
 
-    cdef int add_particles(self, Cell cell1) except -1:
+    cpdef int add_particles(self, Cell cell1) except -1:
         """
         Add particle indices in cell to the current cell.
         
@@ -720,7 +720,7 @@ cdef class LeafCell(Cell):
         cdef LongArray index_array = self.index_lists[parray_id]
         index_array.reset()
 
-    cdef bint is_empty(self):
+    cpdef bint is_empty(self):
         """
         """
         if self.get_number_of_particles() == 0:
@@ -728,7 +728,7 @@ cdef class LeafCell(Cell):
         else:
             return False
 
-    cdef long get_number_of_particles(self):
+    cpdef long get_number_of_particles(self):
         """
         """
         cdef int i, num_arrays
@@ -743,14 +743,14 @@ cdef class LeafCell(Cell):
         
         return num_particles
 
-    cdef void update_cell_manager_hierarchy_list(self):
+    cpdef int update_cell_manager_hierarchy_list(self) except -1:
         """
         """
         cdef CellManager cell_manager = self.cell_manager
         cdef str msg
         cdef dict hierarchy_dict
         if cell_manager is None:
-            return
+            return 0
 
         if self.level >= len(cell_manager.hierarchy_list):
             msg = 'invalid cell level'
@@ -759,15 +759,18 @@ cdef class LeafCell(Cell):
         hierarchy_dict = cell_manager.hierarchy_list[self.level]
         hierarchy_dict[self.id.copy()] = self
 
-    cdef void clear(self):
-        """
-        """
-        self.index_lists[:] = []        
+        return 0
 
-    cdef void delete_empty_cells(self):
+    cpdef int clear(self) except -1:
         """
         """
-        return
+        self.index_lists[:] = []   
+        return 0
+
+    cpdef int delete_empty_cells(self) except -1:
+        """
+        """
+        return 0
 
 ################################################################################
 # `NonLeafCell` class.
@@ -792,7 +795,7 @@ cdef class NonLeafCell(Cell):
                                             level=self.level)
         return <Cell>cell
                                             
-    cdef int add_particles(self, Cell cell) except -1:
+    cpdef int add_particles(self, Cell cell) except -1:
         """
         Add particles from given cell, into this cell.
     
@@ -964,7 +967,7 @@ cdef class NonLeafCell(Cell):
 
         return 0
 
-    cdef void update_cell_manager_hierarchy_list(self):
+    cpdef int update_cell_manager_hierarchy_list(self) except -1:
         """
         """
         cdef CellManager cell_manager = self.cell_manager
@@ -978,7 +981,7 @@ cdef class NonLeafCell(Cell):
         num_cells = len(self.cell_dict)
 
         if cell_manager is None:
-            return
+            return 0
 
         if self.level >= len(cell_manager.hierarchy_list):
             msg = 'invalid cell level'
@@ -990,8 +993,10 @@ cdef class NonLeafCell(Cell):
         for i from 0 <= i < num_cells:
             cell = cell_list[i]
             cell.update_cell_manager_hierarchy_list()   
+        
+        return 0
 
-    cdef void clear(self):
+    cpdef int clear(self) except -1:
         """
         Clear internal information.
         """
@@ -1006,7 +1011,9 @@ cdef class NonLeafCell(Cell):
 
         self.cell_dict.clear()
 
-    cdef void delete_empty_cells(self):
+        return 0
+
+    cpdef int delete_empty_cells(self) except -1:
         """
         Delete any empty cells underneath this cell.
     
@@ -1035,7 +1042,9 @@ cdef class NonLeafCell(Cell):
             if cell.get_number_of_particles() == 0:
                 self.cell_dict.pop(cell.id)
 
-    cdef long get_number_of_particles(self):
+        return 0
+
+    cpdef long get_number_of_particles(self):
         """
         Return the number of particles.
         """
@@ -1261,7 +1270,7 @@ cdef class CellManager:
                 if parr.name == '':
                     logger.warn('particle array (%s) name not set'%(parr))
         
-    cdef int update_status(self):
+    cpdef int update_status(self):
         """
         Updates the is_dirty flag to indicate is an update is required.
 
@@ -1285,7 +1294,7 @@ cdef class CellManager:
         """
         self.is_dirty = value
 
-    cdef initialize(self):
+    cpdef initialize(self):
         """
         Initialize the cell manager.
     
@@ -1344,7 +1353,7 @@ cdef class CellManager:
 
         self.initialized = True
 
-    cdef void clear(self):
+    cpdef clear(self):
         """
         Clears all information in the cell manager.
         """
@@ -1356,7 +1365,7 @@ cdef class CellManager:
         if self.root_cell is not None:
             self.root_cell.clear()
 
-    cdef void _setup_hierarchy_list(self):
+    cpdef _setup_hierarchy_list(self):
         """
         """
         cdef int i
@@ -1364,8 +1373,8 @@ cdef class CellManager:
         for i from 0 <= i < self.num_levels+1:
             self.hierarchy_list.append(dict())
 
-    cdef void compute_cell_sizes(self, double min_size, double max_size, int
-                                 num_levels, DoubleArray arr):
+    cpdef compute_cell_sizes(self, double min_size, double max_size, int
+                             num_levels, DoubleArray arr):
         """
         Get the cell sizes for each level requested.
     
@@ -1414,7 +1423,7 @@ cdef class CellManager:
             for i from 1 <= i < num_levels-1:
                 arr.set(i, min_size + i*delta)
 
-    cdef void _build_base_hierarchy(self) except *:
+    cpdef _build_base_hierarchy(self):
         """
         Create a hierarchy of cells containing one cell from each level in the
         hierarchy.
@@ -1475,7 +1484,7 @@ cdef class CellManager:
         # build the hierarchy list also
         self.update_cell_hierarchy_list()
         
-    cdef void update_cell_hierarchy_list(self) except *:
+    cpdef update_cell_hierarchy_list(self):
         """
         Update the lists containing references to cells from each 
         level in the hierarchy.
@@ -1491,7 +1500,7 @@ cdef class CellManager:
 
         self.root_cell.update_cell_manager_hierarchy_list()
         
-    cdef void _rebuild_array_indices(self):
+    cpdef _rebuild_array_indices(self):
         """
         Rebuild the mapping from array name to position in arrays_to_bin list.
         """

@@ -62,13 +62,11 @@ class ParallelController(Base):
         """
         pass
 
-    def get_glb_min_max_from_dict(self, local_min_dict, local_max_dict,
-                                  pid_arr=None):
+    def get_glb_min_max(self, local_min_dict, local_max_dict):
         """
         Given various values in the dictionaries, find the global max and min of
-        those values and set the values in the result* dictionaries. All
-        processors are expected to pass on dictionaries with the same set of
-        keys.
+        those values. All processors are expected to pass on dictionaries with
+        the same set of keys. The resuly min and max dictionaries are returned.
 
         **Algorithm**
 

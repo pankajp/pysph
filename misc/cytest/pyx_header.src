@@ -30,6 +30,10 @@ cimport numpy as np
 
 import numpy as np
 
+# logging imports
+import logging
+logger = logging.getLogger()
+
 # 'importing' some Numpy C-api functions.
 cdef extern from "numpy/arrayobject.h":
     cdef void  import_array()
@@ -128,3 +132,15 @@ cdef class BaseArray:
         Copy values of selected particles in indices from self to dest.
         """
         raise NotImplementedError, 'BaseArray::copy_values'
+
+    cpdef copy_subset(self, BaseArray source, long start_index=-1, long end_index=-1):
+        """
+	Copy subset of values from source to self.
+	"""
+        raise NotImplementedError, 'BaseArray::copy_subset'
+
+    cpdef update_min_max(self):
+        """
+	Update the min and max values of the array.
+	"""
+        raise NotImplementedError, 'BaseArray::update_min_max'

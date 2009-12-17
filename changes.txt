@@ -199,3 +199,14 @@ Tuesday 15 December 2009 (03:55:23 PM)
       id also.
     - start_index and end_index bug in *RemoteCopy cells resolved.
     - update_status for ParallelCellManager - always sets the is_dirty to True.
+Thursday 17 December 2009 (05:00:19 PM)
+    - minimum, maximum attribute added to carrays.
+    - copy_subset function added to carrays.
+    - changed many cdef functions in cell.pyx to cpdef functions - unable to
+    call the cdef functions of python types derived from cython types.
+    - remove_property, copy_properties function added to ParticleArray class.
+    - function to update remote copies data every iteration added to
+    parallel_cell module.
+    - parallel_fsf_solver completed and run.
+    - 2d dam break parallel version written.
+    - parallel property updater component added.

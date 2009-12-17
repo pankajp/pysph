@@ -197,7 +197,7 @@ class LineGenerator(ParticleGenerator):
         
         # check if mass has to be set.
         if self.mass_computation_mode == MCM.Set_Constant:
-            output.m[:] = self.particle_density
+            output.m[:] = self.particle_mass
         elif self.mass_computation_mode == MCM.Compute_From_Density:
             m = compute_particle_mass(density=self.particle_density, 
                                       h=self.particle_h, 

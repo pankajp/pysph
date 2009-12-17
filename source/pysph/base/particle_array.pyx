@@ -1050,3 +1050,43 @@ cdef class ParticleArray:
         
         for i from 0 <= i < indices.length:
             tag_array.data[indices.data[i]] = tag_value
+
+    cpdef copy_properties(self, ParticleArray source, long start_index=-1, long
+                          end_index=-1):
+        """
+        Copy properties from source to self, starting from start_index uptill
+        end_index in self.
+
+        **Parameters**
+
+            - source - the particle array from where to copy.
+            - start_index - the first particle in self which maps to the 0th
+              particle in source.
+            - end_index - the last particle in self which maps to the last
+              particle in source.
+
+        """
+        cdef BaseArray src_array, dst_array
+        for prop_name in source.properties:
+            src_array = source.get_carray(prop_name)
+            dst_array = self.get_carray(prop_name)
+
+            if src_array != None and dst_array != None:
+                dst_array.copy_subset(src_array, start_index, end_index)
+
+    cpdef remove_property(self, str prop_name):
+        """
+        Removes property prop_name from the particle array.
+        """
+
+        if self.properties.has_key(prop_name):
+            self.properties.pop(prop_name)
+            self.default_values.pop(prop_name)
+
+    def update_min_max(self):
+        """
+        Updates the min max properties of all properties in this particle
+        array. 
+        """
+        for prop_array in self.properties.values():
+            prop_array.update_min_max()

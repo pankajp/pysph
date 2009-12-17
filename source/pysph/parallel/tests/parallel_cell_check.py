@@ -107,8 +107,6 @@ parray.add_property({'name':'p'})
 pcm.add_array_to_bin(parray)
 pcm.initialize()
 
-
-
 pcm.set_jump_tolerance(INT_INF())
 
 # on processor 1 move all particles from cell (7, 5, 5) to cell (8, 5, 5).

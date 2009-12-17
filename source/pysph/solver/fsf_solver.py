@@ -53,6 +53,17 @@ class FSFSolver(SolverBase):
         """
         Constructor.
         """
+        SolverBase.__init__(self, component_manager=component_manager,
+                            cell_manager=cell_manager,
+                            nnps_manager=nnps_manager, 
+                            kernel=kernel,
+                            integrator=integrator,
+                            time_step=time_step,
+                            total_simulation_time=total_simulation_time,
+                            *args, **kwargs)
+
+        logger.debug('FSFSolver Constructor called')
+
         self.g = -9.81
         self.max_fluid_density_variation = max_fluid_density_variation
         self.speed_of_sound = SpeedOfSound(0.0)
@@ -162,18 +173,21 @@ class FSFSolver(SolverBase):
             self.integrator.add_pre_integration_component(c.name)
 
         # add the inflow and outflow componets.
+        # both of these are added at the top of the pre-step component as the
+        # nnps_updater (added in the base class, should be at the last step of
+        # the pre-step components)
         for c in self.component_categories['inflow']:
             self._component_name_check(c)
-            self.integrator.add_pre_step_component(c.name)
+            self.integrator.add_pre_step_component(c.name, at_tail=False)
 
         for c in self.component_categories['outflow']:
             self._component_name_check(c)
-            self.integrator.add_pre_step_component(c.name)
+            self.integrator.add_pre_step_component(c.name, at_tail=False)
 
         # add the pre-step components
         for c in self.component_categories['pre_step']:
             self._component_name_check(c)
-            self.integrator.add_pre_step_component(c.name)
+            self.integrator.add_pre_step_component(c.name, at_tail=False)
 
         # setup the density components.
         self._setup_density_component()
@@ -286,7 +300,7 @@ class FSFSolver(SolverBase):
         Computes the speed of sound using the fluid particles in the list of
         entities.
         """
-        y_max = -1.0
+        y_max = -1e20
         particles_present = False
 
         for e in self.entity_list:

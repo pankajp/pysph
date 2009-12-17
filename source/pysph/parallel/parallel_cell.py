@@ -25,7 +25,8 @@ TAG_CROSSING_PARTICLES = 3
 TAG_NEW_CELL_PARTICLES = 4
 TAG_REMOTE_CELL_REQUEST = 5
 TAG_REMOTE_CELL_REPLY = 6
-
+TAG_REMOTE_DATA_REQUEST = 7
+TAG_REMOTE_DATA_REPLY = 8
 
 ################################################################################
 # `share_data` function.
@@ -540,7 +541,7 @@ class ParallelRootCell(cell.RootCell):
 
         # exchange particles moving into a region assigned to a known
         # processor's region. 
-        self.exchange_new_particles_with_neighbors(
+        self.exchange_crossing_particles_with_neighbors(
             remote_cells,
             self.new_particles_for_neighbors
             )
@@ -604,18 +605,6 @@ class ParallelRootCell(cell.RootCell):
         # delete any empty cells.
         self.py_delete_empty_cells()
         
-    def local_update(self):
-        """
-        Perform a local update - were are sure that all particles WILL be within
-        our region, hence this update can be performed just like the RootCell
-        would do it.
-
-        We however could check the cells actually created to be sure that
-        nothing wrong is going on.
-
-        """
-        RootCell.update(self, None)
-
     def bin_particles(self):
         """
         Find the cell configurations caused by the particles moving. Returns the
@@ -701,7 +690,6 @@ class ParallelRootCell(cell.RootCell):
                 
         """
         copies = {}
-        props_to_extract = self.cell_manager.properties_to_copy
         for cid, c in cell_dict.iteritems():
             index_lists = []
             parrays = []
@@ -711,8 +699,7 @@ class ParallelRootCell(cell.RootCell):
                 index_array = index_lists[i]
                 parr = c.arrays_to_bin[i]
                 
-                parr_new = parr.extract_particles(index_array,
-                                                  props=props_to_extract)
+                parr_new = parr.extract_particles(index_array)
                 parr_new.set_name(parr.name)
                 parrays.append(parr_new)
                 
@@ -852,7 +839,7 @@ class ParallelRootCell(cell.RootCell):
 
         return winning_procs
 
-    def exchange_new_particles_with_neighbors(self, remote_cells, particles):
+    def exchange_crossing_particles_with_neighbors(self, remote_cells, particles):
         """
         Send all particles that crossed into a known neighbors region, receive
         particles that got into our region from a neighbors.
@@ -883,7 +870,8 @@ class ParallelRootCell(cell.RootCell):
         proc_data = {}
         comm = self.parallel_controller.comm
 
-        logger.debug('Exchanging crossing particles with : %s'%(self.adjacent_processors))
+        logger.debug('Exchanging crossing particles with : %s'%(
+                self.adjacent_processors))
 
         # create one entry here for each neighbor processor.
         for proc_id in self.adjacent_processors:
@@ -954,6 +942,99 @@ class ParallelRootCell(cell.RootCell):
             else:
                 self.new_cells_added[cid.py_copy()] += count
 
+    def update_remote_particle_properties(self, props=None):
+        """
+        Update the properties of the remote particles from the respective
+        processors. 
+
+        **Parameters**
+            - props - the names of the properties that are to be copied. One
+            list of properties for each array that has been binned using the
+            cell manager. 
+
+        **Note**
+        
+             - this function will work correctly only if the particle arrays
+             have not been modified since the last parallel update. If the
+             particle arrays have been touched, then the start and end indices
+             stored for r the particles that are remote copies will become
+             invalid and the values will be copied into incorrect locations.
+
+        """
+        logger.debug('update_remote_particle_properties')
+        nbr_procs = []
+        nbr_procs[:] = self.adjacent_processors
+        arc = self.adjacent_remote_cells
+        remote_cell_data = {}
+        comm = self.parallel_controller.comm
+
+        logger.debug('Neighbor procs are : %s'%(nbr_procs))
+        for cids in arc.values():
+            for cid in cids:
+                logger.debug('%s'%(cid))
+
+        if props is None:
+            props = [None]*len(self.cell_manager.arrays_to_bin)
+
+        for pid in nbr_procs:
+            if pid == self.pid:
+                for dest in nbr_procs:
+                    if self.pid == dest:
+                        continue
+                    comm.send(arc[dest], dest=dest, tag=TAG_REMOTE_DATA_REQUEST)
+                    remote_cell_data[dest] = comm.recv(
+                        source=dest, tag=TAG_REMOTE_DATA_REPLY)
+            else:
+                requested_cells = comm.recv(source=pid,
+                                            tag=TAG_REMOTE_DATA_REQUEST) 
+                data = self._get_cell_data_for_neighbor(requested_cells,
+                                                        props=props)
+                comm.send(data, dest=pid, tag=TAG_REMOTE_DATA_REPLY)
+
+        logger.debug('Data Exchange done')
+        # now copy the data received into the appropriate locations.
+        for pid, cell_data in remote_cell_data.iteritems():
+            for cid, cell_particles in cell_data.iteritems():
+                # get the copy of the remote cell with us.
+                remote_cell = self.cell_dict.get(cid)
+                
+                if remote_cell is None:
+                    msg = 'Copy of Remote cell %s not found'%(cid)
+                    logger.error(msg)
+                    raise SystemError, msg
+                
+                for i in range(len(self.cell_manager.arrays_to_bin)):
+                    d_parr = self.cell_manager.arrays_to_bin[i]
+                    s_parr = cell_particles[i]
+
+                    si = remote_cell.particle_start_indices[i]
+                    ei = remote_cell.particle_end_indices[i]
+
+                    if si == -1 and ei == -1:
+                        # there are no particles for this array, continue
+                        continue
+                    
+                    n1 = ei-si+1
+                    n2 = s_parr.get_number_of_particles()
+
+                    if n1 != n2:
+                        msg = 'Remote data : %d, local copy : %d\n'%(n1, n2)
+                        msg += 'Both should have same number of particles'
+                        logger.error(msg)
+                        raise SystemError, msg
+                    
+                    # make sure only the required properties are there in the
+                    # destination arrays.
+                    if props[i] is not None:
+                        for prop in s_parr.properties.keys():
+                            if prop not in props[i]:
+                                s_parr.remove_property(prop)
+
+                    # copy the property values from the source array into
+                    # properties of the destination array.
+                    
+                    d_parr.copy_properties(s_parr, start_index=si, end_index=ei)
+
     def exchange_neighbor_particles(self):
         """
         Exchange neighbor particles.
@@ -967,7 +1048,7 @@ class ParallelRootCell(cell.RootCell):
                 - create a new cell
                 - append the particles of this cell as remote and dummy
                   particles to the particle arrays. These particles WILL be
-                  appended and will not violate the particle indices.
+                  APPENDED and will not violate the particle indices.
                 - bin the new particles into this cell.
 
         """
@@ -975,7 +1056,6 @@ class ParallelRootCell(cell.RootCell):
         nbr_procs[:] = self.adjacent_processors
         arc = self.adjacent_remote_cells
         remote_cell_data = {}
-        props_to_copy = self.cell_manager.properties_to_copy
         comm = self.parallel_controller.comm
         
         if nbr_procs.count(self.pid) == 0:
@@ -996,8 +1076,7 @@ class ParallelRootCell(cell.RootCell):
             else:
                 requested_cells = comm.recv(source=pid,
                                             tag=TAG_REMOTE_CELL_REQUEST) 
-                data = self._get_cell_data_for_neighbor(requested_cells,
-                                                        props_to_copy)
+                data = self._get_cell_data_for_neighbor(requested_cells)
                 comm.send(data, dest=pid, tag=TAG_REMOTE_CELL_REPLY)
 
         logger.debug('Remote data received')
@@ -1021,26 +1100,49 @@ class ParallelRootCell(cell.RootCell):
                     d_parr = self.cell_manager.arrays_to_bin[i]
                     s_parr = cell_particles[i]
                     
-                    si = d_parr.get_number_of_particles()
-                    ei = si + s_parr.get_number_of_particles() -1
+                    # check if there are no particles for this array.
+                    if s_parr.get_number_of_particles() == 0:
+                        si = -1
+                        ei = -1
+                    else:
+                        si = d_parr.get_number_of_particles()
+                        ei = si + s_parr.get_number_of_particles() - 1
+                        logger.debug('SI : %d, EI : %d'%(si, ei))
+
                     c.particle_start_indices.append(si)
                     c.particle_end_indices.append(ei)
                     
                     d_parr.append_parray(s_parr)
-
-                    indices = arange_long(start=si, stop=ei)
-                    c.insert_particles(i, indices)
+                    
+                    if si >=0 and ei >=0:
+                        indices = arange_long(start=si, stop=ei)
+                        c.insert_particles(i, indices)
 
                 # add this cell to the cell_dict
                 self.cell_dict[cid.py_copy()] = c
                 
-    def _get_cell_data_for_neighbor(self, cell_list, props):
+    def _get_cell_data_for_neighbor(self, cell_list, props=None):
         """
         Return new particle arrays created for particles contained in each of
         the requested cells.
 
+        **Parameters**
+        
+            - cell_list - the list of cells, whose properties are requested.
+            - props - a list whose entries are as follows: for each particle
+              array that has been binned, a list of properties required of that
+              particle array, or None if all properties are required.
+
         """
         data = {}
+        if props is not None:
+            if len(props) != len(self.cell_manager.arrays_to_bin):
+                msg = 'Need information for each particle array'
+                logger.error(msg)
+                raise SystemError, msg
+        else:
+            props = [None]*len(self.cell_manager.arrays_to_bin)
+            
         for cid in cell_list:
 
             c = self.cell_dict.get(cid)
@@ -1061,7 +1163,7 @@ class ParallelRootCell(cell.RootCell):
                 num_particles += index_array.length
                 parr = c.cell_manager.arrays_to_bin[i]
                 parr_new = parr.extract_particles(index_array,
-                                                  props=props)
+                                                  props=props[i])
                 parr_new.set_name(parr.name)
                 parrays.append(parr_new)
 
@@ -1086,8 +1188,7 @@ class ParallelCellManager(cell.CellManager):
                  min_cell_size=0.1, max_cell_size=0.5, origin=Point(0, 0, 0),
                  num_levels=2, initialize=True,
                  parallel_controller=None,
-                 max_radius_scale=2.0,
-                 properties_to_copy=['x', 'y', 'z', 'u', 'v', 'w', 'rho', 'p']):
+                 max_radius_scale=2.0, *args, **kwargs):                 
         """
         Constructor.
         """
@@ -1107,8 +1208,6 @@ class ParallelCellManager(cell.CellManager):
         self.max_radius_scale = max_radius_scale
         self.pid = 0
         self.parallel_cell_level = 0
-        self.properties_to_copy = []
-        self.properties_to_copy[:] = properties_to_copy
 
         # set the parallel controller.
         if parallel_controller is None:
@@ -1137,7 +1236,7 @@ class ParallelCellManager(cell.CellManager):
             - May have to do a conflict resolutions at this point.
             
         """
-
+        logger.debug('%s initialize called'%(self))
         if self.initialized == True:
             logger.warn('Trying to initialize cell manager more than once')
             return
@@ -1257,7 +1356,7 @@ class ParallelCellManager(cell.CellManager):
 
         pc = self.parallel_controller
         
-        glb_min, glb_max = pc.get_glb_min_max_from_dict(data_min, data_max)
+        glb_min, glb_max = pc.get_glb_min_max(data_min, data_max)
 
         self.glb_bounds_min[0] = glb_min['x']
         self.glb_bounds_min[1] = glb_min['y']
@@ -1383,13 +1482,6 @@ class ParallelCellManager(cell.CellManager):
 
         logger.debug('Updated processor map : %s'%(self.proc_map))
         
-    def force_update(self):
-        """
-        Update without regard to if particle arrays are dirty or not.
-        """
-        self.is_dirty = True
-        CellManager.update(self)
-
     def remove_remote_particles(self):
         """
         Remove all remote particles from the particle arrays.
@@ -1398,16 +1490,6 @@ class ParallelCellManager(cell.CellManager):
         """
         for parray in self.arrays_to_bin:
             parray.remove_flagged_particles(flag_name='local', flag_value=0)
-
-    def update_neighbor_information(self, *props):
-        """
-        """
-        pass
-
-    def update_neighbor_data(self, *props):
-        """
-        """
-        pass
 
     def _find_min_max_of_property(self, prop_name):
         """
@@ -1437,3 +1519,23 @@ class ParallelCellManager(cell.CellManager):
             return None, None
 
         return min, max
+
+    def update_remote_particle_properties(self, props=None):
+        """
+        Update the properties of all copies of remote particles with this
+        processor. 
+        """
+        self.root_cell.update_remote_particle_properties(props)
+
+    def update_property_bounds(self):
+        """
+        Updates the min and max values of all properties in all particle arrays
+        that are being binned by this cell manager.
+
+        Not sure if this is the correct place for such a function.
+
+        """
+        pass
+        
+
+        

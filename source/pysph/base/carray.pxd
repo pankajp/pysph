@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Dec  8 14:28:33 2009
+# Wed Dec 16 23:59:27 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -35,7 +35,10 @@ cdef class BaseArray:
     cpdef align_array(self, LongArray new_indices)
     cdef void _align_array(self, LongArray new_indices)
     cpdef str get_c_type(self)
-    cpdef copy_values(self, LongArray indices, BaseArray dest)################################################################################
+    cpdef copy_values(self, LongArray indices, BaseArray dest)
+    cpdef copy_subset(self, BaseArray source, long start_index=*, long end_index=*)
+    cpdef update_min_max(self)
+################################################################################
 # `IntArray` class.
 ################################################################################
 cdef class IntArray(BaseArray):
@@ -43,6 +46,7 @@ cdef class IntArray(BaseArray):
     This class defines a managed array of ints.
     """     
     cdef int *data
+    cdef public int minimum, maximum
         
     cdef _setup_npy_array(self)
     cdef int* get_data_ptr(self)
@@ -70,6 +74,7 @@ cdef class DoubleArray(BaseArray):
     This class defines a managed array of doubles.
     """     
     cdef double *data
+    cdef public double minimum, maximum
         
     cdef _setup_npy_array(self)
     cdef double* get_data_ptr(self)
@@ -97,6 +102,7 @@ cdef class FloatArray(BaseArray):
     This class defines a managed array of floats.
     """     
     cdef float *data
+    cdef public float minimum, maximum
         
     cdef _setup_npy_array(self)
     cdef float* get_data_ptr(self)
@@ -124,6 +130,7 @@ cdef class LongArray(BaseArray):
     This class defines a managed array of longs.
     """     
     cdef long *data
+    cdef public long minimum, maximum
         
     cdef _setup_npy_array(self)
     cdef long* get_data_ptr(self)

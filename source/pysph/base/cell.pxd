@@ -33,17 +33,17 @@ cdef class Cell:
     cdef public int jump_tolerance
     
     # Member functions.
-    cdef int add_particles(self, Cell cell) except -1
+    cpdef int add_particles(self, Cell cell) except -1
     cpdef int update(self, dict data) except -1
-    cdef long get_number_of_particles(self)
-    cdef bint is_empty(self)
-    cdef void get_centroid(self, Point pnt)
-    cdef void delete_empty_cells(self)
+    cpdef long get_number_of_particles(self)
+    cpdef bint is_empty(self)
+    cpdef get_centroid(self, Point pnt)
+    cpdef int delete_empty_cells(self) except -1
 
     cpdef set_cell_manager(self, CellManager cell_manager)
-    cdef void update_cell_manager_hierarchy_list(self)
-    cdef void clear(self)
-    cdef bint is_leaf(self)
+    cpdef int update_cell_manager_hierarchy_list(self) except -1
+    cpdef int clear(self) except -1
+    cpdef bint is_leaf(self)
     cpdef Cell get_new_sibling(self, IntPoint id)
     cpdef get_particle_ids(self, list particle_id_list)
     cpdef Cell get_new_child(self, IntPoint id)
@@ -96,16 +96,17 @@ cdef class CellManager:
     cdef public RootCell root_cell
     
     cpdef int update(self) except -1
-    cdef int update_status(self) except -1
-    cdef initialize(self)
-    cdef void clear(self)
+    cpdef int update_status(self) except -1
+    cpdef initialize(self)
+    cpdef clear(self)
     cpdef add_array_to_bin(self, ParticleArray parr)
 
-    cdef void compute_cell_sizes(self, double, double, int, DoubleArray)
-    cdef void update_cell_hierarchy_list(self)
-    cdef void _build_base_hierarchy(self) except *
-    cdef void _rebuild_array_indices(self)
-    cdef void _setup_hierarchy_list(self)
+    cpdef compute_cell_sizes(self, double, double, int, DoubleArray)
+    cpdef update_cell_hierarchy_list(self)
+    cpdef _build_base_hierarchy(self)
+    cpdef _rebuild_array_indices(self)
+    cpdef _setup_hierarchy_list(self)
+    
     cdef int get_potential_cells(self, Point pnt, double radius, list cell_list,
                                  bint single_layer=*) except -1
 

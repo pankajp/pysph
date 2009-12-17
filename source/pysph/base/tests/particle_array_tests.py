@@ -537,7 +537,32 @@ class ParticleArrayTest(unittest.TestCase):
         self.assertEqual(check_array(p1.x, [1, 2, 3, 5]), True)
         self.assertEqual(check_array(p1.y, [0, 0, 0, 2]), True)
         self.assertEqual(check_array(p1.tag, [0, 0, 0, 0]), True)
-       
+    
+    def test_copy_properties(self):
+        """
+        Tests the copy properties function.
+        """
+        p1 = particle_array.ParticleArray()
+        p1.add_property({'name':'x', 'data':[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+        p1.add_property({'name':'y'})
+        p1.add_property({'name':'t'})
+        p1.align_particles()
+
+        p2 = particle_array.ParticleArray()
+        p2.add_property({'name':'t', 'data':[-1, -1, -1, -1]})
+        p2.add_property({'name':'s', 'data':[2, 3, 4, 5]})
+        p2.align_particles()
+        
+        p1.copy_properties(p2, start_index=5, end_index=8)
+        self.assertEqual(check_array(p1.t, [0, 0, 0, 0, 0, -1, -1, -1, -1, 0]),
+                         True)
+
+        p1.add_property({'name':'s'})
+        p1.copy_properties(p2, start_index=5, end_index=8)
+        self.assertEqual(check_array(p1.t, [0, 0, 0, 0, 0, -1, -1, -1, -1, 0]),
+                         True)
+        self.assertEqual(check_array(p1.s, [0, 0, 0, 0, 0, 2, 3, 4, 5, 0]), True)
+               
 if __name__ == '__main__':
     import logging
     logger = logging.getLogger()

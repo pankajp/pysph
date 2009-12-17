@@ -6,6 +6,7 @@ cdef class CLASSNAME(BaseArray):
     This class defines a managed array of ARRAY_TYPEs.
     """     
     cdef ARRAY_TYPE *data
+    cdef public ARRAY_TYPE minimum, maximum
         
     cdef _setup_npy_array(self)
     cdef ARRAY_TYPE* get_data_ptr(self)

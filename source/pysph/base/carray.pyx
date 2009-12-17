@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Dec  8 14:28:33 2009
+# Wed Dec 16 23:59:27 2009
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -33,6 +33,10 @@ include "stdlib.pxd"
 cimport numpy as np
 
 import numpy as np
+
+# logging imports
+import logging
+logger = logging.getLogger()
 
 # 'importing' some Numpy C-api functions.
 cdef extern from "numpy/arrayobject.h":
@@ -131,7 +135,20 @@ cdef class BaseArray:
         """
         Copy values of selected particles in indices from self to dest.
         """
-        raise NotImplementedError, 'BaseArray::copy_values'################################################################################
+        raise NotImplementedError, 'BaseArray::copy_values'
+
+    cpdef copy_subset(self, BaseArray source, long start_index=-1, long end_index=-1):
+        """
+	Copy subset of values from source to self.
+	"""
+        raise NotImplementedError, 'BaseArray::copy_subset'
+
+    cpdef update_min_max(self):
+        """
+	Update the min and max values of the array.
+	"""
+        raise NotImplementedError, 'BaseArray::update_min_max'
+################################################################################
 # `IntArray` class.
 ################################################################################
 cdef class IntArray(BaseArray):
@@ -361,6 +378,95 @@ cdef class IntArray(BaseArray):
         
         for i from 0 <= i < num_values:
             dest_array.data[i] = self.data[indices.data[i]]
+
+    cpdef copy_subset(self, BaseArray source, long start_index=-1,
+                      long end_index=-1):
+        """
+        Copy a subset of values from src to self.
+
+        **Parameters**
+        
+            - start_index - the first index in dest that corresponds to the 0th
+            index in source.
+            - end_index   - the last index in dest that corresponds to the last
+            index in source.
+
+        """
+        cdef int si, ei, s_length, d_length, i, j
+        cdef IntArray src = <IntArray>source
+        s_length = src.length
+        d_length = self.length
+
+        if end_index < 0:
+            if start_index < 0:
+                if s_length != d_length:
+                    msg = 'Source length should be same as dest length'
+                    logger.error(msg)
+                    raise ValueError, msg
+                si = 0
+                ei = self.length - 1
+            else:
+                # meaning we copy from the specified start index to the end of
+                # self. make sure the sizes are consistent.
+                si = start_index
+                ei = d_length-1
+
+                if start_index > (d_length-1):
+                    msg = 'start_index beyond array length'
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                if (ei - si + 1) > s_length:
+                    msg = 'Not enough values in source'
+                    logger.error(msg)
+                    raise ValueError, msg
+        else:
+            if start_index < 0:
+                msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                          end_index)
+                logger.error(msg)
+                raise ValueError, msg
+            else:
+                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                    start_index > end_index):
+                    msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                              end_index)
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                si = start_index
+                ei = end_index
+
+        # we have valid start and end indices now. can start copying now.
+        j = 0
+        for i from si <= i <= ei:
+            self.data[i] = src.data[j]
+            j += 1
+
+    cpdef update_min_max(self):
+        """
+        Updates the min and max values of the array.
+        """
+        cdef int i = 0
+        cdef int min_val, max_val
+        
+        if self.length == 0:
+            self.minimum = <int>-1e20
+            self.maximum = <int>1e20
+            return
+
+        min_val = self.data[0]
+        max_val = self.data[0]
+
+        for i from 0 <= i < self.length:
+            if min_val > self.data[i]:
+                min_val = self.data[i]
+            if max_val < self.data[i]:
+                max_val = self.data[i]
+        
+        self.minimum = min_val
+        self.maximum = max_val		   
+
 
 ################################################################################
 # `DoubleArray` class.
@@ -593,6 +699,95 @@ cdef class DoubleArray(BaseArray):
         for i from 0 <= i < num_values:
             dest_array.data[i] = self.data[indices.data[i]]
 
+    cpdef copy_subset(self, BaseArray source, long start_index=-1,
+                      long end_index=-1):
+        """
+        Copy a subset of values from src to self.
+
+        **Parameters**
+        
+            - start_index - the first index in dest that corresponds to the 0th
+            index in source.
+            - end_index   - the last index in dest that corresponds to the last
+            index in source.
+
+        """
+        cdef int si, ei, s_length, d_length, i, j
+        cdef DoubleArray src = <DoubleArray>source
+        s_length = src.length
+        d_length = self.length
+
+        if end_index < 0:
+            if start_index < 0:
+                if s_length != d_length:
+                    msg = 'Source length should be same as dest length'
+                    logger.error(msg)
+                    raise ValueError, msg
+                si = 0
+                ei = self.length - 1
+            else:
+                # meaning we copy from the specified start index to the end of
+                # self. make sure the sizes are consistent.
+                si = start_index
+                ei = d_length-1
+
+                if start_index > (d_length-1):
+                    msg = 'start_index beyond array length'
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                if (ei - si + 1) > s_length:
+                    msg = 'Not enough values in source'
+                    logger.error(msg)
+                    raise ValueError, msg
+        else:
+            if start_index < 0:
+                msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                          end_index)
+                logger.error(msg)
+                raise ValueError, msg
+            else:
+                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                    start_index > end_index):
+                    msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                              end_index)
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                si = start_index
+                ei = end_index
+
+        # we have valid start and end indices now. can start copying now.
+        j = 0
+        for i from si <= i <= ei:
+            self.data[i] = src.data[j]
+            j += 1
+
+    cpdef update_min_max(self):
+        """
+        Updates the min and max values of the array.
+        """
+        cdef int i = 0
+        cdef double min_val, max_val
+        
+        if self.length == 0:
+            self.minimum = <double>-1e20
+            self.maximum = <double>1e20
+            return
+
+        min_val = self.data[0]
+        max_val = self.data[0]
+
+        for i from 0 <= i < self.length:
+            if min_val > self.data[i]:
+                min_val = self.data[i]
+            if max_val < self.data[i]:
+                max_val = self.data[i]
+        
+        self.minimum = min_val
+        self.maximum = max_val		   
+
+
 ################################################################################
 # `FloatArray` class.
 ################################################################################
@@ -824,6 +1019,95 @@ cdef class FloatArray(BaseArray):
         for i from 0 <= i < num_values:
             dest_array.data[i] = self.data[indices.data[i]]
 
+    cpdef copy_subset(self, BaseArray source, long start_index=-1,
+                      long end_index=-1):
+        """
+        Copy a subset of values from src to self.
+
+        **Parameters**
+        
+            - start_index - the first index in dest that corresponds to the 0th
+            index in source.
+            - end_index   - the last index in dest that corresponds to the last
+            index in source.
+
+        """
+        cdef int si, ei, s_length, d_length, i, j
+        cdef FloatArray src = <FloatArray>source
+        s_length = src.length
+        d_length = self.length
+
+        if end_index < 0:
+            if start_index < 0:
+                if s_length != d_length:
+                    msg = 'Source length should be same as dest length'
+                    logger.error(msg)
+                    raise ValueError, msg
+                si = 0
+                ei = self.length - 1
+            else:
+                # meaning we copy from the specified start index to the end of
+                # self. make sure the sizes are consistent.
+                si = start_index
+                ei = d_length-1
+
+                if start_index > (d_length-1):
+                    msg = 'start_index beyond array length'
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                if (ei - si + 1) > s_length:
+                    msg = 'Not enough values in source'
+                    logger.error(msg)
+                    raise ValueError, msg
+        else:
+            if start_index < 0:
+                msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                          end_index)
+                logger.error(msg)
+                raise ValueError, msg
+            else:
+                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                    start_index > end_index):
+                    msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                              end_index)
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                si = start_index
+                ei = end_index
+
+        # we have valid start and end indices now. can start copying now.
+        j = 0
+        for i from si <= i <= ei:
+            self.data[i] = src.data[j]
+            j += 1
+
+    cpdef update_min_max(self):
+        """
+        Updates the min and max values of the array.
+        """
+        cdef int i = 0
+        cdef float min_val, max_val
+        
+        if self.length == 0:
+            self.minimum = <float>-1e20
+            self.maximum = <float>1e20
+            return
+
+        min_val = self.data[0]
+        max_val = self.data[0]
+
+        for i from 0 <= i < self.length:
+            if min_val > self.data[i]:
+                min_val = self.data[i]
+            if max_val < self.data[i]:
+                max_val = self.data[i]
+        
+        self.minimum = min_val
+        self.maximum = max_val		   
+
+
 ################################################################################
 # `LongArray` class.
 ################################################################################
@@ -1054,4 +1338,93 @@ cdef class LongArray(BaseArray):
         
         for i from 0 <= i < num_values:
             dest_array.data[i] = self.data[indices.data[i]]
+
+    cpdef copy_subset(self, BaseArray source, long start_index=-1,
+                      long end_index=-1):
+        """
+        Copy a subset of values from src to self.
+
+        **Parameters**
+        
+            - start_index - the first index in dest that corresponds to the 0th
+            index in source.
+            - end_index   - the last index in dest that corresponds to the last
+            index in source.
+
+        """
+        cdef int si, ei, s_length, d_length, i, j
+        cdef LongArray src = <LongArray>source
+        s_length = src.length
+        d_length = self.length
+
+        if end_index < 0:
+            if start_index < 0:
+                if s_length != d_length:
+                    msg = 'Source length should be same as dest length'
+                    logger.error(msg)
+                    raise ValueError, msg
+                si = 0
+                ei = self.length - 1
+            else:
+                # meaning we copy from the specified start index to the end of
+                # self. make sure the sizes are consistent.
+                si = start_index
+                ei = d_length-1
+
+                if start_index > (d_length-1):
+                    msg = 'start_index beyond array length'
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                if (ei - si + 1) > s_length:
+                    msg = 'Not enough values in source'
+                    logger.error(msg)
+                    raise ValueError, msg
+        else:
+            if start_index < 0:
+                msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                          end_index)
+                logger.error(msg)
+                raise ValueError, msg
+            else:
+                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                    start_index > end_index):
+                    msg = 'start_index : %d, end_index : %d'%(start_index,
+                                                              end_index)
+                    logger.error(msg)
+                    raise ValueError, msg
+
+                si = start_index
+                ei = end_index
+
+        # we have valid start and end indices now. can start copying now.
+        j = 0
+        for i from si <= i <= ei:
+            self.data[i] = src.data[j]
+            j += 1
+
+    cpdef update_min_max(self):
+        """
+        Updates the min and max values of the array.
+        """
+        cdef int i = 0
+        cdef long min_val, max_val
+        
+        if self.length == 0:
+            self.minimum = <long>-1e20
+            self.maximum = <long>1e20
+            return
+
+        min_val = self.data[0]
+        max_val = self.data[0]
+
+        for i from 0 <= i < self.length:
+            if min_val > self.data[i]:
+                min_val = self.data[i]
+            if max_val < self.data[i]:
+                max_val = self.data[i]
+        
+        self.minimum = min_val
+        self.maximum = max_val		   
+
 

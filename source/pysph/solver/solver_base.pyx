@@ -818,7 +818,21 @@ cdef class ComponentManager(Base):
 cdef class SolverBase(Base):
     """
     """
-    def __cinit__(self, 
+    def __cinit__(self,
+                  ComponentManager component_manager=None,
+                  CellManager cell_manager=None,
+                  NNPSManager nnps_manager=None,
+                  KernelBase kernel=None,
+                  object integrator=None,
+                  double time_step=0.0,
+                  double total_simulation_time=0.0,
+                  *args, **kwargs):
+        """
+        Cython constructor.
+        """
+        pass
+
+    def __init__(self, 
                   ComponentManager component_manager=None,
                   CellManager cell_manager=None,
                   NNPSManager nnps_manager=None,
@@ -828,7 +842,9 @@ cdef class SolverBase(Base):
                   double total_simulation_time=0.0,
                   *args, **kwargs
                   ):
-        
+        """
+        Python constructor.
+        """        
         if component_manager is None:
             self.component_manager = ComponentManager()
         else:
@@ -837,6 +853,7 @@ cdef class SolverBase(Base):
         if cell_manager is None:
             self.cell_manager = CellManager(initialize=False)
         else:
+            logger.debug('Using cell manager : %s'%(cell_manager))
             self.cell_manager = cell_manager
         
         if nnps_manager is None:

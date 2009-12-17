@@ -47,6 +47,7 @@ cdef class ParticleArray:
     
     # function to add any property
     cpdef add_property(self, dict prop_info)
+    cpdef remove_property(self, str prop_name)
     
     # increase the number of particles by num_particles
     cpdef extend(self, int num_particles)
@@ -82,3 +83,6 @@ cdef class ParticleArray:
     # in indices.
     cpdef set_flag(self, str flag_name, int flag_value, LongArray indices)
     cpdef set_tag(self, long tag_value, LongArray indices)
+
+    cpdef copy_properties(self, ParticleArray source, long start_index=*, long
+                          end_index=*)

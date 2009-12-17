@@ -199,6 +199,65 @@ class TestLongArray(unittest.TestCase):
         l1.align_array(new_indices)
         self.assertEqual(numpy.allclose([1, 5, 3, 2, 4, 7, 8, 6, 9, 0],
                                         l1.get_npy_array()), True)
+
+    def test_copy_subset(self):
+        """
+        Tests the copy_subset function.
+        """
+        l1 = LongArray(10)
+        l1.set_data(numpy.arange(10))
+        
+        l2 = LongArray(4)
+        l2[0] = 4
+        l2[1] = 3
+        l2[2] = 2
+        l2[3] = 1
+
+        # a valid copy.
+        l1.copy_subset(l2, 5, 8)
+        self.assertEqual(numpy.allclose([0, 1, 2, 3, 4, 4, 3, 2, 1, 9],
+                                        l1.get_npy_array()), True)
+        
+        # try to copy different sized arrays without any index specification.
+        l1.set_data(numpy.arange(10))
+        # copy to the last k values of source array.
+        l1.copy_subset(l2, start_index=6)
+        self.assertEqual(numpy.allclose([0, 1, 2, 3, 4, 5, 4, 3, 2, 1],
+                                        l1.get_npy_array()), True)
+        
+        l1.set_data(numpy.arange(10))
+        l1.copy_subset(l2, start_index=7)
+        self.assertEqual(numpy.allclose([0, 1, 2, 3, 4, 5, 6, 4, 3, 2],
+                                        l1.get_npy_array()), True)
+
+        # some invalid operations.
+        l1.set_data(numpy.arange(10))
+        self.assertRaises(ValueError, l1.copy_subset, l2, -1, 1)
+        self.assertRaises(ValueError, l1.copy_subset, l2, 3, 2)
+        self.assertRaises(ValueError, l1.copy_subset, l2, 0, 10)
+        self.assertRaises(ValueError, l1.copy_subset, l2, 10, 20)
+        self.assertRaises(ValueError, l1.copy_subset, l2, -1, -1)
+
+    def test_update_min_max(self):
+        """
+        Tests the update_min_max function.
+        """
+        l1 = LongArray(10)
+        l1.set_data(numpy.arange(10))
+        
+        l1.update_min_max()
+
+        self.assertEqual(l1.minimum, 0)
+        self.assertEqual(l1.maximum, 9)
+
+        l1[9] = -1
+        l1[0] = -20
+        l1[4] = 200
+        l1.update_min_max()
+
+        self.assertEqual(l1.minimum, -20)
+        self.assertEqual(l1.maximum, 200)
+
 if __name__ == '__main__':
     unittest.main()
         
