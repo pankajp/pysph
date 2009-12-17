@@ -49,6 +49,9 @@ fluid_particle_spacing=0.05
 # Create a solver instance using default parameters and some small changes.
 solver = ParallelFsfSolver(cell_manager=None, time_step=0.0001,
                            total_simulation_time=10.0, kernel=CubicSpline2D())
+solver.timer.output_file_name = 'times_'+str(rank)
+solver.enable_timing=True
+solver.timer.write_after = 50
 
 # create the two entities.
 dam_wall = Solid(name='dam_wall')
@@ -136,7 +139,7 @@ vtk_writer = VTKWriter(solver=solver, entity_list=[dam_wall, dam_fluid],
 
 # add the parr_vtk_writer to an iteration skipper component.
 iter_skipper = IterSkipper(solver=solver)
-iter_skipper.add_component(vtk_writer, skip_iteration=10)
+iter_skipper.add_component(vtk_writer, skip_iteration=50)
 pic = solver.component_categories['pre_integration']
 pic.append(iter_skipper)
 

@@ -48,6 +48,8 @@ class FSFSolver(SolverBase):
                  integrator=None,
                  time_step=0.0, 
                  total_simulation_time=0.0,
+                 enable_timing=False,
+                 timing_output_file='',
                  max_fluid_density_variation=0.01,
                  *args, **kwargs):
         """
@@ -60,6 +62,8 @@ class FSFSolver(SolverBase):
                             integrator=integrator,
                             time_step=time_step,
                             total_simulation_time=total_simulation_time,
+                            enable_timing=enable_timing,
+                            timing_output_file=timing_output_file,
                             *args, **kwargs)
 
         logger.debug('FSFSolver Constructor called')

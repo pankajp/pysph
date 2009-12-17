@@ -22,6 +22,7 @@ from pysph.solver.typed_dict cimport TypedDict
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 from pysph.solver.nnps_updater cimport NNPSUpdater
+from pysph.solver.timing import Timer
 
 # FIXME
 # 1. The compute function finally implemented by the USER should not require
@@ -826,6 +827,8 @@ cdef class SolverBase(Base):
                   object integrator=None,
                   double time_step=0.0,
                   double total_simulation_time=0.0,
+                  bint enable_timing=False,
+                  str timing_output_file='',
                   *args, **kwargs):
         """
         Cython constructor.
@@ -833,14 +836,16 @@ cdef class SolverBase(Base):
         pass
 
     def __init__(self, 
-                  ComponentManager component_manager=None,
-                  CellManager cell_manager=None,
-                  NNPSManager nnps_manager=None,
-                  KernelBase kernel=None,
-                  object integrator=None,
-                  double time_step=0.0,
-                  double total_simulation_time=0.0,
-                  *args, **kwargs
+                 ComponentManager component_manager=None,
+                 CellManager cell_manager=None,
+                 NNPSManager nnps_manager=None,
+                 KernelBase kernel=None,
+                 object integrator=None,
+                 double time_step=0.0,
+                 double total_simulation_time=0.0,
+                 bint enable_timing=False,
+                 str timing_output_file='',
+                 *args, **kwargs
                   ):
         """
         Python constructor.
@@ -894,6 +899,11 @@ cdef class SolverBase(Base):
         if self.integrator is not None:
             self.integrator.time_step = self.time_step
 
+        # the timer
+        self.enable_timing = enable_timing
+        self.timing_output_file = timing_output_file
+        self.timer = Timer(output_file_name=self.timing_output_file)
+
     cpdef add_entity(self, EntityBase entity):
         """
         Add a new entity to be included in the simulation.
@@ -922,8 +932,14 @@ cdef class SolverBase(Base):
         current_time = 0.0
 
         while current_time < self.total_simulation_time:
-            
+
+            if self.enable_timing:
+                self.timer.start()
+
             self.integrator.integrate()
+
+            if self.enable_timing:
+                self.timer.finish()
 
             logger.info('Iteration %d done %f'%(
                     self.current_iteration, self.elapsed_time))

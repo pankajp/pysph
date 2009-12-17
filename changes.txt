@@ -210,3 +210,5 @@ Thursday 17 December 2009 (05:00:19 PM)
     - parallel_fsf_solver completed and run.
     - 2d dam break parallel version written.
     - parallel property updater component added.
+Thursday 17 December 2009 (07:01:18 PM)
+    - timing module added.
