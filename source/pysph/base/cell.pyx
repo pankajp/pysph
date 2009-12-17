@@ -1288,6 +1288,8 @@ cdef class CellManager:
                 self.is_dirty = True
                 break
 
+        return 0
+
     def set_dirty(self, bint value):
         """
         Sets/Resets the dirty bit.

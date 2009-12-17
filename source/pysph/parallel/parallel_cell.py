@@ -1293,6 +1293,8 @@ class ParallelCellManager(cell.CellManager):
         """
         self.set_dirty(True)
 
+        return 0
+
     def build_base_hierarchy(self):
         """
         Build the initial hierachy tree.
