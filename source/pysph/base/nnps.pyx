@@ -1121,13 +1121,15 @@ cdef class NNPSManager:
     cdef int update(self) except -1:
         """
         """
+        # update the status of the caches.
+        self.cell_cache_manager.update()
+        self.particle_cache_manager.update()
+
         # update the status of the cell manager.
+        # this may or may not update the cell manager. That depends on how the
+        # cell managers update_status is implemented.
         self.cell_manager.update_status()
 
-        self.cell_cache_manager.update()
-        
-        self.particle_cache_manager.update()
-        
         #self.polygon_cache_manager.update()
 
     ######################################################################
