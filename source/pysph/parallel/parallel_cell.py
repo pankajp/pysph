@@ -14,9 +14,11 @@ logger = logging.getLogger()
 # local imports
 from pysph.base.point import Point, IntPoint
 from pysph.base.particle_tags import get_dummy_tag
+from pysph.base.particle_tags import *
+from pysph.base import cell
+
 from pysph.solver.base import Base
 from pysph.solver.fast_utils import arange_long
-from pysph.base import cell
 from pysph.parallel.parallel_controller import ParallelController
 
 TAG_PROC_MAP_UPDATE = 1
@@ -423,7 +425,7 @@ class ParallelRootCell(cell.RootCell):
                 cell_size=cell_sizes.get(self.level-1),
                 level=self.level-1,
                 pid=pid)
-        
+
     def find_adjacent_remote_cells(self):
         """
         Finds all cells from other processors that are adjacent to cells handled
@@ -436,7 +438,7 @@ class ParallelRootCell(cell.RootCell):
 
         """
         self.adjacent_remote_cells.clear()
-        arc = self.adjacent_remote_cells
+        arc = {}
 
         for cell in self.cell_dict.values():
             pci = cell.parallel_cell_info
@@ -447,11 +449,15 @@ class ParallelRootCell(cell.RootCell):
                 
                 info = arc.get(pid)
                 if info is None:
-                    info = []
+                    info = {}
                     arc[pid] = info
                 # add cellid to the list of cell from processor pid.
-                info.append(cid.py_copy())
-                
+                info[cid.py_copy()] = None
+
+        # copy temp data in arc into self.adjacent_remote_cells
+        for pid, cell_dict in arc.iteritems():
+            self.adjacent_remote_cells[pid] = cell_dict.keys()
+        
         self.adjacent_processors[:] = self.adjacent_remote_cells.keys()
         # add my pid also into adjacent_processors.
         self.adjacent_processors.append(self.pid)
@@ -794,7 +800,7 @@ class ParallelRootCell(cell.RootCell):
             c_data = cell_data[cid]
             
             for p in c_data.values():
-                self.add_particles_to_parray({cid.py_copy():p})
+                self.add_local_particles_to_parray({cid.py_copy():p})
 
     def _resolve_conflicts(self, data):
         """
@@ -810,7 +816,7 @@ class ParallelRootCell(cell.RootCell):
         **Algorithm**
 
             - for each cell
-                - if only on pid is occupying that region, that pid is the
+                - if only one pid is occupying that region, that pid is the
                   winner. 
                 - sort the competing pids on pid.
                 - find the maximum number of particles any processor is
@@ -916,9 +922,9 @@ class ParallelRootCell(cell.RootCell):
         
         """
         for pid, particle_list in new_particles.iteritems():
-            self.add_particles_to_parray(particle_list)
+            self.add_local_particles_to_parray(particle_list)
 
-    def add_particles_to_parray(self, particle_list):
+    def add_local_particles_to_parray(self, particle_list):
         """
         Adds the given particles to the local parrays as local particles.
                 
@@ -1032,7 +1038,6 @@ class ParallelRootCell(cell.RootCell):
 
                     # copy the property values from the source array into
                     # properties of the destination array.
-                    
                     d_parr.copy_properties(s_parr, start_index=si, end_index=ei)
 
     def exchange_neighbor_particles(self):
@@ -1188,7 +1193,7 @@ class ParallelCellManager(cell.CellManager):
                  min_cell_size=0.1, max_cell_size=0.5, origin=Point(0, 0, 0),
                  num_levels=2, initialize=True,
                  parallel_controller=None,
-                 max_radius_scale=2.0, *args, **kwargs):                 
+                 max_radius_scale=2.0, *args, **kwargs):
         """
         Constructor.
         """
@@ -1290,8 +1295,13 @@ class ParallelCellManager(cell.CellManager):
         cell manager based on just the particle arrays here, as cell managers on
         other processors could have become dirty at the same time.
 
+        We also force an update at this point. Reason being, the delayed updates
+        can cause stale neighbor information to be used before the actual update
+        happens. 
         """
         self.set_dirty(True)
+
+        self.update()
 
         return 0
 

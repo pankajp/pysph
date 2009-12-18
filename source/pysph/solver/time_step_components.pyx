@@ -12,6 +12,7 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.nnps cimport NNPSManager, \
     FixedDestinationNbrParticleLocator
 from pysph.base.point cimport Point
+from pysph.base.particle_tags cimport *
 
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.speed_of_sound cimport SpeedOfSound
@@ -250,6 +251,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
         cdef double search_radius = 0.0
         cdef DoubleArray _h, s_x, s_y, s_z, d_x, d_y, d_z, s_u, s_v, s_w, d_u,\
             d_v, d_w, d_sigma
+        cdef LongArray d_tag
         cdef double dist
 
         d_pnt = Point()
@@ -270,6 +272,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
         d_u = d_parr.get_carray('u')
         d_v = d_parr.get_carray('v')
         d_w = d_parr.get_carray('w')
+        d_tag = d_parr.get_carray('tag')
 
         d_sigma = d_parr.get_carray('_ts_sigma')
         # set all values to -INFINITY
@@ -292,6 +295,9 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
             for j from 0 <= j < np:
                 
                 indices.reset()
+
+                if d_tag.data[j] != LocalReal:
+                    continue
 
                 s_loc.get_nearest_particles(j, indices, 1.0, True)
 
