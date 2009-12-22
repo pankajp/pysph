@@ -20,6 +20,7 @@ from pysph.base import cell
 from pysph.solver.base import Base
 from pysph.solver.fast_utils import arange_long
 from pysph.parallel.parallel_controller import ParallelController
+from pysph.parallel.load_balancer import LoadBalancer
 
 TAG_PROC_MAP_UPDATE = 1
 TAG_CELL_ID_EXCHANGE = 2
@@ -121,11 +122,10 @@ class ProcessorMap(Base):
         cm = self.cell_manager
         pid = self.pid
         pm = {}
-        hl = cm.hierarchy_list
-        cells = hl[len(hl)-2]
+        cells = self.cell_manager.root_cell.cell_dict
         centroid = Point()
         id = IntPoint()
-
+        
         for cid, cel in cells.iteritems():
             cel.py_get_centroid(centroid)
             cell.py_find_cell_id(origin=self.origin, pnt=centroid,
@@ -205,6 +205,7 @@ class ParallelCellInfo(Base):
     """
     def __init__(self, cell=None):
         self.cell = cell
+        self.root_cell = self.cell.cell_manager.root_cell
         self.neighbor_cell_pids = {}
         self.remote_pid_cell_count = {}
         self.num_remote_neighbors = 0
@@ -237,7 +238,7 @@ class ParallelCellInfo(Base):
         self.remote_pid_cell_count.clear()
         self.num_remote_neighbors = 0
         self.num_local_neighbors = 0
-        mypid = self.pid
+        mypid = self.cell.pid
         for cid, pid in self.neighbor_cell_pids.iteritems():
             if pid == mypid:
                 self.num_local_neighbors += 1
@@ -249,6 +250,46 @@ class ParallelCellInfo(Base):
                 else:
                     self.remote_pid_cell_count[pid] = cnt + 1
 
+    def update_neighbor_information_local(self):
+        """
+        Updates neighbor information using just local data.
+
+        This uses the root_cell's cell_dict to search for neighbors.
+        """
+        nbr_cell_pids = {}
+        nbr_cell_pids.update(self.neighbor_cell_pids)
+
+        for cid in nbr_cell_pids:
+            c = self.root_cell.cell_dict.get(cid)
+            if c is not None:
+                self.neighbor_cell_pids[cid.py_copy()] = c.pid        
+    
+    def is_boundary_cell(self):
+        """
+        Returns true if this cell is a boundary cell, false otherwise.
+        """
+        dim = self.cell.cell_manager.dimension
+        num_neighbors = len(self.neighbor_cell_pids.keys())
+        if dim == 1:
+           if num_neighbors < 2:
+               return True
+           else:
+               return False
+        elif dim == 2:
+            if num_neighbors < 8:
+                return True
+            else:
+                return False
+        elif dim == 3:
+            if num_neighbors < 26:
+                return True
+            else:
+                return False
+
+        msg = 'Invalid dimension'
+        logger.error(msg)
+        raise ValueError, msg
+        
 ################################################################################
 # `ParallelLeafCell` class.
 ################################################################################
@@ -571,11 +612,12 @@ class ParallelRootCell(cell.RootCell):
         # re-compute the neighbor information
         self.update_cell_neighbor_information()
 
-        # call a load balancer function.
-        #self.cell_manager.load_balance()
-
         # wait till all processors have reached this point.
         self.parallel_controller.comm.Barrier()
+
+        # call a load balancer function.
+        if self.cell_manager.initialized == True:
+            self.cell_manager.load_balancer.load_balance()
 
         # at this point each processor has all the real particles it is supposed
         # to handle. We can now exchange neighbors particle data with the
@@ -609,7 +651,16 @@ class ParallelRootCell(cell.RootCell):
             i += 1
 
         # delete any empty cells.
-        self.py_delete_empty_cells()
+        self.delete_empty_cells()
+
+        logger.debug('Top down binning done')
+        logger.debug('Cell information as START')
+        
+        for cid, c in self.cell_dict.iteritems():
+            logger.debug(
+                'Cell %s with %d particles'%(cid,
+                                             c.get_number_of_particles()))
+        logger.debug('Cell information END')
         
     def bin_particles(self):
         """
@@ -1182,6 +1233,29 @@ class ParallelRootCell(cell.RootCell):
                                                                 num_particles))
         return data
 
+    def compute_neighbor_counts(self):
+        """
+        Recompute the neighbor counts of all local cells. 
+        This does not invovle any global communications. It assumes that the
+        data available is up-to-date.
+
+        **Note**
+
+            - DO NOT PUT ANY GLOBAL COMMUNICATION CALLS HERE. This function may
+            be asynchronously called to update the neighbor counts after say
+            transfering cell to another process.
+        """
+        for c in self.cell_dict.values():
+            c.parallel_cell_info.compute_neighbor_counts()
+
+    def update_neighbor_information_local(self):
+        """
+        Update the neighbor information locally.
+        """
+        for c in self.cell_dict.values():
+            c.parallel_cell_info.update_neighbor_information_local()
+            c.parallel_cell_info.compute_neighbor_counts()            
+
 ################################################################################
 # `ParallelCellManager` class.
 ################################################################################
@@ -1193,7 +1267,8 @@ class ParallelCellManager(cell.CellManager):
                  min_cell_size=0.1, max_cell_size=0.5, origin=Point(0, 0, 0),
                  num_levels=2, initialize=True,
                  parallel_controller=None,
-                 max_radius_scale=2.0, *args, **kwargs):
+                 max_radius_scale=2.0, dimension=3,
+                 *args, **kwargs):
         """
         Constructor.
         """
@@ -1205,7 +1280,7 @@ class ParallelCellManager(cell.CellManager):
                                   num_levels=num_levels,
                                   initialize=False)
 
-
+        self.dimension = dimension
         self.glb_bounds_min = [0, 0, 0]
         self.glb_bounds_max = [0, 0, 0]
         self.glb_min_h = 0
@@ -1224,6 +1299,7 @@ class ParallelCellManager(cell.CellManager):
         self.pid = self.pc.rank
         self.root_cell = ParallelRootCell(cell_manager=self)
         self.proc_map = ProcessorMap(cell_manager=self)
+        self.load_balancer = LoadBalancer(parallel_cell_manager=self)
                 
         if initialize is True:
             self.initialize()
@@ -1289,6 +1365,9 @@ class ParallelCellManager(cell.CellManager):
         # update the processor maps now.
         self.glb_update_proc_map()
 
+        # call load balance once
+        self.load_balancer.load_balance()
+
     def update_status(self):
         """
         Sets the is_dirty to to true, We cannot decide the dirtyness of this
@@ -1348,7 +1427,7 @@ class ParallelCellManager(cell.CellManager):
             cell_list[self.num_levels-1]
 
         # build the hierarchy list also
-        self.py_update_cell_hierarchy_list()        
+        self.update_cell_hierarchy_list()        
         
     def initial_info_exchange(self):
         """
@@ -1528,7 +1607,7 @@ class ParallelCellManager(cell.CellManager):
                 max = max_prop
 
         if num_particles == 0:
-            return None, None
+            return 1e20, -1e20
 
         return min, max
 

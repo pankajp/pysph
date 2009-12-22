@@ -219,3 +219,13 @@ Friday 18 December 2009 (05:41:06 PM)
     - bug in computing adjacent remote cells resolved.
     - force update of parallel cell manager along with update status.
     - time step component does not compute sigms for dummy particles.
+Monday 21 December 2009 (10:55:03 PM)
+    - processor map uses cells directly from the root_cells children rather
+      than the hierarchy_list - this hierarchy list only gets updated after the
+      root cells update call, within which the load balance could be called
+      multiple times.
+    - function to construct face neighbors.
+    - load balancer class added.
+    - function to update neighbor information after some local changes added.
+    - dimension attribute added to ParallelCellManager to test for boundary
+      cells properly.

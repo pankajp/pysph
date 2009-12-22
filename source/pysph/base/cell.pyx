@@ -118,6 +118,31 @@ cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
     neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
     neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
 
+cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
+                                         bint include_self=True, int
+                                         dimension=3):
+    """
+    Construct a list of cell ids, which share a face(3d) or edge(2d) with the
+    given cell_id.
+    """
+    if include_self:
+        neighbor_list.append(cell_id)
+    
+    # face neighbors in x dimension.
+    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y, cell_id.z))
+    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y, cell_id.z))
+
+    if dimension < 3:
+        neighbor_list.append(IntPoint(cell_id.x, cell_id.y+1, cell_id.z))
+        neighbor_list.append(IntPoint(cell_id.x, cell_id.y-1, cell_id.z))
+
+    if dimension == 3:
+        neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
+        neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
+
+def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
+    construct_face_neighbor_list(cell_id, neighbor_list, include_self)
+
 def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
                                          include_self=True):
     construct_immediate_neighbor_list(cell_id,
