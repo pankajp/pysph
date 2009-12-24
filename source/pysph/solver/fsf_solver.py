@@ -285,7 +285,8 @@ class FSFSolver(SolverBase):
             d_list = self.component_categories['density_rate']
     
             if len(d_list) == 0:
-                raise SystemError, 'No density rate components specified'
+                msg = 'No density rate components specified'
+                logger.error(msg)
             else:
                 for c in d_list:
                     self.integrator.add_pre_step_component(c.name, 'density')

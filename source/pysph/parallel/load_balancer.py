@@ -168,7 +168,7 @@ class LoadBalancer(Base):
             logger.debug('Total particles : %d'%(self.total_particles))
             logger.debug('Ideal load : %d'%(self.ideal_load))
             logger.debug('Load DIfference : %s'%(self.load_difference))
-            logger.debug('Particle counts : %s'%(self.particles_per_proc))
+            logger.info('Particle counts : %s'%(self.particles_per_proc))
             logger.debug('Threshold margin: %f'%(self.threshold_margin))
             logger.debug('Upper threshold : %f'%(self.upper_threshold))
             logger.debug('Lower threshold : %f'%(self.lower_threshold))
@@ -202,7 +202,6 @@ class LoadBalancer(Base):
         num_particles = sum(map(ParticleArray.get_number_of_particles, arrays))
 
         particles_per_proc = self.comm.gather(num_particles, root=0)
-
         # now num_particles has one entry for each processor, containing the
         # number of particles with each processor. broadcast that data to all
         # processors.
@@ -368,7 +367,7 @@ class LoadBalancer(Base):
         
     def _build_particle_request(self):
         """
-        Build the dictionary to be send as a particle request.
+        Build the dictionary to be sent as a particle request.
         """
         arrays = self.cell_manager.arrays_to_bin
         num_particles = sum(map(ParticleArray.get_number_of_particles, arrays))
@@ -448,9 +447,9 @@ class LoadBalancer(Base):
 
             pinfo = c.parallel_cell_info
 
-            #logger.debug('%s\'s pinfo, %s'%(cid, pinfo.neighbor_cell_pids))
+            logger.debug('%s\'s pinfo, %s'%(cid, pinfo.neighbor_cell_pids.values()))
             pinfo.compute_neighbor_counts()
-            #logger.debug('remote nbr cnts : %s'%(pinfo.remote_pid_cell_count))
+            logger.debug('remote nbr cnts : %s'%(pinfo.remote_pid_cell_count))
 
             if pinfo.num_remote_neighbors == 0:
                 #logger.debug('%s has no remote nbrs'%(cid))
@@ -462,6 +461,7 @@ class LoadBalancer(Base):
                 continue
 
             if num_nbrs_in_pid > max_neighbor_count:
+                max_neighbor_count = num_nbrs_in_pid
                 max_neighbor_cell_id = cid
         
         if max_neighbor_cell_id is not None:
@@ -477,7 +477,7 @@ class LoadBalancer(Base):
             particles = {}
 
         return particles
-
+    
     def _zero_request_particles(self):
         """
         Requests particles from processors with some particles.

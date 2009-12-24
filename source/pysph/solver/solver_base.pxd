@@ -12,7 +12,6 @@ from pysph.base.kernelbase cimport KernelBase
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 
-
 # forward declaration.
 cdef class ComponentManager
 cdef class SolverBase
@@ -169,6 +168,15 @@ cdef class SolverBase(Base):
 
     # a list containing all the entities involved in the simulation.
     cdef public list entity_list
+
+    # enable/disable timing
+    cdef public bint enable_timing
+
+    # file to write output to.
+    cdef public str timing_output_file
+
+    # the timer
+    cdef public object timer
 
     # inform the solver that this kernel is being used.
     cpdef register_kernel(self, KernelBase kernel)

@@ -49,6 +49,7 @@ cdef class NNPSUpdater(SolverComponent):
     cdef int compute(self) except -1:
         """
         """
+        logger.debug('NNPS UPDATER COMPONENT CALLED')
         self.nnps_manager.update()
         
 

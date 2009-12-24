@@ -933,15 +933,20 @@ cdef class SolverBase(Base):
 
         while current_time < self.total_simulation_time:
 
+            logger.info('Iteration %d start \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ '%(
+                    self.current_iteration))
+
             if self.enable_timing:
                 self.timer.start()
 
             self.integrator.integrate()
 
+            logger.debug('Execute list : %s'%(self.integrator.execute_list))
+
             if self.enable_timing:
                 self.timer.finish()
 
-            logger.info('Iteration %d done %f'%(
+            logger.info('Iteration %d done %f \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ '%(
                     self.current_iteration, self.elapsed_time))
 
             current_time += self.time_step.value

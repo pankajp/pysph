@@ -185,9 +185,9 @@ class ProcessorMap(Base):
         rep = '\nProcessor Map At proc : %d\n'%(self.pid)
         rep += 'Origin : %s\n'%(self.origin)
         rep += 'Bin size : %s\n'%(self.bin_size)
-        for cid in self.p_map:
-            rep += 'bin %s with processors : %s'%(cid, self.p_map[cid])
-            rep += '\n'
+#         for cid in self.p_map:
+#             rep += 'bin %s with processors : %s'%(cid, self.p_map[cid])
+#             rep += '\n'
         rep += 'Region neighbors : %s'%(self.nbr_procs)
         return rep
 
@@ -572,7 +572,11 @@ class ParallelRootCell(cell.RootCell):
         """
         Update particle information.
         """
-        logger.debug('++++++++++++++++++++++++++++++++++++++++++++++++')
+        # wait till all processors have reached this point.
+        self.parallel_controller.comm.Barrier()
+
+        logger.debug('++++++++++++++++ UPDATE BEGIN +++++++++++++++++++++')
+
         # bin the particles and find the new_cells and remote_cells.
         new_cells, remote_cells = self.bin_particles()
 
@@ -617,13 +621,15 @@ class ParallelRootCell(cell.RootCell):
 
         # call a load balancer function.
         if self.cell_manager.initialized == True:
-            self.cell_manager.load_balancer.load_balance()
+            if self.cell_manager.load_balancing == True:
+                self.cell_manager.load_balancer.load_balance()
 
         # at this point each processor has all the real particles it is supposed
         # to handle. We can now exchange neighbors particle data with the
         # neighbors.
         self.exchange_neighbor_particles()
-        logger.debug('++++++++++++++++++++++++++++++++++++++++++++++++')
+
+        logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
         return 0
 
     def bin_particles_top_down(self):
@@ -655,11 +661,12 @@ class ParallelRootCell(cell.RootCell):
 
         logger.debug('Top down binning done')
         logger.debug('Cell information as START')
-        
+        logger.debug('Num cells : %d'%(len(self.cell_dict)))
         for cid, c in self.cell_dict.iteritems():
             logger.debug(
-                'Cell %s with %d particles'%(cid,
-                                             c.get_number_of_particles()))
+                'Cell %s with %d particles with pid %d'%(cid,
+                                                         c.get_number_of_particles(),
+                                                         c.pid))
         logger.debug('Cell information END')
         
     def bin_particles(self):
@@ -740,7 +747,7 @@ class ParallelRootCell(cell.RootCell):
             - for each cell in cell_dict
                 - get indices of all particles in this cell.
                 - remove any particles marked as non-local from this set of
-                  particles. 
+                  particles. [not required - infact this is incorrect]
                 - create a particle array for each set of particles, including
                   in it only the required particles.
                 - mark these particles as remote in the main particle array.
@@ -1055,6 +1062,7 @@ class ParallelRootCell(cell.RootCell):
                 # get the copy of the remote cell with us.
                 remote_cell = self.cell_dict.get(cid)
                 
+                logger.debug('Copy data for cell : %s'%(cid))
                 if remote_cell is None:
                     msg = 'Copy of Remote cell %s not found'%(cid)
                     logger.error(msg)
@@ -1066,6 +1074,14 @@ class ParallelRootCell(cell.RootCell):
 
                     si = remote_cell.particle_start_indices[i]
                     ei = remote_cell.particle_end_indices[i]
+
+                    logger.debug('Copying particles of parray :%s'%(
+                            d_parr.name))
+                    logger.debug('Copying from %d to %d'%(si, ei))
+                    logger.debug('Num particles in dest : %d'%(
+                            d_parr.get_number_of_particles()))
+                    logger.debug('Num particles in source : %d'%(
+                            s_parr.get_number_of_particles()))
 
                     if si == -1 and ei == -1:
                         # there are no particles for this array, continue
@@ -1108,6 +1124,7 @@ class ParallelRootCell(cell.RootCell):
                 - bin the new particles into this cell.
 
         """
+        logger.debug('exchange_neighbor_particles_START')
         nbr_procs = []
         nbr_procs[:] = self.adjacent_processors
         arc = self.adjacent_remote_cells
@@ -1126,9 +1143,12 @@ class ParallelRootCell(cell.RootCell):
                     if self.pid == dest:
                         continue
                     # our turn to send request for cells.
+                    logger.debug('adjacent remote cells : %s'%(arc))
                     comm.send(arc[dest], dest=dest, tag=TAG_REMOTE_CELL_REQUEST)
+                    logger.debug('adjacent cell request send')
                     remote_cell_data[dest] = comm.recv(source=dest,
                                                        tag=TAG_REMOTE_CELL_REPLY)
+                    logger.debug('got cells : %s'%(remote_cell_data[dest]))
             else:
                 requested_cells = comm.recv(source=pid,
                                             tag=TAG_REMOTE_CELL_REQUEST) 
@@ -1176,6 +1196,8 @@ class ParallelRootCell(cell.RootCell):
 
                 # add this cell to the cell_dict
                 self.cell_dict[cid.py_copy()] = c
+
+        logger.debug('exchange_neighbor_particles_DONE')
                 
     def _get_cell_data_for_neighbor(self, cell_list, props=None):
         """
@@ -1200,11 +1222,17 @@ class ParallelRootCell(cell.RootCell):
             props = [None]*len(self.cell_manager.arrays_to_bin)
             
         for cid in cell_list:
-
+            logger.debug('Building data for cell : %s'%(cid))
             c = self.cell_dict.get(cid)
 
             if c is None:
                 msg = 'Requested cell (%s) not with proc %d'%(cid, self.pid)
+                logger.error(msg)
+                raise SystemError, msg
+
+            if c.pid != self.pid:
+                msg = 'Data being requested for cell %s which is remote in %d'%(
+                    c.id, self.pid)
                 logger.error(msg)
                 raise SystemError, msg
 
@@ -1268,6 +1296,7 @@ class ParallelCellManager(cell.CellManager):
                  num_levels=2, initialize=True,
                  parallel_controller=None,
                  max_radius_scale=2.0, dimension=3,
+                 load_balancing=True,
                  *args, **kwargs):
         """
         Constructor.
@@ -1300,6 +1329,7 @@ class ParallelCellManager(cell.CellManager):
         self.root_cell = ParallelRootCell(cell_manager=self)
         self.proc_map = ProcessorMap(cell_manager=self)
         self.load_balancer = LoadBalancer(parallel_cell_manager=self)
+        self.load_balancing = load_balancing
                 
         if initialize is True:
             self.initialize()
@@ -1361,12 +1391,9 @@ class ParallelCellManager(cell.CellManager):
         self.py_reset_jump_tolerance()
 
         self.initialized = True
-        
+
         # update the processor maps now.
         self.glb_update_proc_map()
-
-        # call load balance once
-        self.load_balancer.load_balance()
 
     def update_status(self):
         """

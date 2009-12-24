@@ -173,7 +173,7 @@ cdef class ParticleArray:
         self.name = d['name']
         props = d['properties']
         for prop in props:
-            self.add_property(props[prop])        
+            self.add_property(props[prop])
         
     ######################################################################
     # `Public` interface

@@ -9,7 +9,9 @@ logger = logging.getLogger()
 
 from pysph.base.carray import DoubleArray
 
-
+################################################################################
+# `Timer` class.
+################################################################################
 class Timer:
     """
     Class to measure and write code execution times.

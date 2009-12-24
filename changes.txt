@@ -229,3 +229,5 @@ Monday 21 December 2009 (10:55:03 PM)
     - function to update neighbor information after some local changes added.
     - dimension attribute added to ParallelCellManager to test for boundary
       cells properly.
+Thursday 24 December 2009 (06:04:12 PM)
+    - superficial changes - nothing major.
