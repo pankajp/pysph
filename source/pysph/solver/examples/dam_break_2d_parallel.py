@@ -17,6 +17,8 @@ d_help +=  'The directory path should be relative to the HOME directory'
 op.add_option('-d', '--destdir', dest='destdir',
               help=d_help,
               metavar='DESTDIR')
+op.add_option('-r', '--radius', dest='radius',
+              help='interaction radius of particles')
 
 from sys import argv
 args = op.parse_args()
@@ -59,23 +61,28 @@ from pysph.solver.parallel_vtk_writer import ParallelVTKWriter
 from pysph.solver.runge_kutta_integrator import RK2Integrator
 
 # parameters for the simulation
+if options.radius is None:
+    radius = 0.005
+else:
+    radius = options.radius
+
 dam_width=10.0
 dam_height=7.0
-solid_particle_h=0.012
-dam_particle_spacing=0.001
+solid_particle_h=radius
+dam_particle_spacing=radius/9.
 solid_particle_mass=1.0
 origin_x=origin_y=0.0
 
-fluid_particle_h=0.012
+fluid_particle_h=radius
 fluid_density=1000.
 fluid_column_height=3.0
 fluid_column_width=2.0
-fluid_particle_spacing=0.012
+fluid_particle_spacing=radius
 
 # Create a solver instance using default parameters and some small changes.
 solver = ParallelFsfSolver(cell_manager=None, time_step=0.0001,
                            total_simulation_time=10., kernel=CubicSpline2D())
-#solver.integrator=RK2Integrator(name='rk2_integrator', solver=solver)
+solver.integrator=RK2Integrator(name='rk2_integrator', solver=solver)
 
 solver.timer.output_file_name = destdir+'times_'+str(rank)
 solver.enable_timing=True
