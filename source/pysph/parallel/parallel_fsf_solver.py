@@ -10,6 +10,7 @@ from pysph.base.nnps import *
 
 from pysph.parallel.parallel_cell import ParallelCellManager
 from pysph.parallel.parallel_controller import ParallelController
+from pysph.parallel.parallel_component import ParallelComponent
 from pysph.solver.parallel_property_updater import ParallelPropertyUpdater
 from pysph.solver.fsf_solver import *
 from pysph.solver.entity_types import *
@@ -56,7 +57,9 @@ class ParallelFsfSolver(FSFSolver):
         logger.debug('ParallelFsfSolver, before FSF Constructor')
         parallel_controller = ParallelController()
         cell_manager = ParallelCellManager(
-            parallel_controller=parallel_controller, initialize=False)
+            parallel_controller=parallel_controller, 
+            initialize=False,
+            solver=self)
                 
         FSFSolver.__init__(self,
                            cell_manager=cell_manager, 
@@ -71,6 +74,10 @@ class ParallelFsfSolver(FSFSolver):
 
         self.parallel_controller = parallel_controller
         self.parallel_controller.solver = self
+
+        # add a parallel component to the component manager.
+        pc = ParallelComponent(name='parallel_component', solver=self)
+        self.component_manager.add_component(pc)
         
     def _setup_integrator(self):
         """

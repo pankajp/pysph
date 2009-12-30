@@ -36,6 +36,8 @@ def compute_particle_mass(parray, kernel, density=1000.0, h=0.1, dim=3):
     centroid.x = numpy.sum(x)/float(len(x))
     y = None
     z = None
+
+    logger.debug('particles to compute_particle_mass %d'%(len(x)))
     
     if dim > 1:
         y = parray.get('y')
@@ -48,7 +50,8 @@ def compute_particle_mass(parray, kernel, density=1000.0, h=0.1, dim=3):
     else:
         y = numpy.zeros(len(x), dtype=numpy.float)
         z = y
-    
+
+    logger.debug('Centroid : %s'%(centroid))
     radius = kernel.radius()
     
     # find the nearest points in parray of the centroid.

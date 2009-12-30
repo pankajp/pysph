@@ -231,3 +231,8 @@ Monday 21 December 2009 (10:55:03 PM)
       cells properly.
 Thursday 24 December 2009 (06:04:12 PM)
     - superficial changes - nothing major.
+Wednesday 30 December 2009 (03:48:54 PM)
+    - parallel component to add particle property requirements for parallel
+    simulations.
+    - parallel vtk writer component to write VTK files in a parallel
+    simulation.

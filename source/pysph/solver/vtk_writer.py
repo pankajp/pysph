@@ -40,7 +40,8 @@ class VTKWriter(FileWriterComponent):
     """
     Component to write particle data into files.
     """
-    def __init__(self, solver=None,
+    def __init__(self, name='',
+                 solver=None,
                  component_manager=None,
                  entity_list=[],
                  file_name_prefix='',
@@ -54,6 +55,7 @@ class VTKWriter(FileWriterComponent):
         Constructor.
         """
         FileWriterComponent.__init__(self,
+                                     name=name,
                                      solver=solver,
                                      component_manager=component_manager,
                                      entity_list=entity_list,
@@ -63,7 +65,7 @@ class VTKWriter(FileWriterComponent):
         self.vectors = []
         self.coords = ['x', 'y', 'z']
         self.write_count = 0
-        self.only_real_particles = False
+        self.only_real_particles = only_real_particles
         self.file_name_prefix=file_name_prefix
 
         self.xml_output = xml_output

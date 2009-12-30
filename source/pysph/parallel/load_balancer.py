@@ -23,7 +23,7 @@ class LoadBalancer(Base):
     """
     Class to perform simple load balancing.
     """
-    def __init__(self, parallel_solver=None, parallel_cell_manager=None):
+    def __init__(self, parallel_solver=None, parallel_cell_manager=None, *args, **kwargs):
         """
         Constructor.
         """
@@ -69,7 +69,7 @@ class LoadBalancer(Base):
         """
         self.setup()
 
-        if self.current_iteration % self.skip_iteration == 0:
+        if self.solver.current_iteration % self.skip_iteration == 0:
             self.load_balance_func()
 
         self.current_iteration += 1
@@ -407,7 +407,7 @@ class LoadBalancer(Base):
         # particles. 
         if abs(self.ideal_load-num_particles) < self.threshold_margin:
             if (not (num_particles-num_particles_in_pid) >
-                2.*self.threshold_margin):
+                self.threshold_margin):
                 logger.debug('Need not donate - not overloaded')
                 reply['particles'] = {}
                 return reply

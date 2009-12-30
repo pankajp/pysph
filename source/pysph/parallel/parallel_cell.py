@@ -1297,6 +1297,7 @@ class ParallelCellManager(cell.CellManager):
                  parallel_controller=None,
                  max_radius_scale=2.0, dimension=3,
                  load_balancing=True,
+                 solver=None,
                  *args, **kwargs):
         """
         Constructor.
@@ -1309,6 +1310,7 @@ class ParallelCellManager(cell.CellManager):
                                   num_levels=num_levels,
                                   initialize=False)
 
+        self.solver=solver
         self.dimension = dimension
         self.glb_bounds_min = [0, 0, 0]
         self.glb_bounds_max = [0, 0, 0]
@@ -1328,7 +1330,7 @@ class ParallelCellManager(cell.CellManager):
         self.pid = self.pc.rank
         self.root_cell = ParallelRootCell(cell_manager=self)
         self.proc_map = ProcessorMap(cell_manager=self)
-        self.load_balancer = LoadBalancer(parallel_cell_manager=self)
+        self.load_balancer = LoadBalancer(parallel_solver=self.solver, parallel_cell_manager=self)
         self.load_balancing = load_balancing
                 
         if initialize is True:

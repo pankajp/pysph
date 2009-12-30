@@ -14,7 +14,8 @@ cdef class FileWriterComponent(SolverComponent):
     """
     Base class for all components that write to file.
     """
-    def __cinit__(self, SolverBase solver=None,
+    def __cinit__(self, name='',
+                  SolverBase solver=None,
                   ComponentManager component_manager=None,
                   list entity_list=[],
                   *args, **kwargs):
@@ -23,11 +24,12 @@ cdef class FileWriterComponent(SolverComponent):
         """
         pass
 
-    def __init__(self, SolverBase solver=None,
+    def __init__(self, name='',
+                 SolverBase solver=None,
                  ComponentManager component_manager=None,
                  list entity_list=[],
                  *args, **kwargs):
-        SolverComponent.__init__(self, solver=solver,
+        SolverComponent.__init__(self, name=name, solver=solver,
                                  component_manager=component_manager,
                                  entity_list=entity_list,
                                  *args, **kwargs)
