@@ -166,7 +166,8 @@ class ParallelVTKWriter(VTKWriter):
             for j in range(len(merged_data)):
                 merged_parray = merged_data[j]
                 c_parray = d[j]
-                c_parray.pid[:] = pid
+                if c_parray.get_number_of_particles() > 0:
+                    c_parray.pid[:] = pid
                 if self.only_real_particles:
                     c_parray.remove_flagged_particles(flag_name='local',
                                                       flag_value=0)
