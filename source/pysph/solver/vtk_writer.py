@@ -123,8 +123,11 @@ class VTKWriter(FileWriterComponent):
         """
         self.coords[:] = coords
 
-    def compute(self):
-        self.write()
+    # def compute(self):
+
+    #     self.setup_component()
+
+    #     self.write()
 
     def write(self):
         """

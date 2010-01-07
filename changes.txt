@@ -236,3 +236,5 @@ Wednesday 30 December 2009 (03:48:54 PM)
     simulations.
     - parallel vtk writer component to write VTK files in a parallel
     simulation.
+Friday 08 January 2010 (01:10:01 AM)
+    - code for measuring performance gain from parallel simulations. 
