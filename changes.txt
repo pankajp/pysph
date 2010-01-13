@@ -240,3 +240,5 @@ Friday 08 January 2010 (01:10:01 AM)
     - code for measuring performance gain from parallel simulations. 
 Friday 08 January 2010 (10:02:22 AM)
     - code for timing serial code (to compare results with serial case.)
+Wednesday 13 January 2010 (10:36:19 PM)
+    - added command line arguments to the timing code.

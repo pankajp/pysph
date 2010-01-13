@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Module to get various timings of the parallel code.
 
@@ -9,10 +10,95 @@ What to do ?
 square_width = 1.0
 particle_spacing = 0.01
 particle_radius = 0.01
-total_iterations = 10
-
+sph_interpolations = 1
+num_iterations = 10
 # library imports
 import time
+
+import sys
+from sys import argv
+from optparse import OptionParser
+op = OptionParser()
+op.add_option('-w', '--width', dest='square_width',
+              metavar='SQUARE_WIDTH')
+op.add_option('-s', '--spacing', dest='particle_spacing',
+              metavar='PARTICLE_SPACING')
+op.add_option('-r', '--radius', dest='particle_radius',
+              metavar='PARTICLE_RADIUS')
+op.add_option('-d', '--destdir', dest='destdir',
+              metavar='DESTDIR')
+op.add_option('-i', '--sph-interpolations', dest='sph_interpolations',
+              metavar='SPH_INTERPOLATIONS')
+op.add_option('-n', '--num-iterations', dest='num_iterations',
+              metavar='NUM_ITERATIONS')
+
+# parse the input arguements
+args = op.parse_args()
+options = args[0]
+
+import os
+from os.path import join, exists
+
+# setup the default values or the ones passed from the command line
+if options.destdir is None:
+    print 'No destination directory specified. Using current dir'
+else:
+    home = os.environ['HOME']
+    destdir = home + '/'+ options.destdir+'/'
+
+# create the destination directory if it does not exist.
+if not exists(destdir):
+    os.mkdir(destdir)
+
+# logging imports
+import logging
+logger = logging.getLogger()
+log_filename = destdir + '/' + 'log_pysph'
+logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
+#logger.addHandler(logging.StreamHandler())
+
+# read the square_width to use
+if options.square_width == None:
+    logger.warn('Using default square width of %f'%(square_width))
+else:
+    square_width = float(options.square_width)
+
+# read the particle spacing
+if options.particle_spacing == None:
+    logger.warn('Using default particle spacing of %f'%(particle_spacing))
+else:
+    particle_spacing = float(options.particle_spacing)
+
+# read the particle radius
+if options.particle_radius == None:
+    logger.warn('Using default particle radius of %f'%(particle_radius))
+else:
+    particle_radius = float(options.particle_radius)
+
+# read the number of sph-interpolations to perform
+if options.sph_interpolations == None:
+    logger.warn('Using default number of SPH interpolations %f'%(
+            sph_interpolations))
+else:
+    sph_interpolations = int(options.sph_interpolations)
+
+# read the total number of iterations to run
+if options.num_iterations == None:
+    logger.warn('Using default number of iterations %d'%(num_iterations))
+else:
+    num_iterations = int(options.num_iterations)
+
+# write the settings file
+settings_file = destdir + '/settings.dat'
+f = open(settings_file, 'w')
+f.write('Run with command : %s\n'%(sys.argv))
+f.write('destdir = %s\n'%(destdir))
+f.write('square_width = %f\n'%(square_width))
+f.write('particle_spacing = %f\n'%(particle_spacing))
+f.write('particle_radius = %f\n'%(particle_radius))
+f.write('sph_interpolations = %d\n'%(sph_interpolations))
+f.write('num_iterations = %d\n'%(num_iterations))
+f.close()
 
 # logging imports
 import logging
@@ -34,7 +120,6 @@ from pysph.solver.basic_generators import RectangleGenerator
 from pysph.sph.sph_calc import SPHBase
 from pysph.sph.density_funcs import SPHRho3D
 from pysph.solver.vtk_writer import VTKWriter
-
 
 # create a component manager.
 component_manager = ComponentManager()
@@ -82,28 +167,26 @@ component_manager.add_component(vtk_writer)
 
 solver._setup_entities()
 
-# if rank != 0:
-#     # add some necessary properties to the particle array.
-#     parray.add_property({'name':'x'})
-#     parray.add_property({'name':'y'})
-#     parray.add_property({'name':'z'})
-#     parray.add_property({'name':'h', 'default':particle_radius})
-#     parray.add_property({'name':'rho', 'default':1000.})
-#     parray.add_property({'name':'pid'})
-#     parray.add_property({'name':'_tmp', 'default':0.0})
-#     parray.add_property({'name':'m'})
-# else:
 parray.add_property({'name':'_tmp'})
-#parray.add_property({'name':'pid', 'default':0.0})
 
 solver._setup_nnps()
 
 # create the SPHRho3D class
 parray = block.get_particle_array()
-sph_func = SPHRho3D(source=parray, dest=parray)
-sph_sum = SPHBase(sources=[parray], dest=parray, kernel=kernel,
-                  sph_funcs=[sph_func],
-                  nnps_manager=nnps_manager)
+
+sph_funcs = [None]*sph_interpolations
+sph_sums = [None]*sph_interpolations
+
+for i in range(sph_interpolations):
+    sph_funcs[i] = SPHRho3D(source=parray, dest=parray)
+    sph_sums[i] = SPHBase(sources=[parray], dest=parray, kernel=kernel,
+                          sph_funcs=[sph_funcs[i]],
+                          nnps_manager=nnps_manager)
+
+# sph_func = SPHRho3D(source=parray, dest=parray)
+# sph_sum = SPHBase(sources=[parray], dest=parray, kernel=kernel,
+#                   sph_funcs=[sph_func],
+#                   nnps_manager=nnps_manager)
 vtk_writer.setup_component()
 
 processing_times = []
@@ -113,7 +196,7 @@ particle_counts = []
 
 particle_counts.append(parray.get_number_of_particles())
 
-for i in range(total_iterations):
+for i in range(num_iterations):
 
     t1 = time.time()
 
@@ -127,12 +210,13 @@ for i in range(total_iterations):
     
     communication_times.append(t2-t1)
     parr = block.get_particle_array()
-    t2 = time.time()
-
-    # computation
     particle_counts.append(parr.num_real_particles)
-    sph_sum.sph1('_tmp')
-    parr.rho[:] = parr._tmp
+
+    t2 = time.time()
+    # computation
+    for j in range(sph_interpolations):
+        sph_sums[j].sph1('_tmp')
+        parr.rho[:] = parr._tmp
 
     t3 = time.time()
     processing_times.append(t3-t2)
@@ -143,8 +227,10 @@ for i in range(total_iterations):
     total_iteration_times.append(t4-t1)
     parr.set_dirty(True)
 
+    logger.info('Iteration %d done'%(i))
+
 # write the three times into a file.
-fname = 'stats'
+fname = destdir + '/' + 'stats'
 
 file = open(fname, 'w')
 
@@ -157,7 +243,7 @@ for i in range(len(total_iteration_times)):
 file.close()
 
 # write the particle counts
-fname = 'pcount'
+fname = destdir + '/pcount'
 
 file = open(fname, 'w')
 
