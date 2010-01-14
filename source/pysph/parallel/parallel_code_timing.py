@@ -55,7 +55,10 @@ else:
 
 # create the destination directory if it does not exist.
 if not exists(destdir):
-    os.mkdir(destdir)
+    try:
+        os.mkdir(destdir)
+    except OSError:
+	print 'Directory %s already exists'%(destdir)
 
 # logging imports
 import logging

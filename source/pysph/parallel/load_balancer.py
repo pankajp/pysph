@@ -46,6 +46,7 @@ class LoadBalancer(Base):
         self.load_difference = []
         self.communicating_procs = []
         self.has_zero_procs = False
+        self.prev_particle_count = []
 
     def setup(self):
         """
@@ -130,6 +131,8 @@ class LoadBalancer(Base):
         current_balance_iteration = 0
         num_procs = self.num_procs
         self.particles_per_proc = [0]*num_procs
+        if len(self.prev_particle_count) == 0:
+            self.prev_particle_count = [0]*num_procs
         self.ideal_load = 0.
         self.load_difference = [0]*num_procs
         
@@ -161,8 +164,15 @@ class LoadBalancer(Base):
             if (abs(min_diff) < self.threshold_margin and max_diff <
                 self.threshold_margin):
                 balancing_done = True
-                logger.debug('BALANCE ACHIEVED')
+                logger.info('BALANCE ACHIEVED')
                 logger.debug('Num particles are : %s'%(self.particles_per_proc))
+                continue
+
+            if self.particles_per_proc == self.prev_particle_count:
+                # meaning that the previous load balancing iteration did not
+                # change the particle counts, we do not do anything now.
+                balancing_done = True
+                logger.info('Load unchanged')
                 continue
 
             logger.debug('Total particles : %d'%(self.total_particles))
@@ -187,6 +197,8 @@ class LoadBalancer(Base):
             self.comm.Barrier()
 
             current_balance_iteration += 1
+            # store the old particle counts in prev_particle_count
+            self.prev_particle_count[:] = self.particles_per_proc
 
     def collect_num_particles(self):
         """

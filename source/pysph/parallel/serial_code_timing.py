@@ -12,6 +12,7 @@ particle_spacing = 0.01
 particle_radius = 0.01
 sph_interpolations = 1
 num_iterations = 10
+destdir = '.'
 # library imports
 import time
 
@@ -121,6 +122,34 @@ from pysph.sph.sph_calc import SPHBase
 from pysph.sph.density_funcs import SPHRho3D
 from pysph.solver.vtk_writer import VTKWriter
 
+class DummySolver(SolverBase):
+    def __init__(self, component_manager=None,
+		 cell_manager=None,
+	         nnps_manager=None,
+                 kernel=None,
+                 integrator=None,
+                 time_step=0.0,
+                 total_simulation_time=0.0):
+	SolverBase.__init__(self, component_manager=component_manager,
+			    cell_manager=cell_manager,
+	                    nnps_manager=nnps_manager,
+	                    kernel=kernel)
+	pass
+    def _setup_nnps(self):
+	"""
+	"""
+        for e in self.entity_list:
+            e.add_arrays_to_cell_manager(self.cell_manager)
+
+        min_cell_size, max_cell_size = self._compute_cell_sizes()
+
+        if min_cell_size != -1 and max_cell_size != -1:
+            self.cell_manager.min_cell_size = 2.*min_cell_size
+            self.cell_manager.max_cell_size = 4.*min_cell_size
+            
+        # initialize the cell manager.
+        self.cell_manager.initialize()
+
 # create a component manager.
 component_manager = ComponentManager()
 
@@ -131,8 +160,8 @@ cell_manager = CellManager(initialize=False)
 nnps_manager = NNPSManager(cell_manager=cell_manager)
 
 # create a dummy solver - serves no purpose but for a place holder
-solver = SolverBase(cell_manager=cell_manager,
-                    nnps_manager=nnps_manager)
+solver = DummySolver(cell_manager=cell_manager,
+                     nnps_manager=nnps_manager)
                     
 # the kernel to be used
 kernel = CubicSpline2D()

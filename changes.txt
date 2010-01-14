@@ -242,3 +242,7 @@ Friday 08 January 2010 (10:02:22 AM)
     - code for timing serial code (to compare results with serial case.)
 Wednesday 13 January 2010 (10:36:19 PM)
     - added command line arguments to the timing code.
+Thursday 14 January 2010 (1:15:30 PM)
+    - load balance checks if particles change during a load balance iteration.
+      if not - load balancing iterations are stopped.
+    - dummy solver added to serial_code_timing.py in the repo.
