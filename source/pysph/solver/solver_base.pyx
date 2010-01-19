@@ -886,6 +886,7 @@ cdef class SolverBase(Base):
         self.component_categories['post_integration'] = []
         self.component_categories['pre_step'] = []
         self.component_categories['post_step'] = []
+        self.component_categories['pre_iteration'] = []
 
         # add a nnps_updater component to the pre-step components.
         psc = self.component_categories['pre_step']
@@ -925,11 +926,18 @@ cdef class SolverBase(Base):
         """
         Run the solver.
         """
+        cdef SolverComponent c
         #from pysph.solver.integrator_base cimport Integrator
 
         self._setup_solver()
 
         current_time = 0.0
+
+        # execute any pre-iterations components before the iterations begin.
+        pre_iteration_components = self.component_categories['pre_iteration']
+        for cm in pre_iteration_components:
+            c = <SolverComponent>cm
+            c.compute()
 
         while current_time < self.total_simulation_time:
 

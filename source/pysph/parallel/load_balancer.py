@@ -47,7 +47,7 @@ class LoadBalancer(Base):
         self.communicating_procs = []
         self.has_zero_procs = False
         self.prev_particle_count = []
-
+        
     def setup(self):
         """
         Sets up some internal data.
