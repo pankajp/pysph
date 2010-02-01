@@ -1,6 +1,6 @@
 cimport numpy as np
 from pysph.base.particle_tags cimport ParticleTag
-from pysph.base.carray cimport LongArray
+from pysph.base.carray cimport LongArray, BaseArray
 
 cdef class ParticleArray:
     """
@@ -36,10 +36,11 @@ cdef class ParticleArray:
 
     cdef np.ndarray _get_real_particle_prop(self, str prop)
 
+    cpdef set_name(self, str name)
     cpdef set_dirty(self, bint val)
     cpdef set_indices_invalid(self, bint val)
 
-    cpdef get_carray(self, str prop)
+    cpdef BaseArray get_carray(self, str prop)
 
     cpdef int get_number_of_particles(self)
     cpdef remove_particles(self, LongArray index_list)

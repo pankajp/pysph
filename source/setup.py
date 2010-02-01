@@ -44,6 +44,15 @@ sph = [
                   ["pysph/sph/pressure_funcs.pyx"])
         ]
 
+parallel = [
+    Extension("pysph.parallel.parallel_controller",
+              ["pysph/parallel/parallel_controller.pyx"],
+              include_dirs=['/usr/include/mpi']),
+    Extension("pysph.parallel.cy_parallel_cell",
+              ["pysph/parallel/cy_parallel_cell.pyx"],
+              include_dirs=['/usr/include/mpi'])
+    ]
+
 # kernel extension modules.
 kernels = [Extension("pysph.base.kernelbase",
                      ["pysph/base/kernelbase.pyx"]),
@@ -111,6 +120,7 @@ solver = [Extension("pysph.solver.fast_utils",
 ext_modules = base +\
     kernels +\
     sph+\
+    parallel + \
     solver
 
 setup(name='pysph',

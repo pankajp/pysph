@@ -45,6 +45,8 @@ default values to property names in various constructors.
    real particles easily.
 
 """
+cdef extern from "string.h":
+    int strcmp(char *s1, char *s2)
 
 # logging imports
 import logging
@@ -57,6 +59,10 @@ import numpy
 # Local imports
 from pysph.base.carray cimport *
 from pysph.base.particle_tags cimport *
+
+from python_ref cimport PyObject
+from python_dict cimport *
+from python_string cimport *
 
 cdef class ParticleArray:
     """
@@ -209,7 +215,7 @@ cdef class ParticleArray:
         self.is_dirty = True
         self.indices_invalid = True
 
-    def set_name(self, str name):
+    cpdef set_name(self, str name):
         self.name = name
 
     def initialize(self, **props):
@@ -428,6 +434,11 @@ cdef class ParticleArray:
          - should the input parameter type be changed ?
 
     	"""
+        cdef int num_extra_particles, old_num_particles, new_num_particles
+        cdef str prop
+        cdef BaseArray arr
+        cdef numpy.ndarray s_arr, nparr
+        
         if len(particle_props) == 0:
             return 0
 
@@ -440,9 +451,9 @@ cdef class ParticleArray:
         new_num_particles = num_extra_particles + old_num_particles
 
         for prop in self.properties:
-            arr = self.properties[prop]
+            arr = <BaseArray>PyDict_GetItem(self.properties, prop)
 
-            if prop in particle_props.keys():
+            if PyDict_Contains(particle_props, prop)== 1:
                 d_type = arr.get_npy_array().dtype
                 s_arr = numpy.asarray(particle_props[prop], dtype=d_type)
                 arr.extend(s_arr)
@@ -473,17 +484,25 @@ cdef class ParticleArray:
         if parray.get_number_of_particles() == 0:
             return 0
         
-        num_extra_particles = parray.get_number_of_particles()
-        old_num_particles = self.get_number_of_particles()
-        new_num_particles = num_extra_particles + old_num_particles
-
+        cdef int num_extra_particles = parray.get_number_of_particles()
+        cdef int old_num_particles = self.get_number_of_particles()
+        cdef int new_num_particles = num_extra_particles + old_num_particles
+        cdef str prop_name
+        cdef BaseArray arr, source, dest
+        cdef numpy.ndarray nparr_dest, nparr_source
+        
         # extend current arrays by the required number of particles
         self.extend(num_extra_particles)
         
         for prop_name in parray.properties.keys():
-            arr = self.properties.get(prop_name)
+            if PyDict_Contains(self.properties, prop_name):
+                arr = <BaseArray>PyDict_GetItem(self.properties, prop_name)
+            else:
+                arr = None
+                
             if arr is not None:
-                nparr_source = parray.get_carray(prop_name).get_npy_array()
+                source = <BaseArray>PyDict_GetItem(parray.properties, prop_name)
+                nparr_source = source.get_npy_array()
                 nparr_dest = arr.get_npy_array()
                 nparr_dest[old_num_particles:] = nparr_source
             else:
@@ -491,8 +510,10 @@ cdef class ParticleArray:
                 self.add_property({'name':prop_name,
                                    'default':parray.default_values[prop_name]})
                 # now add the values to the end of the created array
-                nparr_dest = self.properties[prop_name].get_npy_array()
-                nparr_source = parray.get_carray(prop_name).get_npy_array()
+                dest = <BaseArray>PyDict_GetItem(self.properties, prop_name)
+                nparr_dest = dest.get_npy_array()
+                source = <BaseArray>PyDict_GetItem(parray.properties, prop_name)
+                nparr_source = source.get_npy_array()
                 nparr_dest[old_num_particles:] = nparr_source
 
         if num_extra_particles > 0:
@@ -654,17 +675,17 @@ cdef class ParticleArray:
             if prop == 'x' or prop == 'y' or prop == 'z':
                 self.set_dirty(True)
     
-    cpdef get_carray(self, str prop):
+    cpdef BaseArray get_carray(self, str prop):
         """
         Return the c-array corresponding to the property or temporary array.
         """
-        cdef int prop_id
-
-        if self.properties.has_key(prop):
-            return self.properties[prop]
-        elif self.temporary_arrays.has_key(prop):
-            return self.temporary_arrays[prop]
-
+        if PyDict_Contains(self.properties, prop) == 1:
+            return <BaseArray>PyDict_GetItem(self.properties, prop)
+        elif PyDict_Contains(self.temporary_arrays, prop) == 1:
+            return <BaseArray>PyDict_GetItem(self.temporary_arrays, prop)
+        else:
+            return None
+        
     cpdef add_property(self, dict prop_info):
         """
         Add a new property based on information in prop_info.
@@ -717,23 +738,24 @@ cdef class ParticleArray:
         cdef str prop_name, data_type
         cdef object data, default
         cdef bint array_size_proper = False
+        cdef PyObject* temp_obj
 
-        prop_name = prop_info.get('name')
-        data_type = prop_info.get('type')
-        data = prop_info.get('data')
-        default = prop_info.get('default')
+        temp_obj = PyDict_GetItemString(prop_info, 'name')
+        if temp_obj != NULL:
+            prop_name = <str>temp_obj
+        temp_obj = PyDict_GetItemString(prop_info, 'type')
+        if temp_obj != NULL:
+            data_type = <str>temp_obj
+        temp_obj = PyDict_GetItemString(prop_info, 'data')
+        if temp_obj != NULL:
+            data = <object>temp_obj
+        temp_obj = PyDict_GetItemString(prop_info, 'default')
+        if temp_obj != NULL:
+            default = <object>temp_obj
 
         if prop_name is None:
             logger.error('Cannot add property with no name')
             raise ValueError
-
-        # check if the property is already present, if so display warning
-        # message and exit
-        # if self.properties.has_key(prop_name):
-        #     logger.warn(
-        #         'Property %s already present, cannot add again'%(prop_name))
-        #     logger.warn('Use set() to set values for a property')
-        #     return
 
         # make sure the size of the supplied array is consistent.
         if (data is None or self.get_number_of_particles() == 0 or   
@@ -749,12 +771,12 @@ cdef class ParticleArray:
         
         # setup the default values
         if default is None:
-            if not self.properties.has_key(prop_name):
+            if PyDict_Contains(self.properties, prop_name) != 1:
                 default = 0
             else:
-                default = self.default_values[prop_name]
+                default = <object>PyDict_GetItem(self.default_values, prop_name)
                 
-        self.default_values[prop_name] = default
+        PyDict_SetItem(self.default_values, prop_name, default)
 
         # array sizes are compatible, now resize the required arrays
         # appropriately and add.
@@ -762,7 +784,7 @@ cdef class ParticleArray:
             if data is None or len(data) == 0:
                 # if a property with that name already exists, do not do
                 # anything.
-                if not self.properties.has_key(prop_name):
+                if PyDict_Contains(self.properties, prop_name) != 1:
                     # just add the property with a zero array.
                     self.properties[prop_name] = self._create_carray(
                         data_type, 0, default)
@@ -820,11 +842,12 @@ cdef class ParticleArray:
                         np_arr = arr.get_npy_array()
                         arr.get_npy_array()[:] = numpy.asarray(data)
                         self.properties[prop_name] = arr
-                        
+
+
     ######################################################################
     # Non-public interface
     ######################################################################
-    def _create_carray(self, data_type, size, default=0):
+    def _create_carray(self, str data_type, int size, default=0):
         """
         Create a carray of the requested type, and of requested size.
 
@@ -836,13 +859,16 @@ cdef class ParticleArray:
             - default - the default value to initialize the array with.
 
         """
-        if data_type == None or data_type == 'double':
+        cdef BaseArray arr
+        if data_type == None:
             arr = DoubleArray(size)
-        if data_type == 'long':
+        elif strcmp(PyString_AsString(data_type), 'double') == 0:
+            arr = DoubleArray(size)
+        elif strcmp(PyString_AsString(data_type), 'long') == 0:
             arr = LongArray(size)
-        if data_type == 'float':
+        elif strcmp(PyString_AsString(data_type), 'float') == 0:
             arr = FloatArray(size)
-        if data_type == 'int':
+        elif strcmp(PyString_AsString(data_type), 'int') == 0:
             arr = IntArray(size)
 
         if size > 0:
@@ -854,7 +880,8 @@ cdef class ParticleArray:
         """
         Check if a property is present or not.
         """
-        if self.temporary_arrays.has_key(prop) or self.properties.has_key(prop):
+        if (PyDict_Contains(self.temporary_arrays, prop) == 1 or
+            PyDict_Contains(self.properties, prop)):
             return
         else:
             raise AttributeError, 'property %s not present'%(prop)
@@ -996,6 +1023,7 @@ cdef class ParticleArray:
         cdef list prop_names
         cdef long* idx_data
         cdef BaseArray dst_prop_array, src_prop_array
+        cdef str prop_type, prop        
         
         if props is None:
             prop_names = self.properties.keys()

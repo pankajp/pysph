@@ -249,3 +249,9 @@ Thursday 14 January 2010 (1:15:30 PM)
 Tuesday 19 January 2010 (11:59:22 PM)
     - load balance component added.
     - some timing measurement code for report.
+Monday 01 February 2010 (01:07:30 PM)
+    - Use of Python c-api functions in many low-level modules.
+    - cythonizing of parallel cell module.
+    - removed debug calls in parallel cell modules (both cython and python).
+    - Added code to perform load balancing initially in the parallel timing modules.
+    - Cythonized parallel controller.

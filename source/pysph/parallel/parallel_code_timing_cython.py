@@ -101,7 +101,6 @@ if options.num_iterations == None:
     logger.warn('Using default number of iterations %d'%(num_iterations))
 else:
     num_iterations = int(options.num_iterations)
-
 if options.num_load_balance_iterations == None:
     logger.warn('Running 100 initial load balance iterations')
 else:
@@ -125,12 +124,13 @@ if rank == 0:
 from pysph.base.kernel2d import CubicSpline2D
 from pysph.base.point import Point
 from pysph.base.nnps import *
-from pysph.parallel.parallel_cell import *
+
+from pysph.parallel.cy_parallel_cell import *
 from pysph.parallel.parallel_controller import ParallelController
 from pysph.parallel.parallel_component import ParallelComponent
 from pysph.solver.fluid import Fluid
 from pysph.solver.solver_base import *
-from pysph.parallel.dummy_solver import *
+from pysph.parallel.cy_dummy_solver import *
 from pysph.solver.particle_generator import DensityComputationMode as Dcm
 from pysph.solver.particle_generator import MassComputationMode as Mcm
 from pysph.solver.basic_generators import RectangleGenerator
@@ -283,7 +283,6 @@ for i in range(num_iterations):
     t4 = time.time()
 
     total_iteration_times.append(t4-t1)
-
     logger.info('Iteration %d done'%(i))
 
 # write the three times into a file.

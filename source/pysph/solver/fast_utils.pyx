@@ -5,7 +5,7 @@ import numpy
 
 from pysph.base.carray cimport LongArray
 
-cpdef make_nd_array(arrays=[]):
+cpdef make_nd_array(list arrays=[]):
     """
     Makes a proper array of shape (len(a), len(arrays)), from the passed arrays.
     """

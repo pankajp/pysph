@@ -8,7 +8,8 @@ logger = logging.getLogger()
 # local imports
 from pysph.base.nnps import *
 
-from pysph.parallel.parallel_cell import ParallelCellManager
+#from pysph.parallel.parallel_cell import ParallelCellManager
+from pysph.parallel.cy_parallel_cell import ParallelCellManager
 from pysph.parallel.parallel_controller import ParallelController
 from pysph.parallel.parallel_component import ParallelComponent
 from pysph.solver.parallel_property_updater import ParallelPropertyUpdater
