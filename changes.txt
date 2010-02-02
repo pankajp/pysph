@@ -255,3 +255,5 @@ Monday 01 February 2010 (01:07:30 PM)
     - removed debug calls in parallel cell modules (both cython and python).
     - Added code to perform load balancing initially in the parallel timing modules.
     - Cythonized parallel controller.
+Tuesday 02 February 2010 (01:24:44 PM)
+    - insert_particles function changed to use PyDict_functions.

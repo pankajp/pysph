@@ -8,6 +8,9 @@ from pysph.base.point cimport *
 from pysph.base.carray cimport *
 from pysph.base.particle_array cimport ParticleArray
 
+# python c-api imports
+from python_dict cimport *
+
 cdef extern from 'math.h':
     int abs(int)
 
@@ -343,60 +346,11 @@ cdef class Cell:
 
     cpdef insert_particles(self, int parray_id, LongArray indices):
         """
-        Does a top-down insertion of particles into the hierarchy.
+        Insert particle indices of the parray given by "parray_id" from the
+        array"indices" into the cell. 
         """
-        cdef ParticleArray parray = self.cell_manager.arrays_to_bin[parray_id]
-        cdef dict particles_for_children = dict()
-        cdef int num_particles = parray.get_number_of_particles()
-        cdef int i
-        cdef DoubleArray x, y, z
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
-        cdef double child_size = self.get_child_size()
-        cdef IntPoint id = IntPoint()
-        cdef Point pnt = Point()
-        cdef LongArray child_indices, la
-        cdef Cell child
-        cdef IntPoint cid
+        raise NotImplementedError, 'Cell::insert_particles'
         
-        x = parray.get_carray(self.coord_x)
-        y = parray.get_carray(self.coord_y)
-        z = parray.get_carray(self.coord_z)
-        
-        for i from 0 <= i < indices.length:
-            if indices.data[i] >= num_particles:
-                # invalid particle being added.
-                # raise error and exit
-                msg = 'Particle %d does not exist'%(indices.data[i])
-                logger.error(msg)
-                raise ValueError, msg
-            
-            pnt.x = x.data[indices.data[i]]
-            pnt.y = y.data[indices.data[i]]
-            pnt.z = z.data[indices.data[i]]
-
-            # find the cell at the lower level, to which this particle belongs
-            # to. 
-            find_cell_id(self.origin, pnt, child_size, id)
-            child_indices = particles_for_children.get(id)
-
-            if child_indices is None:
-                child_indices = LongArray()
-                particles_for_children[id.copy()] = child_indices
-
-            child_indices.append(indices.data[i])
-
-        num_children = len(particles_for_children)
-        
-        for cid, la in particles_for_children.iteritems():
-            child = self.cell_dict.get(cid)
-
-            if child is None:
-                # create a child with the given id.
-                child = self.get_new_child(cid)
-                self.cell_dict[cid.copy()] = child
-
-            child.insert_particles(parray_id, la)        
-
     cpdef get_particle_ids(self, list particle_id_list):
         """
         Finds the indices of particle ids for each particle array in
@@ -1084,6 +1038,60 @@ cdef class NonLeafCell(Cell):
             num_particles += cell.get_number_of_particles()
 
         return num_particles        
+
+    cpdef insert_particles(self, int parray_id, LongArray indices):
+        """
+        Does a top-down insertion of particles into the hierarchy.
+        """
+        cdef ParticleArray parray = self.cell_manager.arrays_to_bin[parray_id]
+        cdef dict particles_for_children = dict()
+        cdef int num_particles = parray.get_number_of_particles()
+        cdef int i
+        cdef DoubleArray x, y, z
+        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
+        cdef double child_size = self.get_child_size()
+        cdef IntPoint id = IntPoint()
+        cdef Point pnt = Point()
+        cdef LongArray child_indices, la
+        cdef Cell child
+        cdef IntPoint cid
+        
+        x = parray.get_carray(self.coord_x)
+        y = parray.get_carray(self.coord_y)
+        z = parray.get_carray(self.coord_z)
+        
+        for i from 0 <= i < indices.length:
+            if indices.data[i] >= num_particles:
+                # invalid particle being added.
+                # raise error and exit
+                msg = 'Particle %d does not exist'%(indices.data[i])
+                logger.error(msg)
+                raise ValueError, msg
+            
+            pnt.x = x.data[indices.data[i]]
+            pnt.y = y.data[indices.data[i]]
+            pnt.z = z.data[indices.data[i]]
+
+            # find the cell at the lower level, to which this particle belongs
+            # to. 
+            find_cell_id(self.origin, pnt, child_size, id)
+            if PyDict_Contains(particles_for_children, id) == 1:
+                child_indices = <LongArray>PyDict_GetItem(particles_for_children, id)
+            else:
+                child_indices = LongArray()
+                particles_for_children[id.copy()] = child_indices
+
+            child_indices.append(indices.data[i])
+
+        for cid, la in particles_for_children.iteritems():
+            if PyDict_Contains(self.cell_dict, cid):
+                child = <Cell>PyDict_GetItem(self.cell_dict, cid)
+            else:
+                # create a child with the given id.
+                child = self.get_new_child(cid)
+                self.cell_dict[cid.copy()] = child
+
+            child.insert_particles(parray_id, la)        
 
 ################################################################################
 # `RootCell` class.
