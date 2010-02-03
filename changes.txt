@@ -257,3 +257,7 @@ Monday 01 February 2010 (01:07:30 PM)
     - Cythonized parallel controller.
 Tuesday 02 February 2010 (01:24:44 PM)
     - insert_particles function changed to use PyDict_functions.
+Wednesday 03 February 2010 (02:47:31 PM)
+    - pickling routines for carrays and tests.
+    - optimized routines for neighbor particle exchange in the
+    cy_parallel_cell_manager module.

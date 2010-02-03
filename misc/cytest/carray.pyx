@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Wed Dec 16 23:59:27 2009
+# Tue Feb  2 21:22:16 2010
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -185,6 +185,23 @@ cdef class IntArray(BaseArray):
         Set location idx to value.
         """
         self.data[idx] = value
+
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling.
+        """
+        d = {}
+        d['data'] = self.get_npy_array()
+	
+        return (IntArray, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the carray from the dictionary d.
+        """
+        cdef np.ndarray arr = d['data']
+        self.resize(arr.size)
+        self.set_data(arr)
 
     cdef _setup_npy_array(self):
         """
@@ -506,6 +523,23 @@ cdef class DoubleArray(BaseArray):
         """
         self.data[idx] = value
 
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling.
+        """
+        d = {}
+        d['data'] = self.get_npy_array()
+	
+        return (DoubleArray, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the carray from the dictionary d.
+        """
+        cdef np.ndarray arr = d['data']
+        self.resize(arr.size)
+        self.set_data(arr)
+
     cdef _setup_npy_array(self):
         """
         Create the numpy array.
@@ -826,6 +860,23 @@ cdef class FloatArray(BaseArray):
         """
         self.data[idx] = value
 
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling.
+        """
+        d = {}
+        d['data'] = self.get_npy_array()
+	
+        return (FloatArray, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the carray from the dictionary d.
+        """
+        cdef np.ndarray arr = d['data']
+        self.resize(arr.size)
+        self.set_data(arr)
+
     cdef _setup_npy_array(self):
         """
         Create the numpy array.
@@ -1145,6 +1196,23 @@ cdef class LongArray(BaseArray):
         Set location idx to value.
         """
         self.data[idx] = value
+
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling.
+        """
+        d = {}
+        d['data'] = self.get_npy_array()
+	
+        return (LongArray, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the carray from the dictionary d.
+        """
+        cdef np.ndarray arr = d['data']
+        self.resize(arr.size)
+        self.set_data(arr)
 
     cdef _setup_npy_array(self):
         """

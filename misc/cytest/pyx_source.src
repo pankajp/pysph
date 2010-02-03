@@ -36,6 +36,23 @@ cdef class CLASSNAME(BaseArray):
         """
         self.data[idx] = value
 
+    def __reduce__(self):
+        """
+        Implemented to facilitate pickling.
+        """
+        d = {}
+        d['data'] = self.get_npy_array()
+	
+        return (CLASSNAME, (), d)
+
+    def __setstate__(self, d):
+        """
+        Load the carray from the dictionary d.
+        """
+        cdef np.ndarray arr = d['data']
+        self.resize(arr.size)
+        self.set_data(arr)
+
     cdef _setup_npy_array(self):
         """
         Create the numpy array.

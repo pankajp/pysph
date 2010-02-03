@@ -74,7 +74,7 @@ cdef class ParallelRootCell(RootCell):
     cpdef add_local_particles_to_parray(self, dict particle_list)
     cpdef update_remote_particle_properties(self, list props=*)
     cpdef exchange_neighbor_particles(self)
-    cpdef _get_cell_data_for_neighbor(self, list cell_list, list props=*)
+    cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
     
 cdef class ParallelCellInfo(Base):
     cdef public Cell cell

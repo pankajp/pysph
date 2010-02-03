@@ -9,7 +9,7 @@ import unittest
 from pysph.base.cell import *
 from pysph.base.point import *
 from pysph.base.particle_array import ParticleArray
-from pysph.base.carray import DoubleArray
+from pysph.base.carray import DoubleArray, LongArray
 from pysph.base.tests.common_data import *
 
 def check_array(x, y):
@@ -278,6 +278,37 @@ class TestLeafCell(unittest.TestCase):
         ind_arr = cell.index_lists[1]
         self.assertEqual(ind_arr.length, 1)
         self.assertEqual(ind_arr.get(0), 3)
+
+    def test_get_particle_counts_ids(self):
+        """
+        Tests the get_particle_counts_ids function.
+        """
+        p_arrs = generate_sample_dataset_1()
+        cm = CellManager(arrays_to_bin=p_arrs, initialize=False)
+        
+        cell = LeafCell(IntPoint(0, 0, 0), cell_manager=cm, cell_size=1.0,
+                        level=0, jump_tolerance=1)
+        
+        # put all the particles into this cell.
+        indx_arr = cell.index_lists[0]
+        indx_arr.resize(8)
+        indx_arr.set_data(numpy.arange(8, dtype=numpy.int))
+
+        indx_arr = cell.index_lists[1]
+        indx_arr.resize(4)
+        indx_arr.set_data(numpy.arange(4, dtype=numpy.int))
+
+        index_lists = []
+        counts = LongArray()
+
+        cell.get_particle_counts_ids(index_lists, counts)
+
+        self.assertEqual(len(index_lists), 2)
+        self.assertEqual(index_lists[0].length, 8)
+        self.assertEqual(index_lists[1].length, 4)
+
+        self.assertEqual(counts[0], 8)
+        self.assertEqual(counts[1], 4)
 
     def test_add_particles(self):
         """
@@ -1001,7 +1032,6 @@ class TestCellManager(unittest.TestCase):
                                   single_layer=False)
 
         # exactly one cell should be returned
-        print cell_list
         self.assertEqual(len(cell_list), 1)
         id_list = []
         for cell in cell_list:
@@ -1097,7 +1127,6 @@ class TestCellManager(unittest.TestCase):
         id_list = []
         cm.py_get_potential_cells(pnt, 2.0, cell_list,
                                   single_layer=False)
-        print cell_list
         # 7 cells from level 0 should be returned.
         self.assertEqual(len(cell_list), 7)
         for cell in cell_list:

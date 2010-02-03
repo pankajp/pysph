@@ -258,6 +258,20 @@ class TestLongArray(unittest.TestCase):
         self.assertEqual(l1.minimum, -20)
         self.assertEqual(l1.maximum, 200)
 
+    def test_pickling(self):
+        """
+        Tests the __reduce__ and __setstate__ functions.
+        """
+        l1 = LongArray(10)
+        l1.set_data(numpy.arange(10))
+
+        import pickle
+
+        l1_dump = pickle.dumps(l1)
+
+        l1_load = pickle.loads(l1_dump)
+        self.assertEqual((l1_load.get_npy_array() == l1.get_npy_array()).all(), True)
+
 if __name__ == '__main__':
     unittest.main()
         

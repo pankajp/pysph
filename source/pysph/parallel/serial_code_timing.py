@@ -56,7 +56,7 @@ import logging
 logger = logging.getLogger()
 log_filename = destdir + '/' + 'log_pysph'
 logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
-#logger.addHandler(logging.StreamHandler())
+logger.addHandler(logging.StreamHandler())
 
 # read the square_width to use
 if options.square_width == None:

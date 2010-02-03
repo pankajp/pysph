@@ -50,7 +50,7 @@ parallel = [
               include_dirs=['/usr/include/mpi']),
     Extension("pysph.parallel.cy_parallel_cell",
               ["pysph/parallel/cy_parallel_cell.pyx"],
-              include_dirs=['/usr/include/mpi'])
+              include_dirs=['/usr/include/mpi']),
     ]
 
 # kernel extension modules.

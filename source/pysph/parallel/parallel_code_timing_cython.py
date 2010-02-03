@@ -34,6 +34,10 @@ op.add_option('-n', '--num-iterations', dest='num_iterations',
 op.add_option('-l', '--num-load-balance-iterations',
               dest='num_load_balance_iterations',
               metavar='NUM_LOAD_BALANCE_ITERATIONS')
+op.add_option('-v', '--verbose',
+	      action="store_true", default=False, dest='verbose',
+	      help='print large amounts of debug information')
+	      
 
 destdir = '.'
 square_width = 1.0
@@ -68,7 +72,11 @@ if not exists(destdir):
 import logging
 logger = logging.getLogger()
 log_filename = destdir + '/' + 'log_pysph_' + str(rank)
-logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
+if options.verbose:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+logging.basicConfig(level=log_level, filename=log_filename, filemode='w')
 logger.addHandler(logging.StreamHandler())
 
 # read the square_width to use

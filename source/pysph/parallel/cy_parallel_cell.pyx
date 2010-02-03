@@ -17,8 +17,8 @@ class DummyLogger:
 
 # logger imports
 import logging
-#logger = logging.getLogger()
-logger = DummyLogger()
+logger = logging.getLogger()
+#logger = DummyLogger()
 
 # mpi imports
 cimport mpi4py.MPI as MPI
@@ -1219,7 +1219,6 @@ cdef class ParallelRootCell(RootCell):
                     # properties of the destination array.
                     d_parr.copy_properties(s_parr, si, ei)
 
-
     cpdef exchange_neighbor_particles(self):
         """
         Exchange neighbor particles.
@@ -1244,20 +1243,21 @@ cdef class ParallelRootCell(RootCell):
         cdef dict remote_cell_data = {}
         cdef MPI.Comm comm = self.parallel_controller.comm
         cdef int pid, num_nbrs, i, j, dest, si, ei
-        cdef dict cell_dict
+        cdef dict cell_dict, particle_data
         cdef IntPoint cid
-        cdef list requested_cells
-        cdef LongArray indices
-        cdef ParticleArray d_parr, s_parr
-        cdef list cell_particles
-        cdef Cell c
+        cdef list requested_cells, cell_ids, parrays, particle_counts
+        cdef LongArray indices, pcount_j, current_counts
+        cdef ParticleArray parr, d_parr
+        cdef object c
         
+        # sort the processors in increasing order of ranks.
         if nbr_procs.count(self.pid) == 0:
             nbr_procs.append(self.pid)
             nbr_procs = sorted(nbr_procs)
         
         # get data from all procs and send data to all procs.
         logger.debug('neighbor proces are : %s'%(nbr_procs))
+
         num_nbrs = len(nbr_procs)
         for i from 0 <= i < num_nbrs:
             pid = nbr_procs[i]
@@ -1267,12 +1267,9 @@ cdef class ParallelRootCell(RootCell):
                     if self.pid == dest:
                         continue
                     # our turn to send request for cells.
-                    logger.debug('adjacent remote cells : %s'%(arc))
                     comm.send(arc[dest], dest=dest, tag=TAG_REMOTE_CELL_REQUEST)
-                    logger.debug('adjacent cell request send')
                     remote_cell_data[dest] = comm.recv(source=dest,
                                                        tag=TAG_REMOTE_CELL_REPLY)
-                    logger.debug('got cells : %s'%(remote_cell_data[dest]))
             else:
                 requested_cells = comm.recv(source=pid,
                                             tag=TAG_REMOTE_CELL_REQUEST)
@@ -1284,50 +1281,61 @@ cdef class ParallelRootCell(RootCell):
         # we now have all the cells we require from the remote processors.
         # create new cells and add the particles to the particle array and the
         # cell.
-        for pid, cell_dict in remote_cell_data.iteritems():
-            for cid, cell_particles in cell_dict.iteritems():
-                c = self.cell_dict.get(cid)
-                
-                if c is not None:
+        num_arrays = len(self.cell_manager.arrays_to_bin)
+        current_counts = LongArray(num_arrays)
+
+        for pid, particle_data in remote_cell_data.iteritems():
+            # append the new particles to the corresponding local particle
+            # arrays. Also get the current number of particles before
+            # appending. 
+            parrays = particle_data['parrays']
+            particle_counts = particle_data['pcounts']
+            
+            i = 0
+            for parr in parrays:
+                d_parr = self.cell_manager.arrays_to_bin[i]
+                current_counts.data[i] = d_parr.get_number_of_particles()
+                d_parr.append_parray(parr)
+                i += 1
+
+            i = 0
+            cell_ids = arc[pid]
+            
+            for cid in cell_ids:
+                # make sure this cell is not already present.
+                if self.cell_dict.has_key(cid):
                     msg = 'Cell %s should not be present %d'%(cid, self.pid)
                     logger.error(msg)
                     raise SystemError, msg
-                
-                c = self.get_new_child_for_copy(cid, pid)
-                logger.debug('Created cells %s. %s pid :%d'%(c, c.id, pid))
 
-                for i in range(len(self.cell_manager.arrays_to_bin)):
-                    d_parr = self.cell_manager.arrays_to_bin[i]
-                    s_parr = cell_particles[i]
-                    
-                    # check if there are no particles for this array.
-                    if s_parr.get_number_of_particles() == 0:
+                c = self.get_new_child_for_copy(cid, pid)
+
+                # add the new particle indices to the cell.
+                for j in range(num_arrays):
+                    pcount_j = particle_counts[j]
+                    if pcount_j.data[i] == 0:
                         si = -1
                         ei = -1
                     else:
-                        si = d_parr.get_number_of_particles()
-                        ei = si + s_parr.get_number_of_particles() - 1
-                        logger.debug('SI : %d, EI : %d'%(si, ei))
+                        si = current_counts.data[j]
+                        ei = si + pcount_j.data[i] - 1
+                        current_counts.data[j] += pcount_j.data[i]
 
-                    if c.is_leaf():
-                        (<ParallelLeafCellRemoteCopy>c).particle_start_indices.append(si)
-                        (<ParallelLeafCellRemoteCopy>c).particle_end_indices.append(ei)
-                    else:
-                        (<ParallelNonLeafCellRemoteCopy>c).particle_start_indices.append(si)
-                        (<ParallelNonLeafCellRemoteCopy>c).particle_end_indices.append(ei)
-                    
-                    d_parr.append_parray(s_parr)
-                    
-                    if si >=0 and ei >=0:
+                    c.particle_start_indices.append(si)
+                    c.particle_end_indices.append(ei)
+
+                    # insert the indices into the cell.
+                    if si >= 0 and ei >=0:
                         indices = arange_long(si, ei)
-                        (<Cell>c).insert_particles(i, indices)
-
-                # add this cell to the cell_dict
+                        (<Cell>c).insert_particles(j, indices)
+                        
+                # insert the newly created cell into the cell_dict.
                 self.cell_dict[cid.copy()] = c
+                i += 1
 
         logger.debug('exchange_neighbor_particles_DONE')
-            
-    def _get_cell_data_for_neighbor_old(self, list cell_list, list props=None):
+
+    cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=None):
         """
         Return new particle arrays created for particles contained in each of
         the requested cells.
@@ -1339,80 +1347,37 @@ cdef class ParallelRootCell(RootCell):
               array that has been binned, a list of properties required of that
               particle array, or None if all properties are required.
 
+        **Algorithm**
+
+            - Do the following operations for each ParticleArray that is being
+              binned by the cell manager.
+            - Collect in a LongArray particle indices from all the cells in
+              cell_list. Along with this also maintain a LongArray containing
+              the number of partilces in each cell (in the same order as the
+              cell_list).
+            - Extract the required particles (indices collected above) into a
+              ParticleArray.
+            - Return the ParticleArrays and the LongArrays.
+              
         """
         cdef IntPoint cid
         cdef dict data = {}
-        if props is not None:
-            if len(props) != len(self.cell_manager.arrays_to_bin):
-                msg = 'Need information for each particle array'
-                logger.error(msg)
-                raise SystemError, msg
-        else:
-            props = [None]*len(self.cell_manager.arrays_to_bin)
-            
-        for cid in cell_list:
-            logger.debug('Building data for cell : %s'%(cid))
-            c = self.cell_dict.get(cid)
-
-            if c is None:
-                msg = 'Requested cell (%s) not with proc %d'%(cid, self.pid)
-                logger.error(msg)
-                raise SystemError, msg
-
-            if c.pid != self.pid:
-                msg = 'Data being requested for cell %s which is remote in %d'%(
-                    c.id, self.pid)
-                logger.error(msg)
-                raise SystemError, msg
-
-            index_lists = []
-            parrays = []
-            
-            # get all particles ids of this cell.
-            c.get_particle_ids(index_lists)
-            num_particles = 0
-            for i in range(len(index_lists)):
-                index_array = index_lists[i]
-                num_particles += index_array.length
-                parr = c.cell_manager.arrays_to_bin[i]
-                parr_new = parr.extract_particles(index_array,
-                                                  props=props[i])
-                parr_new.set_name(parr.name)
-                parrays.append(parr_new)
-
-                # make the particles as remote in the particle array
-                parr_new.local[:] = 0
-                parr_new.tag[:] = get_dummy_tag()
-
-            data[cid.copy()] = parrays
-            
-            logger.debug('Requested cell %s has %s particles '%(c.id,
-                                                                num_particles))
-        return data
-
-    cpdef _get_cell_data_for_neighbor(self, list cell_list, list props=None):
-        """
-        Return new particle arrays created for particles contained in each of
-        the requested cells.
-
-        **Parameters**
-        
-            - cell_list - the list of cells, whose properties are requested.
-            - props - a list whose entries are as follows: for each particle
-              array that has been binned, a list of properties required of that
-              particle array, or None if all properties are required.
-
-        """
-        cdef IntPoint cid
-        cdef dict data = {}
-        cdef int i, num_cells
-        cdef list index_lists
-        cdef list parrays
+        cdef int i, num_cells, j, num_arrays
+        cdef list index_lists = list()
+        cdef list parrays = list()
         cdef int num_particles
         cdef int num_index_lists
         cdef ParticleArray parr, parr_new
-        cdef LongArray index_array
-                
+        cdef LongArray index_array, ca
+        
+        cdef list collected_indices = list()
+        cdef list particle_counts = list()
+        cdef list particle_arrays = list()
+        cdef LongArray pcount_temp = LongArray()
+
+        # make sure the properties have been specified properly.
+        num_arrays = len(self.cell_manager.arrays_to_bin)
+        
         if props is not None:
             if len(props) != len(self.cell_manager.arrays_to_bin):
                 msg = 'Need information for each particle array'
@@ -1422,48 +1387,48 @@ cdef class ParallelRootCell(RootCell):
             props = [None]*len(self.cell_manager.arrays_to_bin)
 
         num_cells = len(cell_list)
+        
+        # intialize some temp data structures.
+        for i in range(len(self.cell_manager.arrays_to_bin)):
+            #collected_indices.append(LongArray())
+            particle_counts.append(LongArray(num_cells))
+
+        
+        # now collect all the particle indices that need to be returned.
         for i from 0 <= i < num_cells:
             cid = cell_list[i]
-
-            logger.debug('Building data for cell : %s'%(cid))
-            c = self.cell_dict.get(cid)
-
-            if c is None:
-                msg = 'Requested cell (%s) not with proc %d'%(cid, self.pid)
-                logger.error(msg)
-                raise SystemError, msg
-
+            c = self.cell_dict[cid]
+            
+            # make sure the requested cell is local.
             if c.pid != self.pid:
                 msg = 'Data being requested for cell %s which is remote in %d'%(
                     c.id, self.pid)
                 logger.error(msg)
                 raise SystemError, msg
+            c.get_particle_counts_ids(collected_indices, pcount_temp)
 
-            index_lists = []
-            parrays = []
-            
-            # get all particles ids of this cell.
-            (<Cell>c).get_particle_ids(index_lists)
-            num_particles = 0
-            num_index_lists = len(index_lists)
-            for j from 0 <= j < num_index_lists:
-                index_array = index_lists[j]
-                num_particles += index_array.length
-                parr = (<Cell>c).cell_manager.arrays_to_bin[j]
-                parr_new = parr.extract_particles(index_array, props[j])
-                parr_new.set_name(parr.name)
-                parrays.append(parr_new)
+            # now find the number of particles that were added to each particle
+            # array that is being binned.
+            for j from 0 <= j < num_arrays:
+                ca = particle_counts[j]
+                ca.data[i] = pcount_temp.data[j]
+                # reset the value of the next use.
+                pcount_temp.data[j] = 0
 
-                # make the particles as remote in the particle array
-                parr_new.local[:] = 0
-                parr_new.tag[:] = get_dummy_tag()
+        # now extract the required particles from the local particle arrays and
+        # return. 
+        for i in range(num_arrays):
+            parr = self.cell_manager.arrays_to_bin[i]
+            parr_new = parr.extract_particles(collected_indices[i], props[i])
+            parr_new.set_name(parr.name)
+            parr_new.local[:] = 0
+            parr_new.tag[:] = get_dummy_tag()
+            parrays.append(parr_new)
 
-            data[cid.copy()] = parrays
-            
-            logger.debug('Requested cell %s has %s particles '%(c.id,
-                                                                num_particles))
+        data['parrays'] = parrays
+        data['pcounts'] = particle_counts
         return data
-
+        
     def compute_neighbor_counts(self):
         """
         Recompute the neighbor counts of all local cells. 

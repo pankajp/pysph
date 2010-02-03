@@ -46,6 +46,7 @@ cdef class Cell:
     cpdef bint is_leaf(self)
     cpdef Cell get_new_sibling(self, IntPoint id)
     cpdef get_particle_ids(self, list particle_id_list)
+    cpdef get_particle_counts_ids(self, list particle_list, LongArray particle_counts)
     cpdef Cell get_new_child(self, IntPoint id)
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef clear_indices(self, int parray_id)

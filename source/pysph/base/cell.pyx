@@ -364,6 +364,25 @@ cdef class Cell:
 
         """
         raise NotImplementedError, 'Cell::get_particle_ids'
+
+    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
+                                  counts):
+        """
+        Finds the indices of particles for each particle array in arrays_to_bin
+        contained within this cell. Also returns the number of particles ids
+        that were added in this call for each of the arrays.
+
+        **Parameters**
+
+            - particle_id_list - output parameter, should contain one LongArray
+            for each array in arrays_to_bin. Particle ids will be appended to the
+            LongArrays.
+            - counts - output parameter, A LongArray with one value per array in
+            arrays_to_bin. Each entry will contain the number of particle ids
+            that were appended to each of the arrays in particle_id_list in this
+            call to get_particle_counts_ids.
+        """
+        raise NotImplementedError, 'Cell::get_particle_counts_ids'
      
     cpdef Cell get_new_child(self, IntPoint id):
         """
@@ -506,6 +525,45 @@ cdef class LeafCell(Cell):
             source = self.index_lists[i]
             dest.extend(source.get_npy_array())
 
+    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
+                                  particle_counts):
+        """
+        Finds the indices of particles for each particle array in arrays_to_bin
+        contained within this cell. Also returns the number of particles ids
+        that were added in this call for each of the arrays.
+
+        **Parameters**
+
+            - particle_id_list - output parameter, should contain one LongArray
+            for each array in arrays_to_bin. Particle ids will be appended to the
+            LongArrays.
+            - particle_counts - output parameter, A LongArray with one value per
+            array in arrays_to_bin. Each entry will contain the number of
+            particle ids that were appended to each of the arrays in
+            particle_id_list in this call to get_particle_counts_ids.
+
+        """
+        cdef int num_arrays = 0
+        cdef int i = 0
+        cdef LongArray source, dest
+
+        num_arrays = len(self.arrays_to_bin)
+
+        if len(particle_id_list) == 0:
+            for i from 0 <= i < num_arrays:
+                particle_id_list.append(LongArray(0))
+                
+        if particle_counts.length == 0:
+            particle_counts.resize(num_arrays)
+            # set the values to zero
+            particle_counts._npy_array[:] = 0
+
+        for i from 0 <= i < num_arrays:
+            dest = particle_id_list[i]
+            source = self.index_lists[i]
+            dest.extend(source.get_npy_array())
+            particle_counts.data[i] += source.length
+        
     cpdef set_cell_manager(self, CellManager cell_manager):
         """
         """
@@ -839,6 +897,25 @@ cdef class NonLeafCell(Cell):
         for i from 0 <= i < num_children:
             cell = children[i]
             cell.get_particle_ids(particle_id_list)        
+
+    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
+                                  particle_counts):
+        """
+        """
+        cdef int i, num_children, num_arrays
+        cdef Cell c
+
+        num_arrays = len(self.arrays_to_bin)
+
+        if len(particle_id_list) == 0:
+            for i from 0 <= i < num_arrays:
+                particle_id_list.append(LongArray())
+        if particle_counts.length == 0:
+            particle_counts.resize(num_arrays)
+            particle_counts._npy_array[:] = 0
+
+        for c in self.cell_dict.itervalues():
+            c.get_particle_counts_ids(particle_id_list, particle_counts)
 
     cpdef clear_indices(self, int parray_id):
         """
