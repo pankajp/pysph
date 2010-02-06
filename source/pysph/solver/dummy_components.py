@@ -38,26 +38,26 @@ class DummyComponent1(SolverComponent):
         Constructor.
         """
         # add private particle property requirements
-        pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
+        pp = self.particle_props_private
         # add a requirement for Entity_Solid
         pp[EntityTypes.Entity_Solid] = [{'name':'a', 'default':1.0},
                                         {'name':'b', 'default':2.0}]
         
         # add read property requirement
-        rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
+        rp = self.particle_props_read
         rp[EntityTypes.Entity_Fluid] = ['c', 'd']
 
         # add write property requirements
-        wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        wp = self.particle_props_write
         wp[EntityTypes.Entity_Fluid] = [{'name':'e', 'default':10.0},
                                         {'name':'f', 'default':11.0}]
 
-        flags = self.information.get_dict(self.PARTICLE_FLAGS)
+        flags = self.particle_flags
         flags[EntityTypes.Entity_Fluid] = [{'name':'f1', 'default':4}]
         flags[EntityTypes.Entity_Solid] = [{'name':'f2', 'default':5}]        
 
         # add entity property requirements
-        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep = self.entity_props
         ep[EntityTypes.Entity_Fluid] = [{'name':'h', 'default':0.1},
                                         {'name':'mu', 'default':None}]
 
@@ -76,17 +76,17 @@ class DummyComponent2(SolverComponent):
         Constructor.
         """
         # add private particle property requirements
-        pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
+        pp = self.particle_props_private
         # add a requirement for Entity_Solid
         pp[EntityTypes.Entity_Solid] = [{'name':'a', 'default':1.0},
                                         {'name':'t', 'default':2.0}]
         
         # add read property requirement
-        rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
+        rp = self.particle_props_read
         rp[EntityTypes.Entity_Fluid] = ['b', 'd']
 
         # add write property requirements
-        wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        wp = self.particle_props_write
         wp[EntityTypes.Entity_Fluid] = [{'name':'e', 'default':10.0},
                                         {'name':'f', 'default':11.0},
                                         {'name':'a', 'default':None}]
@@ -94,12 +94,12 @@ class DummyComponent2(SolverComponent):
         wp[EntityTypes.Entity_Solid] = [{'name':'g', 'default':10.0},
                                         {'name':'h', 'default':11.0}]
 
-        flags = self.information.get_dict(self.PARTICLE_FLAGS)
+        flags = self.particle_flags
         flags[EntityTypes.Entity_Fluid] = [{'name':'f3', 'default':4}]
         flags[EntityTypes.Entity_Solid] = [{'name':'f4', 'default':5}]        
 
         # add entity property requirements
-        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep = self.entity_props
         ep[EntityTypes.Entity_Fluid] = [{'name':'h1', 'default':0.1},
                                         {'name':'mu', 'default':1.0}]
 
@@ -118,12 +118,12 @@ class DummyComponent3(SolverComponent):
         Constructor.
         """
         # add read property requirement
-        rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
+        rp = self.particle_props_read
         rp[EntityTypes.Entity_Fluid] = ['b', 'd']
 
         rp[EntityTypes.Entity_Solid] = ['a', 'b', 'c', 'd']
 
-        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        ep = self.entity_props
         ep[EntityTypes.Entity_Solid] = [{'name':'mu', 'default':1.0}]
 
         ep[EntityTypes.Entity_Fluid] = [{'name':'nu', 'default':3.0}]    

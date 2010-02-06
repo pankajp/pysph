@@ -57,9 +57,7 @@ cdef class TaitPressureComponent(SolverComponent):
         """
         Setup the property requirements of this component.
         """
-        cdef dict in_types = self.information.get_dict(self.INPUT_TYPES)
-        
-        for t in in_types.keys():
+        for t in self.input_types:
             self.add_read_prop_requirement(t, ['rho'])
             self.add_write_prop_requirement(t, 'p')
             

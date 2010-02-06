@@ -30,6 +30,9 @@ from pysph.solver.timing import Timer
 # internally. This could be done by implementing the base class compute to call
 # setup_component and then call a compute_def function - which will be written
 # by the user.
+#
+# 2. Default values of properties should/need not be specified by the
+# component. It may have to be specified somewhere else.
 ################################################################################
 # `SolverComponent` class.
 ################################################################################
@@ -59,17 +62,6 @@ cdef class SolverComponent(Base):
       
     """
     # list of information keys used by this class.
-    PARTICLE_PROPERTIES_READ = 'PARTICLE_PROPERTIES_READ'
-    PARTICLE_PROPERTIES_WRITE = 'PARTICLE_PROPERTIES_WRITE'
-    PARTICLE_PROPERTIES_PRIVATE = 'PARTICLE_PROPERTIES_PRIVATE'
-    PARTICLE_FLAGS = 'PARTICLE_FLAGS'
-
-    ENTITY_PROPERTIES = 'ENTITY_PROPERTIES'
-    OUTPUT_PROPERTIES = 'OUTPUT_PROPERTIES'
-
-    INPUT_TYPES = 'INPUT_TYPES'
-    ENTITY_NAMES = 'ENTITY_NAMES'
-    
     identifier = 'base_component'
     category = 'base'
 
@@ -91,15 +83,13 @@ cdef class SolverComponent(Base):
         self.entity_list = []
         self.entity_list[:] = entity_list
 
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_PRIVATE,
-                                  {})
-        self.information.set_dict(SolverComponent.PARTICLE_FLAGS, {})
-        self.information.set_dict(SolverComponent.ENTITY_PROPERTIES, {})
-        self.information.set_dict(SolverComponent.OUTPUT_PROPERTIES, {})
-        self.information.set_dict(SolverComponent.INPUT_TYPES, {})
-        self.information.set_dict(SolverComponent.ENTITY_NAMES, {})
+        self.particle_props_read = {}
+        self.particle_props_write = {}
+        self.particle_props_private = {}
+        self.particle_flags = {}
+        self.entity_props = {}
+        self.input_types = set()
+        self.entity_names = {}
     
     def __init__(self,  *args, **kwargs):
         """
@@ -116,7 +106,7 @@ cdef class SolverComponent(Base):
             if accept_input_entities is set to False, no entities will be
             accepted.
 
-            if no INPUT_TYPES is specified or if this entity's type is accepted
+            if no input_types is specified or if this entity's type is accepted
                 input type
                 if there is not named entity requirement for entities of this
                 type or if this entities name appears in the required names
@@ -131,16 +121,14 @@ cdef class SolverComponent(Base):
         if self.accept_input_entities == False:
             return True
 
-        cdef dict input_types = self.information.get_dict(
-            SolverComponent.INPUT_TYPES)
-        cdef dict entity_names = self.information.get_dict(
-            SolverComponent.ENTITY_NAMES)
+        cdef set input_types = self.input_types
+        cdef dict entity_names = self.entity_names
 
         cdef list req_names
         cdef bint type_accepted = False
         
-        if len(input_types.keys()) > 0:
-            for type in input_types.keys():
+        if len(input_types) > 0:
+            for type in input_types:
                 if entity.is_a(type):
                     type_accepted = True
                     break
@@ -151,80 +139,44 @@ cdef class SolverComponent(Base):
         
         # entity has passed input type requirements or no input type
         # requirements were there for this component, hence further checks.
-
-        # check if there is any named requirements for this entity's type
-        req_names = entity_names.get(entity.type)
-
-        if req_names is None:
-            # all test passes, entity should not be filtered
-            return False
-            
-        # check if this entity's name is there in list
-        if entity.name in req_names:
-            return False
-
-        return True
+        return False
 
     cpdef add_entity_name(self, str name):
         """
         Add name of an entity that can be accepted as input.
         """
-        cpdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
-
-        if not name_dict.has_key(name):
-            name_dict[name] = None
-
+        raise NotImplementedError, 'SolverComponent::add_entity_name'
+    
     cpdef remove_entity_name(self, str name):
         """
         Remove name of an entity that was added.
         """
-        cpdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
+        raise NotImplementedError, 'SolverComponent::remove_entity_name'
         
-        if name_dict.has_key(name):
-            name_dict.pop(name)
-        else:
-            logger.warn('Name %s not found'%name)
-
     cpdef set_entity_names(self, list entity_names):
         """
         Sets the entity names list to the given list.
         """
-        cdef dict name_dict = self.information.get_dict(self.ENTITY_NAMES)
-        name_dict.clear()
-
-        for name in entity_names:
-            name_dict[name] = None
-
+        raise NotImplementedError, 'SolverComponent::set_entity_names'
+        
     cpdef add_input_entity_type(self, int etype):
         """
         Adds an entity type that will be accepted by this component.
         """
-        cpdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
-        
-        if not type_dict.has_key(etype):
-            type_dict[etype] = None
+        self.input_types.add(etype)
 
     cpdef remove_input_entity_type(self, int etype):
         """
         Removes a particular entity type that was added.
         """
-        cdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
-        
-        if type_dict.has_key(etype):
-            type_dict.pop(etype)
-        else:
-            logger.warn('Type (%d) not present'%(etype))
+        self.input_types.remove(etype)
 
     cpdef set_input_entity_types(self, list type_list):
         """
         Sets the accepted entity types from the given list.
         """
-        cdef dict type_dict = self.information.get_dict(self.INPUT_TYPES)
-
-        type_dict.clear()
-        
-        for t in type_list:
-            type_dict[t] = None
+        self.input_types.clear()
+        self.input_types.update(set(type_list))
 
     cpdef add_read_prop_requirement(self, int e_type, list prop_list):
         """
@@ -232,23 +184,21 @@ cdef class SolverComponent(Base):
 
         prop_list is a list of strings, one for each property.
         """
-        cdef dict rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        cdef list t_rp = rp.get(e_type)
-        
+        cdef dict rp = self.particle_props_read
+        cdef set t_rp = rp.get(e_type)
+
         if t_rp is None:
-            t_rp = []
+            t_rp = set([])
             rp[e_type] = t_rp
 
-        for prop in prop_list:
-            if t_rp.count(prop) == 0:
-                t_rp.append(prop)
+        t_rp.update(set(prop_list))
 
     cpdef add_write_prop_requirement(self, int e_type, str prop_name, double
                                      default_value=0.0):
         """
         Adds a property requirement for the given type.
         """
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        cdef dict wp = self.particle_props_write
         cdef list t_wp = wp.get(e_type)
         
         if t_wp is None:
@@ -264,7 +214,7 @@ cdef class SolverComponent(Base):
         """
         Adds a property requirement for the given type.
         """
-        cdef dict pp = self.information.get_dict(self.PARTICLE_PROPERTIES_PRIVATE)
+        cdef dict pp = self.particle_props_private
         cdef list t_pp = pp.get(e_type)
         
         if t_pp is None:
@@ -280,7 +230,7 @@ cdef class SolverComponent(Base):
         """
         Adds a flag property requirement for the given type.
         """
-        cdef dict f = self.information.get_dict(self.PARTICLE_FLAGS)
+        cdef dict f = self.particle_flags
         cdef list t_f = f.get(e_type)
         
         if t_f is None:
@@ -296,7 +246,7 @@ cdef class SolverComponent(Base):
         """
         Add a property requirement of the entity.
         """
-        cdef dict ep = self.information.get_dict(self.ENTITY_PROPERTIES)
+        cdef dict ep = self.entity_props
         cdef list t_ep = ep.get(e_type)
 
         if t_ep is None:
@@ -438,32 +388,25 @@ cdef class ComponentManager(Base):
         Constructor.
         """
         self.component_dict = {}
-        
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_READ, {})
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE, {})
-        self.information.set_dict(SolverComponent.PARTICLE_PROPERTIES_PRIVATE,
-                                  {})
-        
-        self.information.set_dict(ComponentManager.ENTITY_PROPERTIES, {})
-        self.information.set_dict(ComponentManager.PARTICLE_PROPERTIES, {})
-        
-        # stores the names of components requiring a particular property.
-        self.information.set_dict(
-            ComponentManager.PROPERTY_COMPONENT_MAP, {})
 
+        self.particle_props = {} 
+        self.entity_props = {}
+        self.property_component_map = {}
+        self.particle_props_read = {}
+        self.particle_props_write = {}
+        self.particle_props_private = {}
+        
     cpdef get_entity_properties(self, int e_type):
         """
         Get the entity property requirements of all components.
         """
-        return self.information.get_dict(ComponentManager.ENTITY_PROPERTIES)[e_type]
+        return self.entity_props[e_type]
 
     cpdef get_particle_properties(self, int e_type):
         """
         Get the particle property requirements of all components.
         """
-        return self.information.get_dict(
-            ComponentManager.PARTICLE_PROPERTIES)[e_type]
-
+        return self.particle_props[e_type]
 
     cpdef add_input(self, EntityBase entity):
         """
@@ -521,6 +464,7 @@ cdef class ComponentManager(Base):
                 self.component_dict[c.name] = {'component':c, 'notify':notify}
             else:
                 logger.warn('Component %s not added'%(c.name))
+                raise ValueError, 'Component %s not added'%(c.name)
 
     cpdef remove_component(self, str comp_name):
         """
@@ -554,12 +498,10 @@ cdef class ComponentManager(Base):
         cdef dict p_props, r_props, w_props, flags
         cdef dict entity, particle
 
-        cdef TypedDict c_info = c.information
-        
-        p_props = c_info.get_dict(SolverComponent.PARTICLE_PROPERTIES_PRIVATE)
-        w_props = c_info.get_dict(SolverComponent.PARTICLE_PROPERTIES_WRITE)
-        r_props = c_info.get_dict(SolverComponent.PARTICLE_PROPERTIES_READ)
-        flags = c_info.get_dict(SolverComponent.PARTICLE_FLAGS)
+        p_props = c.particle_props_private
+        w_props = c.particle_props_write
+        r_props = c.particle_props_read
+        flags = c.particle_flags
         
         # check the validity of private properties.
         for etype in p_props:
@@ -585,11 +527,8 @@ cdef class ComponentManager(Base):
         # properties and other tables.
 
         # add entity properties to entity_properties
-        entity_props = self.information.get_dict(
-            ComponentManager.ENTITY_PROPERTIES)
-
-        e_props = c.information.get_dict(
-            c.ENTITY_PROPERTIES)
+        entity_props = self.entity_props
+        e_props = c.entity_props
         
         for etype in e_props:
             p_list = e_props[etype]
@@ -620,8 +559,7 @@ cdef class ComponentManager(Base):
                             p1['default'] = p_default                
         
         # add the particle properites to particle_properties
-        particle_props = self.information.get_dict(
-            ComponentManager.PARTICLE_PROPERTIES)
+        particle_props = self.particle_props
         
         # add the private particle properties.
         for etype in p_props:
@@ -662,8 +600,7 @@ cdef class ComponentManager(Base):
                                          etype, str access_type):
         """
         """
-        cdef dict pc_map = self.information.get_dict(
-            self.PROPERTY_COMPONENT_MAP)
+        pc_map = self.property_component_map
 
         # get the dictionary maintained for this property
         cdef dict comp_dict = pc_map.get(prop)
@@ -695,9 +632,7 @@ cdef class ComponentManager(Base):
     cpdef _add_particle_property(self, dict prop, int etype, str data_type='double'):
         """
         """
-        cdef dict particle_props = self.information.get_dict(
-            ComponentManager.PARTICLE_PROPERTIES)
-
+        cdef dict particle_props = self.particle_props
         cdef dict e_type_props = particle_props.get(etype)
 
         # no property for this entity type yet.
@@ -734,8 +669,7 @@ cdef class ComponentManager(Base):
         cdef SolverComponent existing_comp
 
         prop_name = prop['name']
-        pc_map = self.information.get_dict(
-            ComponentManager.PROPERTY_COMPONENT_MAP)
+        pc_map = self.property_component_map
 
         # get the list of components needing this property.
         # this is stored a a dictionary, keyed on the components name, and
@@ -786,8 +720,8 @@ cdef class ComponentManager(Base):
         Call this on any entity AFTER all required components have been added to
         the component manager.
         """
-        ep = self.information.get_dict(self.ENTITY_PROPERTIES)
-        pp = self.information.get_dict(self.PARTICLE_PROPERTIES)
+        ep = self.entity_props
+        pp = self.particle_props
 
         # update the entity properties first
         for e_type in ep.keys():
@@ -816,6 +750,7 @@ cdef class ComponentManager(Base):
 ################################################################################
 # `SolverBase` class.
 ################################################################################ 
+from pysph.solver.integrator_base cimport Integrator
 cdef class SolverBase(Base):
     """
     """
@@ -897,8 +832,9 @@ cdef class SolverBase(Base):
         
         # the integrator.
         self.integrator = integrator
-        if self.integrator is not None:
-            self.integrator.time_step = self.time_step
+        if self.integrator is None:
+            self.integrator = Integrator(name='integrator_default', solver=self)
+        self.integrator.time_step = self.time_step
 
         # the timer
         self.enable_timing = enable_timing
@@ -927,7 +863,6 @@ cdef class SolverBase(Base):
         Run the solver.
         """
         cdef SolverComponent c
-        #from pysph.solver.integrator_base cimport Integrator
 
         self._setup_solver()
 

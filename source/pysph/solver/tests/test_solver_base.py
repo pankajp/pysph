@@ -61,23 +61,14 @@ class TestSolverComponent(unittest.TestCase):
 
         self.assertEqual(c.setup_done, False)
 
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_WRITE), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_READ), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.PARTICLE_FLAGS), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.ENTITY_PROPERTIES), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_PRIVATE), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.INPUT_TYPES), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.ENTITY_NAMES), {})
-        self.assertEqual(c.information.get_dict(
-                SolverComponent.OUTPUT_PROPERTIES), {})
-
+        self.assertEqual(c.particle_props_read, {})
+        self.assertEqual(c.particle_props_write, {})
+        self.assertEqual(c.particle_props_private, {})
+        self.assertEqual(c.particle_flags, {})
+        self.assertEqual(c.entity_props, {})
+        self.assertEqual(c.input_types, set())
+        self.assertEqual(c.entity_names, {})
+        
     def test_filter_entity(self):
         """
         Tests the filter_entity function.
@@ -85,36 +76,36 @@ class TestSolverComponent(unittest.TestCase):
         e = EntityBase('e', {'a':2.0, 'b':5.0, 'c':6.0})
 
         c = SolverComponent()
-        input_types = c.information.get_dict(SolverComponent.INPUT_TYPES)
+        input_types = c.input_types
 
         # make the component accept Fluids only.
-        input_types[EntityTypes.Entity_Fluid] = None
+        input_types.add(EntityTypes.Entity_Fluid)
         self.assertEqual(c.filter_entity(e), True)
         
         # remove any type requirements.
         # now the entity should be accepted.
-        input_types.pop(EntityTypes.Entity_Fluid)
+        input_types.remove(EntityTypes.Entity_Fluid)
         self.assertEqual(c.filter_entity(e), False)
 
         e = Solid()
-        input_types[EntityTypes.Entity_Solid] = None
+        input_types.add(EntityTypes.Entity_Solid)
         self.assertEqual(c.filter_entity(e), False)
 
         #  Solid should be accepted when the component has a type requirement of
         #  Base.
-        input_types.pop(EntityTypes.Entity_Solid)
-        input_types[EntityTypes.Entity_Base] = None
+        input_types.remove(EntityTypes.Entity_Solid)
+        input_types.add(EntityTypes.Entity_Base)
         self.assertEqual(c.filter_entity(e), False)
 
-        input_types.pop(EntityTypes.Entity_Base)
-        input_types[EntityTypes.Entity_Fluid] = None
+        input_types.remove(EntityTypes.Entity_Base)
+        input_types.add(EntityTypes.Entity_Fluid)
         self.assertEqual(c.filter_entity(e), True)
 
         # now add some named requirements.
-        entity_names = c.information.get_dict(SolverComponent.ENTITY_NAMES)
+        entity_names = c.entity_names
 
-        entity_names[EntityTypes.Entity_Fluid] = ['f1']
-        entity_names[EntityTypes.Entity_Solid] = ['s1']
+        entity_names[EntityTypes.Entity_Fluid] = set(['f1'])
+        entity_names[EntityTypes.Entity_Solid] = set(['s1'])
         
         # clear all property requirements.
         input_types.clear()
@@ -125,28 +116,49 @@ class TestSolverComponent(unittest.TestCase):
         
         self.assertEqual(c.filter_entity(e1), False)
         self.assertEqual(c.filter_entity(e2), False)
-        self.assertEqual(c.filter_entity(e3), True)
+        self.assertEqual(c.filter_entity(e3), False)
 
-    def test_entity_name_specs(self):
+    def test_add_property_speification(self):
         """
-        Tests the add_entity_name, remove_entity_name and set_entity_names
-        functions. 
+        Tests functions that add property requirements to the component. 
         """
         s = SolverComponent()
-        s.add_entity_name('abcd')
-        s.add_entity_name('efgh')
+        s.add_read_prop_requirement(EntityTypes.Entity_Fluid, ['a', 'b', 'c'])
+        s.add_read_prop_requirement(EntityTypes.Entity_Base, ['d', 'e', 'f'])
 
-        name_dict = s.information.get_dict(s.ENTITY_NAMES)
-        self.assertEqual(name_dict.has_key('abcd'), True)
-        self.assertEqual(name_dict.has_key('efgh'), True)
+        rp = s.particle_props_read
+        self.assertEqual(rp[EntityTypes.Entity_Fluid], set(['a', 'b', 'c']))
+        self.assertEqual(rp[EntityTypes.Entity_Base], set(['d', 'e', 'f']))
 
-        s.remove_entity_name('abcd')
-        self.assertEqual(name_dict.has_key('abcd'), False)
-        self.assertEqual(name_dict.has_key('efgh'), True)
+        s.add_write_prop_requirement(EntityTypes.Entity_Base, 't')
+        s.add_write_prop_requirement(EntityTypes.Entity_Fluid, 'u', -1.02)
+        
+        wp = s.particle_props_write
+        self.assertEqual(wp[EntityTypes.Entity_Base], [{'name':'t', 'default':0.0}])
+        self.assertEqual(wp[EntityTypes.Entity_Fluid], [{'name':'u',
+                                                        'default':-1.02}])
 
-        s.set_entity_names([])
-        self.assertEqual(len(name_dict), 0)
+        pp = s.particle_props_private
+        s.add_private_prop_requirement(EntityTypes.Entity_Base, 'g', 9.0)
+        s.add_private_prop_requirement(EntityTypes.Entity_Base, 'h', 6.0)
+        
+        self.assertEqual(pp[EntityTypes.Entity_Base], [{'name':'g',
+                                                        'default':9.0},
+                                                       {'default':6.0,
+                                                        'name':'h'}])
 
+        fl = s.particle_flags
+        s.add_flag_requirement(EntityTypes.Entity_Solid, 'boundary', 1)
+        s.add_flag_requirement(EntityTypes.Entity_Fluid, 'real', 5)
+        self.assertEqual(fl[EntityTypes.Entity_Solid], [{'name':'boundary',
+                                                        'default':1}])
+        self.assertEqual(fl[EntityTypes.Entity_Fluid], [{'name':'real',
+                                                        'default':5}])
+
+        ep = s.entity_props
+        s.add_entity_prop_requirement(EntityTypes.Entity_Solid, 'ht', 5.0)
+        self.assertEqual(ep[EntityTypes.Entity_Solid], [{'name':'ht', 'default':5.0}])
+                             
     def test_entity_type_specs(self):
         """
         Tests the add_input_entity_type, remove_input_entity_type and
@@ -156,18 +168,17 @@ class TestSolverComponent(unittest.TestCase):
         s.add_input_entity_type(EntityTypes.Entity_Solid)
         s.add_input_entity_type(EntityTypes.Entity_Dummy)
         
-        type_dict = s.information.get_dict(s.INPUT_TYPES)
-        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Dummy), True)
-        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Solid), True)
+        input_types = s.input_types
+        self.assertEqual(EntityTypes.Entity_Dummy in input_types, True)
+        self.assertEqual(EntityTypes.Entity_Solid in input_types, True)
 
         s.remove_input_entity_type(EntityTypes.Entity_Solid)
-        
-        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Dummy), True)
-        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Solid), False)
+
+        self.assertEqual(EntityTypes.Entity_Dummy in input_types, True)
+        self.assertEqual(EntityTypes.Entity_Solid in input_types, False)
 
         s.set_input_entity_types([EntityTypes.Entity_Fluid])
-        self.assertEqual(type_dict.has_key(EntityTypes.Entity_Fluid), True)
-        self.assertEqual(len(type_dict), 1)                         
+        self.assertEqual(EntityTypes.Entity_Fluid in input_types, True)
 
 ################################################################################
 # `TestComponentManager` class.
@@ -182,17 +193,13 @@ class TestComponentManager(unittest.TestCase):
         """
         cm = ComponentManager()
         self.assertEqual(cm.component_dict, {})
-        self.assertEqual(cm.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_PRIVATE), {})
-        self.assertEqual(cm.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_WRITE), {})
-        self.assertEqual(cm.information.get_dict(
-                SolverComponent.PARTICLE_PROPERTIES_PRIVATE), {})
-        self.assertEqual(cm.information.get_dict(
-                ComponentManager.ENTITY_PROPERTIES), {})
-        self.assertEqual(cm.information.get_dict(
-                ComponentManager.PARTICLE_PROPERTIES), {})
-
+        self.assertEqual(cm.particle_props, {})
+        self.assertEqual(cm.entity_props, {})
+        self.assertEqual(cm.property_component_map, {})
+        self.assertEqual(cm.particle_props_read, {})
+        self.assertEqual(cm.particle_props_write, {})
+        self.assertEqual(cm.particle_props_private, {})
+        
     def test_add_component(self):
         """
         Tests the add_component function.
@@ -208,8 +215,8 @@ class TestComponentManager(unittest.TestCase):
         self.assertEqual(cm.component_dict['c1']['component'], c1)
         self.assertEqual(cm.component_dict['c1']['notify'], False)
         # make sure the property requirements have been updated.
-        particle_props = cm.information.get_dict(cm.PARTICLE_PROPERTIES)
-        entity_props = cm.information.get_dict(cm.ENTITY_PROPERTIES)
+        particle_props = cm.particle_props
+        entity_props = cm.entity_props
 
         solid_props = particle_props[EntityTypes.Entity_Solid]
         check_particle_properties(solid_props,
@@ -261,7 +268,7 @@ class TestComponentManager(unittest.TestCase):
                                 [1.0])
 
         # now try adding a component with conflicting requirements.
-        cm.add_component(c2)
+        self.assertRaises(ValueError, cm.add_component, c2)
                 
         # the component should not have been added. And the arrays should not
         # have changed.
@@ -365,7 +372,7 @@ class TestSolverBase(unittest.TestCase):
         self.assertEqual(s.cell_manager != None, True)
         self.assertEqual(s.nnps_manager != None, True)
         self.assertEqual(s.kernel, None)
-        self.assertEqual(s.integrator, None)
+        #self.assertEqual(s.integrator, None)
         self.assertEqual(s.elapsed_time, 0.0)
         self.assertEqual(s.total_simulation_time, 0.0)
         self.assertEqual(s.current_iteration, 0)

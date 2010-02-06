@@ -479,6 +479,9 @@ cdef class ParallelRootCell(RootCell):
         # list of cell ids of neighbors from those processors.
         self.adjacent_remote_cells = {}
 
+        # start and end indices of particles from each neighbor processor.
+        self.remote_particle_indices = {}
+
         # adjacent processors - list of processors that share a cell boundary
         # with this processor.
         self.adjacent_processors = []
@@ -554,6 +557,8 @@ cdef class ParallelRootCell(RootCell):
 
         """
         self.adjacent_remote_cells.clear()
+        self.remote_particle_indices.clear()
+        
         cdef dict arc = {}
         cdef dict cell_dict
         cdef IntPoint cid
@@ -578,7 +583,7 @@ cdef class ParallelRootCell(RootCell):
 
         # copy temp data in arc into self.adjacent_remote_cells
         for pid, cell_dict in arc.iteritems():
-            self.adjacent_remote_cells[pid] = cell_dict.keys()
+            self.adjacent_remote_cells[pid] = cell_dict.keys()            
         
         self.adjacent_processors[:] = self.adjacent_remote_cells.keys()
         # add my pid also into adjacent_processors.
@@ -1111,7 +1116,7 @@ cdef class ParallelRootCell(RootCell):
             else:
                 self.new_cells_added[cid.copy()] += count
 
-    cpdef update_remote_particle_properties(self, list props=None):
+    def update_remote_particle_properties_old(self, list props=None):
         """
         Update the properties of the remote particles from the respective
         processors. 
@@ -1219,6 +1224,120 @@ cdef class ParallelRootCell(RootCell):
                     # properties of the destination array.
                     d_parr.copy_properties(s_parr, si, ei)
 
+    cpdef update_remote_particle_properties(self, list props=None):
+        """
+        Update the properties of the remote particles from the respective
+        processors. 
+
+        **Parameters**
+            - props - the names of the properties that are to be copied. One
+            list of properties for each array that has been binned using the
+            cell manager. 
+
+        **Note**
+        
+             - this function will work correctly only if the particle arrays
+             have not been modified since the last parallel update. If the
+             particle arrays have been touched, then the start and end indices
+             stored for r the particles that are remote copies will become
+             invalid and the values will be copied into incorrect locations.
+
+        """
+        logger.debug('update_remote_particle_properties')
+        cdef list nbr_procs = []
+        nbr_procs[:] = self.adjacent_processors
+        cdef dict arc = self.adjacent_remote_cells
+        cdef dict remote_cell_data = {}
+        cdef MPI.Comm comm = self.parallel_controller.comm
+        cdef list cids
+        cdef IntPoint cid
+        cdef int pid, dest, num_arrays, i, si, ei, n1, n2
+        cdef dict cell_data
+        cdef ParticleArray d_parr, s_parr
+        cdef str prop
+        
+        num_arrays = len(self.cell_manager.arrays_to_bin)
+        logger.debug('Neighbor procs are : %s'%(nbr_procs))
+        for cids in arc.values():
+            for cid in cids:
+                logger.debug('%s'%(cid))
+
+        if props is None:
+            props = [None]*len(self.cell_manager.arrays_to_bin)
+
+        for pid in nbr_procs:
+            if pid == self.pid:
+                for dest in nbr_procs:
+                    if self.pid == dest:
+                        continue
+                    comm.send(arc[dest], dest=dest, tag=TAG_REMOTE_DATA_REQUEST)
+                    remote_cell_data[dest] = comm.recv(
+                        source=dest, tag=TAG_REMOTE_DATA_REPLY)
+            else:
+                requested_cells = comm.recv(source=pid,
+                                            tag=TAG_REMOTE_DATA_REQUEST) 
+                data = self._get_cell_data_for_neighbor(requested_cells,
+                                                        props=props)
+                comm.send(data, dest=pid, tag=TAG_REMOTE_DATA_REPLY)
+
+        logger.debug('Data Exchange done')
+        num_arrays = len(self.cell_manager.arrays_to_bin)
+        for pid, particle_data in remote_cell_data.iteritems():
+            parrays = particle_data['parrays']
+            particle_counts = particle_counts['pcounts']
+
+            
+        # now copy the data received into the appropriate locations.
+        for pid, cell_data in remote_cell_data.iteritems():
+            for cid, cell_particles in cell_data.iteritems():
+                # get the copy of the remote cell with us.
+                remote_cell = self.cell_dict.get(cid)
+                
+                logger.debug('Copy data for cell : %s'%(cid))
+                if remote_cell is None:
+                    msg = 'Copy of Remote cell %s not found'%(cid)
+                    logger.error(msg)
+                    raise SystemError, msg
+
+                for i from 0 <= i < num_arrays:
+                    d_parr = self.cell_manager.arrays_to_bin[i]
+                    s_parr = cell_particles[i]
+
+                    si = remote_cell.particle_start_indices[i]
+                    ei = remote_cell.particle_end_indices[i]
+
+                    logger.debug('Copying particles of parray :%s'%(
+                            d_parr.name))
+                    logger.debug('Copying from %d to %d'%(si, ei))
+                    logger.debug('Num particles in dest : %d'%(
+                            d_parr.get_number_of_particles()))
+                    logger.debug('Num particles in source : %d'%(
+                            s_parr.get_number_of_particles()))
+
+                    if si == -1 and ei == -1:
+                        # there are no particles for this array, continue
+                        continue
+                    
+                    n1 = ei-si+1
+                    n2 = s_parr.get_number_of_particles()
+
+                    if n1 != n2:
+                        msg = 'Remote data : %d, local copy : %d\n'%(n1, n2)
+                        msg += 'Both should have same number of particles'
+                        logger.error(msg)
+                        raise SystemError, msg
+                    
+                    # make sure only the required properties are there in the
+                    # destination arrays.
+                    if props[i] is not None:
+                        for prop in s_parr.properties.keys():
+                            if prop not in props[i]:
+                                s_parr.remove_property(prop)
+
+                    # copy the property values from the source array into
+                    # properties of the destination array.
+                    d_parr.copy_properties(s_parr, si, ei)
+
     cpdef exchange_neighbor_particles(self):
         """
         Exchange neighbor particles.
@@ -1249,6 +1368,8 @@ cdef class ParallelRootCell(RootCell):
         cdef LongArray indices, pcount_j, current_counts
         cdef ParticleArray parr, d_parr
         cdef object c
+        cdef dict rpi = self.remote_particle_indices
+        cdef list rpi_list 
         
         # sort the processors in increasing order of ranks.
         if nbr_procs.count(self.pid) == 0:

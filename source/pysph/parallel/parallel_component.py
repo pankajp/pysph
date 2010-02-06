@@ -51,9 +51,7 @@ class ParallelComponent(UserDefinedComponent):
         else:
             pid = self.solver.parallel_controller.rank        
 
-        in_types = self.information.get_dict(self.INPUT_TYPES)
-
-        for t in in_types.keys():
+        for t in self.input_types
             self.add_write_prop_requirement(t, 'local', 1)
             self.add_write_prop_requirement(t, 'pid', pid)
         

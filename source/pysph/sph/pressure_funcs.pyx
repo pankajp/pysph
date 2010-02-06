@@ -15,7 +15,7 @@ cdef class SPHSymmetricPressureGradient3D(SPHFunctionParticle3D):
     def __init__(self, ParticleArray source, ParticleArray dest,
                  str h='h', str mass='m', str rho='rho',
                  str coord_x='x', str coord_y='y', str coord_z='z',
-                 str velx='u', str vely='v', str velz='z', bint
+                 str velx='u', str vely='v', str velz='w', bint
                  setup_arrays=True,
                  str pressure='p', 
                  *args, **kwargs):

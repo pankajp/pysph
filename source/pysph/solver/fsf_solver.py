@@ -111,9 +111,6 @@ class FSFSolver(SolverBase):
         self.component_categories['density_rate'].append(
             SPHDensityRateComponent(name='density_rate_default',solver=self))
 
-        if self.integrator is None:
-            self.integrator = Integrator(name='integrator_default', solver=self)
-    
     ######################################################################
     # `Public` interface
     ######################################################################

@@ -81,11 +81,7 @@ class ParallelVTKWriter(VTKWriter):
         """
         Set the property requirements on this component.
         """
-        in_types = self.information.get_dict(self.INPUT_TYPES)
-        
-        for t in in_types.keys():
-            self.add_write_prop_requirement(t, ['pid'])
-
+        self.add_write_prop_requirement(EntityTypes.Entity_Base, ['pid'])
         return 0
 
     def setup_component(self):

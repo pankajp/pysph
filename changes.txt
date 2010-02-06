@@ -261,3 +261,11 @@ Wednesday 03 February 2010 (02:47:31 PM)
     - pickling routines for carrays and tests.
     - optimized routines for neighbor particle exchange in the
     cy_parallel_cell_manager module.
+Saturday 06 February 2010 (02:18:13 PM)
+    - Cleanup before uploading on google:
+        - entity filtering based on entity names disabled due to lack to concrete
+    	idea about the same.
+	- information dict stuff removed from all components except integrator.
+    - Typo in sph/pressure_funcs.pyx resolved.
+    - carray generation files moved to pysph/base
+    

@@ -120,10 +120,8 @@ class SPHDensityRateComponent(PYSPHComponent):
             - read - m and h
             - write - rho, _tmp1
         """
-        inp_types = self.information.get_dict(self.INPUT_TYPES)
-        wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
-        rp = self.information.get_dict(self.PARTICLE_PROPERTIES_READ)
-        
+        inp_types = self.input_types
+
         for t in self.source_types:
             self.add_read_prop_requirement(t, ['m', 'h', 'u', 'v', 'w'])
 

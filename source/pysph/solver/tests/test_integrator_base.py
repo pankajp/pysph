@@ -422,22 +422,17 @@ class TestIntegrator(unittest.TestCase):
 
         
         # make sure NO property information is present currently.
-        self.assertEqual(
-            i.information.get_dict(i.PARTICLE_PROPERTIES_WRITE), {})
-        self.assertEqual(
-            i.information.get_dict(i.PARTICLE_PROPERTIES_READ), {})
-        self.assertEqual(
-            i.information.get_dict(i.PARTICLE_PROPERTIES_PRIVATE), {})
-
+        self.assertEqual(i.particle_props_read, {})
+        self.assertEqual(i.particle_props_write, {})
+        self.assertEqual(i.particle_props_private, {})
+        
         i.update_property_requirements()
 
-        self.assertEqual(
-            i.information.get_dict(i.PARTICLE_PROPERTIES_READ), {})
-        self.assertEqual(
-            i.information.get_dict(i.PARTICLE_PROPERTIES_PRIVATE), {})
+        self.assertEqual(i.particle_props_read, {})
+        self.assertEqual(i.particle_props_private, {})
 
         # make sure the write properties were added.
-        wp = i.information.get_dict(i.PARTICLE_PROPERTIES_WRITE)
+        wp = i.particle_props_write
         
         self.assertEqual(wp.has_key(EntityTypes.Entity_Base), True)
         self.assertEqual(wp.has_key(EntityTypes.Entity_Fluid), True)

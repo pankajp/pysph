@@ -50,7 +50,7 @@ cdef class EulerXSPHIntegrator(Integrator):
         Integrator.update_property_requirements(self)
 
         # add the property required for storing the velocity corrections.
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        cdef dict wp = self.particle_props_write
         
         fluid_props = wp.get(EntityTypes.Entity_Fluid)
 
@@ -61,7 +61,6 @@ cdef class EulerXSPHIntegrator(Integrator):
         fluid_props.extend([{'name':'del_u', 'default':0.0},
                             {'name':'del_v', 'default':0.0},
                             {'name':'del_w', 'default':0.0}])
-
         return 0
 
     def setup_position_stepper(self):
@@ -124,7 +123,7 @@ cdef class RK2XSPHIntegrator(RK2Integrator):
         RK2Integrator.update_property_requirements(self)
 
         # add the property required for storing the velocity corrections.
-        cdef dict wp = self.information.get_dict(self.PARTICLE_PROPERTIES_WRITE)
+        cdef dict wp = self.particle_props_write
         
         fluid_props = wp.get(EntityTypes.Entity_Fluid)
 

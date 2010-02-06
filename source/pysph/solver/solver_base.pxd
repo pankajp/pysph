@@ -24,6 +24,15 @@ cdef class SolverComponent(Base):
     Base class for all solver components.
     """
 
+    # information to be associated with each component.
+    cdef public dict particle_props_read
+    cdef public dict particle_props_write
+    cdef public dict particle_props_private
+    cdef public dict particle_flags
+    cdef public dict entity_props
+    cdef public set input_types
+    cdef public dict entity_names
+        
     # name of the component.
     cdef public str name
 
@@ -101,6 +110,13 @@ cdef class ComponentManager(Base):
         - for every component, indicate if its input has to be handled by the
         component manager.
     """
+    cdef public dict property_component_map
+    cdef public dict particle_props_read
+    cdef public dict particle_props_write
+    cdef public dict particle_props_private
+    cdef public dict entity_props
+    cdef public dict particle_props
+    
     # the main dict containing all components
     cdef public dict component_dict
 

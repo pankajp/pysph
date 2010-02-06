@@ -51,6 +51,7 @@ cdef class ParallelCellManager(CellManager):
 cdef class ParallelRootCell(RootCell):
     cdef public bint initial_redistribution_done
     cdef public dict adjacent_remote_cells
+    cdef public dict remote_particle_indices
     cdef public dict nbr_cell_info
     cdef public dict new_particles_for_neighbors
     cdef public dict new_region_particles
