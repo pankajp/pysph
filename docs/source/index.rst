@@ -6,13 +6,11 @@
 Welcome to PySPH's documentation!
 =================================
 
-Contents:
-
 .. toctree::
    :maxdepth: 3 
 
-    install.rst
-    getting_started.rst
+   install.rst
+   getting_started.rst
 
 
 Indices and tables
