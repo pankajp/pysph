@@ -1,0 +1,5 @@
+syntax: glob
+*.c
+docs/build/
+source/build/
+source/pysph.egg-info/
