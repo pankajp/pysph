@@ -268,4 +268,6 @@ Saturday 06 February 2010 (02:18:13 PM)
 	- information dict stuff removed from all components except integrator.
     - Typo in sph/pressure_funcs.pyx resolved.
     - carray generation files moved to pysph/base
+Saturday 06 February 2010 (05:08:32 PM)
+    - removed misc directory
     
