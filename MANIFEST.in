@@ -1,0 +1,3 @@
+include MANIFEST.in *.py *.txt
+recursive-include examples *.py
+recursive-include docs *.*
