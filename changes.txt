@@ -270,4 +270,6 @@ Saturday 06 February 2010 (02:18:13 PM)
     - carray generation files moved to pysph/base
 Saturday 06 February 2010 (05:08:32 PM)
     - removed misc directory
+Saturday 06 February 2010 (05:12:28 PM)
+    - moved examples to root.
     
