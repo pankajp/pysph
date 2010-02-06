@@ -1,5 +1,8 @@
 syntax: glob
 *.c
+*.pyc
+*.so
+*.o
 docs/build/
 source/build/
-source/pysph.egg-info/
+pysph.egg-info/
