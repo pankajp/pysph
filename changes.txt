@@ -272,4 +272,11 @@ Saturday 06 February 2010 (05:08:32 PM)
     - removed misc directory
 Saturday 06 February 2010 (05:12:28 PM)
     - moved examples to root.
-    
+Monday 08 February 2010 (01:31:45 PM)
+    - better indentation in cy_parallel_cell_manager.
+    - command line option to - write vtk files and choose largest cell size for
+    parallel cell manager.
+Monday 08 February 2010 (01:44:29 PM)
+    - typo in update_property_requirements function of parallel_component
+    removed. 
+    - error in update_property_requirements of parallel_vtk_writer resolved.

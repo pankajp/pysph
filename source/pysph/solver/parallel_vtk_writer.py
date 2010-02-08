@@ -13,6 +13,7 @@ import numpy
 from pysph.base.particle_array import ParticleArray
 from pysph.base.particle_tags import *
 from pysph.solver.vtk_writer import *
+from pysph.solver.entity_types import EntityTypes
 
 ################################################################################
 # `ParallelVTKWriter` class.
@@ -81,7 +82,11 @@ class ParallelVTKWriter(VTKWriter):
         """
         Set the property requirements on this component.
         """
-        self.add_write_prop_requirement(EntityTypes.Entity_Base, ['pid'])
+        if self.parallel_controller is None:
+            pid = 0
+        else:
+            pid = self.parallel_controller.rank
+        self.add_write_prop_requirement(EntityTypes.Entity_Base, 'pid', pid)
         return 0
 
     def setup_component(self):
