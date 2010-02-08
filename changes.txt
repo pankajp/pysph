@@ -280,3 +280,5 @@ Monday 08 February 2010 (01:44:29 PM)
     - typo in update_property_requirements function of parallel_component
     removed. 
     - error in update_property_requirements of parallel_vtk_writer resolved.
+Monday 08 February 2010 (01:52:30 PM)
+    - added "build" directory to .hgignore
