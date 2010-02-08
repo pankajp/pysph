@@ -32,6 +32,12 @@ op.add_option('-i', '--sph-interpolations', dest='sph_interpolations',
               metavar='SPH_INTERPOLATIONS')
 op.add_option('-n', '--num-iterations', dest='num_iterations',
               metavar='NUM_ITERATIONS')
+op.add_option('-w', '--write-vtk', 
+              action="store_true", default=False, dest='write_vtk',
+              help='write a vtk file after all iterations are done')
+op.add_option('-v', '--verbose',
+	      action="store_true", default=False, dest='verbose',
+	      help='print large amounts of debug information')
 
 # parse the input arguements
 args = op.parse_args()
@@ -55,7 +61,12 @@ if not exists(destdir):
 import logging
 logger = logging.getLogger()
 log_filename = destdir + '/' + 'log_pysph'
-logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
+if options.verbose:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+
+logging.basicConfig(level=log_level, filename=log_filename, filemode='w')
 logger.addHandler(logging.StreamHandler())
 
 # read the square_width to use
@@ -212,10 +223,6 @@ for i in range(sph_interpolations):
                           sph_funcs=[sph_funcs[i]],
                           nnps_manager=nnps_manager)
 
-# sph_func = SPHRho3D(source=parray, dest=parray)
-# sph_sum = SPHBase(sources=[parray], dest=parray, kernel=kernel,
-#                   sph_funcs=[sph_func],
-#                   nnps_manager=nnps_manager)
 vtk_writer.setup_component()
 
 processing_times = []
@@ -229,8 +236,6 @@ for i in range(num_iterations):
 
     t1 = time.time()
 
-    # parallel operations.
-    #vtk_writer.write()
     nnps_manager.py_update()
     # perform an explicit cell manager update, otherwise the update gets called
     # in the portion where the computation time is being measure.
@@ -281,3 +286,8 @@ for i in range(len(total_iteration_times)):
     file.write('\n')
 
 file.close()
+
+# write the VTK file if needed.
+if options.write_vtk is True:
+    vtk_writer.write()
+

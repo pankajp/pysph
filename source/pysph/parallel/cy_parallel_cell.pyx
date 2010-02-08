@@ -52,6 +52,11 @@ TAG_REMOTE_CELL_REPLY = 6
 TAG_REMOTE_DATA_REQUEST = 7
 TAG_REMOTE_DATA_REPLY = 8
 
+# TODO
+# 1. The parallel cell manager by default uses exactly two levels in the cell
+# hierarchy. This needs to be made configurable.
+
+
 ################################################################################
 # `share_data` function.
 ################################################################################
@@ -383,10 +388,13 @@ cdef class ParallelLeafCell(LeafCell):
     cpdef Cell get_new_sibling(self, IntPoint id):
         """
         """
-        cdef ParallelLeafCell cell = ParallelLeafCell(id=id, cell_manager=self.cell_manager,
-                                                      cell_size=self.cell_size, level=self.level,
-                                                      jump_tolerance=self.jump_tolerance,
-                                                      pid=self.pid)
+        cdef ParallelLeafCell cell = \
+            ParallelLeafCell(id=id,
+                             cell_manager=self.cell_manager, 
+                             cell_size=self.cell_size,
+                             level=self.level, 
+                             jump_tolerance=self.jump_tolerance,
+                             pid=self.pid)
         return cell
 
 ################################################################################
@@ -423,9 +431,10 @@ cdef class ParallelNonLeafCell(NonLeafCell):
     cpdef Cell get_new_sibling(self, IntPoint id):
         """
         """
-        cdef ParallelNonLeafCell cell = ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
-                                                            cell_size=self.cell_size, level=self.level,
-                                                            pid=self.pid)
+        cdef ParallelNonLeafCell cell = ParallelNonLeafCell(
+            id=id, cell_manager=self.cell_manager,
+            cell_size=self.cell_size, level=self.level,
+            pid=self.pid)
         return cell
 
     cpdef Cell get_new_child(self, IntPoint id):
@@ -434,11 +443,12 @@ cdef class ParallelNonLeafCell(NonLeafCell):
         cdef int num_levels = self.cell_manager.num_levels
         cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
         if (num_levels - self.level) == num_levels-1:
-            return ParallelLeafCell(id=id, cell_manager=self.cell_manager,
-                                    cell_size=cell_sizes.get(self.level-1),
-                                    level=self.level-1,
-                                    jump_tolerance=self.cell_manager.jump_tolerance
-                                    ,pid=self.pid) 
+            return ParallelLeafCell(
+                id=id, cell_manager=self.cell_manager,
+                cell_size=cell_sizes.get(self.level-1),
+                level=self.level-1,
+                jump_tolerance=self.cell_manager.jump_tolerance
+                ,pid=self.pid) 
         else:
             return ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
                                        cell_size=cell_sizes.get(self.level-1),
