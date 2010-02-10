@@ -139,7 +139,7 @@ setup(name='pysph',
       keywords = "SPH simulation computational fluid dynamics",
       test_suite = "nose.collector",
       packages = find_packages('source'),
-      package_dir = {'pysph': 'source/pysph'},
+      package_dir = {'': 'source'},
 
       ext_modules = ext_modules,
       
