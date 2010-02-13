@@ -282,3 +282,9 @@ Monday 08 February 2010 (01:44:29 PM)
     - error in update_property_requirements of parallel_vtk_writer resolved.
 Monday 08 February 2010 (01:52:30 PM)
     - added "build" directory to .hgignore
+Saturday 13 February 2010 (01:03:04 PM)
+    - incorporated the new method to exchange neighbor particle data, in the
+    update_remote_particle_properties function.
+    - found and rectified bug in bin_particles_top_down function - had crept in
+    while cythoning the parallel_cell module.
+    - some _old functions removed from cy_parallel_cell module.
