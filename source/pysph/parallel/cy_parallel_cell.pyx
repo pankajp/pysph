@@ -734,10 +734,6 @@ cdef class ParallelRootCell(RootCell):
         # neighbors.
         self.exchange_neighbor_particles()
 
-        logger.debug('Current Cells are : ')
-        for c in self.cell_dict.keys():
-            logger.debug(' -> %s'%(c))
-
         logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
         return 0
 
@@ -1059,9 +1055,6 @@ cdef class ParallelRootCell(RootCell):
         cdef IntPoint cid
         cdef dict p_data
 
-        logger.debug('Exchanging crossing particles with : %s'%(
-                self.adjacent_processors))
-
         # create one entry here for each neighbor processor.
         for proc_id in self.adjacent_processors:
             proc_data[proc_id] = {}
@@ -1072,14 +1065,11 @@ cdef class ParallelRootCell(RootCell):
             
             p_data[cid.copy()] = parrays
             
-        logger.debug('Sharing the following data: %s'%(proc_data))
-
         new_particles = share_data(self.pid,
                                    self.adjacent_processors,
                                    proc_data, comm,
                                    TAG_CROSSING_PARTICLES, True)
         
-        logger.debug('Got shared data : %s'%(new_particles))
         # for each neigbor processor, there is one entry in new_particles
         # containing all new cells that processor sent to us.
         self.add_entering_particles_from_neighbors(new_particles)
@@ -1116,7 +1106,6 @@ cdef class ParallelRootCell(RootCell):
         
         for cid, parrays in particle_list.iteritems():
             count = 0
-            logger.debug('Adding particles entering cell %s, %s'%(cid, parrays))
 
             num_arrays = len(self.cell_manager.arrays_to_bin)
             for i from 0 <= i < num_arrays:
@@ -1184,8 +1173,6 @@ cdef class ParallelRootCell(RootCell):
                                                         props=props)
                 comm.send(data, dest=pid, tag=TAG_REMOTE_DATA_REPLY)
 
-        logger.debug('Data Exchange done')
-
         # now copy the new remote values into the existing local copy.
         for pid, particle_data in remote_cell_data.iteritems():
             parrays = particle_data['parrays']
@@ -1227,7 +1214,6 @@ cdef class ParallelRootCell(RootCell):
                 - bin the new particles into this cell.
 
         """
-        logger.debug('exchange_neighbor_particles_START')
         cdef list nbr_procs = []
         nbr_procs[:] = self.adjacent_processors
         cdef dict arc = self.adjacent_remote_cells
@@ -1249,8 +1235,6 @@ cdef class ParallelRootCell(RootCell):
             nbr_procs = sorted(nbr_procs)
         
         # get data from all procs and send data to all procs.
-        logger.debug('neighbor proces are : %s'%(nbr_procs))
-
         num_nbrs = len(nbr_procs)
         for i from 0 <= i < num_nbrs:
             pid = nbr_procs[i]
@@ -1268,8 +1252,6 @@ cdef class ParallelRootCell(RootCell):
                                             tag=TAG_REMOTE_CELL_REQUEST)
                 data = self._get_cell_data_for_neighbor(requested_cells)
                 comm.send(data, dest=pid, tag=TAG_REMOTE_CELL_REPLY)
-
-        logger.debug('Remote data received')
 
         # we now have all the cells we require from the remote processors.
         # create new cells and add the particles to the particle array and the
@@ -1342,8 +1324,6 @@ cdef class ParallelRootCell(RootCell):
                 # insert the newly created cell into the cell_dict.
                 self.cell_dict[cid.copy()] = c
                 i += 1
-
-        logger.debug('exchange_neighbor_particles_DONE')
 
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=None):
         """
@@ -1754,8 +1734,6 @@ cdef class ParallelCellManager(CellManager):
         
         self.proc_map.update()
 
-        logger.debug('Local Updated proc map : %s'%(self.proc_map))
-        
         # merge data from all children proc maps.
         for c_rank in pc.children_proc_ranks:
             c_proc_map = comm.recv(source=c_rank, 
@@ -1781,8 +1759,6 @@ cdef class ParallelCellManager(CellManager):
         # setup the region neighbors.
         self.proc_map.find_region_neighbors()
 
-        logger.debug('Updated processor map : %s'%(self.proc_map))
-        
     cpdef remove_remote_particles(self):
         """
         Remove all remote particles from the particle arrays.

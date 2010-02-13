@@ -288,3 +288,5 @@ Saturday 13 February 2010 (01:03:04 PM)
     - found and rectified bug in bin_particles_top_down function - had crept in
     while cythoning the parallel_cell module.
     - some _old functions removed from cy_parallel_cell module.
+Saturday 13 February 2010 (01:28:41 PM)
+    - few debug calls removed.
