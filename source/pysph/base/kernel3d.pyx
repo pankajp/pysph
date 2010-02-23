@@ -105,12 +105,15 @@ cdef class CubicSpline3D(Kernel3D):
         cdef Point r = p1-p2
         cdef double l2_norm_r = sqrt(r.norm())
         cdef double q = l2_norm_r/h
-        cdef double factor = (-1.0)/(4.0*PI*(h**4.0)*l2_norm_r)
-        cdef double temp = 0.0
+        cdef double denom = (4.0*PI*(h**4.0)*l2_norm_r)
+        cdef double factor = 1.0
+        cdef double temp = 1.0
 
-        if l2_norm_r < 1e-12:
+        if denom < 1e-12:
             grad.x = grad.y = grad.z = 0.0
-            return 
+            return
+
+        factor = (-1.0)/denom
 
         if 0.0 <= q <= 1.0:
             temp = 3.0*((2.0-q)**2.0) - 12.0*((1.0-q)**2.0)

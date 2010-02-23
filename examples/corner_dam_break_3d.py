@@ -134,7 +134,7 @@ solver.add_entity(dam_fluid)
 
 # create a vtk writer to write an output file.
 vtk_writer = VTKWriter(solver=solver, entity_list=[dam_wall, dam_fluid],
-                       file_name_prefix='corener_db_',
+                       file_name_prefix='corner_db',
                        scalars=['rho', 'p', 'm', 'rho_rate'],
                        vectors={'velocity':['u', 'v', 'w'],
                                 'acceleration':['ax', 'ay', 'az'],
