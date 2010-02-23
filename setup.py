@@ -129,10 +129,10 @@ ext_modules = base +\
     parallel + \
     solver
 
-setup(name='pysph',
+setup(name='PySPH',
       version = '0.9',
       author = 'Chandrashekhar P. Kaushik',
-      author_email = 'shekhar.kaushik@iitb.ac.in',
+      author_email = 'shekhar.kaushik@gmail.com',
       description = "A general purpose Smoothed Particle Hydrodynamics framework",
       long_description = __doc__,
       license = "BSD",
@@ -145,4 +145,7 @@ setup(name='pysph',
       
       include_package_data = True,
       cmdclass={'build_ext': build_ext},
+      #install_requires=['mpi4py>=1.2', 'numpy>=1.0.3', 'Cython>=0.12'],
+      #setup_requires=['Cython>=0.12', 'setuptools>=0.6c1'],
+      #extras_require={'3D': 'Mayavi>=3.0'}
       )
