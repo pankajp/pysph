@@ -14,21 +14,21 @@ The following dependencies are absolutely essential:
   * Cython_: version 0.12 and above.  This implies that your system have
     a working C compiler.
 
-  * mpi4py_: version 1.2 and above.
+  * mpi4py_: version 1.2 and above.  This will require working MPI libs
+    on your computer
 
   * setuptools_: version 0.6c9 is tested to work.  This is needed to
-    build and install the package.
+    build and install the package.  A later version will work better.
 
 The following dependencies are optional but recommended:
 
-  * nose_: version 0.10.3 should work.  This package is used for running
-    any tests.
+  * nose_: This package is used for running any tests.
 
   * Sphinx_: version 0.5 will work.  This package is used for building
     the documentation.
 
-  * VTK_: version 5.x and above will work.  This is used to write VTK
-    files for subsequent output and visualization.
+  * VTK_: versions, 4.x, 5.x and above will work.  This is used to write
+    VTK files for subsequent output and visualization.
 
   * Mayavi_: version 3.x and above. This is convenient for visualization
     and generation of VTK files.  This is entirely optional though.
@@ -40,13 +40,14 @@ Installing the dependencies on a recent flavor of Ubuntu or Debian is
 relatively easy.  Just do the following::
 
   $ sudo apt-get install python-numpy python-setuptools python-dev gcc \
-    python-pyrex python-nose mayavi2
+    python-pyrex python-nose mayavi2 libopenmpi-dev
 
 Cython and Sphinx may not be readily available, in which case you can
 install them using either the usual ``python setup.py`` dance for the
 respective projects or using the more convenient::
 
-    $ easy_install Cython Sphinx
+    $ easy_install Cython 
+    $ easy_install mpi4py
 
 
 Once you have the essential dependencies installed you can easily build
@@ -93,6 +94,32 @@ install also like so::
 .. warning::
     This does not work yet since the package isn't released!
 
+
+Installation in a virtualenv_
+-----------------------------
+
+Installing PySPH in a virtualenv_ is a very convenient way to install
+and use PySPH.  Assuming you have Python installed along with
+virtualenv_, numpy_, and a working MPI setup you can do the following::
+
+  $ virtualenv pysph
+  $ source pysph/bin/activate
+  $ easy_install Cython
+  $ easy_install mpi4py
+  $ cd PySPH-source-directory
+  $ python setup.py install
+ 
+The advantage with this approach is that your entire PySPH install and
+its dependencies are isolated inside the ``pysph`` directory created by
+virtualenv and uninstalling the packages is as easy as deleting the
+directory.
+
+You may also install the optional dependencies like Mayavi, like so::
+
+  $ easy_install Mayavi[app]
+
+
+.. _virtualenv: http://pypi.python.org/pypi/virtualenv
 
 Running the tests
 -----------------
