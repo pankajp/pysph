@@ -8,9 +8,16 @@ allowing most of the user code to be written in pure Python.
 from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 import numpy
-import mpi4py
 
-inc_dirs = [numpy.get_include(), mpi4py.get_include()]
+HAS_MPI4PY = True
+try:
+    import mpi4py
+except ImportError:
+    HAS_MPI4PY = False
+
+inc_dirs = [numpy.get_include()]
+if HAS_MPI4PY:
+    inc_dirs += [mpi4py.get_include()]
 
 mpi_inc_dir = ['/usr/include/mpi', '/usr/local/include/mpi', 
                '/opt/local/include/mpi']
@@ -127,8 +134,10 @@ solver = [Extension("pysph.solver.fast_utils",
 ext_modules = base +\
     kernels +\
     sph+\
-    parallel + \
-    solver
+    solver 
+
+if HAS_MPI4PY:
+    ext_modules += parallel
 
 setup(name='PySPH',
       version = '0.9',
