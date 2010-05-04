@@ -2,21 +2,6 @@
 Base class for components doing some SPH summation.
 """
 
-# logger imports
-import logging
-logger = logging.getLogger()
-
-# local imports
-from pysph.base.kernelbase cimport KernelBase
-from pysph.base.nnps cimport NNPSManager
-from pysph.solver.base cimport Base
-from pysph.sph.sph_calc cimport SPHBase
-from pysph.sph.sph_func cimport SPHFunctionParticle
-from pysph.solver.solver_base cimport SolverComponent, SolverBase, \
-    ComponentManager
-from pysph.solver.entity_base cimport EntityBase
-
-
 ################################################################################
 # `SPHSourceDestMode` class.
 ################################################################################
@@ -24,171 +9,183 @@ cdef class SPHSourceDestMode:
     """
     Class to hold the different ways in which source and destinations of a given
     SPH component should be handled.
+
+    Example: Group by None
+    ----------------------
+    If the group mode is None, an sph_calc object is created for each 
+    destination entity, which behaves as a source as well. 
+    This essentially is useful to model a scenario when all entities 
+    influence themselves. An example would be a shock tube simulation
+    with free boundaries.
+
+    Example: Group by Type
+    ----------------------
+    Consider again the shock tube problem. The boundary and domain
+    are both of type `Fluid`, but no force is computed on the boundary 
+    particles. This type of grouping would setup a calc for the 
+    force computation by the boundary on the domain.
+
+    Example: Group All
+    ------------------
+    Consider our old friend again. The shock tube problem.
+    Just create the domain fluid as the destination entity and 
+    all other boundary entities and the domain fluid as the sources. 
+
     """
 
-    Group_None = 0
-    Group_By_Type = 1
-    Group_All = 2
+    byNone = 0
+    byType = 1
+    byAll = 2
 
     def __cinit__(self, *args, **kwargs):
-        """
-        Constructor.
-        """
+        """ Constructor. """
         raise SystemError, 'Do not instantiate this class'
 
 ################################################################################
 # `SPHComponent` class.
 ################################################################################
-cdef class SPHComponent(SolverComponent):
+cdef class SPHComponent:
     """
-    Base class for components doing SPH summations.
+    An SPH solver consists of an sph_calc object handling the summations
+    between the source and destination particle managers/entities. 
+
+    The SPHComponent generalizes this concept when multiple entities are 
+    present. For a simulation with multiple entities, the SPHComponent 
+    creates an sph_calc object for each destination, source pair, based 
+    on the user specified method for grouping them.
+
     """
-    def __cinit__(self, 
+
+    #Defined in the .pxd file
+    #cdef public list calcs
+    #cdef public list srcs
+    #cdef public list dsts
+    #cdef public list src_types
+    #cdef public list dst_types
+    #cdef public int _mode
+    #cdef public MultidimensionalKernel kernel
+    #cdef public type sph_calc
+    #cdef public type sph_func
+
+    def __init__(self, 
                   str name='',
-                  SolverBase solver=None,
-                  ComponentManager component_manager=None,
                   list entity_list=[],
-                  NNPSManager nnps_manager=None,
-                  KernelBase kernel=None,
-                  list source_list=[],
-                  list dest_list=[],
-                  bint source_dest_setup_auto=True,
-                  int source_dest_mode=SPHSourceDestMode.Group_None,
+                  MultidimensionalKernel kernel=None,
+                  int _mode=SPHSourceDestMode.byNone,
                   *args, **kwargs):
         """
-        Constructor.
+        Parameters:
+        -----------
+        name -- String literal for identifying the Component
+        entity_list -- The list of entities to manage
+        kernel -- The kernel used for the calc's
+
+        srcs -- List of source entities
+        dsts -- List of dest entities
+        _mode -- The mode by which the calcs are setup
+
         """
-        self.source_dest_mode = source_dest_mode
-        self.source_dest_setup_auto = source_dest_setup_auto
+        self.writes = ['tmpx', 'tmpy', 'tmpz']
+        self._mode = _mode
         
-        self.source_types = []
-        self.dest_types = []
+        self.srcs = []
+        self.dsts = []
 
-        self.source_list = []
-        self.dest_list = []
+        self.calcs = []
 
-        self.source_list[:] = source_list
-        self.dest_list[:] = dest_list
+        self.kernel = kernel
+        self.entity_list = entity_list
 
-        self.sph_calcs = []
-
-        if kernel is not None:
-            self.kernel = kernel
-        else:
-            if solver is not None:
-                self.kernel = self.solver.kernel
-
-        if solver is not None:
-            self.nnps_manager = solver.nnps_manager
-        else:
-            self.nnps_manager = nnps_manager
-
-        self.sph_class = SPHBase
-        self.sph_func_class = None
-
+        self.sph_calc = SPHCalc
+        
     cpdef int setup_component(self) except -1:
         """
         """
         if self.setup_done == True:
             return 0
 
-        logger.info('SPHComponent : setting up %s'%(self.name))
-        logger.info('Component object : %s'%(self))
-
-        self.sph_calcs[:] = []
+        self.calcs = []
         
-        self._setup_sources_dests()
+        self._setup_entities()
 
-        self._setup_sph_objs()
+        self._setup_sph()
         
         self.setup_done = True
 
-    cpdef _setup_sources_dests(self):
+    cpdef _setup_entities(self):
+        """ Reset the source_list and dest_list to empty lists before 
+        populating them with entities from the entity list.
+
+        The accepted types for the sources and destinations are 
+        defined in the attributes src_types and dst_types.
+
         """
-        From the input entity_list and the source_types,
-        dest_types, make two lists - sources and dests.
+        self.srcs[:] = []
+        self.dsts[:] = []
 
-        This is done only if source_dest_setup_auto is True
-
-        """
-        if self.source_dest_setup_auto == False:
-            return
-
-        if len(self.source_list) > 0 or len(self.dest_list) > 0:
-            logger.warn('source_list/dest_list not empty')
-            logger.warn('clearing')
-
-        self.source_list[:] = []
-        self.dest_list[:] = []
-
+        #Add each entity from the list to either source or destination
         for e in self.entity_list:
-            logger.debug('Adding entity : %s'%(e.name))
-            if e.is_type_included(self.source_types):
-                self.source_list.append(e)
-            if e.is_type_included(self.dest_types):
-                self.dest_list.append(e)
+            if e.is_type_included(self.src_types):
+                self.srcs.append(e)
+            if e.is_type_included(self.dst_types):
+                self.dsts.append(e)
 
-        logger.info('(%s)source entities : %s'%(self.name, self.source_list))
-        logger.info('(%s)dest entities : %s'%(self.name, self.dest_list))
+    cpdef _setup_sph(self):
+        """ Setup the sph_calcs based on the groupping mode. """
+        #Group by None
+        if self._mode == SPHSourceDestMode.byNone:
+            self._group_by_none(self.dsts, self.sph_calc,
+                              self.sph_func)
 
-    cpdef _setup_sph_objs(self):
-        """
-        """
-        if self.source_dest_mode == SPHSourceDestMode.Group_None:
-            self._setup_sph_group_none(self.dest_list, self.sph_class,
-                                       self.sph_func_class)
-        elif self.source_dest_mode == SPHSourceDestMode.Group_By_Type:
-            self._setup_sph_group_by_type(self.source_list, self.dest_list,
-                                          self.sph_class, self.sph_func_class)
-        elif self.source_dest_mode == SPHSourceDestMode.Group_All:
-            self._setup_sph_group_all(self.source_list, self.dest_list, 
-                                      self.sph_class, self.sph_func_class)
-        else:
-            self.setup_sph_objs(self.source_list, self.dest_list,
-                                self.sph_class, self.sph_func_class)            
-
-    cpdef _setup_sph_group_none(self, list dest_list, type sph_class, type
-                                sph_func_class):
-        """
-        For each entity in the destination list, create one sph calc, and one
-        sph functionfor the SPH summation. For each sph calc and function the
-        entity will remain the source and destination.
-
-        """
+        #Group by Type
+        elif self._mode == SPHSourceDestMode.byType:
+            self._group_by_type(self.srcs, self.dsts,
+                              self.sph_calc, self.sph_func)
         
-        for e in dest_list:
+        #Group by All
+        elif self._mode == SPHSourceDestMode.byAll:
+            print 'Groping'
+            self._group_all(self.srcs, self.dsts, 
+                            self.sph_calc, self.sph_func)
+        #Group by ?
+        else:
+            self._group(self.srcs, self.dsts,
+                        self.sph_calc, self.sph_func)            
+
+    cpdef _group_by_none(self, list dst, type sph_calc,
+                         type sph_eval):
+        """ This method of grouping is useful when each destination entity
+        is influenced by itself. Like the fluid under self gravitation.
+
+        """        
+        for e in dst:
             parr = e.get_particle_array()
             
+            #No particle array? Hahahahahahaha......Error!!!
             if parr is None:
                 msg = 'Entity %s does not have a particle array'%(e.name)
-                logger.error(msg)
                 raise AttributeError, msg
             
-            func = sph_func_class(source=parr, dest=parr)
-            
+            func = sph_eval(source=parr, dest=parr)            
             self.setup_sph_function(e, e, func)
 
-            calc = sph_class(sources=[parr], dest=parr, kernel=self.kernel,
-                             sph_funcs=[func],
-                             nnps_manager=self.nnps_manager)
+            calc = sph_calc(sources=[parr], dest=parr, kernel=self.kernel,
+                            sph_funcs=[func])
 
             self.setup_sph_summation_object([e], e, calc)
 
-            self.sph_calcs.append(calc)
+            #Append to the list of sph_calc's
+            self.calcs.append(calc)
 
-    cpdef _setup_sph_group_by_type(self, list source_list, list dest_list, type
-                                   sph_class, type sph_func_class):
-        """
-        Creates sph objects where sources have to be of same type as the
-        destination for an sph summation. 
-        
-        """
-        for d in dest_list:
+    cpdef _group_by_type(self, list src, list dst, type
+                       sph_calc, type sph_eval):
+        """ Create an sph_calc for only matching entity pairs """
+
+        for d in dst:
             d_parr = d.get_particle_array()
-            
+
             if d_parr is None:
                 msg = 'Entity %s does not have a particle array'%(d.name)
-                logger.error(msg)
                 raise AttributeError, msg
 
             func_list = []
@@ -196,7 +193,8 @@ cdef class SPHComponent(SolverComponent):
             s_parr_list = []
             s_parr = None
     
-            for s in source_list:
+            for s in src:
+                #Don't do anything if src and dst entity types mismatch
                 if not s.is_a(d.type):
                     continue
 
@@ -204,37 +202,36 @@ cdef class SPHComponent(SolverComponent):
                     
                 if s_parr is None:
                     msg = 'Entity %s does not have a particle array'%(s.name)
-                    logger.error(msg)
                     raise AttributeError, msg
         
+                #Append the source entity to the newly created list
                 s_list.append(s)
                 s_parr_list.append(s_parr)
 
-                func = sph_func_class(source=s_parr, dest=d_parr)
+                #Create the sph_eval function and append to the list
+                func = sph_eval(source=s_parr, dest=d_parr)
                 self.setup_sph_function(s, d, func)
                 func_list.append(func)
 
-            calc = sph_class(sources=s_parr_list, dest=d_parr,
-                             kernel=self.kernel, sph_funcs=func_list,
-                             nnps_manager=self.nnps_manager)
+            calc = sph_calc(srcs=s_parr_list, dest=d_parr,
+                            kernel=self.kernel, sph_funcs=func_list)
 
-            self.setup_sph_summation_object(source_list=s_list, dest=d,
+            self.setup_sph_summation_object(src=s_list, dest=d,
                                             sph_sum=calc)
-            self.sph_calcs.append(calc)
+            self.calcs.append(calc)
 
-    cpdef _setup_sph_group_all(self, list source_list, list dest_list, type
-                               sph_class, type sph_func_class):
-        """
-        Creates sph objects when all the sources are to be considered for each
-        destination.
+    cpdef _group_all(self, list src, list dst, type
+                    sph_calc, type sph_eval):
+
+        """ Actually the simplest type of grouping. Here, each destination 
+        entity is influenced by all the sources.
 
         """
-        for d in dest_list:
+        for d in dst:
             d_parr = d.get_particle_array()
-            
+           
             if d_parr is None:
                 msg = 'Entity %s does not have a particle array'%(d.name)
-                logger.error(msg)
                 raise AttributeError, msg
 
             func_list = []
@@ -242,33 +239,37 @@ cdef class SPHComponent(SolverComponent):
             s_parr_list = []
             s_parr = None
     
-            logger.debug('Source list now : %s'%(source_list))
-
-            for s in source_list:
+            for s in src:
                 s_parr = s.get_particle_array()
                     
                 if s_parr is None:
                     msg = 'Entity %s does not have a particle array'%(s.name)
-                    logger.error(msg)
                     raise AttributeError, msg
         
                 s_list.append(s)
                 s_parr_list.append(s_parr)
 
-                func = sph_func_class(source=s_parr, dest=d_parr)
+                func = sph_eval(source=s_parr, dest=d_parr)
                 self.setup_sph_function(s, d, func)
                 func_list.append(func)
 
-            calc = sph_class(sources=s_parr_list, dest=d_parr,
-                             kernel=self.kernel, sph_funcs=func_list,
-                             nnps_manager=self.nnps_manager)
+            calc = sph_calc(sources=s_parr_list, dest=d_parr,
+                             kernel=self.kernel, sph_funcs=func_list)
 
-            self.setup_sph_summation_object(source_list=s_list, dest=d,
+            self.setup_sph_summation_object(src=s_list, dest=d,
                                             sph_sum=calc)
-            self.sph_calcs.append(calc)
+            self.calcs.append(calc)
+
+    cpdef _group(self, list src, list dst, type sph_calc,
+                         type sph_eval):
+        """
+        Implement this function if you want a different handling of source and
+        dest objects that those provided by this class.
+        """
+        raise NotImplementedError, 'SPHComponent::setup_sph_objs'
 
     cpdef setup_sph_function(self, EntityBase source, EntityBase dest,
-        SPHFunctionParticle sph_func):
+                             SPHFunctionParticle sph_func):
         """
         Callbacks to perform any component specific initialization of the
         created sph function. 
@@ -278,8 +279,8 @@ cdef class SPHComponent(SolverComponent):
         """
         pass
 
-    cpdef setup_sph_summation_object(self, list source_list, EntityBase dest,
-                                     SPHBase sph_sum):
+    cpdef setup_sph_summation_object(self, list src, EntityBase dest,
+                                     SPHCalc sph_sum):
         """
         Callback to perform any component specific initialization of the created
         sph summation object.
@@ -289,59 +290,86 @@ cdef class SPHComponent(SolverComponent):
         """
         pass
 
-    cpdef setup_sph_objs(self, list source_list, list dest_list, type sph_class,
-                         type sph_func_class):
-        """
-        Implement this function if you want a different handling of source and
-        dest objects that those provided by this class.
-        """
-        raise NotImplementedError, 'SPHComponent::setup_sph_objs'
-
     cdef int compute(self) except -1:
         """
         """
         raise NotImplementedError, 'SPHComponent::compute'
+
+
+    def reads_prop(self, str prop):
+        """ The read properties is a list of strings specifying the 
+        properties read from the source particle arrays. """
+
+        if self.reads == None:
+            self.reads = []
+
+        self.reads.append(prop)
+
+    def writes_prop(self, str prop):
+        """ The writes attribute is a list of strings specifying the 
+        properties written to of the destination particle array. """
+        
+        if self.writes == None:
+            self.writes = []
+
+        self.writes.append(prop)
+
+    def updates_prop(self, str prop):
+        if self.updates == None:
+            self.updates = []
+
+        self.updates.append(prop)
+
+    def _check_particle_arrays(self):
+        reads = self.reads
+        writes = self.writes
+        updates = self.updates
+
+        dsts = self.dsts
+        srcs = self.srcs
+        
+        ndst = len(dsts)
+        nsrc = len(srcs)
+
+        nread = len(reads)
+        nwrite = len(writes)
+        nupdate = len(updates)
+
+        #Check for updates. Only for the destination particle array
+        for i in range(ndst):
+            dst = dsts[i]
+            dst_parr = dst.get_particle_array()
+            for j in range(nupdate):
+                if not dst_parr.properties.has_key(updates[j]):
+                    print 'Adding prop %s for destination' %(updates[j])
+                    dst_parr.add_props([updates[j]])
+            
+        #Check for read. On both, the destination and source
+        for i in range(nread):
+            
+            msg1 = 'Property %s must be defined!'%(reads[i])
+            for j in range(ndst):
+                dst = dsts[j]
+                dst_pa = dst.get_particle_array()
+                assert dst_pa.properties.has_key(reads[i]), msg1
+                
+            msg = 'Property %s must be defined for the source'%(reads[i])
+            for j in range(nsrc):
+                src = srcs[j]
+                src_pa = src.get_particle_array()
+                assert src_pa.properties.has_key(reads[i]), msg
+
+        #For write properties, add if not present in destination
+        for i in range(nwrite):            
+            for j in range(ndst):
+                dst = dsts[j]
+                dst_pa = dst.get_particle_array()
+                if not dst_pa.properties.has_key(writes[i]):
+                    print 'Adding prop %s for destination' %(writes[i])
+                    dst_pa.add_props([writes[i]])                
+
+    def _compute(self):
+        self._check_particle_arrays()
+        self.compute()
+
 ################################################################################
-# `PYSPHComponent` class.
-################################################################################
-cdef class PYSPHComponent(SPHComponent):
-    """
-    Component to implement SPH components from pure python.
-    """
-    def __cinit__(self, str name='',
-                  SolverBase solver=None,
-                  ComponentManager component_manager=None,
-                  list entity_list=[],
-                  NNPSManager nnps_manager=None,
-                  KernelBase kernel=None,
-                  list source_list=[],
-                  list dest_list=[],
-                  bint source_dest_setup_auto=True,
-                  int source_dest_mode=SPHSourceDestMode.Group_None,
-                  *args, **kwargs):
-        pass
-
-    def __init__(self, str name='',
-                 SolverBase solver=None,
-                 ComponentManager component_manager=None,
-                 list entity_list=[],
-                 NNPSManager nnps_manager=None,
-                 KernelBase kernel=None,
-                 list source_list=[],
-                 list dest_list=[],
-                 bint source_dest_setup_auto=True,
-                 int source_dest_mode=SPHSourceDestMode.Group_None,
-                 *args, **kwargs):
-        pass
-
-    cpdef int py_compute(self) except -1:
-        """
-        Function where the core logic of a python component is to be implemented.
-        """
-        raise NotImplementedError, 'UserDefinedComponent::py_compute'
-
-    cdef int compute(self) except -1:
-        """
-        Call the py_compute method.
-        """
-        return self.py_compute()

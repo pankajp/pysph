@@ -2,9 +2,7 @@
 # `CLASSNAME` class.
 ################################################################################
 cdef class CLASSNAME(BaseArray):
-    """
-    This class defines a managed array of ARRAY_TYPEs.
-    """     
+    """This class defines a managed array of ARRAY_TYPEs. """     
     cdef ARRAY_TYPE *data
     cdef public ARRAY_TYPE minimum, maximum
         

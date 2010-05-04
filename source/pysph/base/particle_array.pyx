@@ -64,6 +64,17 @@ from python_ref cimport PyObject
 from python_dict cimport *
 from python_string cimport *
 
+ctypedef int size_t
+
+class PropAdd(object):
+    def __init__(self, name, default = 0):
+        self.propinfo = {'name':name, 'default':default}
+
+class PropInfo(object):
+    def __init__(self, name, data):
+        self.propinfo = {'name':name, 'data':data}
+
+
 cdef class ParticleArray:
     """
     Class to represent a collection of particles.
@@ -92,18 +103,18 @@ cdef class ParticleArray:
     ######################################################################
     def __cinit__(self, object particle_manager=None, str name='',
                   default_particle_tag=LocalReal, *args, **props):
-        """
-        Constructor.
+        """ Constructor.
 
-	**Parameters**
-
-         - particle_manager - particle manager managing this array.
-         - name - name of this particle array.
-         - props - dictionary of properties for every particle in this array.
+	Parameters:
+        -----------
+        particle_manager -- particle manager managing this array.
+        name -- name of this particle array.
+        props -- A dictionary of particles for every array.
 
     	"""
         self.properties = {'tag':LongArray(0), 'group':LongArray(0),
                            'local':IntArray(0)}
+
         self.default_values = {'tag':default_particle_tag, 'group':0, 'local':1}
         
         self.temporary_arrays = {}
@@ -118,9 +129,12 @@ cdef class ParticleArray:
             self.initialize(**props)
 
     def __getattr__(self, name):
-        """
-        Convenience, to access particle property arrays as an attribute.
+        """ getattr method for the class.
         
+        Use like so,
+
+        object.get(name) or getattr(object, name)
+
         A numpy array is returned. Look at the get() functions documentation for
         care on using this numpy array.
 
@@ -132,9 +146,7 @@ cdef class ParticleArray:
             raise AttributeError, 'property %s not found'%(name)
 
     def __setattr__(self, name, value):
-        """
-        Convenience, to set particle property arrays as an attribute.
-        """
+        """ setattr method for the class. """
         keys = self.properties.keys() + self.temporary_arrays.keys()
         if name in keys:
             self.set(**{name:value})
@@ -142,9 +154,7 @@ cdef class ParticleArray:
             raise AttributeError, 'property %s not found'%(name)
 
     def __reduce__(self):
-        """
-        Implemented to facilitate pickling of extension types.
-        """
+        """ Implemented to facilitate pickling of extension types."""
         d = {}
         # we want only the names of temporary arrays.
         d['name'] = self.name
@@ -165,9 +175,7 @@ cdef class ParticleArray:
         return (ParticleArray, (), d)
 
     def __setstate__(self, d):
-        """
-        Load the particle array object from the saved dictionary.
-        """
+        """ Load the particle array object from the saved dictionary. """
         self.properties = {}
         self.property_arrays = []
         self.default_values = {}
@@ -185,27 +193,19 @@ cdef class ParticleArray:
     # `Public` interface
     ######################################################################
     cpdef set_dirty(self, bint value):
-        """
-        Set the is_dirty variable to given value
-        """
+        """ Set the is_dirty variable to given value. """
         self.is_dirty = value
 
     cpdef set_indices_invalid(self, bint value):
-        """
-        Set the indices_invalid to the given value.
-        """
+        """ Set the indices_invalid to the given value. """
         self.indices_invalid = value
 
     cpdef has_array(self, str arr_name):
-        """
-        Returns true if the array arr_name is present.
-        """
+        """  Returns true if the array arr_name is present. """
         return self.properties.has_key(arr_name)
 
     def clear(self):
-        """
-        Clear all data held by this array.
-        """
+        """ Clear all data held by this array. """
         self.properties = {'tag':LongArray(0),
                            'group':LongArray(0), 'local':IntArray(0)}
         tag_def_values = self.default_values['tag']
@@ -216,27 +216,27 @@ cdef class ParticleArray:
         self.indices_invalid = True
 
     cpdef set_name(self, str name):
+        """ Set the name of the ParticleArray """
         self.name = name
 
     def initialize(self, **props):
-        """
-        Initialize the particle array with the given props.
+        """ Initialize the particle array with the given props.
 
-        **Parameters**
+        Parameters:
+        -----------
+        props - A dictionaty of property arrays. The arrays are expected
+                to be numpy arrays or objects that can be
+                converted to numpy arrays.
 
-         - props - dictionary containing various property arrays. All these
-           arrays are expected to be numpy arrays or objects that can be
-           converted to numpy arrays.
+        Notes:
+        ------
+        Oevrwrites existing data.
+        As a rule internal arrays will always be either long or double
+        arrays. 
 
-        **Notes**
-
-         - This will clear any existing data.
-         - As a rule internal arrays will always be either long or double
-           arrays. 
-
-        **Helper Functions**
-
-         - _create_c_array_from_npy_array
+        Helper Functions:
+        -----------------
+         _create_c_array_from_npy_array
 
         """
         cdef int nprop, nparticles
@@ -249,6 +249,7 @@ cdef class ParticleArray:
 
         nprop = len(props)
 
+        #Return if an empty dictionary was provided.
         if nprop == 0:
             return 
 
@@ -284,9 +285,7 @@ cdef class ParticleArray:
         self.align_particles()
 
     cpdef int get_number_of_particles(self):
-        """
-        Return the number of particles.
-        """
+        """  Return the number of particles. """
         if len(self.properties.values()) > 0:
             prop0 = self.properties.values()[0]
             return prop0.length
@@ -294,48 +293,41 @@ cdef class ParticleArray:
             return 0
 
     def add_temporary_array(self, arr_name):
-        """
-        Add temporary double with name arr_name.
+        """  Add a named temporary array. 
 
-        **Parameters**
-
-         - arr_name - name of the temporary array needed. It should be different
-           from any property name.
+        Parameters:
+        -----------
+        arr_name -- The name for the temporary array.
            
         """
         if self.properties.has_key(arr_name):
             raise ValueError, 'property (%s) exists'%(arr_name)
         
         np = self.get_number_of_particles()
-        
         if not self.temporary_arrays.has_key(arr_name):
             carr = DoubleArray(np)
             self.temporary_arrays[arr_name] = carr            
         
     cpdef remove_particles(self, LongArray index_list):
-        """
-        Remove particles whose indices are given in index_list.
+        """ Remove an indexed list of particles.
 
         We repeatedy interchange the values of the last element and values from
         the index_list and reduce the size of the array by one. This is done for
         every property and temporary arrays that is being maintained.
     
-	**Parameters**
-        
-         - index_list - an array of indices, this array should be a LongArray.
+	Parameters:
+        index_list -- Indices array referencing the particles.
 
         **Algorithm**::
         
-         if index_list.length > number of particles
-             raise ValueError
-
-         sorted_indices <- index_list sorted in ascending order.
+        Check the length of the arrays and the index list.
+        Sort the indices in ascending order.
         
-         for every every array in property_array
-             array.remove(sorted_indices)
-
-         for every array in temporary_arrays:
-             array.remove(sorted_indices)
+        for every every array in property_array
+            array.remove(sorted_indices)
+            
+        for every array in temporary_arrays:
+            array.remove(sorted_indices)
 
     	"""
         cdef str msg
@@ -371,12 +363,11 @@ cdef class ParticleArray:
             self.indices_invalid = True
     
     cpdef remove_tagged_particles(self, long tag):
-        """
-        Remove particles that have the given tag.
+        """ Remove particles with the given tag.
 
-        **Parameters**
-
-         - tag - the type of particles that need to be removed.
+        Parameters:
+        -----------
+        tag -- the type of particles that need to be removed.
 
         """
         cdef LongArray indices = LongArray()
@@ -394,7 +385,12 @@ cdef class ParticleArray:
 
     cpdef remove_flagged_particles(self, str flag_name, int
                                    flag_value):
-        """
+        """ Remove flagged particles.
+
+        Parameters:
+        -----------
+        flag_name -- The name of the flag variable.
+        flag_value -- The value of the flag variable.
         Remove all particles that have the value of property flag_name set to
         flag_value.
 
@@ -413,21 +409,19 @@ cdef class ParticleArray:
         self.remove_particles(indices)
 
     def add_particles(self, **particle_props):
-        """
-        Add particles in particle_array to self.
-    
-	**Parameters**
-
-         - particle_props - a dictionary containing numpy arrays for various
-           particle properties.
+        """ Add particle arrays
+   
+	Parameters:
+        -----------
+        particle_props -- A dictionary of particle properties.
          
-    	**Notes**
-         
-         - all properties should have same length arrays.
-         - all properties should already be present in this particles array.
-           if new properties are seen, an exception will be raised.
-         - temporary arrays are not to be specified here, only particle
-           properties.
+  	Notes:
+        ------
+        - all properties should have same length arrays.
+        - all properties should already be present in this particles array.
+          if new properties are seen, an exception will be raised.
+        - temporary arrays are not to be specified here, only particle
+          properties.
 
     	**Issues**
 
@@ -475,11 +469,10 @@ cdef class ParticleArray:
         return 0
 
     cpdef int append_parray(self, ParticleArray parray):
-        """
-        Similar to add_particles above, except that particles come from a
-        particle array.
+        """ Append arrays from another particle array.
+        
+        Exisitng properties will be appended while new ones are created.
 
-        New properties - that are not there in self, will be added.
         """
         if parray.get_number_of_particles() == 0:
             return 0
@@ -523,11 +516,13 @@ cdef class ParticleArray:
         return 0
 
     cpdef extend(self, int num_particles):
-        """
-        Increase the total number of particles by the requested amount.
+        """ Extend the particle array by a specified number.
 
-        New particles are added at the end of the list, you may have to manually
-        call align_particles later.
+        Note:
+        -----
+        - New particles are added at the end of the list, 
+          you may have to manually call align_particles later.
+
         """
         if num_particles <= 0:
             return
@@ -547,20 +542,15 @@ cdef class ParticleArray:
             arr.resize(new_size)
 
     def get_property_index(self, prop_name):
-        """
-        Get the index into the property array where the prop_name property is
-        located.
-
-        """
+        """ Return the named property array. """
         return self.properties.get(prop_name)
 
     cdef numpy.ndarray _get_real_particle_prop(self, str prop_name):
-        """
-        cdef'ed function to get the npy array corresponding to only real
-        particles of a given property.
+        """ Return the named property array for real particles.
 
         No checks are performed. Only call this after making sure that the
         property required already exists.
+
         """
         cdef BaseArray prop_array
         prop_array = self.properties.get(prop_name)
@@ -574,15 +564,12 @@ cdef class ParticleArray:
                 return None
 
     def get(self, *args, only_real_particles=True):
-        """
-        Return the numpy array for the  property names in *args.
+        """ Return a tuple of named property arrays.
         
-        **Parameters**
-
-         - only_real_particles - indicates if properties of only real particles
-           need to be returned or all particles to be returned. By default only
-           real particles will be returned.
-         - args - a list of property names.
+        Parameters:
+        -----------
+        only_real_particles -- Flag for returning only real particles.
+        *args -- A variable list of property names.
 
         **Notes**
 
@@ -629,19 +616,17 @@ cdef class ParticleArray:
             return tuple(result)        
 
     def set(self, **props):
-        """
-        Set properties from numpy arrays or objects that can be converted into
-        numpy arrays.
+        """ Set the property array.
 
-        **Parameters**
+        Parameters:
+        -----------
+        props -- A dictionay of named property arrays.
 
-         - props - a dictionary of properties containing the arrays to be set.
-
-        **Notes**
-
-         - the properties being set must already be present in the properties
-           dict. 
-         - the size of the data should match the array already present.
+        Notes:
+        ------
+        - the properties being set must already be present in the properties
+          dict. 
+        - the size of the data should match the array already present.
 
         **Issues**
 
@@ -676,51 +661,47 @@ cdef class ParticleArray:
                 self.set_dirty(True)
     
     cpdef BaseArray get_carray(self, str prop):
-        """
-        Return the c-array corresponding to the property or temporary array.
-        """
+        """ Return the underlying named c-array. """
         if PyDict_Contains(self.properties, prop) == 1:
             return <BaseArray>PyDict_GetItem(self.properties, prop)
+
         elif PyDict_Contains(self.temporary_arrays, prop) == 1:
             return <BaseArray>PyDict_GetItem(self.temporary_arrays, prop)
         else:
             return None
         
     cpdef add_property(self, dict prop_info):
-        """
-        Add a new property based on information in prop_info.
+        """ Add a new propery.
 
-        **Params**
-        
-            - prop_info - a dict with the following keys: 
+        Params:
+        -------
+        prop_info - A dictionary with keys:
 
                 - 'name' - compulsory key
                 - 'type' - specifying the data type of this property.
                 - 'default' - specifying the default value of this property.
                 - 'data' - specifying the data associated with each particle.
            
-                type, default and data are optional keys. They will take the
-                following default values:
-                type - 'double' by default
-                default - 0 by default
-                data - if not present, an array with all values set to default will
-                be used for this property.                
+                Default values:
+                type -- double
+                default -- 0
+                data -- Array of defaults.
 
-        **Notes**
-            
-            If there are no particles currently in the particle array, and a
-            new property with some particles is added, all the remaining
-            properties will be resized to the size of the newly added array.
+        Notes:
+        ------
+        If there are no particles currently in the particle array, and a
+        new property with some particles is added, all the remaining
+        properties will be resized to the size of the newly added array.
 
-            If there are some particles in the particle array, and a new
-            property is added without any particles, then this new property will
-            be resized according to the current size.
+        If there are some particles in the particle array, and a new
+        property is added without any particles, then this new property will
+        be resized according to the current size.
 
-            If there are some particles in the particle array and a new property
-            is added with a different number of particles, then an error will be
-            raised.
+        If there are some particles in the particle array and a new property
+        is added with a different number of particles, then an error will be
+        raised.
 
-        **Issue**
+        *Issue**
 
             - it is best not to add properties with dat when you already have
               particles in the particle array. Reason is that, the particles in
@@ -740,15 +721,19 @@ cdef class ParticleArray:
         cdef bint array_size_proper = False
         cdef PyObject* temp_obj
 
+        #Typecast variables to required type
         temp_obj = PyDict_GetItemString(prop_info, 'name')
         if temp_obj != NULL:
             prop_name = <str>temp_obj
+
         temp_obj = PyDict_GetItemString(prop_info, 'type')
         if temp_obj != NULL:
             data_type = <str>temp_obj
+
         temp_obj = PyDict_GetItemString(prop_info, 'data')
         if temp_obj != NULL:
             data = <object>temp_obj
+
         temp_obj = PyDict_GetItemString(prop_info, 'default')
         if temp_obj != NULL:
             default = <object>temp_obj
@@ -774,7 +759,8 @@ cdef class ParticleArray:
             if PyDict_Contains(self.properties, prop_name) != 1:
                 default = 0
             else:
-                default = <object>PyDict_GetItem(self.default_values, prop_name)
+                default = <object>PyDict_GetItem(self.default_values, 
+                                                 prop_name)
                 
         PyDict_SetItem(self.default_values, prop_name, default)
 
@@ -848,15 +834,13 @@ cdef class ParticleArray:
     # Non-public interface
     ######################################################################
     def _create_carray(self, str data_type, int size, default=0):
-        """
-        Create a carray of the requested type, and of requested size.
-
-        **Parameters**
-
-            - data_type - string representing the 'c' data type - eg. 'int' for
-            integers. 
-            - size - the size of the requested array
-            - default - the default value to initialize the array with.
+        """ Return a c-array of a specified data type.
+        
+        Parameters:
+        -----------
+        data_type -- string representing the 'c' data type - eg. 'int'
+        size -- the size of the requested array.
+        default -- the default value to initialize the array with.
 
         """
         cdef BaseArray arr
@@ -877,9 +861,7 @@ cdef class ParticleArray:
         return arr
             
     cdef _check_property(self, str prop):
-        """
-        Check if a property is present or not.
-        """
+        """ Check for a named property. """
         if (PyDict_Contains(self.temporary_arrays, prop) == 1 or
             PyDict_Contains(self.properties, prop)):
             return
@@ -887,11 +869,11 @@ cdef class ParticleArray:
             raise AttributeError, 'property %s not present'%(prop)
         
     cdef object _create_c_array_from_npy_array(self, numpy.ndarray np_array):
-        """
-        Create and return  a carray array from the given numpy array.
+        """ Return a c-array from a Numpy array.
 
-        **Notes**
-         - this function is used only when a C array needs to be
+        Notes:
+        ------
+        -  this function is used only when a C array needs to be
            created (in the initialize function).
 
         """
@@ -907,13 +889,13 @@ cdef class ParticleArray:
             a = DoubleArray(np)
             a.set_data(np_array)
         else:
-            raise TypeError, 'unknown numpy data type passed %s'%(np_array.dtype)
+            msg = "unknown numpy data type passed: %s"% np_array.dtype
+            raise TypeError, msg
 
         return a
 
     cpdef int align_particles(self) except -1:
-        """
-        Moves all 'LocalReal' particles to the begining of the array. 
+        """ Move all `LocalReal` particles to the begining of the array.
 
         This makes retrieving numpy slices of properties of 'LocalReal'
         particles possible. This facility will be required frequently.
@@ -1002,15 +984,12 @@ cdef class ParticleArray:
 
     cpdef ParticleArray extract_particles(self, LongArray index_array, list
                                           props=None):
-        """
-        Creates a new particle array with the particle indices mentioned in
-        index_array, and with properties mentioned in props.
+        """ Extract an indexed list of particles with required props.
 
-        **Parameters**
-
-            - index_array - indices of particles to be extracted.
-            - props - the list of properties to extract, if None all properties
-              are extracted.
+        Parameters:
+        -----------
+        index_array - Particle indices.
+        props -- List of particle properties to extract. Defaults to all.
 
          **Algorithm**
 
@@ -1057,11 +1036,7 @@ cdef class ParticleArray:
         return result_array
 
     cpdef set_flag(self, str flag_name, int flag_value, LongArray indices):
-        """
-        Sets the value of the property flag_name to flag_value for the particles
-        specified in indices.
-        
-        """
+        """ Flag indexed particles."""
         cdef IntArray flag_arr = self.get_carray(flag_name)
         cdef int i
 
@@ -1069,10 +1044,7 @@ cdef class ParticleArray:
             flag_arr.data[indices.data[i]] = flag_value
 
     cpdef set_tag(self, long tag_value, LongArray indices):
-        """
-        Sets the value of tag to tag_value for the particles specified in
-        indices.
-        """
+        """ Tag indexed particles. """
         cdef LongArray tag_array = self.get_carray('tag')
         cdef int i
         
@@ -1081,17 +1053,13 @@ cdef class ParticleArray:
 
     cpdef copy_properties(self, ParticleArray source, long start_index=-1, long
                           end_index=-1):
-        """
-        Copy properties from source to self, starting from start_index uptill
-        end_index in self.
+        """ Copy properties from an indexed list of source particles.
 
-        **Parameters**
-
-            - source - the particle array from where to copy.
-            - start_index - the first particle in self which maps to the 0th
-              particle in source.
-            - end_index - the last particle in self which maps to the last
-              particle in source.
+        Parameters:
+        ----------
+        source -- the particle array from where to copy.
+        start_index -- Starting index. Defaults to -1.
+        end_index -- End index. Defaults to -1.
 
         """
         cdef BaseArray src_array, dst_array
@@ -1103,18 +1071,21 @@ cdef class ParticleArray:
                 dst_array.copy_subset(src_array, start_index, end_index)
 
     cpdef remove_property(self, str prop_name):
-        """
-        Removes property prop_name from the particle array.
-        """
-
+        """ Remove a named property. """
         if self.properties.has_key(prop_name):
             self.properties.pop(prop_name)
             self.default_values.pop(prop_name)
 
     def update_min_max(self):
-        """
-        Updates the min max properties of all properties in this particle
-        array. 
-        """
+        """ Update the min and max values of the property arrays. """
         for prop_array in self.properties.values():
             prop_array.update_min_max()
+
+    def add_props(self, props):
+        for prop in props:
+            P = PropAdd(prop)
+            self.add_property(P.propinfo)
+
+    def add_prop(self, str prop, double value):
+        p = PropAdd(prop, value)
+        self.add_property(p.propinfo)

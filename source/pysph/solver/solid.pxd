@@ -4,6 +4,7 @@ Classes to describe solids (rigid bodies).
 
 # local imports
 from pysph.base.point cimport Point
+from pysph.base.particle_array cimport ParticleArray
 
 from pysph.solver.entity_base cimport *
 from pysph.solver.geometry cimport GeometryBase
@@ -23,9 +24,6 @@ cdef class Solid(EntityBase):
 
     # particles used to track polygons in the solids geometry.
     cdef public ParticleArray tracker_particles
-
-    # the geometry of the solid.
-    cdef public GeometryBase geometry
 
     # the type of motion the solid can undergo.
     cpdef public int motion_type

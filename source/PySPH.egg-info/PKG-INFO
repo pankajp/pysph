@@ -1,0 +1,16 @@
+Metadata-Version: 1.0
+Name: PySPH
+Version: 0.9
+Summary: A general purpose Smoothed Particle Hydrodynamics framework
+Home-page: UNKNOWN
+Author: PySPH Developers
+Author-email: pysph-dev@googlegroups.com
+License: BSD
+Description: A general purpose Smoothed Particle Hydrodynamics framework.
+        
+        The SPH package provides a general purpose framework for SPH simulations
+        in Python.  The framework emphasizes flexibility and efficiency while
+        allowing most of the user code to be written in pure Python.
+        
+Keywords: SPH simulation computational fluid dynamics
+Platform: UNKNOWN

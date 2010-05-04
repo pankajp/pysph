@@ -1,5 +1,5 @@
 # This file has been generated automatically on
-# Tue Feb  2 21:22:16 2010
+# Thu Apr 29 00:56:48 2010
 # DO NOT modify this file
 # To make changes modify the source templates and regenerate
 """
@@ -42,9 +42,7 @@ cdef class BaseArray:
 # `IntArray` class.
 ################################################################################
 cdef class IntArray(BaseArray):
-    """
-    This class defines a managed array of ints.
-    """     
+    """This class defines a managed array of ints. """     
     cdef int *data
     cdef public int minimum, maximum
         
@@ -70,9 +68,7 @@ cdef class IntArray(BaseArray):
 # `DoubleArray` class.
 ################################################################################
 cdef class DoubleArray(BaseArray):
-    """
-    This class defines a managed array of doubles.
-    """     
+    """This class defines a managed array of doubles. """     
     cdef double *data
     cdef public double minimum, maximum
         
@@ -98,9 +94,7 @@ cdef class DoubleArray(BaseArray):
 # `FloatArray` class.
 ################################################################################
 cdef class FloatArray(BaseArray):
-    """
-    This class defines a managed array of floats.
-    """     
+    """This class defines a managed array of floats. """     
     cdef float *data
     cdef public float minimum, maximum
         
@@ -126,9 +120,7 @@ cdef class FloatArray(BaseArray):
 # `LongArray` class.
 ################################################################################
 cdef class LongArray(BaseArray):
-    """
-    This class defines a managed array of longs.
-    """     
+    """This class defines a managed array of longs. """     
     cdef long *data
     cdef public long minimum, maximum
         
