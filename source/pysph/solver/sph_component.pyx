@@ -67,6 +67,9 @@ cdef class SPHComponent:
     #cdef public type sph_calc
     #cdef public type sph_func
 
+    #cdef public list entity_list
+    #cdef public list nbrloc_list
+
     def __init__(self, 
                   str name='',
                   list entity_list=[],
@@ -78,11 +81,23 @@ cdef class SPHComponent:
         -----------
         name -- String literal for identifying the Component
         entity_list -- The list of entities to manage
-        kernel -- The kernel used for the calc's
-
-        srcs -- List of source entities
-        dsts -- List of dest entities
+        kernel -- The kernel used for the calcs
         _mode -- The mode by which the calcs are setup
+        
+        Defaults:
+        ------
+        srcs -- []
+        dsts -- []
+        calcs -- []
+        nbrloc_list -- []
+        sph_calc = SPHCalc
+        writes -- ['tmpx', 'tmpy', 'tmpz']
+
+        Notes:
+        ------
+        If a component manager is being used, set the entity_list and 
+        the nbrloc_list of the component to that of the manager's, before
+        invoking setup_component.
 
         """
         self.writes = ['tmpx', 'tmpy', 'tmpz']
@@ -97,6 +112,9 @@ cdef class SPHComponent:
         self.entity_list = entity_list
 
         self.sph_calc = SPHCalc
+
+        #Default parameters
+        self.nbrloc_list = []
         
     cpdef int setup_component(self) except -1:
         """
@@ -188,6 +206,7 @@ cdef class SPHComponent:
                 msg = 'Entity %s does not have a particle array'%(d.name)
                 raise AttributeError, msg
 
+            nbrloc_list = self.nbrloc_list
             func_list = []
             s_list = []
             s_parr_list = []
