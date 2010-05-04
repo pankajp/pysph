@@ -6,7 +6,8 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray
 from pysph.base.point cimport Point
 
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernelbase cimport KernelBase
+
 
 
 ################################################################################
@@ -25,28 +26,24 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_mass, d_mass    
     cdef public DoubleArray s_rho, d_rho
 
-    cdef public Point _src
-    cdef public Point _dst
+    cdef public Point _pnt1
+    cdef public Point _pnt2
 
     cpdef setup_arrays(self)
 
     cpdef int output_fields(self) except -1
-    cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr)
-    cpdef py_eval(self, int source_pid, int dest_pid, 
-                  MultidimensionalKernel kernel, numpy.ndarray
+    cpdef py_eval(self, int source_pid, int dest_pid, KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr)
 
 cdef class SPHFuncParticleUser(SPHFunctionParticle):
     """
     User defined SPHFunctionParticle.
     """
-    cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr)
-    cpdef py_eval(self, int source_pid, int dest_pid, 
-                  MultidimensionalKernel kernel, numpy.ndarray
+    cpdef py_eval(self, int source_pid, int dest_pid, KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr)
 
 ################################################################################
@@ -62,16 +59,14 @@ cdef class SPHFunctionPoint:
     cpdef setup_arrays(self)
     cpdef int output_fields(self) except -1
 
-    cdef void eval(self, Point pnt, int dest_pid, 
-                   MultidimensionalKernel kernel, double
+    cdef void eval(self, Point pnt, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr) 
-    cpdef py_eval(self, Point pnt, int dest_pid, 
-                  MultidimensionalKernel kernel, numpy.ndarray
+    cpdef py_eval(self, Point pnt, int dest_pid, KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr)
 
-###############################################################################
+################################################################################
 # `SPHFunctionParticle1D` class.
-############################################################################### 
+################################################################################ 
 cdef class SPHFunctionParticle1D(SPHFunctionParticle):
     """
     1-D SPH function.
@@ -164,3 +159,8 @@ cdef class SPHFunctionPoint3D(SPHFunctionPoint):
     cpdef setup_arrays(self)
 
 
+# some inline convenience functions.
+cdef inline void make_coords_1d(DoubleArray x, Point pnt, int pid)
+cdef inline void make_coords_2d(DoubleArray x, DoubleArray y, Point pnt, int pid)
+cdef inline void make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Point
+                           pnt, int pid)

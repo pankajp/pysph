@@ -3,12 +3,9 @@ Module containing class to represent fluids.
 """
 
 # local imports
-from pysph.base.particle_array cimport ParticleArray
-
-from entity_base cimport EntityBase
-from entity_types cimport EntityTypes
+from pysph.solver.entity_base cimport *
 
 cdef class Fluid(EntityBase):
     """
     """
-    cpdef ParticleArray particle_array
+    cdef ParticleArray particle_array

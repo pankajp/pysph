@@ -4,7 +4,7 @@ Miscellaneous SPHFunctionParticle's.
 
 
 # local imports
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernelbase cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
 from pysph.sph.sph_func cimport SPHFunctionParticle
 
@@ -17,7 +17,7 @@ cdef class NeighborCountFunc(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, True)
 
     
-    cdef void eval(self, int source_pid, int dest_pid, MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr):
         """
         """
@@ -41,7 +41,7 @@ cdef class NeighborCountFunc2(SPHFunctionParticle):
                  mass='m', str rho='rho', setup_arrays=True):
         SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, True)
 
-    cdef void eval(self, int source_pid, int dest_pid, MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr):
         """
         """
@@ -62,7 +62,7 @@ cdef class NeighborCountFunc3(SPHFunctionParticle):
                  mass='m', str rho='rho', setup_arrays=True):
         SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, True)
 
-    cdef void eval(self, int source_pid, int dest_pid, MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr):
         """
         """
@@ -84,7 +84,7 @@ cdef class NeighborCountFunc4(SPHFunctionParticle):
                  mass='m', str rho='rho', setup_arrays=True):
         SPHFunctionParticle.__init__(self, source, dest, h, mass, rho, True)
 
-    cdef void eval(self, int source_pid, int dest_pid, MultidimensionalKernel kernel, double
+    cdef void eval(self, int source_pid, int dest_pid, KernelBase kernel, double
                    *nr, double *dnr):
         """
         """

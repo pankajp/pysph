@@ -2,6 +2,7 @@
 Lists the codes for various entity types.
 """
 
+
 cdef class EntityTypes:
     """
     Empty class to emunale an enum for all entity types.

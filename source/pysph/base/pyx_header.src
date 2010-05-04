@@ -63,15 +63,16 @@ cdef class BaseArray
 cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
-    """ Base class for managed C-arrays. """     
+    """
+    Base class for managed C-arrays.
+    """     
     def __cinit__(self, *args, **kwargs):
         pass
 
-    ########################################################################
-    #Public interface
-    ########################################################################
     cpdef str get_c_type(self):
-        """ Return the c data type of this array. """
+        """
+	Return the c data type of this array.
+        """
         raise NotImplementedError, 'BaseArray::get_c_type'
 
     cpdef reserve(self, int size):
@@ -84,7 +85,8 @@ cdef class BaseArray:
         return self._npy_array
 
     cpdef set_data(self, np.ndarray nparr):
-        """  Set data from the given numpy array.
+        """
+        Set data from the given numpy array.
 
         If the numpy array is a reference to the numpy array maintained
         internally by this class, nothing is done. 
@@ -118,20 +120,27 @@ cdef class BaseArray:
         raise NotImplementedError, 'BaseArray::_align_array'	
         
     cpdef reset(self):
-        """ Reset the length of the array to 0. """
+        """
+        Reset the length of the array to 0.
+    	"""
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
         self.length = 0
         arr.dimensions[0] = self.length        
         
     cpdef copy_values(self, LongArray indices, BaseArray dest):
-        """ Copy values of indexed particles from self to dest. """
+        """
+        Copy values of selected particles in indices from self to dest.
+        """
         raise NotImplementedError, 'BaseArray::copy_values'
 
-    cpdef copy_subset(self, BaseArray source, long start_index=-1,
-                      long end_index=-1):
-        """Copy subset of values from source to self."""
+    cpdef copy_subset(self, BaseArray source, long start_index=-1, long end_index=-1):
+        """
+	Copy subset of values from source to self.
+	"""
         raise NotImplementedError, 'BaseArray::copy_subset'
 
     cpdef update_min_max(self):
-        """ Update the min and max values of the array. """
+        """
+	Update the min and max values of the array.
+	"""
         raise NotImplementedError, 'BaseArray::update_min_max'

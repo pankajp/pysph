@@ -3,13 +3,16 @@ Base class for components doing some SPH summation.
 """
 
 # local imports
-from pysph.base.kernels cimport MultidimensionalKernel
-from pysph.sph.calc cimport SPHCalc
+from pysph.base.kernelbase cimport KernelBase
+from pysph.base.nnps cimport NNPSManager
+from pysph.solver.base cimport Base
+from pysph.sph.sph_calc cimport SPHBase
 from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
+    ComponentManager 
+from pysph.solver.entity_base cimport EntityBase
 
-from entity_base cimport EntityBase
-
-cdef class SPHSourceDestMode:
+cdef class SPHSourceDestMode(Base):
     """
     Class to hold the different ways in which source and destinations of a given
     SPH component should be handled.
@@ -17,106 +20,65 @@ cdef class SPHSourceDestMode:
     """
     pass
 
-cdef class SPHComponent:
+cdef class SPHComponent(SolverComponent):
     """
-    An SPH solver consists of an sph_calc object handling the summations
-    between the source and destination particle managers/entities. 
-
-    The SPHComponent generalizes this concept when multiple entities are 
-    present. For a simulation with multiple entities, the SPHComponent 
-    creates an sph_calc object for each destination, source pair, based 
-    on the user specified method for grouping them.
-
-    Data Attributes:
-    ----------------
-    calcs -- The list of sph_calc's. One for each destination-source pair
-
-    src_types -- Accepted types for the sources.
-    src -- The list of source
-
-    dst_types -- Accepted types for the destinations.
-    dst -- The list of destinations
-
-    _auto_setup -- Setup the sph_calc's automatically?
-    _mode -- The mode of grouping
-
-    nnps_manager -- The nnps's to use for the calc's
-
-    sph -- The type of sph_calc
-    sph_func -- The sph_eval function to use
-
     """
-
-    # list of SPHCalc objects created for this component.
-    cdef public list calcs
+    # list of SPHBase objects created for this component.
+    cdef public list sph_calcs
     
     # list of sources.
-    cdef public list srcs
+    cdef public list source_list
     
     # list of dests.
-    cdef public list dsts
+    cdef public list dest_list
 
     # list of types accepted as sources
-    cdef public list src_types
+    cdef public list source_types
 
     # list of types accepted as dests.
-    cdef public list dst_types
+    cdef public list dest_types
 
-    # indcates the way to use the src and entity_list to create the sph
+    # indicates if the source destinations are to be infered automatically from
+    # the input entity list.
+    cdef public bint source_dest_setup_auto
+
+    # indcates the way to use the source_list and entity_list to create the sph
     # functions and calculators.
-    cdef public int _mode
-
-    cdef public list entity_list
+    cdef public int source_dest_mode
 
     # the kernel to use.
-    cdef public MultidimensionalKernel kernel
+    cdef public KernelBase kernel
 
-    # The sph_calc to use
-    cdef public type sph_calc
+    # the nnps manager to use.
+    cpdef public NNPSManager nnps_manager
 
-    #The sph_eval to use
-    cdef public type sph_func
+    # the type of sph summation class to create for the summation.
+    cdef public type sph_class
+    # the type of the sph function class to create.
+    cdef public type sph_func_class
 
-    #Read, write and update properties.
-    cdef public list reads
-    cdef public list writes 
-    cdef public list updates
-
-    cdef public bool setup_done
-
-    ######################################################################
-    #Member functions
-    ######################################################################
     cdef int compute(self) except -1
 
-    #Setup src's and dst's
-    cpdef _setup_entities(self)    
+    cpdef _setup_sources_dests(self)
+    cpdef _setup_sph_objs(self)
 
-    #Setup SPH
-    cpdef _setup_sph(self)
-
-    #Group by None
-    cpdef _group_by_none(self, list dst, type sph_calc,
-                         type sph_eval)
-
-    #Group by type
-    cpdef _group_by_type(self, list src, list dst, type
-                         sph_calc, type sph_eval)
-
-    #Group by All
-    cpdef _group_all(self, list src, list dst, type
-                     sph_calc, type sph_eval)
-
-    #Group by ?
-    cpdef _group(self, list src, list dst, type sph_calc,
-                 type sph_eval)
+    cpdef _setup_sph_group_none(self, list dest_list, type sph_class,
+                                type sph_func_class)
+    cpdef _setup_sph_group_by_type(self, list source_list, list dest_list, type
+                                   sph_class, type sph_func_class)
+    cpdef _setup_sph_group_all(self, list source_list, list dest_list, type
+                               sph_class, type sph_func_class)
+    cpdef setup_sph_objs(self, list source_list, list dest_list, type sph_class,
+                         type sph_func_class)
 
     cpdef setup_sph_function(self, EntityBase source, EntityBase dest,
                              SPHFunctionParticle sph_func)
-
-    cpdef setup_sph_summation_object(self, list src, EntityBase dest,
-                             SPHCalc sph_sum)
-
-    cpdef int setup_component(self)
-
-#############################################################################
+    cpdef setup_sph_summation_object(self, list source_list, EntityBase dest,
+                             SPHBase sph_sum)
+    
+cdef class PYSPHComponent(SPHComponent):
+    """
+    Component to implement SPH components from pure python.
+    """
+    cpdef int py_compute(self) except -1
+    cdef int compute(self) except -1
