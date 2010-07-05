@@ -24,7 +24,7 @@ cdef class ODEStepper:
         """
         pass
 
-    cdef void step(self):
+    cdef double time_step(self):
         """
         Function that does the stepping.
         """

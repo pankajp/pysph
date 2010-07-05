@@ -16,6 +16,10 @@ cdef class Point:
     cpdef Point cross(self, Point p)
     cpdef double distance(self, Point p)
 
+cpdef Point Point_new(double x=*, double y=*, double z=*)
+cpdef Point Point_sub(Point pa, Point pb)
+cpdef Point Point_add(Point pa, Point pb)
+
 
 cdef class IntPoint:
     cdef public int x

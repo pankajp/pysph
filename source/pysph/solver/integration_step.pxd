@@ -64,7 +64,7 @@ be performed is given below:
       provided, collisions are handled using that component. What exactly does
       'handling collisions' means is yet to be decided. But after this step, the
       new positions computed for particles should not involve collisions. That
-      is what this step should guarentee.
+      is what this step should guarantee.
 
     - Compute new positions.
 
@@ -94,6 +94,8 @@ Building on the above ideas, and some extra requirements:
           setup. The doubt was whether to include some automation to this. Does
           not seem to be a very good idea.
 """
+
+from pysph.solver.solver_base cimport SolverComponent
 
 cdef class ODEStepper(SolverComponent):
     """
@@ -164,8 +166,8 @@ cdef class ODEInfo:
     cdef dict _pre_step_component_order
     cdef dict _post_step_component_order
 
-    cpdef add_pre_step_component(self, str name Component c, int pos=*)
-    cpdef add_post_step_component(self, str name, Component c, int pos=*)
+    cpdef add_pre_step_component(self, str name, SolverComponent c, int pos=*)
+    cpdef add_post_step_component(self, str name, SolverComponent c, int pos=*)
 
     # to copy components from another ODEInfo.
     cpdef copy_components(self, ODEInfo)
@@ -187,4 +189,4 @@ cdef class IntegrationStep:
 
     cdef void step(self)
     cdef void add_ode(self, ODEInfo ode_info, int pos=*)
-    cdef void add_pre_integration_component(self, Component c, int pos=*)
+    cdef void add_pre_integration_component(self, SolverComponent c, int pos=*)

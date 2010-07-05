@@ -1,3 +1,4 @@
+# cython: profile=True
 """
 """
 
@@ -13,9 +14,22 @@ cdef extern from "math.h":
 DTYPE = numpy.float
 ctypedef numpy.float_t DTYPE_t
 
-################################################################################
+cpdef Point Point_new(double x=0, double y=0, double z=0):
+    cdef Point p = Point.__new__(Point)
+    p.x = x
+    p.y = y
+    p.z = z
+    return p
+
+cpdef Point Point_sub(Point pa, Point pb):
+    return Point_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
+
+cpdef Point Point_add(Point pa, Point pb):
+    return Point_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
+
+###############################################################################
 # `Point` class.
-################################################################################ 
+############################################################################### 
 cdef class Point:
     """
     This class represents a Point in 3D space.
@@ -51,6 +65,9 @@ cdef class Point:
 
     def __str__(self):
         return '(%f, %f, %f)'%(self.x, self.y, self.z)
+
+    def __repr__(self):
+        return 'Point(%g, %g, %g)'%(self.x, self.y, self.z)
 
     def __add__(self, Point p):
         return Point(self.x + p.x, self.y + p.y, self.z + p.z)

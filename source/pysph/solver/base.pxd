@@ -9,7 +9,7 @@ cdef class Base:
     Base class for all classes in the solver module.
 
     Any class derived from the base can store any information associated with
-    it, in the "infomration" attribute. The key associcated with a particular
+    it, in the "information" attribute. The key associated with a particular
     information *should* be exposed by the class as a "class attribute". This
     allows a simple method to extend the definition of various objects later.
     Another more important use of the 'information' is to allow information

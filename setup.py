@@ -8,6 +8,7 @@ allowing most of the user code to be written in pure Python.
 from setuptools import setup, find_packages, Extension
 from Cython.Distutils import build_ext
 import numpy
+import os
 
 HAS_MPI4PY = True
 try:
@@ -19,7 +20,9 @@ inc_dirs = [numpy.get_include()]
 if HAS_MPI4PY:
     inc_dirs += [mpi4py.get_include()]
 
-mpi_inc_dir = ['/usr/include/mpi', '/usr/local/include/mpi', 
+mpi_inc_dir = [os.environ.get('MPI_INCLUDE', None)]
+if mpi_inc_dir is None:
+    mpi_inc_dir = ['/usr/include/mpi', '/usr/local/include/mpi', 
                '/opt/local/include/mpi']
 
 # base extension modules.
