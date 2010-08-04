@@ -1,7 +1,7 @@
-# This file has been generated automatically on
-# Tue Feb  2 21:22:16 2010
+# This file (carray.pxd) has been generated automatically on
+# Wed Aug  4 20:49:10 2010
 # DO NOT modify this file
-# To make changes modify the source templates and regenerate
+# To make changes modify the source templates (carray_pxd.src) and regenerate
 """
 Implementation of arrays of different types in Cython.
 
@@ -38,6 +38,8 @@ cdef class BaseArray:
     cpdef copy_values(self, LongArray indices, BaseArray dest)
     cpdef copy_subset(self, BaseArray source, long start_index=*, long end_index=*)
     cpdef update_min_max(self)
+
+
 ################################################################################
 # `IntArray` class.
 ################################################################################

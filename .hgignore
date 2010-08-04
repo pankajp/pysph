@@ -3,6 +3,9 @@ syntax: glob
 *.pyc
 *.so
 *.o
+*~
+*.rej
+*.orig
 docs/build/
 source/build/
 pysph.egg-info/
