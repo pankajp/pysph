@@ -1,13 +1,16 @@
-MAKEFILE = $(shell pwd)/Makefile
-PKG = source/pysph
+ROOT = $(PWD)
+MAKEFILE = $(ROOT)/Makefile
+ROOT = $(PWD)
+PKG = $(ROOT)/source/pysph
 DIRS = $(PKG)/base $(PKG)/sph $(PKG)/solver $(PKG)/parallel
 PYX = $(wildcard *.pyx)
 BENCH = 
-MPI4PY_INCL=$(shell python -c "import mpi4py; print mpi4py.get_include()")
+MPI4PY_INCL = $(shell python -c "import mpi4py; print mpi4py.get_include()")
 all : $(DIRS) extn
 .PHONY : $(DIRS)
 $(DIRS) : 
-	$(MAKE) -f $(MAKEFILE) -C $@ cython
+	cd $@;  python $(ROOT)/source/pysph/base/generator.py
+	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
 %.c : %.pyx
 	cython -I../.. -I$(MPI4PY_INCL) -a $<
 cython : $(PYX:.pyx=.c)

@@ -1,4 +1,4 @@
-[[[cog
+<?py
 import datetime
 now = datetime.datetime.now()
 template_strs = ['CLASSNAME','ARRAY_TYPE','NUMPY_TYPENAME']
@@ -8,14 +8,11 @@ c_types_info = {'int':['IntArray', "int_array", "NPY_INT",[]],
                 'long':['LongArray', "long_array", "NPY_LONG",[]],#
                 'float':['FloatArray', "float_array", "NPY_FLOAT",[]]#
                 }
-]]]
-[[[end]]]
-# This file (carray.pxd) has been generated automatically on
-[[[cog cog.out('# '+now.strftime('%c')) ]]]
-
+?># This file (carray.pxd) has been generated automatically on
+# <?py= now.strftime('%c') ?><?py
 # The section below is the header section which is copied unmodified into
 # the generated file
-[[[end]]]
+?>
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -60,7 +57,7 @@ cdef extern from "numpy/arrayobject.h":
 
     ctypedef struct PyArrayObject:
         char  *data
-        int *dimensions
+        np.npy_intp *dimensions
 
     cdef enum NPY_TYPES:
         NPY_INT,
@@ -68,7 +65,7 @@ cdef extern from "numpy/arrayobject.h":
         NPY_FLOAT,
         NPY_DOUBLE
 
-    np.ndarray PyArray_SimpleNewFromData(int, int*, int, void*)
+    np.ndarray PyArray_SimpleNewFromData(int, np.npy_intp*, int, void*)
 
 
 # memcpy
@@ -83,30 +80,28 @@ cdef class BaseArray
 cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
-    """
-    Base class for managed C-arrays.
-    """
+    """ Base class for managed C-arrays. """
     def __cinit__(self, *args, **kwargs):
         pass
 
+    ########################################################################
+    #Public interface
+    ########################################################################
     cpdef str get_c_type(self):
-        """
-	Return the c data type of this array.
-        """
+        """ Return the c data type of this array. """
         raise NotImplementedError, 'BaseArray::get_c_type'
 
-    cpdef reserve(self, int size):
+    cpdef reserve(self, long size):
         raise NotImplementedError, 'BaseArray::reserve'
 
-    cpdef resize(self, int size):
+    cpdef resize(self, long size):
         raise NotImplementedError, 'BaseArray::resize'
 
     cpdef np.ndarray get_npy_array(self):
         return self._npy_array
 
     cpdef set_data(self, np.ndarray nparr):
-        """
-        Set data from the given numpy array.
+        """ Set data from the given numpy array.
 
         If the numpy array is a reference to the numpy array maintained
         internally by this class, nothing is done.
@@ -127,7 +122,7 @@ cdef class BaseArray:
     cpdef squeeze(self):
         raise NotImplementedError, 'BaseArray::squeeze'
 
-    cpdef remove(self, np.ndarray index_list, int input_sorted=0):
+    cpdef remove(self, np.ndarray index_list, bint input_sorted=0):
         raise NotImplementedError, 'BaseArray::remove'
 
     cpdef extend(self, np.ndarray in_array):
@@ -140,32 +135,28 @@ cdef class BaseArray:
         raise NotImplementedError, 'BaseArray::_align_array'
 
     cpdef reset(self):
-        """
-        Reset the length of the array to 0.
-    	"""
+        """ Reset the length of the array to 0. """
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
         self.length = 0
         arr.dimensions[0] = self.length
 
     cpdef copy_values(self, LongArray indices, BaseArray dest):
-        """
-        Copy values of selected particles in indices from self to dest.
-        """
+        """ Copy values of indexed particles from self to dest. """
         raise NotImplementedError, 'BaseArray::copy_values'
 
     cpdef copy_subset(self, BaseArray source, long start_index=-1, long end_index=-1):
         """
-	Copy subset of values from source to self.
-	"""
+        Copy subset of values from source to self.
+        """
         raise NotImplementedError, 'BaseArray::copy_subset'
 
     cpdef update_min_max(self):
         """
-	Update the min and max values of the array.
-	"""
+        Update the min and max values of the array.
+        """
         raise NotImplementedError, 'BaseArray::update_min_max'
 
-[[[cog
+<?py
 
 # The `pxd_code_str` string defined below is the code template for each class
 # of array to be defined
@@ -175,13 +166,27 @@ pxd_code_str = '''
 # `CLASSNAME` class.
 ################################################################################
 cdef class CLASSNAME(BaseArray):
-    #cdef public int length, alloc
+    """ Represents an array of `ARRAY_TYPE`s """
+
+    #cdef public long length, alloc
     #cdef ARRAY_TYPE *data
     #cdef np.ndarray _npy_array
 
-    def __cinit__(self, int n=0, *args, **kwargs):
-        """
-        Constructor.
+    def __cinit__(self, long n=0, *args, **kwargs):
+        """ Constructor for the class.
+
+        Mallocs a memory buffer of size (n*sizeof(ARRAY_TYPE)) and sets up
+        the numpy array.
+
+        Parameters:
+        -----------
+        n -- Length of the array.
+
+        Data attributes:
+        ----------------
+        data -- Pointer to an integer array.
+        alloc -- Size of the data buffer allocated.
+
         """
         self.length = n
         if n == 0:
@@ -192,78 +197,56 @@ cdef class CLASSNAME(BaseArray):
         self._setup_npy_array()
 
     def __dealloc__(self):
-        """
-        Frees the array.
-        """
+        """ Frees the array. """
         free(<void*>self.data)
 
-    def __getitem__(self, int idx):
-        """
-        Get item at position idx.
-        """
+    def __getitem__(self, long idx):
+        """ Get item at position idx. """
         return self.data[idx]
 
-    def __setitem__(self, int idx, ARRAY_TYPE value):
-        """
-        Set location idx to value.
-        """
+    def __setitem__(self, long idx, ARRAY_TYPE value):
+        """ Set location idx to value. """
         self.data[idx] = value
 
     def __reduce__(self):
-        """
-        Implemented to facilitate pickling.
-        """
+        """ Implemented to facilitate pickling. """
         d = {}
         d['data'] = self.get_npy_array()
 
         return (CLASSNAME, (), d)
 
     def __setstate__(self, d):
-        """
-        Load the carray from the dictionary d.
-        """
+        """ Load the carray from the dictionary d. """
         cdef np.ndarray arr = d['data']
         self.resize(arr.size)
         self.set_data(arr)
 
     cdef _setup_npy_array(self):
-        """
-        Create the numpy array.
-        """
+        """ Create the numpy array. """
         cdef int nd = 1
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NUMPY_TYPENAME, self.data)
 
     cpdef str get_c_type(self):
-        """
-        Return the c data type for this array.
-        """
+        """ Return the c data type for this array. """
         return 'ARRAY_TYPE'
 
     cdef ARRAY_TYPE* get_data_ptr(self):
-        """
-        Return the internal data pointer.
-        """
+        """ Return the internal data pointer. """
         return self.data
 
-    cpdef ARRAY_TYPE get(self, int idx):
-        """
-        Gets value stored at position idx.
-        """
+    cpdef ARRAY_TYPE get(self, long idx):
+        """ Gets value stored at position idx. """
         return self.data[idx]
 
-    cpdef set(self, int idx, ARRAY_TYPE value):
-        """
-        Sets location idx to value.
-        """
+    cpdef set(self, long idx, ARRAY_TYPE value):
+        """ Sets location idx to value. """
         self.data[idx] = value
 
     cpdef append(self, ARRAY_TYPE value):
-        """
-        Appends value to the end of the array.
-        """
-        cdef int l = self.length
+        """ Appends value to the end of the array. """
+        cdef long l = self.length
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
 
         if l >= self.alloc:
@@ -274,10 +257,8 @@ cdef class CLASSNAME(BaseArray):
         # update the numpy arrays length
         arr.dimensions[0] = self.length
 
-    cpdef reserve(self, int size):
-        """
-        Resizes the internal data to size*sizeof(ARRAY_TYPE) bytes.
-        """
+    cpdef reserve(self, long size):
+        """ Resizes the internal data to size*sizeof(ARRAY_TYPE) bytes. """
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
         cdef void* data = NULL
         if size > self.alloc:
@@ -291,9 +272,9 @@ cdef class CLASSNAME(BaseArray):
             self.alloc = size
             arr.data = <char *>self.data
 
-    cpdef resize(self, int size):
+    cpdef resize(self, long size):
         """
- 	Resizes internal data to size*sizeof(ARRAY_TYPE) bytes and sets the
+         Resizes internal data to size*sizeof(ARRAY_TYPE) bytes and sets the
         length to the new size.
 
         """
@@ -307,9 +288,7 @@ cdef class CLASSNAME(BaseArray):
         arr.dimensions[0] = self.length
 
     cpdef squeeze(self):
-        """
-        Release any unused memory.
-        """
+        """ Release any unused memory. """
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
         cdef void* data = NULL
         data = <ARRAY_TYPE*>realloc(self.data, self.length*sizeof(ARRAY_TYPE))
@@ -323,7 +302,7 @@ cdef class CLASSNAME(BaseArray):
         self.alloc = self.length
         arr.data = <char *>self.data
 
-    cpdef remove(self, np.ndarray index_list, int input_sorted=0):
+    cpdef remove(self, np.ndarray index_list, bint input_sorted=0):
         """
         Remove the particles with indices in index_list.
 
@@ -341,8 +320,8 @@ cdef class CLASSNAME(BaseArray):
          the length of the array.
 
         """
-        cdef int i
-        cdef int inlength = index_list.size
+        cdef long i
+        cdef long inlength = index_list.size
         cdef np.ndarray sorted_indices
         cdef long id
         cdef PyArrayObject* arr = <PyArrayObject*>self._npy_array
@@ -376,21 +355,19 @@ cdef class CLASSNAME(BaseArray):
            costly. Look at the annotated cython html file.
 
         """
-        cdef int len = in_array.size
-        cdef int i
+        cdef long len = in_array.size
+        cdef long i
         for i in range(len):
             self.append(in_array[i])
 
     cdef void _align_array(self, LongArray new_indices):
-        """
-	Rearrange the contents of the array according to the new indices.
-	"""
+        """ Rearrange the array contents according to the new indices. """
         if new_indices.length != self.length:
             raise ValueError, 'Unequal array lengths'
 
-        cdef int i
-        cdef int length = self.length
-        cdef int n_bytes
+        cdef long i
+        cdef long length = self.length
+        cdef long n_bytes
         cdef ARRAY_TYPE *temp
 
         n_bytes = sizeof(ARRAY_TYPE)*length
@@ -407,13 +384,13 @@ cdef class CLASSNAME(BaseArray):
 
     cpdef copy_values(self, LongArray indices, BaseArray dest):
         """
-	Copies values of indices in indices from self to dest.
+        Copies values of indices in indices from self to dest.
 
-	No size check if performed, we assume the dest to of proper size
+        No size check if performed, we assume the dest to of proper size
         i.e. atleast as long as indices.
         """
         cdef CLASSNAME dest_array = <CLASSNAME>dest
-        cdef int i, num_values
+        cdef long i, num_values
         num_values = indices.length
 
         for i from 0 <= i < num_values:
@@ -432,7 +409,7 @@ cdef class CLASSNAME(BaseArray):
             index in source.
 
         """
-        cdef int si, ei, s_length, d_length, i, j
+        cdef long si, ei, s_length, d_length, i, j
         cdef CLASSNAME src = <CLASSNAME>source
         s_length = src.length
         d_length = self.length
@@ -484,10 +461,8 @@ cdef class CLASSNAME(BaseArray):
             j += 1
 
     cpdef update_min_max(self):
-        """
-        Updates the min and max values of the array.
-        """
-        cdef int i = 0
+        """ Updates the min and max values of the array. """
+        cdef long i = 0
         cdef ARRAY_TYPE min_val, max_val
 
         if self.length == 0:
@@ -516,8 +491,7 @@ for ctype,info in c_types_info.items():
     code = code.replace(template_strs[0], info[0])
     code = code.replace(template_type_str, ctype)
     code = code.replace(template_strs[2], info[2])
-    cog.outl(code)
+    out.write(code)
 
-]]]
-[[[end]]]
+?>
 
