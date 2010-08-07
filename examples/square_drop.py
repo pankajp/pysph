@@ -17,7 +17,7 @@ logger.addHandler(logging.StreamHandler())
 
 ###############################################################################
 # local imports
-from pysph.base.kernel2d import CubicSpline2D
+from pysph.base.kernels import CubicSplineKernel
 from pysph.base.point import Point
 from pysph.solver.fsf_solver import FSFSolver, DensityComputationMode
 from pysph.solver.solid import Solid
@@ -58,7 +58,7 @@ dam_center_y = (dam_height+origin_y)*0.5 + 0.4
 
 # Create a solver instance using default parameters and some small changes.
 solver = FSFSolver(time_step=0.00001, total_simulation_time=10.0,
-                   kernel=CubicSpline2D())
+                   kernel=CubicSplineKernel(dim=2))
 integrator = RK2Integrator(name='integrator_default', solver=solver)
 solver.integrator = integrator
 

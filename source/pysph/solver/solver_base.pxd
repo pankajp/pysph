@@ -8,7 +8,7 @@ from pysph.solver.entity_base cimport EntityBase
 
 from pysph.base.cell cimport CellManager
 from pysph.base.nnps cimport NNPSManager
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 

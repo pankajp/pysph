@@ -11,7 +11,7 @@ from pysph.base.particle_array import ParticleArray
 from pysph.solver.particle_generator import ParticleGenerator
 from pysph.solver.particle_generator import DensityComputationMode as DCM
 from pysph.solver.particle_generator import MassComputationMode as MCM
-from pysph.base.kernel3d import CubicSpline3D
+from pysph.base.kernels import CubicSplineKernel
 
 
 class DummyGenerator(ParticleGenerator):
@@ -52,7 +52,7 @@ class TestParticleGenerator(unittest.TestCase):
         pg = ParticleGenerator()
         self.assertEqual(pg.validate_setup(), False)
 
-        pg.kernel = CubicSpline3D()
+        pg.kernel = CubicSplineKernel()
         self.assertRaises(NotImplementedError, pg.get_particles)
         self.assertRaises(NotImplementedError, pg.get_coords)
         self.assertRaises(NotImplementedError, pg.generate_func)

@@ -1,5 +1,5 @@
 """
-Compoents to compute forces at boundaries.
+Components to compute forces at boundaries.
 """
 
 # c-function imports
@@ -12,7 +12,7 @@ logger = logging.getLogger()
 
 # local imports
 from pysph.base.point cimport Point
-from pysph.base.kernelbase cimport *
+from pysph.base.kernels cimport *
 from pysph.sph.sph_func cimport *
 from pysph.solver.entity_types cimport EntityTypes
 from pysph.solver.sph_component cimport *
@@ -22,7 +22,7 @@ from pysph.solver.solver_base cimport *
 ################################################################################
 # `RepulsiveBoundaryKernel` class.
 ################################################################################
-cdef class RepulsiveBoundaryKernel(Kernel3D):
+cdef class RepulsiveBoundaryKernel(KernelBase):
     """
     Kernel class to be used for boundary SPH summations.
 

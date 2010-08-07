@@ -5,7 +5,6 @@
 # numpy imports
 cimport numpy
 import numpy
-import numpy
 
 cdef extern from "math.h":
     double sqrt(double)

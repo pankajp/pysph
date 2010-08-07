@@ -9,7 +9,7 @@ import numpy
 # local imports
 from pysph.sph.density_funcs import SPHRho3D
 from pysph.base.particle_array import ParticleArray
-from pysph.base.kernel3d import Poly6Kernel3D, CubicSpline3D
+from pysph.base.kernels import Poly6Kernel, CubicSplineKernel
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -87,7 +87,7 @@ class TestSPHRho3D(unittest.TestCase):
         nr = numpy.array([0.])
         dnr = numpy.array([0.])
         
-        k = Poly6Kernel3D()
+        k = Poly6Kernel()
         # get contribution of particle 1 on particle 0
         sph_rho3d.py_eval(1, 0, k, nr, dnr)
 
@@ -123,7 +123,7 @@ class TestSPHRho3D(unittest.TestCase):
         nr = numpy.array([0.])
         dnr = numpy.array([0.])
         
-        k = Poly6Kernel3D()
+        k = Poly6Kernel()
         # get contribution of particle 1 on particle 0
         nr[0] = 4.0
         sph_rho3d.py_eval(0, 0, k, nr, dnr)

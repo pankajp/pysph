@@ -4,7 +4,7 @@ SPH functions for density and related computation.
 
 # local imports
 from pysph.base.point cimport Point
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
 
 from pysph.sph.sph_func cimport SPHFunctionParticle1D, SPHFunctionParticle2D, \

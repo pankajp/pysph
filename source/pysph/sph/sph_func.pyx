@@ -9,7 +9,7 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray
 from pysph.base.point cimport Point
 
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 
 
 cdef inline void make_coords_1d(DoubleArray x, Point pnt, int pid):

@@ -9,7 +9,7 @@ import logging
 
 # local imports
 from pysph.base.point import Point
-from pysph.base.kernel3d import CubicSpline3D
+from pysph.base.kernels import CubicSplineKernel
 from pysph.solver.basic_generators import *
 from pysph.solver.utils import check_array
 
@@ -79,7 +79,7 @@ class TestLineGenerator(unittest.TestCase):
         Tests the get_particles function.
         """
         lg = LineGenerator(particle_spacing=0.5,
-                           kernel=CubicSpline3D())
+                           kernel=CubicSplineKernel())
         
         particle_array = lg.get_particles()
         self.assertEqual(particle_array.get_number_of_particles(), 3)
@@ -181,7 +181,7 @@ class TestRectangleGenerator(unittest.TestCase):
         """
         rg = RectangleGenerator(particle_spacing_x1=0.5,
                                 particle_spacing_x2=0.5,
-                                kernel=CubicSpline3D())
+                                kernel=CubicSplineKernel())
         p = rg.get_particles()
         self.assertEqual(p.get_number_of_particles(), 9)
         self.assertEqual(check_array(p.x, [0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0,

@@ -29,7 +29,7 @@ logger.addHandler(logging.StreamHandler())
 
 ###############################################################################
 # local imports
-from pysph.base.kernel3d import CubicSpline3D
+from pysph.base.kernels import CubicSplineKernel
 from pysph.base.point import Point
 from pysph.solver.fsf_solver import FSFSolver
 from pysph.solver.solid import Solid
@@ -79,7 +79,7 @@ fluid_particle_spacing=radius
 
 # Create a solver instance using default parameters and some small changes.
 solver = FSFSolver(time_step=0.00001, total_simulation_time=10.0,
-                   kernel=CubicSpline3D())
+                   kernel=CubicSplineKernel())
 solver.enable_timing = True
 solver.timer.output_file_name = 'times'
 solver.timer.write_after=10

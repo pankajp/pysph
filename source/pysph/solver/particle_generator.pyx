@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger()
 
 # local imports
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.base cimport Base
 

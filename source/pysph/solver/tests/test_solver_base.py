@@ -18,7 +18,7 @@ from pysph.solver.dummy_entities import DummyEntity
 
 from pysph.base.cell import CellManager
 from pysph.base.nnps import NNPSManager
-from pysph.base.kernelbase import KernelBase
+from pysph.base.kernels import KernelBase
 from pysph.solver.integrator_base import Integrator
         
 def check_particle_properties(prop_dict, prop_names, data_types, default_vals):

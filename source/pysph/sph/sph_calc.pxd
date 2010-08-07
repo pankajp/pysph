@@ -7,7 +7,7 @@ cimport numpy
 
 # standard imports
 from pysph.base.nnps cimport NNPSManager
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.base.carray cimport DoubleArray
 from pysph.base.particle_array cimport ParticleArray
 

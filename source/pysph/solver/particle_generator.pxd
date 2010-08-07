@@ -3,7 +3,7 @@ Base class for classes generating particle configurations.
 """
 
 # local imports
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.base cimport Base
 from pysph.solver.solver_base cimport SolverBase

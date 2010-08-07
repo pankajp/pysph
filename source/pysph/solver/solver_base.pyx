@@ -12,7 +12,7 @@ import numpy
 import random
 
 # local imports
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.base.nnps cimport NNPSManager
 from pysph.base.cell cimport CellManager
 

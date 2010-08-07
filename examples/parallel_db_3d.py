@@ -53,7 +53,7 @@ logger.addHandler(logging.StreamHandler())
 
 ###############################################################################
 # local imports
-from pysph.base.kernel2d import CubicSpline2D
+from pysph.base.kernels import CubicSplineKernel
 from pysph.base.point import Point
 from pysph.parallel.parallel_fsf_solver import ParallelFsfSolver
 from pysph.solver.solid import Solid
@@ -104,7 +104,7 @@ fluid_particle_spacing=radius
 
 # Create a solver instance using default parameters and some small changes.
 solver = ParallelFsfSolver(cell_manager=None, time_step=0.00001,
-                           total_simulation_time=10., kernel=CubicSpline2D())
+                           total_simulation_time=10., kernel=CubicSplineKernel(dim=2))
 #solver.integrator=RK2Integrator(name='rk2_integrator', solver=solver)
 
 solver.timer.output_file_name = destdir+'times_'+str(rank)

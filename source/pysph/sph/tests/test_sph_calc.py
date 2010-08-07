@@ -6,12 +6,11 @@ import unittest
 
 # local imports
 from pysph.sph.sph_calc import SPHBase
-from pysph.base.kernel1d import *
 from pysph.base.nnps import NNPSManager
 from pysph.base.cell import CellManager
 from pysph.sph.misc_particle_funcs import *
 from pysph.sph.tests.common_data import *
-from pysph.base.kernelbase import KernelBase
+from pysph.base.kernels import KernelBase
 from pysph.base.carray import DoubleArray
 from pysph.base.particle_tags import *
 

@@ -9,7 +9,7 @@ logger = logging.getLogger()
 
 # local imports
 from pysph.base.nnps cimport NNPSManager
-from pysph.base.kernelbase cimport KernelBase
+from pysph.base.kernels cimport KernelBase
 from pysph.sph.sph_func cimport *
 from pysph.solver.sph_component cimport *
 from pysph.solver.solver_base cimport *

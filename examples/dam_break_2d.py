@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG, filename='/tmp/log_pysph',
 logger.addHandler(logging.StreamHandler())
 
 # local imports
-from pysph.base.kernel2d import CubicSpline2D
+from pysph.base.kernels import CubicSplineKernel
 from pysph.base.point import Point
 from pysph.solver.fsf_solver import FSFSolver
 from pysph.solver.solid import Solid
@@ -39,7 +39,7 @@ fluid_particle_spacing=0.05
 
 # Create a solver instance using default parameters and some small changes.
 solver = FSFSolver(time_step=0.0001, total_simulation_time=10.0,
-                   kernel=CubicSpline2D())
+                   kernel=CubicSplineKernel(dim=2))
 integrator = RK2Integrator(name='integrator_default', solver=solver)
 solver.integrator = integrator
 

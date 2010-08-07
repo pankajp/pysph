@@ -70,14 +70,8 @@ parallel = [
     ]
 
 # kernel extension modules.
-kernels = [Extension("pysph.base.kernelbase",
-                     ["source/pysph/base/kernelbase.pyx"], include_dirs=inc_dirs),
-           Extension("pysph.base.kernel1d",
-                     ["source/pysph/base/kernel1d.pyx"], include_dirs=inc_dirs),
-           Extension("pysph.base.kernel2d",
-                     ["source/pysph/base/kernel2d.pyx"], include_dirs=inc_dirs),
-           Extension("pysph.base.kernel3d",
-                     ["source/pysph/base/kernel3d.pyx"], include_dirs=inc_dirs),
+kernels = [Extension("pysph.base.kernels",
+                     ["source/pysph/base/kernels.pyx"], include_dirs=inc_dirs),
            ]
 
 solver = [Extension("pysph.solver.fast_utils",
