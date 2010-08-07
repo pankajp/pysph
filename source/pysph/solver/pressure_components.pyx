@@ -99,11 +99,11 @@ cdef class TaitPressureComponent(SolverComponent):
                 logger.error(msg)
                 raise ValueError, msg
 
-            e.properties.B = e.properties.rho*fac
-            msg = 'B for %s is %f'%(e.name, e.properties.B)
+            e.properties['B'] = e.properties['rho']*fac
+            msg = 'B for %s is %f'%(e.name, e.properties['B'])
             logger.info(msg)
-            logger.info('Entity Rho : %f'%(e.properties.rho))
-            logger.info('Max density var : %f'%(e.properties.max_density_variation))
+            logger.info('Entity Rho : %f'%(e.properties['rho']))
+            logger.info('Max density var : %f'%(e.properties['max_density_variation']))
 
         self.setup_done = True
 
@@ -129,8 +129,8 @@ cdef class TaitPressureComponent(SolverComponent):
             entity = self.entity_list[i]
             parr = entity.get_particle_array()
 
-            e_rho = entity.properties.rho
-            e_B = entity.properties.B
+            e_rho = entity.properties['rho']
+            e_B = entity.properties['B']
             parr.p[:] = 0.0
             parr.p[:] = numpy.divide(parr.rho, e_rho)
             parr.p[:] = numpy.power(parr.p, self.gamma)

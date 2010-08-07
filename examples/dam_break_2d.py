@@ -60,7 +60,7 @@ solver.add_entity(dam_wall)
 
 # create fluid particles
 dam_fluid = Fluid(name='dam_fluid')
-dam_fluid.properties.rho = 1000.
+dam_fluid.properties['rho'] = 1000.
 rg2 = RectangleGenerator(start_point=Point(origin_x+2.0*solid_particle_h,
                             origin_y+2.0*solid_particle_h, 0.0),
                         end_point=Point(origin_x+2.0*solid_particle_h+fluid_column_width,

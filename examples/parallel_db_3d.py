@@ -136,7 +136,7 @@ if rank == 0:
 
     # create fluid particles
     dam_fluid = Fluid(name='dam_fluid')
-    dam_fluid.properties.rho = 1000.
+    dam_fluid.properties['rho'] = 1000.
     bkr = 1.5
     rg = CuboidGenerator(start_point= Point(origin_x+bkr*solid_particle_h,
                                             origin_y+bkr*solid_particle_h,

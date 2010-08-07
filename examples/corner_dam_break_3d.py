@@ -107,7 +107,7 @@ solver.add_entity(dam_wall)
 
 # create fluid particles
 dam_fluid = Fluid(name='dam_fluid')
-dam_fluid.properties.rho = 1000.
+dam_fluid.properties['rho'] = 1000.
 bkr = 2.0
 start_point = Point(origin_x+bkr*solid_particle_h,
                        origin_y+bkr*solid_particle_h,
