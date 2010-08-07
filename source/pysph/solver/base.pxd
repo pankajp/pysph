@@ -2,7 +2,7 @@
 Base class for all classes in the solver module.
 """
 
-from pysph.solver.typed_dict cimport TypedDict
+#from pysph.solver.typed_dict cimport TypedDict
 
 cdef class Base:
     """
@@ -27,5 +27,5 @@ cdef class Base:
     
 
     """
-    cdef public TypedDict information
+    cdef public dict information
     

@@ -239,12 +239,12 @@ class TestIntegrator(unittest.TestCase):
         """
         i = Integrator()
         
-        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        ip = i.information[i.INTEGRATION_PROPERTIES]
         self.assertEqual(len(ip), 2)
         self.assertEqual(ip.has_key('velocity'), True)
         self.assertEqual(ip.has_key('position'), True)
 
-        ds = i.information.get_dict(i.DEFAULT_STEPPERS)
+        ds = i.information[i.DEFAULT_STEPPERS]
         self.assertEqual(ds.has_key('default'), True)
         self.assertEqual(ds['default'], 'euler')
 
@@ -264,7 +264,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
 
-        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        ip = i.information[i.INTEGRATION_PROPERTIES]
 
         self.assertEqual(ip.has_key('density'), True)
         density_info = ip['density']
@@ -287,7 +287,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_pre_step_component('pre_v_2', 'velocity')
         i.add_post_step_component('post_v_1', 'velocity')
 
-        ip = i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        ip = i.information[i.INTEGRATION_PROPERTIES]
         
         vel_info = ip['velocity']
         pre_comps = vel_info['pre_step_components']
@@ -322,7 +322,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_pre_integration_component('comp2')
         i.add_pre_integration_component('comp0', at_tail=False)
 
-        pic = i.information.get_list('PRE_INTEGRATION_COMPONENTS')
+        pic = i.information['PRE_INTEGRATION_COMPONENTS']
         self.assertEqual(pic[0], 'comp0')
         self.assertEqual(pic[1], 'comp1')
         self.assertEqual(pic[2], 'comp2')
@@ -337,7 +337,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_post_integration_component('c2')
         i.add_post_integration_component(comp_name='c3', at_tail=False)
         
-        pic = i.information.get_list(i.POST_INTEGRATION_COMPONENTS)
+        pic = i.information[i.POST_INTEGRATION_COMPONENTS]
         print pic
         self.assertEqual(pic[0], 'c3')
         self.assertEqual(pic[1], 'c1')
@@ -362,7 +362,7 @@ class TestIntegrator(unittest.TestCase):
 
         i.set_integration_order(['density', 'velocity', 'position'])
 
-        io = i.information.get_list(i.INTEGRATION_ORDER)
+        io = i.information[i.INTEGRATION_ORDER]
         self.assertEqual(io, ['density', 'velocity', 'position'])
         i.set_integration_order(['density'])
         self.assertEqual(io, ['density'])
@@ -382,7 +382,7 @@ class TestIntegrator(unittest.TestCase):
         i.add_property(prop_name, integrand_arrays, integral_arrays, 
                        entity_types, stepper)
 
-        print i.information.get_dict(i.INTEGRATION_PROPERTIES)
+        print i.information[i.INTEGRATION_PROPERTIES]
 
         s = i.get_stepper(EntityTypes.Entity_Fluid, 'velocity')
         self.assertEqual(type(s), ODEStepper)

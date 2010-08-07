@@ -286,13 +286,13 @@ cdef class Integrator(SolverComponent):
         else:
             self.time_step = solver.time_step
 
-        self.information.set_dict(self.INTEGRATION_PROPERTIES, {})
-        self.information.set_list(self.PRE_INTEGRATION_COMPONENTS, [])
-        self.information.set_list(self.INTEGRATION_ORDER, [])
-        self.information.set_dict(self.DEFAULT_STEPPERS, {})
-        self.information.set_list(self.POST_INTEGRATION_COMPONENTS, [])
-        self.information.set_list(self.PRE_STEP_COMPONENTS, [])
-        self.information.set_list(self.POST_STEP_COMPONENTS,[])
+        self.information[self.INTEGRATION_PROPERTIES] = {}
+        self.information[self.PRE_INTEGRATION_COMPONENTS] = []
+        self.information[self.INTEGRATION_ORDER] = []
+        self.information[self.DEFAULT_STEPPERS] = {}
+        self.information[self.POST_INTEGRATION_COMPONENTS] = []
+        self.information[self.PRE_STEP_COMPONENTS] = []
+        self.information[self.POST_STEP_COMPONENTS] = []
 
         #self.setup_defualt_steppers()
         # setup the velocity and position properties according to dimension
@@ -308,8 +308,7 @@ cdef class Integrator(SolverComponent):
     def setup_defualt_steppers(self):
         """
         """
-        cdef dict default_steppers = self.information.get_dict(
-            self.DEFAULT_STEPPERS) 
+        cdef dict default_steppers = self.information[self.DEFAULT_STEPPERS] 
         cdef str s        
         # we only add one default stepper to be used for all kinds of entities. 
         s = default_steppers.get('default')
@@ -363,7 +362,7 @@ cdef class Integrator(SolverComponent):
         """
         Includes the given entity type for integration of a given property.
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
         cdef dict prop_info = ip.get(prop_name)
         
         if prop_info is None:
@@ -383,7 +382,7 @@ cdef class Integrator(SolverComponent):
         """
         Remove the given entity type for integration of a given property.
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
         cdef dict prop_info = ip.get(prop_name)
 
         if prop_info is None:
@@ -407,7 +406,7 @@ cdef class Integrator(SolverComponent):
         Returns the dict associated with the property prop_name, containing the
         stepping information of the said property.
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
         
         return ip.get(prop_name)
 
@@ -472,8 +471,8 @@ cdef class Integrator(SolverComponent):
           integrator class will be used.        
 
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        cdef list io = self.information.get_list(self.INTEGRATION_ORDER)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
+        cdef list io = self.information[self.INTEGRATION_ORDER]
         cdef dict p_dict = ip.get(prop_name)
         
         if p_dict is None:
@@ -515,9 +514,8 @@ cdef class Integrator(SolverComponent):
         property_name. If property_name name is '', the component is added at a
         point before stepping of any property is done.
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        cdef list psc = self.information.get_list(
-            self.PRE_STEP_COMPONENTS)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
+        cdef list psc = self.information[self.PRE_STEP_COMPONENTS]
         cdef dict p_dict = ip.get(property_name)
         cdef list prop_components
 
@@ -552,10 +550,9 @@ cdef class Integrator(SolverComponent):
         property_name. If the property_name is '', the component is added after
         stepping of all properties are done.
         """
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
 
-        cdef list psc = self.information.get_list(
-            self.POST_STEP_COMPONENTS)
+        cdef list psc = self.information[self.POST_STEP_COMPONENTS]
 
         cdef dict p_dict = ip.get(property_name)
         cdef list prop_components
@@ -600,8 +597,7 @@ cdef class Integrator(SolverComponent):
             prepended to the said list.
 
         """
-        cdef list pic = self.information.get_list(
-            self.PRE_INTEGRATION_COMPONENTS)
+        cdef list pic = self.information[self.PRE_INTEGRATION_COMPONENTS]
         
         if at_tail ==  False:
             pic.insert(0, comp_name)
@@ -627,8 +623,7 @@ cdef class Integrator(SolverComponent):
             prepended to the list of pre integration components.
 
         """
-        cdef list pic = self.information.get_list(
-            self.POST_INTEGRATION_COMPONENTS)
+        cdef list pic = self.information[self.POST_INTEGRATION_COMPONENTS]
 
         if at_tail == False:
             pic.insert(0, comp_name)
@@ -647,7 +642,7 @@ cdef class Integrator(SolverComponent):
             order.
 
         """
-        cdef list io = self.information.get_list(self.INTEGRATION_ORDER)
+        cdef list io = self.information[self.INTEGRATION_ORDER]
         
         # first check if the new order list has the same components as the
         # current list. If not, we warn about extra / removed components, but
@@ -701,7 +696,7 @@ cdef class Integrator(SolverComponent):
         Add the pre-integration components to the execute list.
         """
         # add the pre-integration components.
-        pic = self.information.get_list(self.PRE_INTEGRATION_COMPONENTS)
+        pic = self.information[self.PRE_INTEGRATION_COMPONENTS]
         for c_name in pic:
             c = self.cm.get_component(c_name)
             if c is not None:
@@ -712,7 +707,7 @@ cdef class Integrator(SolverComponent):
         Add the post-integration components to the execute list.
         """
         # add the post-integration components.
-        pic = self.information.get_list(self.POST_INTEGRATION_COMPONENTS)
+        pic = self.information[self.POST_INTEGRATION_COMPONENTS]
         for c_name in pic:
             c = self.cm.get_component(c_name)
             if c is not None:
@@ -726,7 +721,7 @@ cdef class Integrator(SolverComponent):
         Setup components that are to be executed before stepping of any property
         beings. 
         """
-        psc = self.information.get_list(self.PRE_STEP_COMPONENTS)
+        psc = self.information[self.PRE_STEP_COMPONENTS]
         for c_name in psc:
             c = self.cm.get_component(c_name)
             if c is not None:
@@ -737,7 +732,7 @@ cdef class Integrator(SolverComponent):
         Setup components that are to be executed after stepping of all
         properties is done and new values are copied.
         """
-        psc = self.information.get_list(self.POST_STEP_COMPONENTS)
+        psc = self.information[self.POST_STEP_COMPONENTS]
         for c_name in psc:
             c = self.cm.get_component(c_name)
             if c is not None:
@@ -754,7 +749,7 @@ cdef class Integrator(SolverComponent):
         prop_steppers = {}
 
         # now start appending components for the properties.
-        io = self.information.get_list(self.INTEGRATION_ORDER)
+        io = self.information[self.INTEGRATION_ORDER]
 
         for p_name in io:
             stepper_list = self._setup_property(p_name)
@@ -790,7 +785,7 @@ cdef class Integrator(SolverComponent):
         """
         prop_steppers = []
 
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
         p_info = ip.get(prop_name)
         
         if p_info is None:
@@ -805,7 +800,7 @@ cdef class Integrator(SolverComponent):
         if integrand_initial_values != None:
             e_list = []
             for e in self.entity_list:
-                e_ip = e.information.get_list(e.INTEGRATION_PROPERTIES)
+                e_ip = e.information[e.INTEGRATION_PROPERTIES]
                 if len(e_types) > 0:
                     if e.is_type_included(e_types):
                         if e_ip is not None:
@@ -836,7 +831,7 @@ cdef class Integrator(SolverComponent):
         
         # now for every entity add an appropriate stepper.
         for e in self.entity_list:
-            e_ip = e.information.get_list(e.INTEGRATION_PROPERTIES)
+            e_ip = e.information[e.INTEGRATION_PROPERTIES]
             # check if the property spec had some entity_type information.
             accept = False
             if len(e_types) > 0:
@@ -910,8 +905,8 @@ cdef class Integrator(SolverComponent):
             - ELSE get the stepper for the property spec.
 
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        default_steppers = self.information.get_dict(self.DEFAULT_STEPPERS)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
+        default_steppers = self.information[self.DEFAULT_STEPPERS]
         
         prop_info = ip.get(prop_name)
         # check if the property is valid.
@@ -964,8 +959,8 @@ cdef class Integrator(SolverComponent):
         Create copiers for each property, to copy the next step values to the
         current arrays.
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        io = self.information.get_list(self.INTEGRATION_ORDER)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
+        io = self.information[self.INTEGRATION_ORDER]
 
         for prop_name in io:
             stepper_list = prop_stepper_dict[prop_name]
@@ -1019,7 +1014,7 @@ cdef class Integrator(SolverComponent):
         properties.
         """
         cdef str prop_name
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
                 
         for prop_name in ip.keys():
             prop_info = ip.get(prop_name)

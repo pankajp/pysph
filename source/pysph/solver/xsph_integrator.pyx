@@ -67,7 +67,7 @@ cdef class EulerXSPHIntegrator(Integrator):
         """
         Sets the position stepper for fluids to use XSPHPositionStepper
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
         prop_info = ip.get('position')
         
         if prop_info is None:
@@ -145,7 +145,7 @@ cdef class RK2XSPHIntegrator(RK2Integrator):
         """
         Sets the position stepper for fluids to use XSPHPositionStepper
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
         prop_info = ip.get('position')
         
         if prop_info is None:

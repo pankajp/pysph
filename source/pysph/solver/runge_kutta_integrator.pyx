@@ -81,8 +81,7 @@ cdef class RK2Integrator(Integrator):
         self._step1_default_steppers = {}
         self._step2_default_steppers = {}        
         
-        self.information.set_dict(self.DEFAULT_STEPPERS,
-                                  self._step1_default_steppers)
+        self.information[self.DEFAULT_STEPPERS] = self._step1_default_steppers
         self.step_being_setup = 1
 
     def __init__(self, name='', solver=None, component_manager=None,
@@ -149,16 +148,14 @@ cdef class RK2Integrator(Integrator):
         
         # set the default steppers to _step1_default_steppers
         if step_num == 1:
-            self.information.set_dict(self.DEFAULT_STEPPERS,
-                                      self._step1_default_steppers)
+            self.information[self.DEFAULT_STEPPERS] = self._step1_default_steppers
         else:
-            self.information.set_dict(self.DEFAULT_STEPPERS,
-                                      self._step2_default_steppers)
+            self.information[self.DEFAULT_STEPPERS] = self._step2_default_steppers
 
         # set the property steppers appropriately.
         curr_stepper = self._stepper_info
-        io = self.information.get_list(self.INTEGRATION_ORDER)
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        io = self.information[self.INTEGRATION_ORDER]
+        ip = self.information[self.INTEGRATION_PROPERTIES]
 
         for prop_name in io:
             prop_stepper_info = self._stepper_info.get(prop_name)
@@ -192,8 +189,8 @@ cdef class RK2Integrator(Integrator):
         """
         Setup property copiers for the 1st step.
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        io = self.information.get_list(self.INTEGRATION_ORDER)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
+        io = self.information[self.INTEGRATION_ORDER]
 
         for prop_name in io:
             stepper_list = prop_stepper_dict[prop_name]
@@ -259,8 +256,8 @@ cdef class RK2Integrator(Integrator):
         """
         Setup property copiers for the 2nd step.
         """
-        ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
-        io = self.information.get_list(self.INTEGRATION_ORDER)
+        ip = self.information[self.INTEGRATION_PROPERTIES]
+        io = self.information[self.INTEGRATION_ORDER]
 
         for prop_name in io:
             stepper_list = prop_stepper_dict[prop_name]
@@ -285,7 +282,7 @@ cdef class RK2Integrator(Integrator):
         Update property requirements.
         """
         cdef str prop_name
-        cdef dict ip = self.information.get_dict(self.INTEGRATION_PROPERTIES)
+        cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
                 
         for prop_name in ip.keys():
             prop_info = ip.get(prop_name)

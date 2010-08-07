@@ -55,7 +55,7 @@ cdef class EntityBase(Base):
         self.properties = dict()
         self.properties.update(properties)
         
-        self.information.set_list(self.INTEGRATION_PROPERTIES, None)
+        self.information[self.INTEGRATION_PROPERTIES] = None
 
     cpdef add_entity_property(self, str prop_name, double default_value=0.0):
         """
@@ -97,10 +97,10 @@ cdef class EntityBase(Base):
             logger.warn('Not adding integration property')
             return
         
-        ip = self.information.get_list(self.INTEGRATION_PROPERTIES)
+        cdef list ip = self.information[self.INTEGRATION_PROPERTIES]
         if ip is None:
             ip = []
-            self.information.set_list(self.INTEGRATION_PROPERTIES, ip)
+            self.information[self.INTEGRATION_PROPERTIES] = ip
 
         ip.extend(list(set(prop_names)))
 

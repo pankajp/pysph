@@ -19,7 +19,7 @@ class TestBase(unittest.TestCase):
         Tests for the constructor.
         """
         b = Base()
-        self.assertEqual(b.information.get_number_of_keys(), 0)
+        self.assertEqual(len(b.information), 0)
 
 
 if __name__ == '__main__':
