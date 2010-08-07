@@ -39,7 +39,7 @@ def py_find_hierarchy_level_for_radius(radius, min_cell_size, max_cell_size,
     return find_hierarchy_level_for_radius(radius, min_cell_size, max_cell_size,
                                        cell_size_step, num_levels)
 
-cdef public int find_hierarchy_level_for_radius(double radius, double min_cell_size, double max_cell_size,
+cdef int find_hierarchy_level_for_radius(double radius, double min_cell_size, double max_cell_size,
                                          double cell_size_step, int num_levels):
         """
         Find hierarchy level to search in given interaction radius.

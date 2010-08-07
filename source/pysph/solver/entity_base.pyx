@@ -10,7 +10,7 @@ logger = logging.getLogger()
 import types
 
 # local imports
-from pysph.base.attrdict cimport AttrDict
+#from pysph.base.attrdict import AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
@@ -52,7 +52,7 @@ cdef class EntityBase(Base):
         self.name = name
 
         # set the properties.
-        self.properties = AttrDict()
+        self.properties = dict()
         self.properties.update(properties)
         
         self.information.set_list(self.INTEGRATION_PROPERTIES, None)
@@ -81,7 +81,7 @@ cdef class EntityBase(Base):
         """
         Check if this entity is of the given type.
 
-        This will be implementde differently in the derived classes.
+        This will be implemented differently in the derived classes.
         """
         if EntityTypes.Entity_Base == type:
             return True

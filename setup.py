@@ -27,8 +27,8 @@ else:
                '/opt/local/include/mpi']
 
 # base extension modules.
-base = [Extension("pysph.base.attrdict",
-                  ["source/pysph/base/attrdict.pyx"], include_dirs=inc_dirs),
+base = [#Extension("pysph.base.attrdict",
+        #          ["source/pysph/base/attrdict.pyx"], include_dirs=inc_dirs),
         Extension("pysph.base.carray", 
                   ["source/pysph/base/carray.pyx"], include_dirs=inc_dirs),
         Extension("pysph.base.point",

@@ -7,11 +7,11 @@ The template files have very similar syntax to php files.
   * All text in input is copied straight to output except that within
 `<?py` and `?>` tags.
 
-  * Text within `<?py` and `?>` tags is executed with a file-like object `obj`
-defined which can be written into using `out.write(<string>)`
-
   * Text within `<?py=` and `?>` tags is evaluated and the result is written
 into the output file as a string
+
+  * Text within `<?py` and `?>` tags is executed with a file-like object `out`
+defined which can be written into using `out.write(<string>)`
 
   * Note however that unlike php each code tag cannot extend across different
 tags. For example you can ``NOT`` write a loop like:
@@ -22,6 +22,8 @@ tags. For example you can ``NOT`` write a loop like:
         In loop with i=<?py= i ?> .
     <?py # End of loop ?>
 
+  * The imports and globals defined are persisted through all code sections
+  
 
 When used to locate source files as a main program:
     The template files must have an extension '.src'.

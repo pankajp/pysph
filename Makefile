@@ -1,37 +1,65 @@
-ROOT = $(PWD)
+ROOT = $(shell pwd)
 MAKEFILE = $(ROOT)/Makefile
-ROOT = $(PWD)
-PKG = $(ROOT)/source/pysph
+SRC = $(ROOT)/source
+PKG = $(SRC)/pysph
 DIRS = $(PKG)/base $(PKG)/sph $(PKG)/solver $(PKG)/parallel
+
+# this is used for cython files on recursive call to make
 PYX = $(wildcard *.pyx)
+
+# set this variable to value to limit benchmark to those benches only
+# example: BENCH="point kernels"
+# empty BENCH runs all benchmarks
 BENCH = 
+
 MPI4PY_INCL = $(shell python -c "import mpi4py; print mpi4py.get_include()")
+
+# the default target to make
 all : $(DIRS) extn
+
 .PHONY : $(DIRS)
+
 $(DIRS) : 
 	cd $@;  python $(ROOT)/source/pysph/base/generator.py
 	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
+
 %.c : %.pyx
-	cython -I../.. -I$(MPI4PY_INCL) -a $<
+	cython -I$(SRC) -I$(MPI4PY_INCL) -a $<
+
 cython : $(PYX:.pyx=.c)
+
 extn : $(DIRS)
 	python setup.py build_ext --inplace
-clean :
+
+clean : 
 	python setup.py clean
-	-rm $(PKG)/*/*.so
+	-for dir in $(DIRS); do rm $$dir/*.so; done
+
 cleanall : clean
-	-rm $(patsubst %.pyx,%.c,$(PKG)/*/*.pyx)
+	-for dir in $(DIRS); do rm $$dir/*.c; done
+#	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
+
 test :
 	nosetests --exe $(PKG)
+
 bench :
 	# can also try '$$ make bench BENCH="point kernels"' etc to limit the benchmarks run
 	$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython
 	python setup.py build_ext --inplace
 	python $(PKG)/bench/bench.py $(BENCH)
+
 coverage :
 	nosetests --exe --cover-erase --with-coverage --cover-html-dir=cover/ --cover-html --cover-package=pysph source/pysph/
+
 epydoc :
 	python cython-epydoc.py --config epydoc.cfg pysph
+
 doc :
 	cd docs; make html
+
+develop : $(DIRS)
+	python setup.py develop
+
+install : $(DIRS)
+	python setup.py install
 

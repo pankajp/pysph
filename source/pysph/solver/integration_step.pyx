@@ -30,3 +30,27 @@ cdef class ODEStepper:
         """
         pass
 
+
+cdef class ODEInfo:
+    cpdef add_pre_step_component(self, str name, SolverComponent c, int pos=0):
+        raise NotImplementedError
+    
+    cpdef add_post_step_component(self, str name, SolverComponent c, int pos=0):
+        raise NotImplementedError
+    
+
+    # to copy components from another ODEInfo.
+    cpdef copy_components(self, ODEInfo odeinfo):
+        raise NotImplementedError
+    
+
+cdef class IntegrationStep:
+    cdef void step(self):
+        raise NotImplementedError
+    
+    cdef void add_ode(self, ODEInfo ode_info, int pos=0):
+        raise NotImplementedError
+    
+    cdef void add_pre_integration_component(self, SolverComponent c, int pos=0):
+        raise NotImplementedError
+    
