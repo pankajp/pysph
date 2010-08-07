@@ -2,8 +2,6 @@
 Base class for all classes in the solver module.
 """
 
-#from pysph.solver.typed_dict cimport TypedDict
-
 cdef class Base:
     """
     Base class for all classes in the solver module.

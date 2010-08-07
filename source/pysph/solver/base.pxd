@@ -2,8 +2,6 @@
 Base class for all classes in the solver module.
 """
 
-#from pysph.solver.typed_dict cimport TypedDict
-
 cdef class Base:
     """
     Base class for all classes in the solver module.
@@ -20,11 +18,6 @@ cdef class Base:
     entities, it can be made into a attribute of the class.
 
     The exposed keys are specified in the pyx file as class attributes.
-
-    The information can be retrieved from the TypedDict using any of the
-    Get methods of the TypedDict.
-
-    
 
     """
     cdef public dict information

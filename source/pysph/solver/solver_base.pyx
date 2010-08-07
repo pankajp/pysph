@@ -18,7 +18,6 @@ from pysph.base.cell cimport CellManager
 
 from pysph.solver.base cimport Base
 from pysph.solver.entity_base cimport EntityBase
-#from pysph.solver.typed_dict cimport TypedDict
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 from pysph.solver.nnps_updater cimport NNPSUpdater

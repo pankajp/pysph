@@ -27,9 +27,7 @@ else:
                '/opt/local/include/mpi']
 
 # base extension modules.
-base = [#Extension("pysph.base.attrdict",
-        #          ["source/pysph/base/attrdict.pyx"], include_dirs=inc_dirs),
-        Extension("pysph.base.carray", 
+base = [Extension("pysph.base.carray", 
                   ["source/pysph/base/carray.pyx"], include_dirs=inc_dirs),
         Extension("pysph.base.point",
                   ["source/pysph/base/point.pyx"], include_dirs=inc_dirs),
@@ -84,8 +82,6 @@ kernels = [Extension("pysph.base.kernelbase",
 
 solver = [Extension("pysph.solver.fast_utils",
                     ["source/pysph/solver/fast_utils.pyx"], include_dirs=inc_dirs),
-          Extension("pysph.solver.typed_dict",
-                    ["source/pysph/solver/typed_dict.pyx"], include_dirs=inc_dirs),
           Extension("pysph.solver.time_step",
                     ["source/pysph/solver/time_step.pyx"], include_dirs=inc_dirs),
           Extension("pysph.solver.base",
