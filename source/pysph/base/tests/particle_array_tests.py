@@ -29,10 +29,8 @@ class ParticleArrayTest(unittest.TestCase):
         Test the constructor.
         """
         # Default constructor test.
-        p = particle_array.ParticleArray(particle_manager=None,
-                                         name='test_particle_array') 
+        p = particle_array.ParticleArray(name='test_particle_array') 
 
-        self.assertEqual(p.particle_manager, None)
         self.assertEqual(p.name, 'test_particle_array')
         self.assertEqual(p.temporary_arrays == {}, True)
         self.assertEqual(p.is_dirty, True)
@@ -51,7 +49,6 @@ class ParticleArrayTest(unittest.TestCase):
                                          m={'data':m},
                                          h={'data':h})
 
-        self.assertEqual(p.particle_manager, None)
         self.assertEqual(p.name, '')
 
         self.assertEqual(p.properties.has_key('x'), True)

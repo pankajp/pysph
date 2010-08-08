@@ -82,7 +82,6 @@ cdef class CellManager:
     cdef public int num_levels
     cdef public DoubleArray cell_sizes
     cdef public double cell_size_step
-    cdef public object particle_manager
     cdef public bint is_dirty    
     cdef public dict array_indices
     cdef public list arrays_to_bin

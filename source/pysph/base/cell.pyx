@@ -1280,12 +1280,11 @@ cdef class CellManager:
     # already been created. Whether this feature is required can be thought over
     # again. 
 
-    def __init__(self, list arrays_to_bin=[], object particle_manager=None, double
-                  min_cell_size=0.1, double max_cell_size=0.5, Point
-                  origin=Point(0., 0., 0), int num_levels=1, str coord_x='x',
+    def __init__(self, list arrays_to_bin=[], double min_cell_size=0.1,
+                  double max_cell_size=0.5, Point origin=Point(0,0,0),
+                  int num_levels=1, str coord_x='x',
                   str coord_y='y', str coord_z='z', bint initialize=True):
         
-        self.particle_manager = particle_manager
         self.origin = Point()
 
         self.origin.x = origin.x

@@ -58,7 +58,6 @@ from pysph.base.point import Point
 
 class ParallelCellManagerTemp(ParallelCellManager):
     def __init__(self, arrays_to_bin=[],
-                 particle_manager=None, 
                  min_cell_size=0.1, 
                  max_cell_size=0.5,
                  origin_point=Point(0, 0, 0),
@@ -78,7 +77,6 @@ class ParallelCellManagerTemp(ParallelCellManager):
         ParallelCellManager.__init__(
             self, 
             arrays_to_bin=arrays_to_bin,
-            particle_manager=particle_manager,
             min_cell_size=min_cell_size,
             max_cell_size=max_cell_size,
             origin_point=origin_point,

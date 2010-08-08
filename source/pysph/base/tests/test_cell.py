@@ -126,7 +126,7 @@ class TestCell(unittest.TestCase):
         """
         Tests the set_cell_manager function.
         """
-        cell_manager = CellManager([], None)
+        cell_manager = CellManager([])
 
         cell = Cell(IntPoint(0, 0, 0), cell_manager=cell_manager, cell_size=0.1, level=0)
 
@@ -689,7 +689,7 @@ class TestCellManager(unittest.TestCase):
             z = numpy.random.rand(num_particles)
             name = 'arr' + str(i)
 
-            p_arr = ParticleArray(None, name, **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}})
+            p_arr = ParticleArray(name, **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}})
             ret.append(p_arr)
         
         return ret
@@ -701,7 +701,6 @@ class TestCellManager(unittest.TestCase):
         cm = CellManager(initialize=False)
         
         # Some checks that should hold prior to cell_manager initialization.
-        self.assertEqual(cm.particle_manager, None)
         self.assertEqual(cm.origin, Point(0, 0, 0))
         self.assertEqual(cm.num_levels, 1)
         self.assertEqual(cm.cell_sizes.length, 0)

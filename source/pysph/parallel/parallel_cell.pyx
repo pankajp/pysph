@@ -1449,8 +1449,8 @@ cdef class ParallelCellManager(CellManager):
     """
     Cell manager for parallel invocations.
     """
-    def __init__(self, arrays_to_bin=[], particle_manager=None,
-                 min_cell_size=0.1, max_cell_size=0.5, origin=Point(0, 0, 0),
+    def __init__(self, arrays_to_bin=[], min_cell_size=0.1,
+                 max_cell_size=0.5, origin=Point(0, 0, 0),
                  num_levels=2, initialize=True,
                  parallel_controller=None,
                  max_radius_scale=2.0, dimension=3,

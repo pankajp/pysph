@@ -16,9 +16,6 @@ cdef class ParticleArray:
     # dictionary to hold temporary arrays - we can do away with this.
     cdef public dict temporary_arrays
 
-    # the particle manager of which this is part of.
-    cdef public object particle_manager
-
     # name associated with this particle array
     cdef public str name
 

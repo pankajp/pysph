@@ -69,7 +69,6 @@ cdef class ParticleArray:
     Class to represent a collection of particles.
 
     **Member variables**
-     - particle_manager - the particle_manager to which this array belongs.
      - name - name of this particle array.
      - properties - for every property, gives the index into the list where the
        property array is found.
@@ -90,14 +89,13 @@ cdef class ParticleArray:
     ######################################################################
     # `object` interface
     ######################################################################
-    def __cinit__(self, object particle_manager=None, str name='',
-                  default_particle_tag=LocalReal, *args, **props):
+    def __cinit__(self, str name='', default_particle_tag=LocalReal,
+                        *args, **props):
         """
         Constructor.
 
 	**Parameters**
 
-         - particle_manager - particle manager managing this array.
          - name - name of this particle array.
          - props - dictionary of properties for every particle in this array.
 
@@ -107,8 +105,6 @@ cdef class ParticleArray:
         self.default_values = {'tag':default_particle_tag, 'group':0, 'local':1}
         
         self.temporary_arrays = {}
-
-        self.particle_manager = particle_manager
 
         self.name = name
         self.is_dirty = True

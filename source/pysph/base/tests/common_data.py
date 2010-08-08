@@ -16,14 +16,14 @@ def generate_sample_dataset_1():
     z = numpy.array([0., 0, 0, 0, 0, 0, 0, 0])
     h = numpy.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
-    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
+    parr1 = ParticleArray(name='parr1', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
 
     x = numpy.array([0.2, 1.2, 1.5, 0.4])
     y = numpy.array([0., 0, 0, 0])
     z = numpy.array([1.6, 1.5, -0.5, 0.4])
     h = numpy.array([1.0, 1.0, 1.0, 1.0])
 
-    parr2 = ParticleArray(particle_manager=None, name='parr2', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
+    parr2 = ParticleArray(name='parr2', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
 
     return [parr1, parr2]
 
@@ -38,7 +38,7 @@ def generate_sample_dataset_2():
     z = numpy.array([0., 0, 0, 0, 0, 0, 0])
     h = numpy.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
-    parr1 = ParticleArray(particle_manager=None, name='parr1', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
+    parr1 = ParticleArray(name='parr1', **{'x':{'data':x}, 'y':{'data':y}, 'z':{'data':z}, 'h':{'data':h}})
 
     return [parr1]
     
