@@ -34,6 +34,15 @@ op.add_option('-n', '--num-iterations', dest='num_iterations',
 op.add_option('-l', '--num-load-balance-iterations',
               dest='num_load_balance_iterations',
               metavar='NUM_LOAD_BALANCE_ITERATIONS')
+op.add_option('-o', '--write-vtk', 
+              action="store_true", default=False, dest='write_vtk',
+              help='write a vtk file after all iterations are done')
+op.add_option('-v', '--verbose',
+	      action="store_true", default=False, dest='verbose',
+	      help='print large amounts of debug information')
+op.add_option('-c', '--max-cell-scale', dest='max_cell_scale',
+              metavar='MAX_CELL_SCALE',
+              help='specify the ratio of the largest cell to the smallest cell')
 
 destdir = '.'
 square_width = 1.0
@@ -42,6 +51,61 @@ particle_radius = 0.01
 num_iterations = 10
 sph_interpolations = 1
 num_load_balance_iterations = 100
+max_cell_scale = 2.0
+
+from pysph.parallel.parallel_cell import *
+from pysph.base.point import Point
+
+class ParallelCellManagerTemp(ParallelCellManager):
+    def __init__(self, arrays_to_bin=[],
+                 particle_manager=None, 
+                 min_cell_size=0.1, 
+                 max_cell_size=0.5,
+                 origin_point=Point(0, 0, 0),
+                 num_levels=2,
+                 initialize=True,
+                 parallel_controller=None,
+                 max_radius_scale=2.0,
+                 dimension=3,
+                 load_balancing=True,
+                 solver=None,
+                 max_cell_scale=2.0,
+                 *args, 
+                 **kwargs):
+
+        self.max_cell_scale = max_cell_scale
+        
+        ParallelCellManager.__init__(
+            self, 
+            arrays_to_bin=arrays_to_bin,
+            particle_manager=particle_manager,
+            min_cell_size=min_cell_size,
+            max_cell_size=max_cell_size,
+            origin_point=origin_point,
+            num_levels=num_levels,
+            initialize=initialize,
+            parallel_controller=parallel_controller,
+            max_radius_scale=max_radius_scale,
+            dimension=dimension,
+            load_balancing=load_balancing,
+            solver=solver,
+            *args, **kwargs)
+        
+    def setup_cell_sizes(self):
+        """
+        Sets up the cell sizes to use from the 'h' values.
+        
+        The smallest cell size is set to 2*max_radius_scale*min_h
+        The larger cell size is set to max_cell_scale*smallest_cell_size
+        
+        Set the number of levels to 2.
+        """
+        self.min_cell_size = 2*self.max_radius_scale*self.glb_max_h
+        self.max_cell_size = self.max_cell_scale*self.min_cell_size
+        self.num_levels = 2
+        pc = self.parallel_controller
+        logger.info('(%d) cell sizes : %f %f'%(pc.rank, self.min_cell_size, 
+                                               self.max_cell_size))
 
 # parse the input arguements
 args = op.parse_args()
@@ -68,7 +132,11 @@ if not exists(destdir):
 import logging
 logger = logging.getLogger()
 log_filename = destdir + '/' + 'log_pysph_' + str(rank)
-logging.basicConfig(level=logging.INFO, filename=log_filename, filemode='w')
+if options.verbose:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+logging.basicConfig(level=log_level, filename=log_filename, filemode='w')
 logger.addHandler(logging.StreamHandler())
 
 # read the square_width to use
@@ -106,6 +174,10 @@ if options.num_load_balance_iterations == None:
     logger.warn('Running 100 initial load balance iterations')
 else:
     num_load_balance_iterations = int(options.num_load_balance_iterations)
+if options.max_cell_scale == None:
+    logger.warn('Using default max cell scale of %f'%(max_cell_scale))
+else:
+    max_cell_scale = float(options.max_cell_scale)
 
 # one node zero - write this setting into a file.
 if rank == 0:
@@ -148,9 +220,10 @@ parallel_component = ParallelComponent(name='parallel_component', solver=None)
 component_manager.add_component(parallel_component)
 
 # create a parallel cell manager.
-cell_manager = ParallelCellManager(parallel_controller=controller,
-                                   initialize=False,
-                                   solver=None)
+cell_manager = ParallelCellManagerTemp(parallel_controller=controller,
+                                       initialize=False,
+                                       solver=None,
+                                       max_cell_scale=max_cell_scale)
 # enable load balancing
 cell_manager.load_balancing = False
 cell_manager.load_balancer.skip_iteration = 1
@@ -309,3 +382,7 @@ for i in range(len(total_iteration_times)):
     file.write('\n')
 
 file.close()
+
+# write the VTK file if needed.
+if options.write_vtk is True:
+    vtk_writer.write()

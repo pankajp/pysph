@@ -64,8 +64,8 @@ parallel = [
     Extension("pysph.parallel.parallel_controller",
               ["source/pysph/parallel/parallel_controller.pyx"],
               include_dirs=inc_dirs + mpi_inc_dir),
-    Extension("pysph.parallel.cy_parallel_cell",
-              ["source/pysph/parallel/cy_parallel_cell.pyx"],
+    Extension("pysph.parallel.parallel_cell",
+              ["source/pysph/parallel/parallel_cell.pyx"],
               include_dirs=inc_dirs + mpi_inc_dir),
     ]
 
