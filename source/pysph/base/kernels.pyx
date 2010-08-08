@@ -25,7 +25,7 @@ cdef:
 #`KernelBase`
 ##############################################################################
 cdef class KernelBase:
-    """ A base class that handles kernels in 3 multiple dimensions. """
+    """ A base class that handles kernels in multiple dimensions. """
 
     #Defined in the .pxd file
     #cdef readonly int dim
@@ -35,7 +35,7 @@ cdef class KernelBase:
 
         Parameters:
         -----------
-        dim -- The dimensionality for the kernel. Defaults to 1D
+        dim -- The dimensionality for the kernel. Defaults to 3D
         
         """
         self.dim = dim
