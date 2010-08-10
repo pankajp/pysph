@@ -27,9 +27,9 @@ All arrays provide for the following operations:
  - access to internal data through a numpy array.
 
 ** Numpy array access **
-Each array also provides an interface to its data through a numpy array. This is
-done through the get_npy_array function. The returned numpy array can be used
-just like any other numpy array but for the following restrictions:
+Each array also provides an interface to its data through a numpy array. This
+is done through the get_npy_array function. The returned numpy array can be
+used just like any other numpy array but for the following restrictions:
 
  - the array may not be resized.
  - references of this array should not be kept.
@@ -81,9 +81,6 @@ cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """ Base class for managed C-arrays. """
-    def __cinit__(self, *args, **kwargs):
-        pass
-
     ########################################################################
     #Public interface
     ########################################################################
@@ -92,12 +89,15 @@ cdef class BaseArray:
         raise NotImplementedError, 'BaseArray::get_c_type'
 
     cpdef reserve(self, long size):
+        """ Resizes the internal data to required size """
         raise NotImplementedError, 'BaseArray::reserve'
 
     cpdef resize(self, long size):
+        """ reserve()s and sets the length to the new size. """
         raise NotImplementedError, 'BaseArray::resize'
 
     cpdef np.ndarray get_npy_array(self):
+        """ returns a numpy array of the data: do not keep its reference """
         return self._npy_array
 
     cpdef set_data(self, np.ndarray nparr):
@@ -120,18 +120,23 @@ cdef class BaseArray:
             raise ValueError, 'array size mismatch'
 
     cpdef squeeze(self):
+        """ Release any unused memory. """
         raise NotImplementedError, 'BaseArray::squeeze'
 
     cpdef remove(self, np.ndarray index_list, bint input_sorted=0):
+        """ Remove the particles with indices in index_list. """
         raise NotImplementedError, 'BaseArray::remove'
 
     cpdef extend(self, np.ndarray in_array):
+        """ Extend the array with data from in_array. """
         raise NotImplementedError, 'BaseArray::extend'
 
     cpdef align_array(self, LongArray new_indices):
+        """ Rearrange the array contents according to the new indices. """
         self._align_array(new_indices)
 
     cdef void _align_array(self, LongArray new_indices):
+        """ Rearrange the array contents according to the new indices. """
         raise NotImplementedError, 'BaseArray::_align_array'
 
     cpdef reset(self):
@@ -144,16 +149,13 @@ cdef class BaseArray:
         """ Copy values of indexed particles from self to dest. """
         raise NotImplementedError, 'BaseArray::copy_values'
 
-    cpdef copy_subset(self, BaseArray source, long start_index=-1, long end_index=-1):
-        """
-        Copy subset of values from source to self.
-        """
+    cpdef copy_subset(self, BaseArray source,
+    				  	long start_index=-1, long end_index=-1):
+        """ Copy subset of values from source to self. """
         raise NotImplementedError, 'BaseArray::copy_subset'
 
     cpdef update_min_max(self):
-        """
-        Update the min and max values of the array.
-        """
+        """ Update the min and max values of the array. """
         raise NotImplementedError, 'BaseArray::update_min_max'
 
 <?py
@@ -162,9 +164,9 @@ cdef class BaseArray:
 # of array to be defined
 
 pxd_code_str = '''
-################################################################################
+###############################################################################
 # `CLASSNAME` class.
-################################################################################
+###############################################################################
 cdef class CLASSNAME(BaseArray):
     """ Represents an array of `ARRAY_TYPE`s """
 
@@ -226,7 +228,8 @@ cdef class CLASSNAME(BaseArray):
         cdef int nd = 1
         cdef np.npy_intp dims = self.length
 
-        self._npy_array = PyArray_SimpleNewFromData(nd, &dims, NUMPY_TYPENAME, self.data)
+        self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
+        							NUMPY_TYPENAME, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """

@@ -33,19 +33,23 @@ extn : $(DIRS)
 
 clean : 
 	python setup.py clean
-	-for dir in $(DIRS); do rm $$dir/*.so; done
+	-for dir in $(DIRS); do rm -f $$dir/*.so; done
 
 cleanall : clean
-	-for dir in $(DIRS); do rm $$dir/*.c; done
+	-for dir in $(DIRS); do rm -f $$dir/*.c; done
 #	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
 
 test :
 	nosetests --exe $(PKG)
 
 bench :
-	# can also try '$$ make bench BENCH="point kernels"' etc to limit the benchmarks run
-	$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython
-	python setup.py build_ext --inplace
+	# try '$$ make bench BENCH="point kernels"' etc to limit the benchmarks run
+	# AVAILABLE: carray kernels parallel_timings point serial_timings
+	# '$$ make bench BENCH=' runs all benchmarks
+	#
+	#####################################################################
+	#
+	$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython ROOT=$(ROOT)
 	python $(PKG)/bench/bench.py $(BENCH)
 
 coverage :

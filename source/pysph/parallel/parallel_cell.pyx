@@ -1461,7 +1461,6 @@ cdef class ParallelCellManager(CellManager):
         Constructor.
         """
         cell.CellManager.__init__(self, arrays_to_bin=arrays_to_bin,
-                                  particle_manager=particle_manager,
                                   min_cell_size=min_cell_size,
                                   max_cell_size=max_cell_size,
                                   origin=origin,
