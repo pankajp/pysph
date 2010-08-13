@@ -8,7 +8,7 @@ from pysph.base.carray cimport DoubleArray
 
 from time import time
 
-# the sizes of array toktest
+# the sizes of array to test
 cdef list Ns = [100,1000,10000,100000]
 
 cpdef dict alloc(ns=Ns):

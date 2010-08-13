@@ -49,8 +49,8 @@ bench :
 	#
 	#####################################################################
 	#
-	$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython ROOT=$(ROOT)
-	python $(PKG)/bench/bench.py $(BENCH)
+	-$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython ROOT=$(ROOT)
+	cd $(PKG)/bench; python bench.py $(BENCH)
 
 coverage :
 	nosetests --exe --cover-erase --with-coverage --cover-html-dir=cover/ --cover-html --cover-package=pysph source/pysph/

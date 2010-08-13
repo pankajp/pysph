@@ -20,31 +20,41 @@ Any output from the test modules id redirected to file `bench.log`
 import os
 import sys
 
-dirname = os.path.abspath(os.path.dirname(__file__))
-olddir = os.path.abspath(os.curdir)
-os.chdir(dirname)
+# local relative import
+import setup
+
 
 def list_pyx_extensions(path):
     """list the files in the path having .pyx extension w/o the extension"""
     return sorted([f[:-4] for f in os.listdir(path) if f.endswith('pyx')])
 
-if len(sys.argv) > 1:
-    extns = sys.argv[1:]
-else:
-    extns = list_pyx_extensions(os.curdir)
 
-
-def run(extns=extns, num_runs=3):
-    """run the benchmarks in the modules given"""
+def run(extns=None, dirname=None, num_runs=3):
+    """run the benchmarks in the modules given
     
+    `extns` is names of python modules to benchmark (None => all cython
+                extensions in dirname)
+    `dirname` is the directory where the modules are found (None implies
+                current directory
+    `num_runs` is the number of times to run the tests, the minimum value
+                is reported over all the runs
+    """
+    
+    if dirname is None:
+        dirname = os.path.abspath(os.curdir)
+    olddir = os.path.abspath(os.curdir)
+    os.chdir(dirname)
+    
+    if extns is None:
+        extns = list_pyx_extensions(os.curdir)
     print 'Running benchmarks:', ', '.join(extns)
     
     # this is needed otherwise setup will take arguments and do something else
     sys.argvold = sys.argv[:]
     sys.argv = sys.argv[:1]
     
-    # this import actually compiles the bench .pyx files
-    import setup
+    # compile the bench .pyx files
+    setup.compile_extns(extns, dirname)#, [os.path.join(dirname,'..','..')])
     
     for bench_name in extns:
         bench_mod = __import__(bench_name)
@@ -75,12 +85,22 @@ def run(extns=extns, num_runs=3):
             for k in sorted(func.keys()):
                 print k.ljust(40), '\t', func[k]
             print
-        
-        sys.argv = sys.argvold
+            
+    sys.argv = sys.argvold
+    os.chdir(olddir)
 
 if __name__ == '__main__':
-    run()
+    print sys.argv
+    if '-h' in sys.argv or '--help' in sys.argv:
+        print '''usage:
+        python setup.py [extension1, [extension2, [...]]]
+        
+        compiles the cython extensions present in the current directory
+        '''
+    elif len(sys.argv) > 1:
+        # compile specified extensions
+        run(sys.argv[1:])
+    else:
+        # compile all extensions found in current directory
+        run()
     
-# this is outside main to revert the value os.curdir
-os.chdir(olddir)
-

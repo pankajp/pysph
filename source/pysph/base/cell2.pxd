@@ -1,0 +1,94 @@
+from pysph.base.point cimport *
+from pysph.base.carray cimport *
+
+from pysph.base.particle_array cimport ParticleArray
+
+# forward declaration for CellManager
+cdef class CellManager
+
+cdef inline int real_to_int(double val, double step)
+cdef inline void find_cell_id(Point origin, Point pnt,
+                              double cell_size, IntPoint id)
+cdef inline void construct_immediate_neighbor_list(IntPoint pnt, list
+                                       neighbor_list, bint include_self=*)
+
+cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
+                          double cell_size, Point pnt, double radius)
+
+cdef class Cell:
+    # Member variables.
+    cdef public IntPoint id
+    cdef public double cell_size
+    cdef public CellManager cell_manager
+    cdef public list arrays_to_bin
+    
+    cdef readonly str coord_x
+    cdef readonly str coord_y
+    cdef readonly str coord_z
+    cdef public Point origin
+
+    cdef public int jump_tolerance
+    cdef public list index_lists
+    
+    # Member functions.
+    cpdef int add_particles(self, Cell cell) except -1
+    cpdef int update(self, dict data) except -1
+    cpdef long get_number_of_particles(self)
+    cpdef bint is_empty(self)
+    cpdef get_centroid(self, Point pnt)
+
+    cpdef set_cell_manager(self, CellManager cell_manager)
+    
+    cpdef int clear(self) except -1
+    cpdef Cell get_new_sibling(self, IntPoint id)
+    cpdef get_particle_ids(self, list particle_id_list)
+    cpdef get_particle_counts_ids(self, list particle_list, LongArray particle_counts)
+    cpdef insert_particles(self, int parray_id, LongArray indices)
+    cpdef clear_indices(self, int parray_id)
+
+    cdef _init_index_lists(self)
+    cpdef set_cell_manager(self, CellManager cell_manager)
+    cpdef Cell get_new_sibling(self, IntPoint id)
+
+
+cdef class CellManager:
+    """
+    Class to manager all cells.
+    """
+    cdef public Point origin
+    cdef public double cell_size
+    cdef public double cell_size_step
+    cdef public bint is_dirty    
+    cdef public dict array_indices
+    cdef public list arrays_to_bin
+    cdef public dict cells_dict
+    cdef public double min_cell_size, max_cell_size
+    cdef public int jump_tolerance
+
+    cdef public bint initialized
+    
+    cdef public str coord_x, coord_y, coord_z
+
+    cpdef int update(self) except -1
+    cpdef int update_status(self) except -1
+    cpdef initialize(self)
+    cpdef clear(self)
+    cpdef add_array_to_bin(self, ParticleArray parr)
+
+    cpdef double compute_cell_size(self, double, double)
+    
+    # carried over from RootCell
+    cpdef int cells_update(self) except -1
+    
+    cpdef _build_cell(self)
+    cpdef _rebuild_array_indices(self)
+    cpdef _setup_cells_dict(self)
+    cpdef set_jump_tolerance(self, int jump_tolerance)
+    cpdef int delete_empty_cells(self) except -1
+    
+    cdef int get_potential_cells(self, Point pnt, double radius, list cell_list) except -1
+
+    cdef int _get_cells_within_radius(self, Point pnt, double radius,
+                                      list cell_list) except -1
+    cdef void _reset_jump_tolerance(self)
+

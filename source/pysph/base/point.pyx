@@ -26,6 +26,20 @@ cpdef Point Point_sub(Point pa, Point pb):
 cpdef Point Point_add(Point pa, Point pb):
     return Point_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
 
+
+cpdef IntPoint IntPoint_new(int x=0, int y=0, int z=0):
+    cdef IntPoint p = IntPoint.__new__(IntPoint)
+    p.x = x
+    p.y = y
+    p.z = z
+    return p
+
+cpdef IntPoint IntPoint_sub(IntPoint pa, IntPoint pb):
+    return IntPoint_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
+
+cpdef IntPoint IntPoint_add(IntPoint pa, IntPoint pb):
+    return IntPoint_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
+
 ###############################################################################
 # `Point` class.
 ############################################################################### 
@@ -191,6 +205,12 @@ cdef class IntPoint:
         self.y = d['y']
         self.z = d['z']
 
+    def __str__(self):
+        return '(%d,%d,%d)'%(self.x, self.y, self.z)
+
+    def __repr__(self):
+        return 'IntPoint(%d,%d,%d)'%(self.x, self.y, self.z)
+
     cpdef set(self, int x, int y, int z):
         self.x = x
         self.y = y
@@ -251,11 +271,9 @@ cdef class IntPoint:
     def __hash__(self):
         return (self.x, self.y, self.z).__hash__()
 
-    def __str__(self):
-        return '(%d, %d, %d)'%(self.x, self.y, self.z)
-
     def py_is_equal(self, IntPoint p):
         return self.is_equal(p)
+    
     def py_diff(self, IntPoint p):
         return self.diff(p)
         
