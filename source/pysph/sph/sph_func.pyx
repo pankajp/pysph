@@ -184,7 +184,7 @@ cdef class SPHFunctionParticle:
 
         **Parameters**
 
-         - dest_pid - the particle at which some quatity is to be computed.
+         - dest_pid - the particle at which some quantity is to be computed.
          - source_pid - the neighbor whose contribution is to be computed.
          - kernel - the kernel to be used.
          - nr - memory location to store the numerator of the result. The

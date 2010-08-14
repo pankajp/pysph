@@ -163,9 +163,9 @@ cdef class CachedNbrParticleLocatorManager:
                                                       str dest_name,
                                                       double radius_scale)
 
-# ################################################################################
-# # `Classes for nearest polygon location`.
-# ################################################################################
+################################################################################
+# `Classes for nearest polygon location`.
+################################################################################
 cdef class NbrPolygonLocatorBase:
     pass
 

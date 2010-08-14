@@ -9,7 +9,7 @@ This module provdies the SPHBase class, which does the actual SPH summation.
  - Particle filtering functions : Instead of checking the 'tag' property by
    default, for every particle in the destination, abstract it out to a
    function. This function in the SPHBase implementation will check for the
-   'tag' property before consideriing them for SPH interpolation. Derived
+   'tag' property before considering them for SPH interpolation. Derived
    classes if needed may check for any other property as desired.
 
    Similarly, for each neighbor of a given particle (that has passed the prior
@@ -118,12 +118,12 @@ cdef class SPHBase:
             raise ValueError, msg
 
         # now make sure all the sph_funcs are of the same class.
-        # and the sources and dest are mathced.
+        # and the sources and dest are matched.
         sph_funcs = self.sph_funcs
 
         for i in range(len(self.sph_funcs)-1):
             if type(sph_funcs[i]) != type(sph_funcs[i+1]):
-                msg = 'All sphfuncs should be of same type'
+                msg = 'All sph_funcs should be of same type'
                 raise ValueError, msg
             
         for i in range(len(self.sph_funcs)):

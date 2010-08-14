@@ -28,21 +28,21 @@ class TstKernel(KernelBase):
     def radius(self):
         return 1.0
 
-def get_sample_data(dimenion, output_fields):
+def get_sample_data(dimension, output_fields):
     """
     Return appropriate test data.
     """
     parrs = None
     funcs = []
-    if dimenion == 2:
+    if dimension == 2:
         parrs = generate_sample_dataset_1()
-    elif dimenion == 3:
+    elif dimension == 3:
         parrs = generate_sample_dataset_2()
     else:
-        raise ValueError, 'dimenion should be 2 or 3'
+        raise ValueError, 'dimension should be 2 or 3'
 
     cell_man = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                               max_cell_size=2.0, num_levels=1)
+                               max_cell_size=2.0)
 
     nnps_man = NNPSManager(cell_manager=cell_man)
     kernel = TstKernel()
@@ -98,8 +98,8 @@ class TestSPHBase(unittest.TestCase):
         self.assertRaises(ValueError, sph.sphn, [])
 
         arr = DoubleArray(parrs[0].get_number_of_particles())
-        arr.get_npy_array()[:] = 0.0
         
+        arr.get_npy_array()[:] = 0.0
         sph.sph1_array(arr, exclude_self=True)
         vals = [2., 3., 2., 3., 4., 3., 2., 3., 2.]
         self.assertEqual(check_array(vals, arr.get_npy_array()), True)

@@ -9,7 +9,7 @@ logger = logging.getLogger()
 from pysph.base.carray cimport LongArray, DoubleArray
 from pysph.base.point cimport Point
 from pysph.base.particle_array cimport ParticleArray
-from pysph.base.cell cimport CellManager, Cell, LeafCell, NonLeafCell
+from pysph.base.cell cimport CellManager, Cell
 from pysph.base.polygon_array cimport PolygonArray
 
 cimport numpy
@@ -27,7 +27,7 @@ cpdef brute_force_nnps(Point pnt, double search_radius,
                        DoubleArray neighbor_distances,
                        long exclude_index=-1):
     """
-    Brute force search for neighbors, used occasionaly when nnps, cell manager
+    Brute force search for neighbors, used occasionally when nnps, cell manager
     may not be available.
     """
     cdef long n = len(xa)
@@ -161,8 +161,7 @@ cdef class CellCache:
                 cl[:] = empty_list
 
                 eff_radius = h[i]*self.radius_scale
-                self.cell_manager.get_potential_cells(pnt, eff_radius, cl,
-                                                      self.single_layer)
+                self.cell_manager.get_potential_cells(pnt, eff_radius, cl)
             
     cdef int get_potential_cells(self, int p_index, list output_list) except -1:
         """
@@ -291,16 +290,15 @@ cdef class NbrParticleLocatorBase:
                                             LongArray output_array, 
                                             long exclude_index=-1) except -1: 
         """
-        Return indices of particles with distance 'radius' to pnt.
+        Return indices of particles with distance < 'radius' to pnt.
 
         **Parameters**
         
          - pnt - the query point whose nearest neighbors are to be searched for.
          - radius - the actual radius, within which particles are to be searched
            for.
-         - output_array - array to store the neighor indices.
+         - output_array - array to store the neighbor indices.
          - exclude_index - an index that should be excluded from the neighbors.
-
 
         **Helper Functions**
         
@@ -308,20 +306,12 @@ cdef class NbrParticleLocatorBase:
 
         """
         cdef list cell_list = list()
-        cdef bint single_layer = False
 
         # make sure cell manager is updated.
         self.cell_manager.update()
         
-        # enable single_layer if the search radius and leaf cell size 
-        # are exactly same.
-        if fabs(self.cell_manager.min_cell_size-radius) < 1e-09:
-            single_layer = True
-
         # get the potential cell_list from the cell manager
-        self.cell_manager.get_potential_cells(pnt, radius, cell_list,
-                                              single_layer)
-
+        self.cell_manager.get_potential_cells(pnt, radius, cell_list)
         
         # now extract the exact points from the cell_list
         self._get_nearest_particles_from_cell_list(
@@ -334,13 +324,9 @@ cdef class NbrParticleLocatorBase:
         LongArray output_array, long exclude_index=-1) except -1: 
         """
         """
-        cdef Cell cell, cell1
-        cdef LeafCell leaf_cell
-        cdef NonLeafCell non_leaf_cell
+        cdef Cell cell
         cdef list tmp_list = list()
-        cdef int num_childen, i, isrc, num_pts
-        cdef list child_list
-        cdef ParticleArray parray
+        cdef int i
         cdef DoubleArray xa, ya, za
         cdef str xc, yc, zc
         cdef double *x, *y, *z
@@ -358,34 +344,27 @@ cdef class NbrParticleLocatorBase:
         xa = self.source.get_carray(xc)
         ya = self.source.get_carray(yc)
         za = self.source.get_carray(zc)
-
+        
         x = xa.get_data_ptr()
         y = ya.get_data_ptr()
-        z = za.get_data_ptr()                                   
-
+        z = za.get_data_ptr()
+          
         while len(tmp_list) != 0:
             cell = tmp_list.pop(0)
-            if cell.is_leaf() == False:
-                # append all of cell's children to tmp_list
-                non_leaf_cell = <NonLeafCell>cell
-                tmp_list.extend(non_leaf_cell.cell_dict.values())
-            else:
-                # find neighbors from the leaf cell
-                leaf_cell = <LeafCell>cell
-                src_indices = leaf_cell.index_lists[self.source_index]
-                
-                num_pts = src_indices.length
-    
-                for i from 0 <= i < num_pts:
-                    idx = src_indices.get(i)
-                    pnt1.x = x[idx]
-                    pnt1.y = y[idx]
-                    pnt1.z = z[idx]
+            # find neighbors from the cell
+            src_indices = cell.index_lists[self.source_index]
+            
+            for i in range(src_indices.length):
+                idx = src_indices.get(i)
+                pnt1.x = x[idx]
+                pnt1.y = y[idx]
+                pnt1.z = z[idx]
 
-                    if pnt1.distance(pnt) <= radius:
-                        if idx != exclude_index:
-                            output_array.append(idx)
+                if pnt1.distance(pnt) <= radius:
+                    if idx != exclude_index:
+                        output_array.append(idx)
         return 0
+    
     ######################################################################
     # python wrappers.
     ######################################################################

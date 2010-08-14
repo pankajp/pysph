@@ -34,39 +34,6 @@ def py_real_to_int(real_val, step):
 def py_find_cell_id(origin, pnt, cell_size, outpoint):
     find_cell_id(origin, pnt, cell_size, outpoint)
 
-def py_find_hierarchy_level_for_radius(radius, min_cell_size, max_cell_size,
-                                       cell_size_step, num_levels):
-    return find_hierarchy_level_for_radius(radius, min_cell_size, max_cell_size,
-                                       cell_size_step, num_levels)
-
-cdef int find_hierarchy_level_for_radius(double radius, double min_cell_size, double max_cell_size,
-                                         double cell_size_step, int num_levels):
-        """
-        Find hierarchy level to search in given interaction radius.
-        """
-        cdef double temp1, temp2, diff
-        if num_levels == 1:
-            if radius > min_cell_size:
-                return 1
-            else:
-                return 0
-        
-        diff = radius - min_cell_size
-
-        if diff < 0:
-            return 0
-
-        temp1 = diff/cell_size_step
-        temp2 = floor(temp1)
-
-        if temp2 > num_levels:
-            return num_levels
-        else:
-            if (temp1-temp2) < 10e-09:
-                return <int>temp2
-            else:
-                return <int>temp2 + 1
-
 cdef inline int real_to_int(double real_val, double step):
     """
     """
@@ -84,42 +51,32 @@ cdef inline void find_cell_id(Point origin, Point pnt, double cell_size,
     id.y = real_to_int(pnt.y-origin.y, cell_size)
     id.z = real_to_int(pnt.z-origin.z, cell_size)
 
+def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
+                                         include_self=True, distance=1):
+    """Construct a list of cell ids neighboring the given cell."""
+    construct_immediate_neighbor_list(cell_id, neighbor_list, include_self,
+                                      distance)
+
 cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
-                                                   neighbor_list, bint include_self=True): 
-    """
-    Construct a list of cell ids neighboring the given cell.
-    """
-    if include_self:
-        neighbor_list.append(cell_id)
-    
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y+1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y-1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y+1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y+1, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y-1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x+1, cell_id.y-1, cell_id.z-1))
+               neighbor_list, bint include_self=True, int distance=1): 
+    """Construct a list of cell ids neighboring the given cell."""
+    cdef list cell_list = []
+    cdef int i,j,k
+    for i in range(-distance, distance+1):
+        for j in range(-distance, distance+1):
+            for k in range(-distance, distance+1):
+                cell_list.append(IntPoint(cell_id.x+i, cell_id.y+j,
+                                          cell_id.z+k))
+    if not include_self:
+        cell_list.remove(cell_id)
+    neighbor_list.extend(cell_list)
 
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y+1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y-1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y+1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y+1, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y-1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x-1, cell_id.y-1, cell_id.z-1))
-
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y+1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y+1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y+1, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y-1, cell_id.z))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y-1, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y-1, cell_id.z-1))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
-    neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
+def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
+    """
+    Construct a list of cell ids, which share a face(3d) or edge(2d) with the
+    given cell_id.
+    """
+    construct_face_neighbor_list(cell_id, neighbor_list, include_self)
 
 cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
                                          bint include_self=True, int
@@ -142,26 +99,16 @@ cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
     if dimension == 3:
         neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
         neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
-
-def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
-    construct_face_neighbor_list(cell_id, neighbor_list, include_self)
-
-def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
-                                         include_self=True):
-    construct_immediate_neighbor_list(cell_id,
-                                      neighbor_list,
-                                      include_self) 
                                       
 def py_cell_encloses_sphere(IntPoint id, Point world_origin, double cell_size,
                             Point pnt, double radius):
-    """
-    """
+    """Check if sphere of `radius` center 'pnt' is enclosed by a cell."""
     return cell_encloses_sphere(id, world_origin, cell_size, pnt, radius)
 
-cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin, double cell_size,
-                              Point pnt, double radius):
+cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
+                                double cell_size, Point pnt, double radius):
     """
-    Checks if point 'pnt' is completely enclosed by a cell.
+    Checks if sphere of `radius` centered at 'pnt' is completely enclosed by a cell.
     
     **Parameters**
     
@@ -182,76 +129,36 @@ cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin, double ce
     """
     cdef double distance
     cdef Point cell_vertex = Point()
-
+    cdef int i,j,k
+    
     # find the first point of the cell.
     cell_vertex.x = world_origin.x + id.x*cell_size
     cell_vertex.y = world_origin.y + id.y*cell_size
     cell_vertex.z = world_origin.z + id.z*cell_size
     
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-    
-    cell_vertex.x += cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.z += cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.x -= cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.y += cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.z -= cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.x += cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
-    cell_vertex.z += cell_size
-    distance = cell_vertex.euclidean(pnt)
-    if distance > radius:
-        # make sure its not very close.
-        if fabs(distance-radius) < 1e-09:
-            return False
-
+    for i in range(0,2):
+        for j in range(0,2):
+            for k in range(0,2):
+                cell_vertex.set(world_origin.x + (id.x+i)*cell_size,
+                                world_origin.y + (id.y+j)*cell_size,
+                                world_origin.z + (id.z+k)*cell_size,
+                                )
+                distance = cell_vertex.euclidean(pnt)
+                if distance > radius:
+                    # make sure its not very close.
+                    if fabs(distance-radius) < 1e-09:
+                        return False
     return True
 
+################################################################################
+# `Cell` class.
+################################################################################
 cdef class Cell:
     """
-    The cell base class.
+    The Cell class.
     """
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
-                 cell_size=0.1, int level=1, str coord_x='x', str coord_y='y',
-                 str coord_z='z', *args, **kwargs):
+                 cell_size=0.1, int jump_tolerance=1):
 
         self.id = IntPoint()
 
@@ -261,312 +168,27 @@ cdef class Cell:
 
         self.cell_size = cell_size
 
-        self.level = level
+        self.coord_x = 'x'
+        self.coord_y = 'y'
+        self.coord_z = 'z'
 
-        self.coord_x = coord_x
-        self.coord_y = coord_y
-        self.coord_z = coord_z
-
-        self.jump_tolerance = 1
+        self.jump_tolerance = jump_tolerance
 
         self.arrays_to_bin = []
 
         self.origin = Point(0., 0., 0.)
         
         self.set_cell_manager(cell_manager)
-
-    cpdef set_cell_manager(self, CellManager cell_manager):
-
-        self.cell_manager = cell_manager
-        if cell_manager is not None:
-            self.arrays_to_bin[:] = cell_manager.arrays_to_bin
-            self.coord_x = cell_manager.coord_x
-            self.coord_y = cell_manager.coord_y
-            self.coord_z = cell_manager.coord_z
-            self.origin.x = cell_manager.origin.x
-            self.origin.y = cell_manager.origin.y
-            self.origin.z = cell_manager.origin.z
-                         
-    cpdef get_centroid(self, Point centroid):
-        """
-        Returns the centroid of this cell in 'centroid'.
-    	"""
-        centroid.x = self.origin.x + (<double>self.id.x + 0.5)*self.cell_size
-        centroid.y = self.origin.y + (<double>self.id.y + 0.5)*self.cell_size
-        centroid.z = self.origin.z + (<double>self.id.z + 0.5)*self.cell_size
-
-    cpdef Cell get_new_sibling(self, IntPoint id):
-        """
-        Create a new cell and return.
-        """
-        cdef Cell cell = Cell(id, self.cell_manager, self.cell_size, self.level)
-        return cell
-
-    cpdef int update(self, dict data) except -1:
-        """
-        """
-        raise NotImplementedError, 'Cell::update called'
-
-    cpdef long get_number_of_particles(self):
-        """
-        """
-        raise NotImplementedError, 'Cell::get_number_of_particles called'
-
-    cpdef bint is_empty(self):
-        """
-    	"""
-        raise NotImplementedError, 'Cell::is_empty called'
-
-    cpdef int add_particles(self, Cell cell) except -1:
-        """
-        """
-        raise NotImplementedError, 'Cell::add_particles'
-
     
-    cpdef int update_cell_manager_hierarchy_list(self) except -1:
-        """
-        """
-        raise NotImplementedError, 'Cell::update_cell_manager_hierarchy_list'
+    def __str__(self):
+        return 'Cell(id=%s,size=%g,np=%d)' %(self.id, self.cell_size,
+                    self.get_number_of_particles())
+    
+    def __repr__(self):
+        return 'Cell(id=%s,size=%g,np=%d)' %(self.id, self.cell_size,
+                    self.get_number_of_particles())
 
-    cpdef int clear(self) except -1:
-        """
-        """
-        raise NotImplementedError, 'Cell::clear'
-
-    cpdef int delete_empty_cells(self) except -1:
-        """
-        """
-        raise NotImplementedError, 'Cell::delete_empty_cells'
-
-    cpdef double get_child_size(self):
-        """
-        Return the size of the child cell.
-        """
-        return self.cell_manager.cell_sizes.data[self.level-1]
-
-    cpdef insert_particles(self, int parray_id, LongArray indices):
-        """
-        Insert particle indices of the parray given by "parray_id" from the
-        array"indices" into the cell. 
-        """
-        raise NotImplementedError, 'Cell::insert_particles'
-        
-    cpdef get_particle_ids(self, list particle_id_list):
-        """
-        Finds the indices of particle ids for each particle array in
-        arrays_to_bin.
-
-        **Parameters**
-
-            - particle_id_list - output parameter, should contain one 
-              LongArray for each array in arrays_to_bin. Particle ids will be
-              appended to the LongArrays
-
-        """
-        raise NotImplementedError, 'Cell::get_particle_ids'
-
-    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
-                                  counts):
-        """
-        Finds the indices of particles for each particle array in arrays_to_bin
-        contained within this cell. Also returns the number of particles ids
-        that were added in this call for each of the arrays.
-
-        **Parameters**
-
-            - particle_id_list - output parameter, should contain one LongArray
-            for each array in arrays_to_bin. Particle ids will be appended to the
-            LongArrays.
-            - counts - output parameter, A LongArray with one value per array in
-            arrays_to_bin. Each entry will contain the number of particle ids
-            that were appended to each of the arrays in particle_id_list in this
-            call to get_particle_counts_ids.
-        """
-        raise NotImplementedError, 'Cell::get_particle_counts_ids'
-     
-    cpdef Cell get_new_child(self, IntPoint id):
-        """
-        Create a new child node depending on this nodes level in the hierarchy.
-        """
-        cdef int num_levels = self.cell_manager.num_levels
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
-        
-        if (num_levels - self.level) == num_levels-1:
-            return LeafCell(id=id, cell_manager=self.cell_manager,
-                            cell_size=cell_sizes.data[self.level-1],
-                            level=self.level-1,
-                            jump_tolerance=1)
-        else:
-            return NonLeafCell(id=id, cell_manager=self.cell_manager,
-                               cell_size=cell_sizes.data[self.level-1],
-                               level=self.level-1)
-
-    cpdef clear_indices(self, int parray_id):
-        """
-        Clear the particles ids of parray_id stored in the hierarchy.
-        """
-        raise NotImplementedError, 'Cell::clear_indices'
-
-    cpdef bint is_leaf(self):
-        """
-        """
-        return False
-
-    def py_add_particles(self, Cell cell):
-        self.add_particles(cell)
-        
-    def py_update(self, dict data):
-        self.update(data)
-
-    def py_get_number_of_particles(self):
-        return self.get_number_of_particles()
-
-    def py_is_empty(self):
-        return self.is_empty()
-
-    def py_get_centroid(self, Point pnt):
-        self.get_centroid(pnt)
-
-    def py_delete_empty_cells(self):
-        self.delete_empty_cells()
-
-    def py_update_cell_manager_hierarchy_list(self):
-        self.update_cell_manager_hierarchy_list()
-        
-    def py_clear(self):
-        self.clear()
-
-    def py_is_leaf(self):
-        return self.is_leaf()
-
-################################################################################
-# `LeafCell` class.
-################################################################################
-cdef class LeafCell(Cell):
-    """
-    """
-    def __init__(self, IntPoint id, CellManager cell_manager=None, double
-                  cell_size=0.1, int level=0, int jump_tolerance=1): 
-        Cell.__init__(self, id=id, cell_manager=cell_manager,
-                      cell_size=cell_size, level=level)
-        
-        self.jump_tolerance = jump_tolerance
-
-    cpdef Cell get_new_sibling(self, IntPoint id):
-        """
-        Create a new LeafCell and return.
-        """
-        cdef LeafCell cell = LeafCell(id=id, cell_manager=self.cell_manager,
-                                      cell_size=self.cell_size, 
-                                      level=self.level,
-                                      jump_tolerance=self.jump_tolerance)
-        return <Cell>cell
-
-    cpdef Cell get_new_child(self, IntPoint id):
-        """
-        Raises an error if this is called.
-        """
-        msg='Cannot create child node for LeafCell'
-        logger.error(msg)
-        raise SystemError, msg
-
-    cpdef bint is_leaf(self):
-        """
-        """
-        return True
-
-    cpdef double get_child_size(self):
-        """
-        Return the size of the child cell.
-        """
-        msg = 'get_child_size called on leaf node'
-        logger.error(msg)
-        raise SystemError, msg
-
-    cdef _init_index_lists(self):
-        """
-        """
-        cdef int i
-        cdef int num_arrays
-
-        if self.cell_manager is None:
-            return
-
-        num_arrays = len(self.arrays_to_bin)
-        self.index_lists[:] = []
-        
-        for i from 0 <= i < num_arrays:
-            self.index_lists.append(LongArray())
-
-    cpdef get_particle_ids(self, list particle_id_list):
-        """
-        Finds the indices of particle ids for each particle array in
-        arrays_to_bin.
-
-        **Parameters**
-        
-            - particle_id_list - output parameter, should contain one 
-              LongArray for each array in arrays_to_bin. Particle ids will be
-              appended to the LongArrays
-        """
-        cdef int num_arrays = 0
-        cdef int i = 0
-        cdef LongArray source, dest
-
-        num_arrays = len(self.arrays_to_bin)
-
-        if len(particle_id_list) == 0:
-            # create num_arrays LongArrays
-            for i from 0 <= i < num_arrays:
-                particle_id_list.append(LongArray())
-        
-        for i from 0 <= i < num_arrays:
-            dest = particle_id_list[i]
-            source = self.index_lists[i]
-            dest.extend(source.get_npy_array())
-
-    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
-                                  particle_counts):
-        """
-        Finds the indices of particles for each particle array in arrays_to_bin
-        contained within this cell. Also returns the number of particles ids
-        that were added in this call for each of the arrays.
-
-        **Parameters**
-
-            - particle_id_list - output parameter, should contain one LongArray
-            for each array in arrays_to_bin. Particle ids will be appended to the
-            LongArrays.
-            - particle_counts - output parameter, A LongArray with one value per
-            array in arrays_to_bin. Each entry will contain the number of
-            particle ids that were appended to each of the arrays in
-            particle_id_list in this call to get_particle_counts_ids.
-
-        """
-        cdef int num_arrays = 0
-        cdef int i = 0
-        cdef LongArray source, dest
-
-        num_arrays = len(self.arrays_to_bin)
-
-        if len(particle_id_list) == 0:
-            for i from 0 <= i < num_arrays:
-                particle_id_list.append(LongArray(0))
-                
-        if particle_counts.length == 0:
-            particle_counts.resize(num_arrays)
-            # set the values to zero
-            particle_counts._npy_array[:] = 0
-
-        for i from 0 <= i < num_arrays:
-            dest = particle_id_list[i]
-            source = self.index_lists[i]
-            dest.extend(source.get_npy_array())
-            particle_counts.data[i] += source.length
-        
     cpdef set_cell_manager(self, CellManager cell_manager):
-        """
-        """
         self.cell_manager = cell_manager
 
         if self.index_lists is None:
@@ -575,9 +197,6 @@ cdef class LeafCell(Cell):
         if self.cell_manager is None:
             self.arrays_to_bin[:] = []
             self.index_lists[:] =[]
-            self.coord_x = 'x'
-            self.coord_y = 'y'
-            self.coord_z = 'z'
         else:
             self.arrays_to_bin[:] = self.cell_manager.arrays_to_bin
             self.coord_x = self.cell_manager.coord_x
@@ -587,73 +206,43 @@ cdef class LeafCell(Cell):
             self.origin.y = self.cell_manager.origin.y
             self.origin.z = self.cell_manager.origin.z
             self._init_index_lists()
+                         
+    cpdef get_centroid(self, Point centroid):
+        """Returns the centroid of this cell in 'centroid'."""
+        centroid.x = self.origin.x + (<double>self.id.x + 0.5)*self.cell_size
+        centroid.y = self.origin.y + (<double>self.id.y + 0.5)*self.cell_size
+        centroid.z = self.origin.z + (<double>self.id.z + 0.5)*self.cell_size
 
-    cpdef int add_particles(self, Cell cell1) except -1:
-        """
-        Add particle indices in cell to the current cell.
-        
-        **Parameters**
-         
-         - cell - a leaf cell from which to add the new particle indices.
+    cpdef Cell get_new_sibling(self, IntPoint id):
+        """Create a new cell and return."""
+        cdef Cell cell = Cell(id=id, cell_manager=self.cell_manager,
+                              cell_size=self.cell_size,
+                              jump_tolerance=self.jump_tolerance)
+        return cell
 
-        **Notes**
-         
-         - the input cell should have the same set of particle arrays.
-
-        """
-        cdef int i, j, id
-        cdef int num_arrays, num_particles, num_indices
-        cdef LongArray dest_array
-        cdef LongArray source_array
-        cdef NonLeafCell cell = <NonLeafCell>cell1
-        cdef ParticleArray parr
-        
-        if not cell.id.is_equal(self.id):
-            raise RuntimeError, 'invalid cell as input'
-
-        num_arrays = len(self.arrays_to_bin)
-
-        for i from 0 <= i < num_arrays:
-            parr = self.arrays_to_bin[i]
-            num_particles = parr.get_number_of_particles()
-            source_array = cell.index_lists[i]
-            dest_array = self.index_lists[i]
-            for j from 0 <= j < source_array.length:
-                id = source_array.get(j)
-                if id >= num_particles or id < 0:
-                    msg = 'trying to add invalid particle\n'
-                    msg += 'num_particles : %d\n'%(num_particles)
-                    msg += 'pid : %d\n'%(id)
-                    raise RuntimeError, msg
-                else:
-                    dest_array.append(id)
-
-        return 0
-            
     cpdef int update(self, dict data) except -1:
         """
         Finds particles that have escaped this cell.
-    
-	**Parameters**
+        
+        **Parameters**
          
-         - data - output parameters, to store cell ids and particles that have
+         - data - output parameter, to store cell ids and particles that have
            moved to those cells.
-
+        
         **Algorithm**::
         
          for each array in arrays_to_bin
              if array is dirty
                  for each particle of that array that is in this cell
                      check if the particle is still there in this cell
-                     if not 
+                     if not
                          find the new cell this particles has moved to.
                          if an entry for that cell does not exist in data
-                             create a leaf cell for that cell.
+                             create a cell for that cell.
                          
                          add this particle entry to the appropriate array in the
                          newly created cell.
-
-    	"""
+        """
         cdef int i,j
         cdef int num_arrays = len(self.arrays_to_bin)
         cdef ParticleArray parray
@@ -665,7 +254,7 @@ cdef class LeafCell(Cell):
         cdef long num_particles
         cdef Point pnt = Point()
         cdef IntPoint id = IntPoint()
-        cdef LeafCell cell
+        cdef Cell cell
         cdef IntPoint pdiff
         cdef str msg
         
@@ -729,9 +318,9 @@ cdef class LeafCell(Cell):
                     # add this particle to the particles that are to be removed.
                     cell = data.get(id)
                     if cell is None:
-                        # create a leaf cell and add it to dict.
-                        # cell = LeafCell(id, self.cell_manager, self.cell_size,
-                        #                 self.level, self.jump_tolerance)
+                        # create a cell and add it to dict.
+                        # cell = Cell(id, self.cell_manager, self.cell_size,
+                        #                 self.jump_tolerance)
                         cell = self.get_new_sibling(id)
                         data[id.copy()] = cell
                         
@@ -743,534 +332,188 @@ cdef class LeafCell(Cell):
 
         return 0
 
-    cpdef insert_particles(self, int parray_id, LongArray indices):
-        """
-        Insert the particles in indices into the leaf cell.
-        """
-        cdef LongArray index_array = self.index_lists[parray_id]
-        index_array.extend(indices.get_npy_array())
-
-    cpdef clear_indices(self, int parray_id):
-        """
-        Clear the particles ids of parray_id stored in the hierarchy.
-        """
-        cdef LongArray index_array = self.index_lists[parray_id]
-        index_array.reset()
-
-    cpdef bint is_empty(self):
-        """
-        """
-        if self.get_number_of_particles() == 0:
-            return True
-        else:
-            return False
-
     cpdef long get_number_of_particles(self):
-        """
-        """
         cdef int i, num_arrays
         cdef long num_particles = 0
         cdef LongArray arr
 
         num_arrays = len(self.index_lists)
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             arr = self.index_lists[i]
             num_particles += arr.length
         
         return num_particles
 
-    cpdef int update_cell_manager_hierarchy_list(self) except -1:
-        """
-        """
-        cdef CellManager cell_manager = self.cell_manager
-        cdef str msg
-        cdef dict hierarchy_dict
-        if cell_manager is None:
-            return 0
+    cpdef bint is_empty(self):
+        if self.get_number_of_particles() == 0:
+            return True
+        else:
+            return False
 
-        if self.level >= len(cell_manager.hierarchy_list):
-            msg = 'invalid cell level'
-            raise RuntimeError, msg
+    cpdef int add_particles(self, Cell cell) except -1:
+        """Add particle indices in cell to the current cell.
+        
+        **Parameters**
+         
+         - cell - a cell from which to add the new particle indices.
 
-        hierarchy_dict = cell_manager.hierarchy_list[self.level]
-        hierarchy_dict[self.id.copy()] = self
+        **Notes**
+         
+         - the input cell should have the same set of particle arrays.
+
+        """
+        cdef int i, j, id
+        cdef int num_arrays, num_particles
+        cdef LongArray dest_array
+        cdef LongArray source_array
+        cdef ParticleArray parr
+        
+        #print self.arrays_to_bin; import sys; sys.stdout.flush()
+        num_arrays = len(self.arrays_to_bin)
+        
+        import sys; sys.stdout.flush()
+        for i from 0 <= i < num_arrays:
+            parr = self.arrays_to_bin[i]
+            num_particles = parr.get_number_of_particles()
+            source_array = cell.index_lists[i]
+            dest_array = self.index_lists[i]
+            for j from 0 <= j < source_array.length:
+                id = source_array.get(j)
+                if id >= num_particles or id < 0:
+                    msg = 'trying to add invalid particle\n'
+                    msg += 'num_particles : %d\n'%(num_particles)
+                    msg += 'pid : %d\n'%(id)
+                    raise RuntimeError, msg
+                else:
+                    dest_array.append(id)
 
         return 0
 
     cpdef int clear(self) except -1:
-        """
-        """
+        """empties the index_lists"""
         self.index_lists[:] = []   
         return 0
 
-    cpdef int delete_empty_cells(self) except -1:
+    cpdef insert_particles(self, int parray_id, LongArray indices):
         """
+        Insert particle indices of the parray given by "parray_id" from the
+        array "indices" into the cell. 
         """
-        return 0
-
-################################################################################
-# `NonLeafCell` class.
-################################################################################
-cdef class NonLeafCell(Cell):
-    """
-    """
-    def __init__(self, IntPoint id, CellManager cell_manager=None, double
-                  cell_size=0.1, int level=1):
-        Cell.__init__(self, id=id, cell_manager=cell_manager,
-                      cell_size=cell_size, level=level)
-
-        self.cell_dict = {}
-
-    cpdef Cell get_new_sibling(self, IntPoint id):
-        """
-        Create and return a new cell at the same level.
-        """
-        cdef NonLeafCell cell = NonLeafCell(id=id,
-                                            cell_manager=self.cell_manager,
-                                            cell_size=self.cell_size,
-                                            level=self.level)
-        return <Cell>cell
-                                            
-    cpdef int add_particles(self, Cell cell) except -1:
-        """
-        Add particles from given cell, into this cell.
-    
-	**Parameters**
-         
-         - cell - the cell from which particles are to be added.
-
-        **Algorithm**::
-         
-         for every smaller_cell in 'cell'
-            if smaller_cell exists in self.cell_dict
-                call update on the smaller cell that already exists, with
-                smaller_cell as parameter.
-            else
-                add smaller_cell into self.cell_dict   
-         
-        **Notes**
-         
-         - we KNOW that 'cell' is a NonLeafCell.
-
-    	"""
-        cdef int num_cells
-        cdef int i
-        cdef list smaller_cell_list = cell.cell_dict.values()
-        cdef Cell smaller_cell, curr_smaller_cell
-        num_cells = len(smaller_cell_list)
-
-        for i from 0 <= i < num_cells:
-            smaller_cell = smaller_cell_list[i]
-
-            curr_smaller_cell = self.cell_dict.get(smaller_cell.id)
-
-            if curr_smaller_cell is None:
-                self.cell_dict[smaller_cell.id.copy()] = smaller_cell
-            else:
-                curr_smaller_cell.add_particles(smaller_cell)
-
-        return 0
-
+        cdef LongArray index_array = self.index_lists[parray_id]
+        index_array.extend(indices.get_npy_array())
+        
     cpdef get_particle_ids(self, list particle_id_list):
         """
         Finds the indices of particle ids for each particle array in
         arrays_to_bin.
 
         **Parameters**
-        
+
             - particle_id_list - output parameter, should contain one 
               LongArray for each array in arrays_to_bin. Particle ids will be
               appended to the LongArrays
+
         """
-        cdef int i, num_children, num_arrays
-        cdef list children = self.cell_dict.values()
-        cdef Cell cell
-        num_children = len(children)
+        cdef int num_arrays = 0
+        cdef int i = 0
+        cdef LongArray source, dest
+
+        num_arrays = len(self.arrays_to_bin)
 
         if len(particle_id_list) == 0:
-            num_arrays = len(self.arrays_to_bin)
             # create num_arrays LongArrays
             for i from 0 <= i < num_arrays:
                 particle_id_list.append(LongArray())
         
-        for i from 0 <= i < num_children:
-            cell = children[i]
-            cell.get_particle_ids(particle_id_list)        
+        for i from 0 <= i < num_arrays:
+            dest = particle_id_list[i]
+            source = self.index_lists[i]
+            dest.extend(source.get_npy_array())
 
-    cpdef get_particle_counts_ids(self, list particle_id_list, LongArray
-                                  particle_counts):
+    cpdef get_particle_counts_ids(self, list particle_id_list,
+                                  LongArray particle_counts):
         """
+        Finds the indices of particles for each particle array in arrays_to_bin
+        contained within this cell. Also returns the number of particles ids
+        that were added in this call for each of the arrays.
+
+        **Parameters**
+
+            - particle_id_list - output parameter, should contain one LongArray
+            for each array in arrays_to_bin. Particle ids will be appended to the
+            LongArrays.
+            - counts - output parameter, A LongArray with one value per array in
+            arrays_to_bin. Each entry will contain the number of particle ids
+            that were appended to each of the arrays in particle_id_list in this
+            call to get_particle_counts_ids.
         """
-        cdef int i, num_children, num_arrays
-        cdef Cell c
+        cdef int num_arrays = 0
+        cdef int i = 0
+        cdef LongArray source, dest
 
         num_arrays = len(self.arrays_to_bin)
 
         if len(particle_id_list) == 0:
             for i from 0 <= i < num_arrays:
-                particle_id_list.append(LongArray())
+                particle_id_list.append(LongArray(0))
+                
         if particle_counts.length == 0:
             particle_counts.resize(num_arrays)
+            # set the values to zero
             particle_counts._npy_array[:] = 0
 
-        for c in self.cell_dict.itervalues():
-            c.get_particle_counts_ids(particle_id_list, particle_counts)
-
+        for i from 0 <= i < num_arrays:
+            dest = particle_id_list[i]
+            source = self.index_lists[i]
+            dest.extend(source.get_npy_array())
+            particle_counts.data[i] += source.length
+     
     cpdef clear_indices(self, int parray_id):
-        """
-        Clear the particles ids of parray_id stored in the hierarchy.
-        """
-        cdef int i, num_children
-        cdef list child_list = self.cell_dict.values()
-        num_children = len(child_list)
-        cdef Cell child
+        """Clear the particles ids of parray_id stored in the cells."""
+        cdef LongArray index_array = self.index_lists[parray_id]
+        index_array.reset()
 
-        for i from 0 <= i < num_children:
-            child = child_list[i]
-            child.clear_indices(parray_id)
-    
-    cpdef int update(self, dict data) except -1:
-        """
-        Update the particles under this cell, returning all
-        particles that have created a new cell outside the
-        bounds of this cell.
-
-	**Parameters**
-        
-         - data - output parameter in which all newly created cells at this
-           level are to be returned.
-
-        **Algorithm**::
-        
-         for every cell in this cell's cell_list
-             perform an update and collect the data about escaping cells.
-             
-         for every cell in the collected data
-             check if cell is in this cells bounds
-                 if yes
-                     if cell is not already there
-                         create a cell with appropriate id
-                     update the cell with new data
-                 if not
-                     Create a new cell(at this level in hierarchy)
-                     add the smaller cell into this cell
-                     and store the larger cell in output dict
-
-    	**Issues**
-        
-         - Not sure when do we delete cells.
-
-    	"""
+    cdef _init_index_lists(self):
+        """initialize the index_lists (to empty LongArrays)"""
         cdef int i
-        cdef int num_cells = len(self.cell_dict)
-        cdef dict output_data, collected_data
-        cdef Cell smaller_cell, smaller_cell_1
-        cdef NonLeafCell cell
-        cdef list cell_list
-        cdef Point centroid = Point()
-        cdef IntPoint cell_id = IntPoint()
-        cdef list smaller_cell_list = self.cell_dict.values()
+        cdef int num_arrays
 
-        output_data = data
-        collected_data = dict()
-        # collect all escaped partiles 
-        # from cells down in the hierarchy.
-        for i from 0 <= i < num_cells:
-            smaller_cell = smaller_cell_list[i]
-            smaller_cell.update(collected_data)
+        if self.cell_manager is None:
+            return
 
-        cell_list = collected_data.values()
-        num_cells = len(cell_list)
-
-        for i from 0 <= i < num_cells:
-            smaller_cell = cell_list[i]
-            
-            # get the cell centroid
-            smaller_cell.get_centroid(centroid)
-            # find the larger cell within which it lies.
-            find_cell_id(self.origin, centroid, self.cell_size, cell_id)
-            
-            # if it lies in this cell, add the new particles to the
-            # cells in the hierarchy below.
-            if cell_id.is_equal(self.id):
-                smaller_cell_1 = self.cell_dict.get(smaller_cell.id)
-                if smaller_cell_1 is None:
-                    # meaning there does not exist any cell for the
-                    # region occupied by smaller_cell, so we just
-                    # add 'smaller_cell' to the cell list
-                    self.cell_dict[smaller_cell.id.copy()] = smaller_cell
-                else:
-                    smaller_cell_1.add_particles(smaller_cell)
-            else:
-                # meaning smaller_cell is not inside this cell
-                cell = output_data.get(cell_id)
-                if cell is None:
-                    # Create a non-leaf node
-                    # cell = NonLeafCell(cell_id, self.cell_manager,
-                    #                    self.cell_size, self.level)
-                    cell = self.get_new_sibling(cell_id)
-                    output_data[cell_id.copy()] = cell
-
-                    # add the escaped smaller cell to this cell.
-                    cell.cell_dict[smaller_cell.id.copy()] = smaller_cell
-                else:
-                    smaller_cell_1 = cell.cell_dict.get(smaller_cell.id)
-                    if smaller_cell_1 is None:
-                        cell.cell_dict[smaller_cell.id.copy()] = smaller_cell
-                    else:
-                        smaller_cell_1.add_particles(smaller_cell)
-
-        return 0
-
-    cpdef int update_cell_manager_hierarchy_list(self) except -1:
-        """
-        """
-        cdef CellManager cell_manager = self.cell_manager
-        cdef str msg
-        cdef dict hierarchy_dict
-        cdef Cell cell
-        cdef int num_cells, i
-
-        cdef list cell_list = self.cell_dict.values()
-
-        num_cells = len(self.cell_dict)
-
-        if cell_manager is None:
-            return 0
-
-        if self.level >= len(cell_manager.hierarchy_list):
-            msg = 'invalid cell level'
-            raise RuntimeError, msg
-
-        hierarchy_dict = cell_manager.hierarchy_list[self.level]
-        hierarchy_dict[self.id.copy()] = self
-
-        for i from 0 <= i < num_cells:
-            cell = cell_list[i]
-            cell.update_cell_manager_hierarchy_list()   
+        num_arrays = len(self.arrays_to_bin)
+        self.index_lists[:] = []
         
-        return 0
+        for i from 0 <= i < num_arrays:
+            self.index_lists.append(LongArray())
 
-    cpdef int clear(self) except -1:
-        """
-        Clear internal information.
-        """
-        cdef int i, num_cells
-        num_cells = len(self.cell_dict)
-        cdef list cell_list = self.cell_dict.values()
-        cdef Cell cell
-
-        for i from 0 <= i < num_cells:
-            cell = cell_list[i]
-            cell.clear()
-
-        self.cell_dict.clear()
-
-        return 0
-
-    cpdef int delete_empty_cells(self) except -1:
-        """
-        Delete any empty cells underneath this cell.
-    
-        **Algorithm**::
+    def py_add_particles(self, Cell cell):
+        self.add_particles(cell)
         
-         Call delete_empty_cells for every smaller_cell contained in this cell.
-         
-         find the number of particles for every smaller cell.
+    def py_update(self, dict data):
+        self.update(data)
 
-         if number of particles is 0, remove that cell from the cell_dict         
+    def py_get_number_of_particles(self):
+        return self.get_number_of_particles()
 
-    	**Issues**
-        
-         - too many passes down the cell hierarchy.
+    def py_is_empty(self):
+        return self.is_empty()
 
-    	"""
-        cdef int num_cells = len(self.cell_dict)
-        cdef int i
-        cdef Cell cell
-        cdef list cell_list = self.cell_dict.values()
+    def py_get_centroid(self, Point pnt):
+        self.get_centroid(pnt)
 
-        for i from 0 <= i < num_cells:
-            cell = cell_list[i]
-            cell.delete_empty_cells()
-
-            if cell.get_number_of_particles() == 0:
-                self.cell_dict.pop(cell.id)
-
-        return 0
-
-    cpdef long get_number_of_particles(self):
-        """
-        Return the number of particles.
-        """
-        cdef long num_particles = 0
-        cdef Cell cell
-        cdef int num_cells = len(self.cell_dict)
-        cdef int i
-        cdef cell_list = self.cell_dict.values()
-
-        for i from 0 <= i < num_cells:
-            cell = cell_list[i]
-            num_particles += cell.get_number_of_particles()
-
-        return num_particles        
-
-    cpdef insert_particles(self, int parray_id, LongArray indices):
-        """
-        Does a top-down insertion of particles into the hierarchy.
-        """
-        cdef ParticleArray parray = self.cell_manager.arrays_to_bin[parray_id]
-        cdef dict particles_for_children = dict()
-        cdef int num_particles = parray.get_number_of_particles()
-        cdef int i
-        cdef DoubleArray x, y, z
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
-        cdef double child_size = self.get_child_size()
-        cdef IntPoint id = IntPoint()
-        cdef Point pnt = Point()
-        cdef LongArray child_indices, la
-        cdef Cell child
-        cdef IntPoint cid
-        
-        x = parray.get_carray(self.coord_x)
-        y = parray.get_carray(self.coord_y)
-        z = parray.get_carray(self.coord_z)
-        
-        for i from 0 <= i < indices.length:
-            if indices.data[i] >= num_particles:
-                # invalid particle being added.
-                # raise error and exit
-                msg = 'Particle %d does not exist'%(indices.data[i])
-                logger.error(msg)
-                raise ValueError, msg
-            
-            pnt.x = x.data[indices.data[i]]
-            pnt.y = y.data[indices.data[i]]
-            pnt.z = z.data[indices.data[i]]
-
-            # find the cell at the lower level, to which this particle belongs
-            # to. 
-            find_cell_id(self.origin, pnt, child_size, id)
-            if PyDict_Contains(particles_for_children, id) == 1:
-                child_indices = <LongArray>PyDict_GetItem(particles_for_children, id)
-            else:
-                child_indices = LongArray()
-                particles_for_children[id.copy()] = child_indices
-
-            child_indices.append(indices.data[i])
-
-        for cid, la in particles_for_children.iteritems():
-            if PyDict_Contains(self.cell_dict, cid):
-                child = <Cell>PyDict_GetItem(self.cell_dict, cid)
-            else:
-                # create a child with the given id.
-                child = self.get_new_child(cid)
-                self.cell_dict[cid.copy()] = child
-
-            child.insert_particles(parray_id, la)        
+    def py_clear(self):
+        self.clear()
 
 ################################################################################
-# `RootCell` class.
-################################################################################
-cdef class RootCell(NonLeafCell):
-    """
-    """
-    def __init__(self, CellManager cell_manager=None, double
-                  cell_size=0.1):
-        NonLeafCell.__init__(self, id=IntPoint(0, 0, 0),
-                             cell_manager=cell_manager, cell_size=cell_size,
-                             level=-1)
-        pass
 
-    cpdef Cell get_new_sibling(self, IntPoint id):
-        """
-        Create and return a new cell at the same level as this.
-        """
-        cdef RootCell cell = RootCell(cell_manager=self.cell_manager,
-                                      cell_size=self.cell_size)
-        return <Cell>cell
-
-    cpdef Cell get_new_child(self, IntPoint id):
-        """
-        Create and return a new cell at one level lower in the cell hierarchy.
-        """
-        cdef int num_levels = self.cell_manager.num_levels
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
-        if num_levels == 1:
-            return LeafCell(id=id, cell_manager=self.cell_manager, 
-                            cell_size=cell_sizes.data[0],
-                            level=0,
-                            jump_tolerance=self.cell_manager.jump_tolerance)
-        else:
-            return NonLeafCell(id=id, cell_manager=self.cell_manager,
-                               cell_size=cell_sizes.data[num_levels-1],
-                               level=num_levels-1)
-
-    cpdef int update(self, dict data) except -1:
-        """
-        Update particle information.
-    
-	**Parameters**
-        
-         - data - should be None. The root cell does not fill up data for anyone.
-
-        **Algorithm**::
-        
-         All escaping particles (in newly created cells) are got from levels
-         underneath the root.
-         
-         For all new cells returned, if some already exist, the data is merged
-         with them.
-
-         If a newly created cell does not exists, it is created as a child.
-
-    	**Notes**
-         
-	**Helper Functions**
-
-    	**Issues**
-
-    	"""
-        cdef int i
-        cdef int num_cells = len(self.cell_dict)
-        cdef dict collected_data
-        cdef Cell smaller_cell, smaller_cell_1
-        cdef NonLeafCell cell
-        cdef list cell_list
-        cdef list smaller_cell_list = self.cell_dict.values()
-
-        collected_data = dict()
-
-        # collect all escaped partiles 
-        # from cells down in the hierarchy.
-        for i from 0 <= i < num_cells:
-            smaller_cell = smaller_cell_list[i]
-            smaller_cell.update(collected_data)
-
-        cell_list = collected_data.values()
-        num_cells = len(cell_list)
-
-        for i from 0 <= i < num_cells:
-            smaller_cell = cell_list[i]
-            
-            smaller_cell_1 = self.cell_dict.get(smaller_cell.id)
-            if smaller_cell_1 is None:
-                # meaning there does not exist any cell for the
-                # region occupied by smaller_cell, so we just
-                # add 'smaller_cell' to the cell list
-                self.cell_dict[smaller_cell.id.copy()] = smaller_cell
-            else:
-                smaller_cell_1.add_particles(smaller_cell)
-
-        return 0
 
 ################################################################################
 # `CellManager` class.
 ################################################################################
 cdef class CellManager:
-    """
-    """
+    """Cell Manager class"""
     # FIXME:
     # 1. Simple API function to add an array to bin _BEFORE_ the cell manager
     # has been initialized.
@@ -1282,8 +525,7 @@ cdef class CellManager:
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=0.1,
                   double max_cell_size=0.5, Point origin=Point(0,0,0),
-                  int num_levels=1, str coord_x='x',
-                  str coord_y='y', str coord_z='z', bint initialize=True):
+                  bint initialize=True):
         
         self.origin = Point()
 
@@ -1293,66 +535,56 @@ cdef class CellManager:
 
         self.min_cell_size = min_cell_size
         self.max_cell_size = max_cell_size
-        self.num_levels = num_levels
 
         self.array_indices = dict()
         self.arrays_to_bin = list()
         self.arrays_to_bin[:] = arrays_to_bin
         
-        self.hierarchy_list = list()
+        self.cells_dict = dict()
         
-        self.coord_x = coord_x
-        self.coord_y = coord_y
-        self.coord_z = coord_z
+        self.coord_x = 'x'
+        self.coord_y = 'y'
+        self.coord_z = 'z'
 
         self.jump_tolerance = 1
-        self.cell_sizes = DoubleArray(0)
+        self.cell_size = 0
         
         self.is_dirty = True
-
-        # create the root cell.
-        self.root_cell = RootCell(cell_manager=self)
 
         self.initialized = False
 
         if initialize == True:
             self.initialize()
 
-    def set_jump_tolerance(self, int jump_tolerance):
-        """
-        Sets the jump tolerance value of the cells.
-        """
+    cpdef set_jump_tolerance(self, int jump_tolerance):
+        """Sets the jump tolerance value of the cells."""
+        cdef int i
+        cdef Cell cell
         self.jump_tolerance = jump_tolerance
 
-        if len(self.hierarchy_list) == 0:
-            logger.debug('Hierarchy list empty')
+        if len(self.cells_dict) == 0:
+            logger.debug('Cells dict empty')
             return
 
-        leaf_dict = self.hierarchy_list[0]
-        num_leaves = len(leaf_dict)
-        leaf_list = leaf_dict.values()
+        num_cells = len(self.cells_dict)
+        cdef list cells_list = self.cells_dict.values()
         
-        for i from 0 <= i < num_leaves:
-            leaf_cell = leaf_list[i]
-            leaf_cell.jump_tolerance = jump_tolerance
+        for i in range(num_cells):
+            cell = cells_list[i]
+            cell.jump_tolerance = jump_tolerance
 
     cpdef int update(self) except -1:
-        """
-        Update the cell manager.
-        """
+        """Update the cell manager if particles have changed (is_dirty)"""
         cdef int i, num_arrays
         cdef ParticleArray parray
-                
+        
         if self.is_dirty:
 
             # update the cells.
-            self.root_cell.update(None)
+            self.cells_update()
         
             # delete empty cells if any.
-            self.root_cell.delete_empty_cells()
-
-            # update the cell hierarchy_list.
-            self.update_cell_hierarchy_list()
+            self.delete_empty_cells()
 
             # reset the dirty bit of all particle arrays.
             num_arrays = len(self.arrays_to_bin)
@@ -1364,10 +596,59 @@ cdef class CellManager:
             self.is_dirty = False
 
         return 0
+    
+    
+    cpdef int cells_update(self) except -1:
+        """Update particle information.
+        
+        **Algorithm**::
+        
+             All escaping particles (in newly created cells) are got from 
+             all the cells
+        
+             For all new cells returned, if some already exist, the data is
+             merged with them.
+        
+             If a newly created cell does not exists, it is added.
+        
+        **Notes**
+            
+            Called from update()
+        
+        """
+        cdef int i
+        cdef int num_cells = len(self.cells_dict)
+        cdef dict collected_data
+        cdef Cell smaller_cell, smaller_cell_1
+        cdef list cell_list
+        cdef list smaller_cell_list = self.cells_dict.values()
 
+        collected_data = dict()
+        
+        # collect all escaped particles from cells.
+        for i in range(num_cells):
+            smaller_cell = smaller_cell_list[i]
+            smaller_cell.update(collected_data)
+
+        cell_list = collected_data.values()
+        num_cells = len(cell_list)
+
+        for i in range(num_cells):
+            smaller_cell = cell_list[i]
+            
+            smaller_cell_1 = self.cells_dict.get(smaller_cell.id)
+            if smaller_cell_1 is None:
+                # meaning there does not exist any cell for the
+                # region occupied by smaller_cell, so we just
+                # add 'smaller_cell' to the cell list
+                self.cells_dict[smaller_cell.id.copy()] = smaller_cell
+            else:
+                smaller_cell_1.add_particles(smaller_cell)
+
+        return 0
+    
     cpdef add_array_to_bin(self, ParticleArray parr):
-        """
-        """
+        """add arrays to the CellManager (before initialization)"""
         if self.initialized == True:
             msg = 'Cannot add array to bin\n'
             msg +='cell manager already initialized'
@@ -1380,18 +661,18 @@ cdef class CellManager:
                     logger.warn('particle array (%s) name not set'%(parr))
         
     cpdef int update_status(self):
-        """
-        Updates the is_dirty flag to indicate is an update is required.
+        """Updates the is_dirty flag to indicate is an update is required.
 
         Any module that may modify the particle data, should call the cell
-        managers update_status function.
+        managers update_status function. The particle array's is_dirty
+        flag is checked to see if is_dirty flag is to be set
         """
         cdef int i,  num_arrays
         cdef ParticleArray parray
         
         num_arrays = len(self.arrays_to_bin)
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             parray = self.arrays_to_bin[i]
             if parray.is_dirty:
                 self.is_dirty = True
@@ -1400,9 +681,7 @@ cdef class CellManager:
         return 0
 
     def set_dirty(self, bint value):
-        """
-        Sets/Resets the dirty bit.
-        """
+        """Sets/Resets the dirty flag."""
         self.is_dirty = value
 
     cpdef initialize(self):
@@ -1413,23 +692,11 @@ cdef class CellManager:
         
          clear current data
          
-         find the cell sizes of each level.
-         
-         make a hierarchy, with each level containing one cell of that
-         heirarchy.
-
-         call update on the root cell.
+         rebuild the cells by calling _build_cell() and update()
 
     	**Notes**
         
          - previous data will be cleared.
-
-    	**Issues**
-         
-         - FIXME: the updation of the hierarchy list could be done along with the 
-           cells update functions, instead of the
-           update_cell_manager_hierarchy_list function.
-           
     	"""
 
         if self.initialized == True:
@@ -1442,17 +709,14 @@ cdef class CellManager:
         # setup some data structures.
         self._rebuild_array_indices()
 
-        # setup the hierarhy list
-        self._setup_hierarchy_list()
+        # setup the cells dict
+        self._setup_cells_dict()
         
-        self.root_cell.level = self.num_levels
-
         # recompute cell sizes.
-        self.compute_cell_sizes(self.min_cell_size, self.max_cell_size,
-                                self.num_levels, self.cell_sizes)
+        self.compute_cell_size(self.min_cell_size, self.max_cell_size)
         
-        # build a base hierarchy.
-        self._build_base_hierarchy()
+        # build cell.
+        self._build_cell()
 
         # update
         self.update()
@@ -1460,156 +724,73 @@ cdef class CellManager:
         # now reset the jump tolerance back to 1
         # we do not want particles to jump across
         # multiple cells.
-        self._reset_jump_tolerance()        
+        self._reset_jump_tolerance()
 
         self.initialized = True
 
     cpdef clear(self):
-        """
-        Clears all information in the cell manager.
-        """
-        cdef int i
+        """Clears all information in the cell manager."""
+        # clear the cells dict.
+        self.cells_dict.clear()
 
-        # clear the hierarchy dict.
-        self.hierarchy_list[:] = []
+    cpdef _setup_cells_dict(self):
+        """create a empty cells_dict dict"""
+        self.cells_dict = dict()
 
-        if self.root_cell is not None:
-            self.root_cell.clear()
-
-    cpdef _setup_hierarchy_list(self):
+    cpdef double compute_cell_size(self, double min_size, double max_size):
+        # TODO: compute size depending on some variation of 'h'
         """
-        """
-        cdef int i
+        get the cell_size
         
-        for i from 0 <= i < self.num_levels+1:
-            self.hierarchy_list.append(dict())
-
-    cpdef compute_cell_sizes(self, double min_size, double max_size, int
-                             num_levels, DoubleArray arr):
-        """
-        Get the cell sizes for each level requested.
-    
-	**Parameters**
+    	**Parameters**
         
          - min_size - smallest cell size needed.
          - max_size - largest cell size needed.
-         - num_levels - number of levels needed (including the max and min
-           levels)
-         - arr - a double array where the cell sizes will be stored.
 
         **Algorithm**::
-         
-         divide the range betweeen max and min cell sizes into (num_level-2)
-         equal parts.
-
-    	**Notes**
         
-         - arr[0] will have the min cell size.
-         - arr[num_levels-1] will have the max cell size.
+            currently the min_size is choosen as the cell_size
+        """
+        # TODO: implement
         
-	**Helper Functions**
+        self.cell_size = min_size
+        return self.cell_size
 
-    	**Issues**
-
-        """
-        cdef double delta
-        cdef int i
-
-        if num_levels == 1:
-            arr.resize(1)
-            arr.set(0, min_size)
-            self.cell_size_step = 0
-        elif num_levels == 2:
-            arr.resize(2)
-            arr.set(0, min_size)
-            arr.set(1, max_size)
-            self.cell_size_step = max_size-min_size
-        else:
-            delta = (max_size-min_size)/<double>(num_levels-1.)
-            self.cell_size_step = delta
-            arr.resize(num_levels)
-            arr.set(0, min_size)
-            arr.set(num_levels-1, max_size)
-            
-            for i from 1 <= i < num_levels-1:
-                arr.set(i, min_size + i*delta)
-
-    cpdef _build_base_hierarchy(self):
-        """
-        Create a hierarchy of cells containing one cell from each level in the
-        hierarchy.
-    
+    cpdef _build_cell(self):
+        """Create a cell containing all the particles.
+        
         **Algorithm**::
         
-         create a root cell
-         
-         Starting from the origin, and the highest level(one below the root)
-         create cells of decreasing sizes.
-         The leaf cell should be created with a jump_tolerance of infinity.
-         
-    	**Notes**
-
-	**Helper Functions**
-
-    	**Issues**
-
+             A single cell at origin is created with all the particles and
+             a jump_tolerance of infinity.
     	"""
         cdef int i, num_arrays, num_particles
-        cdef RootCell root_cell = self.root_cell
-        cdef list cell_list = []
         cdef ParticleArray parry
         cdef numpy.ndarray index_arr_source
         cdef LongArray index_arr
-        cdef NonLeafCell inter_cell
-        cdef LeafCell leaf_cell
-        cdef double leaf_size = self.cell_sizes.get(0)
+        cdef Cell cell
  
         # create a leaf cell with all particles.
-        leaf_cell = LeafCell(id=IntPoint(0, 0, 0), cell_manager=self,
-                             cell_size=leaf_size, level=0,
+        cell = Cell(id=IntPoint(0, 0, 0), cell_manager=self,
+                             cell_size=self.cell_size,
                              jump_tolerance=INT_MAX)
-        num_arrays = len(leaf_cell.arrays_to_bin)
+        num_arrays = len(cell.arrays_to_bin)
         # now add all particles of all arrays to this cell.
         for i from 0 <= i < num_arrays:
-            parray = leaf_cell.arrays_to_bin[i]
+            parray = cell.arrays_to_bin[i]
             num_particles = parray.get_number_of_particles()
 
             index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
-            index_arr = leaf_cell.index_lists[i]
+            index_arr = cell.index_lists[i]
             index_arr.resize(num_particles)
             index_arr.set_data(index_arr_source)
-       
-        cell_list.append(leaf_cell)
-        # for each intermediate level in the hierarchy create a NonLeafCell
-        for i from 1 <= i < self.num_levels:
-            inter_cell = NonLeafCell(IntPoint(0, 0, 0), self,
-                                     self.cell_sizes.get(i), i)
-            # add the previous level cell to this cell
-            inter_cell.cell_dict[IntPoint(0, 0, 0)] = cell_list[i-1]
-            cell_list.append(inter_cell)
-
-        # now add the top level cell to the roots cell list
-        root_cell.clear()
-        root_cell.cell_dict[IntPoint(0, 0, 0)] = cell_list[self.num_levels-1]
         
-        # build the hierarchy list also
-        self.update_cell_hierarchy_list()
+        # now add a cell at the origin (contains all the particles)
+        self.cells_dict.clear()
+        self.cells_dict[IntPoint(0, 0, 0)] = cell
         
-    cpdef update_cell_hierarchy_list(self):
-        """
-        Update the lists containing references to cells from each 
-        level in the hierarchy.
-        """
-        
-        # clear the current data
-        cdef int i
-        cdef dict d
-
-        for i from 0 <= i < self.num_levels:
-            d = self.hierarchy_list[i]
-            d.clear()
-
-        self.root_cell.update_cell_manager_hierarchy_list()
+        # build the cells_dict also
+        #self.update_cells_dict()
         
     cpdef _rebuild_array_indices(self):
         """
@@ -1625,70 +806,52 @@ cdef class CellManager:
             parr  = self.arrays_to_bin[i]
             self.array_indices[parr.name] = i
 
-    cdef int get_potential_cells(self, Point pnt, double radius, list cell_list,
-                                 bint single_layer=True) except -1:
+    cdef int get_potential_cells(self, Point pnt, double radius,
+                                 list cell_list) except -1:
         """
         Gets cell that will potentially contain neighbors the the given point.
     
-	**Parameters**
+    	**Parameters**
          
          - pnt - the point whose neighbors are to be found.
          - radius - the radius within which neighbors are to be found.
          - cell_list - output parameter, where potential cells are appended.
-         - single_layer - indicates if exactly one layer around the cell
-           containging 'pnt' should be returned.
 
         **Algorithm**::
         
-         level <- find level in hierarchy to search for cells, this depends on
-         the interaction 'radius'
-         
-         if single_layer is False:
-             level <- level - 1
-         
          cell_id <- get cell containing point.
-
-         if single_layer is True
-             _get_one_layer_of_cells()
-         else
-             _get_cells_within_radius()
-             
-    	**Notes**
-
-	**Helper Functions**
         
-         - _get_one_layer_of_cells
-         - _get_cells_within_radius
-
-    	**Issues**
-
     	"""
-        cdef int level
-        
-        level = find_hierarchy_level_for_radius(radius, self.min_cell_size,
-                                                self.max_cell_size,
-                                                self.cell_size_step,
-                                                self.num_levels)
 
-        if single_layer == False:
-            if level > 0:
-                level = level - 1
-            self._get_cells_within_radius(pnt, radius, level, cell_list)
-        else:
-            self._get_one_layer_of_cells(pnt, radius, level, cell_list)
+        cdef IntPoint cell_id = IntPoint()
+        cdef IntPoint id
+        cdef list neighbor_list = list()
+        cdef int i
+
+        find_cell_id(self.origin, pnt, self.cell_size, cell_id)
+
+        # construct ids of all neighbors around cell_id, this
+        # will include the cell also.
+        construct_immediate_neighbor_list(cell_id, neighbor_list,
+                                          True, <int>ceil(radius/self.cell_size))
+
+        for i in range(len(neighbor_list)):
+            id = neighbor_list[i]
+            cell = self.cells_dict.get(id)
+            if cell is not None:
+                cell_list.append(cell)
         
         return 0
 
-    cdef int _get_cells_within_radius(self, Point pnt, double radius, int level, list
-                                      cell_list) except -1:
+    cdef int _get_cells_within_radius(self, Point pnt, double radius,
+                                        list cell_list) except -1:
         """
         Finds all cells within the given radius of pnt.
 
-	**Parameters**
+    	**Parameters**
          
          - pnt - point around which cells are to be searched for.
          - radius - search radius
-         - level - level in the hierarchy to search for cells.
          - cell_list - output parameter to add the found cells to.
 
         **Algorithm**::
@@ -1702,7 +865,7 @@ cdef class CellManager:
 
     	**Notes**
 
-	**Helper Functions**
+    	**Helper Functions**
 
     	**Issues**
 
@@ -1710,7 +873,6 @@ cdef class CellManager:
         cdef int max_x, min_x, i
         cdef int max_y, min_y, j
         cdef int max_z, min_z, k
-        cdef double level_size
 
         cdef IntPoint max_cell = IntPoint()
         cdef IntPoint min_cell = IntPoint()
@@ -1720,39 +882,21 @@ cdef class CellManager:
         cdef IntPoint curr_id = IntPoint()
 
         cdef Cell cell
-        cdef dict current_level
-
-        if level == self.num_levels:
-            cell_list.append(self.root_cell)
-            return 0
-
-        # get the current cells list and size.
-        level_size = self.cell_sizes.get(level)
-        current_level = self.hierarchy_list[level]
 
         # find the cell within which this point is located.
-        find_cell_id(self.origin, pnt, level_size, curr_id)
-
-        # check if the search sphere lies completely within 
-        # current cell, if yes, we just return current cell
-        # if it exists.
-#         if cell_encloses_sphere(curr_id, self.origin, level_size, pnt, radius) == True:
-#             cell = current_level.get(curr_id)
-#             if cell is not None:
-#                 cell_list.append(cell)
-#                 return 0
+        find_cell_id(self.origin, pnt, self.cell_size, curr_id)
 
         tmp_pt.x = pnt.x - radius
         tmp_pt.y = pnt.y - radius
         tmp_pt.z = pnt.z - radius
 
-        find_cell_id(self.origin, tmp_pt, level_size, min_cell)
+        find_cell_id(self.origin, tmp_pt, self.cell_size, min_cell)
 
         tmp_pt.x = pnt.x + radius
         tmp_pt.y = pnt.y + radius
         tmp_pt.z = pnt.z + radius
 
-        find_cell_id(self.origin, tmp_pt, level_size, max_cell)
+        find_cell_id(self.origin, tmp_pt, self.cell_size, max_cell)
 
         diff = max_cell.diff(min_cell)
         diff.x += 1
@@ -1766,66 +910,43 @@ cdef class CellManager:
                     id.y = min_cell.y + j
                     id.z = min_cell.z + k
 
-                    cell = current_level.get(id)
+                    cell = self.cells_dict.get(id)
                     if cell is not None:
                         cell_list.append(cell)        
         return 0
 
-    cdef int _get_one_layer_of_cells(self, Point pnt, double radius, int level, list
-                                     cell_list) except -1:
-        """
-        """
-        cdef IntPoint cell_id = IntPoint()
-        cdef IntPoint id
-        cdef double level_size
-        cdef list neighbor_list = list()
-        cdef int i
-        cdef dict current_level
-
-        if level == self.num_levels:
-            cell_list.append(self.root_cell)
-            return 0
-
-        current_level = self.hierarchy_list[level]
-
-        level_size = self.cell_sizes.get(level)
-        
-        find_cell_id(self.origin, pnt, level_size, cell_id)
-
-        # construct ids of all neighbors around cell_id, this
-        # will include the cell also.
-        construct_immediate_neighbor_list(cell_id, neighbor_list)
-
-        for i from 0 <= i < 27:
-            id = neighbor_list[i]
-            cell = current_level.get(id)
-            if cell is not None:
-                cell_list.append(cell)
-        
-        return 0    
-
     cdef void _reset_jump_tolerance(self):
-        """
-        Resets the jump tolerance of all leaf cells to 1.
-        """
-        cdef dict leaf_dict
-        cdef list leaf_list
-        cdef LeafCell leaf_cell
-        cdef int i, num_leaves
+        """Resets the jump tolerance of all cells to 1."""
+        cdef list cells_list
+        cdef Cell cell
+        cdef int i, num_cells
 
         self.jump_tolerance = 1
 
-        if len(self.hierarchy_list) == 0:
+        if len(self.cells_dict) == 0:
             return
 
-        leaf_dict = self.hierarchy_list[0]
-        num_leaves = len(leaf_dict)
-        leaf_list = leaf_dict.values()
+        num_cells = len(self.cells_dict)
+        cells_list = self.cells_dict.values()
         
-        for i from 0 <= i < num_leaves:
-            leaf_cell = leaf_list[i]
-            leaf_cell.jump_tolerance = 1       
- 
+        for i in range(len(self.cells_dict)):
+            cell = cells_list[i]
+            cell.jump_tolerance = 1       
+    
+    cpdef int delete_empty_cells(self) except -1:
+        '''delete empty cells'''
+        cdef int num_cells = len(self.cells_dict)
+        cdef int i
+        cdef Cell cell
+        cdef list cell_list = self.cells_dict.values()
+
+        for i in range(num_cells):
+            cell = cell_list[i]
+            if cell.get_number_of_particles() == 0:
+                self.cells_dict.pop(cell.id)
+
+        return 0
+    
     # python functions for each corresponding cython function for testing purposes.
     def py_update(self):
         return self.update()
@@ -1839,25 +960,27 @@ cdef class CellManager:
     def py_clear(self):
         self.clear()
 
-    def py_compute_cell_sizes(self, double min_size, double max_size, int num_levels, DoubleArray arr):
-        self.compute_cell_sizes(min_size, max_size, num_levels, arr)
+    def py_compute_cell_size(self, double min_size, double max_size):
+        return self.compute_cell_size(min_size, max_size)
 
-    def py_build_base_hierarchy(self):
-        self._build_base_hierarchy()
+    def py_build_cell(self):
+        self._build_cell()
 
     def py_rebuild_array_indices(self):
         self._rebuild_array_indices()
 
-    def py_setup_hierarchy_list(self):
-        self._setup_hierarchy_list()
+    def py_setup_cells_dict(self):
+        self._setup_cells_dict()
 
-    def py_get_potential_cells(self, Point pnt, double radius, list cell_list,
-                               bint single_layer=True):
-        self.get_potential_cells(pnt, radius, cell_list, single_layer)
+    def py_get_potential_cells(self, Point pnt, double radius, list cell_list):
+        self.get_potential_cells(pnt, radius, cell_list)
 
     def py_reset_jump_tolerance(self):
         self._reset_jump_tolerance()
 
-    def py_update_cell_hierarchy_list(self):
-        self.update_cell_hierarchy_list()
+    def py_update_cells_dict(self):
+        self.update_cells_dict()
     
+    def py_get_number_of_particles(self):
+        return self.get_number_of_particles()
+

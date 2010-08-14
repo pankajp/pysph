@@ -19,7 +19,7 @@ def generate_sample_dataset_2_nnps_test():
     """
     dest = generate_sample_dataset_2()[0]
     cell_manager = CellManager(arrays_to_bin=[dest], min_cell_size=1.,
-                               max_cell_size=2.0, num_levels=2)
+                               max_cell_size=2.0)
     return dest, cell_manager
 
 
@@ -98,7 +98,7 @@ class TestCellCache(unittest.TestCase):
             pnt.z = z[i]
 
             lst[:] = []
-            cm.py_get_potential_cells(pnt, 1.0, lst, True)
+            cm.py_get_potential_cells(pnt, 1.0, lst)
             self.assertEqual(len(cache_list[i]), len(lst))
             self.assertEqual(cache_list[i], lst)
 
@@ -118,7 +118,7 @@ class TestCellCache(unittest.TestCase):
             pnt.z = z[i]
 
             lst[:] = []
-            cm.py_get_potential_cells(pnt, 2.0, lst, False)
+            cm.py_get_potential_cells(pnt, 2.0, lst)
             
             self.assertEqual(len(cache_list[i]), len(lst))
             self.assertEqual(cache_list[i], lst)
@@ -137,7 +137,7 @@ class TestCellCache(unittest.TestCase):
             pnt.z = z[i]
             
             lst[:] = []
-            cm.py_get_potential_cells(pnt, 5.0, lst, False)
+            cm.py_get_potential_cells(pnt, 5.0, lst)
             
             self.assertEqual(len(cache_list[i]), len(lst))
             self.assertEqual(cache_list[i], lst)
@@ -161,7 +161,7 @@ class TestCellCache(unittest.TestCase):
             lst1[:] = []
             lst2[:] = []
             
-            cm.py_get_potential_cells(pnt, 1.0, lst1, True)
+            cm.py_get_potential_cells(pnt, 1.0, lst1)
             cell_cache.py_get_potential_cells(i, lst2)
 
             self.assertEqual(len(lst1), len(lst2))
@@ -209,7 +209,7 @@ class TestCellCacheManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         ccm = CellCacheManager(cm)
         ccm.py_add_cache_entry(parrs[0], 1.0)
@@ -229,7 +229,7 @@ class TestCellCacheManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         ccm = CellCacheManager(cm)
         
@@ -281,7 +281,7 @@ class TestCellCacheManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         ccm = CellCacheManager(cm)
         ccm.py_add_cache_entry(parrs[0], 1.0)
@@ -315,7 +315,7 @@ class TestNbrParticleLocatorBase(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         nbrl1 = NbrParticleLocatorBase(parrs[0], cm)
         self.assertEqual(nbrl1.source, parrs[0])
@@ -337,7 +337,7 @@ class TestNbrParticleLocatorBase(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         nbrl1 = NbrParticleLocatorBase(parrs[0], cm)
 
@@ -435,7 +435,7 @@ class TestFixedDestinationNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         nbrl = FixedDestinationNbrParticleLocator(parrs[0], parrs[1], cm, 'h') 
         
@@ -456,7 +456,7 @@ class TestFixedDestinationNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         nbrl = FixedDestinationNbrParticleLocator(parrs[0], parrs[1], cm, 'h') 
         
@@ -476,7 +476,7 @@ class TestConstHFixedDestNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         nbrl = ConstHFixedDestNbrParticleLocator(parrs[0], parrs[1], cm, 'h')  
         self.assertEqual(nbrl.source, parrs[0])
@@ -499,7 +499,7 @@ class TestConstHFixedDestNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         nbrl = ConstHFixedDestNbrParticleLocator(parrs[0], parrs[1], cm, 'h')
 
@@ -539,7 +539,7 @@ class TestVarHFixedDestNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         nbrl = VarHFixedDestNbrParticleLocator(parrs[0], parrs[1], cm, 'h')  
         self.assertEqual(nbrl.source, parrs[0])
@@ -559,7 +559,7 @@ class TestVarHFixedDestNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         nbrl = VarHFixedDestNbrParticleLocator(parrs[0], parrs[1], cm, 'h')  
 
@@ -591,7 +591,7 @@ class TestCachedNbrParticleLocator(unittest.TestCase):
 
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0, False, 'h')
         
@@ -608,7 +608,7 @@ class TestCachedNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0, False)
         nbrl = CachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
@@ -648,7 +648,7 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0)
         
@@ -668,7 +668,7 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0)
         nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
@@ -696,7 +696,7 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0)
         
@@ -729,7 +729,7 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         
         cell_cache = CellCache(cm, parrs[1], 1.0)
         
@@ -802,7 +802,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
 
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         ccm = CellCacheManager(cm)
 
         m = CachedNbrParticleLocatorManager(cm, ccm, True, variable_h=False, h='h')
@@ -818,7 +818,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         ccm = CellCacheManager(cm)
 
         m = CachedNbrParticleLocatorManager(cm, ccm, True)
@@ -844,7 +844,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         # now test for variable_h case.
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         ccm = CellCacheManager(cm, variable_h=True)
 
@@ -867,7 +867,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         ccm = CellCacheManager(cm)
         
         m = CachedNbrParticleLocatorManager(cm, ccm, True)
@@ -906,7 +906,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         ccm = CellCacheManager(cm)
         
         m = CachedNbrParticleLocatorManager(cm, ccm, True)
@@ -932,7 +932,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
         ccm = CellCacheManager(cm)
         
         m = CachedNbrParticleLocatorManager(cm, ccm, True)
@@ -1003,7 +1003,7 @@ class TestNNPSManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
         nm = NNPSManager(cell_manager=cm, cell_caching=False,
@@ -1068,7 +1068,7 @@ class TestNNPSManager(unittest.TestCase):
         # now test for the variable h case ====================================
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
         nm = NNPSManager(cell_manager=cm, cell_caching=False,
@@ -1137,7 +1137,7 @@ class TestNNPSManager(unittest.TestCase):
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0, num_levels=1)
+                         max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
         nm = NNPSManager(cell_manager=cm, cell_caching=True,
