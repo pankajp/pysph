@@ -77,7 +77,7 @@ class LoadBalancerComponent(UserDefinedComponent):
         t1 = time.time()
 
         self.load_balancer.load_balance()
-        self.cell_manager.root_cell.exchange_neighbor_particles()
+        self.cell_manager.exchange_neighbor_particles()
 
         t2 = time.time()
         

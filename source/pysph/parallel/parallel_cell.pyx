@@ -7,6 +7,8 @@ import copy
 # numpy imports
 import numpy
 
+from pysph.base.cell import INT_INF
+
 class DummyLogger:
     def debug(*args, **kwargs):
         pass
@@ -30,7 +32,7 @@ from pysph.base.particle_tags cimport get_dummy_tag
 from pysph.base.particle_tags import *
 from pysph.base import cell
 from pysph.base.cell cimport construct_immediate_neighbor_list, find_cell_id
-from pysph.base.cell cimport CellManager, RootCell, Cell, LeafCell, NonLeafCell
+from pysph.base.cell cimport CellManager, Cell
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport LongArray, DoubleArray
 
@@ -51,10 +53,6 @@ TAG_REMOTE_CELL_REQUEST = 5
 TAG_REMOTE_CELL_REPLY = 6
 TAG_REMOTE_DATA_REQUEST = 7
 TAG_REMOTE_DATA_REPLY = 8
-
-# TODO
-# 1. The parallel cell manager by default uses exactly two levels in the cell
-# hierarchy. This needs to be made configurable.
 
 
 ################################################################################
@@ -136,7 +134,7 @@ cdef class ProcessorMap(Base):
         # we just set the bin size of the proc_map to the value given
         # the cell manager may later on setup the cell size.
         self.bin_size = bin_size
-
+    
     def __reduce__(self):
         """
         Implemented to facilitate pickling of extension types.
@@ -174,16 +172,11 @@ cdef class ProcessorMap(Base):
     def update(self):
         """
         Update the processor map with current cells in the cell manager.
-
-        The cells used are the ones in the 2nd last level in the
-        hierarchy_list. This is the level at which cells are required to be
-        communicated for a parallel simulation.
-        
         """
         cdef ParallelCellManager cm = self.cell_manager
         cdef int pid = self.pid
         cdef dict pm = {}
-        cdef dict cells = self.cell_manager.root_cell.cell_dict
+        cdef dict cells = self.cell_manager.cells_dict
         cdef Point centroid = Point()
         cdef IntPoint id = IntPoint()
         cdef Cell cel
@@ -280,7 +273,7 @@ cdef class ParallelCellInfo(Base):
     """
     def __init__(self, cell=None):
         self.cell = cell
-        self.root_cell = self.cell.cell_manager.root_cell
+        self.cell_manager = self.cell.cell_manager
         self.neighbor_cell_pids = {}
         self.remote_pid_cell_count = {}
         self.num_remote_neighbors = 0
@@ -331,14 +324,14 @@ cdef class ParallelCellInfo(Base):
         """
         Updates neighbor information using just local data.
 
-        This uses the root_cell's cell_dict to search for neighbors.
+        This uses the cell_manager's cells_dict to search for neighbors.
         """
         cdef IntPoint cid
         cdef dict nbr_cell_pids = {}
         nbr_cell_pids.update(self.neighbor_cell_pids)
 
         for cid in nbr_cell_pids:
-            c = self.root_cell.cell_dict.get(cid)
+            c = self.cell_manager.cells_dict.get(cid)
             if c is not None:
                 self.neighbor_cell_pids[cid.copy()] = c.pid        
     
@@ -369,119 +362,109 @@ cdef class ParallelCellInfo(Base):
         raise ValueError, msg
         
 ################################################################################
-# `ParallelLeafCell` class.
+# `ParallelCell` class.
 ################################################################################
-cdef class ParallelLeafCell(LeafCell):
+cdef class ParallelCell(Cell):
     """
-    Leaf cell to be used in parallel computations.
+    Cell to be used in parallel computations.
     """
     def __init__(self, IntPoint id, ParallelCellManager cell_manager=None,
-                 double cell_size=0.1, int level=0, int jump_tolerance=1, int
-                 pid=-1): 
-        cell.LeafCell.__init__(self, id=id, cell_manager=cell_manager,
-                               cell_size=cell_size, level=level,
+                 double cell_size=0.1, int jump_tolerance=1, int pid=-1): 
+        cell.Cell.__init__(self, id=id, cell_manager=cell_manager,
+                               cell_size=cell_size,
                                jump_tolerance=jump_tolerance)
 
         self.pid = pid
         self.parallel_cell_info = ParallelCellInfo(cell=self)
 
     cpdef Cell get_new_sibling(self, IntPoint id):
-        """
-        """
-        cdef ParallelLeafCell cell = \
-            ParallelLeafCell(id=id,
-                             cell_manager=self.cell_manager, 
-                             cell_size=self.cell_size,
-                             level=self.level, 
-                             jump_tolerance=self.jump_tolerance,
-                             pid=self.pid)
+        cdef ParallelCell cell = ParallelCell(id=id,
+                                         cell_manager=self.cell_manager, 
+                                         cell_size=self.cell_size,
+                                         jump_tolerance=self.jump_tolerance,
+                                         pid=self.pid)
         return cell
-
+    
+    def __str__(self):
+        return 'ParallelCell(pid=%d,id=%s,size=%g,np=%d)' %(self.pid,
+                self.id, self.cell_size, self.get_number_of_particles())
+    
+    def __repr__(self):
+        return str(self)
+    
 ################################################################################
-# `ParallelLeafCellRemoteCopy` class.
+# `ParallelCellRemoteCopy` class.
 ################################################################################
-cdef class ParallelLeafCellRemoteCopy(ParallelLeafCell):
+cdef class ParallelCellRemoteCopy(ParallelCell):
     """
-    Leaf cells holding information from another processor.
+    Cells holding information from another processor.
     """
     def __init__(self, id, cell_manager=None,
-                 cell_size=0.1, level=0, jump_tolerance=1, pid=-1):
-        ParallelLeafCell.__init__(self, id=id, cell_manager=cell_manager,
-                                  cell_size=cell_size, level=level,
+                 cell_size=0.1, jump_tolerance=1, pid=-1):
+        ParallelCell.__init__(self, id=id, cell_manager=cell_manager,
+                                  cell_size=cell_size,
                                   jump_tolerance=jump_tolerance, pid=pid)
         
         self.particle_start_indices = []
         self.particle_end_indices = []
         self.num_particles = 0
-################################################################################
-# `ParallelNonLeafCell` class.
-################################################################################
-cdef class ParallelNonLeafCell(NonLeafCell):
-    """
-    NonLeafCell to be used in parallel computations.
-    """
-    def __init__(self, IntPoint id, ParallelCellManager cell_manager=None,
-                 double cell_size=0.1, int level=1,
-                 int pid=-1):
-        cell.NonLeafCell.__init__(self, id=id, cell_manager=cell_manager,
-                                  cell_size=cell_size, level=level)
-        self.pid = pid
-        self.parallel_cell_info = ParallelCellInfo(cell=self)
+    
+    def __str__(self):
+        return 'ParallelCellRemoteCopy(pid=%d,id=%s,size=%g,np=%d)' %(self.pid,
+                self.id, self.cell_size, self.get_number_of_particles())
+    
+    def __repr__(self):
+        return str(self)
+    
 
-    cpdef Cell get_new_sibling(self, IntPoint id):
+################################################################################
+# `ParallelCellManager` class.
+################################################################################
+cdef class ParallelCellManager(CellManager):
+    """
+    Cell manager for parallel invocations.
+    """
+    def __init__(self, arrays_to_bin=[], min_cell_size=0.1,
+                 max_cell_size=0.5, origin=Point(0, 0, 0),
+                 initialize=True,
+                 parallel_controller=None,
+                 max_radius_scale=2.0, dimension=3,
+                 load_balancing=True,
+                 solver=None,
+                 *args, **kwargs):
         """
+        Constructor.
         """
-        cdef ParallelNonLeafCell cell = ParallelNonLeafCell(
-            id=id, cell_manager=self.cell_manager,
-            cell_size=self.cell_size, level=self.level,
-            pid=self.pid)
-        return cell
+        cell.CellManager.__init__(self, arrays_to_bin=arrays_to_bin,
+                                  min_cell_size=min_cell_size,
+                                  max_cell_size=max_cell_size,
+                                  origin=origin,
+                                  initialize=False)
 
-    cpdef Cell get_new_child(self, IntPoint id):
-        """
-        """
-        cdef int num_levels = self.cell_manager.num_levels
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
-        if (num_levels - self.level) == num_levels-1:
-            return ParallelLeafCell(
-                id=id, cell_manager=self.cell_manager,
-                cell_size=cell_sizes.get(self.level-1),
-                level=self.level-1,
-                jump_tolerance=self.cell_manager.jump_tolerance
-                ,pid=self.pid) 
+        self.solver=solver
+        self.dimension = dimension
+        self.glb_bounds_min = [0, 0, 0]
+        self.glb_bounds_max = [0, 0, 0]
+        self.glb_min_h = 0
+        self.glb_max_h = 0
+        self.max_radius_scale = max_radius_scale
+        self.pid = 0
+
+        # set the parallel controller.
+        if parallel_controller is None:
+            self.parallel_controller = ParallelController(cell_manager=self)
         else:
-            return ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
-                                       cell_size=cell_sizes.get(self.level-1),
-                                       level=self.level-1, pid=self.pid)
+            self.parallel_controller = parallel_controller
 
-################################################################################
-# `ParallelNonLeafCellRemoteCopy` class.
-################################################################################
-cdef class ParallelNonLeafCellRemoteCopy(ParallelNonLeafCell):
-    """
-    NonLeafCell holding information from another processor
-    """
-    def __init__(self, id, cell_manager=None, cell_size=0.1, level=1, pid=-1):
-        ParallelNonLeafCell.__init__(self, id=id, cell_manager=cell_manager,
-                                     cell_size=cell_size, level=level, pid=pid)
-        self.particle_start_indices = []
-        self.particle_end_indices = []
-        self.num_particles = 0
-
-################################################################################
-# `ParallelRootCell` class.
-################################################################################
-cdef class ParallelRootCell(RootCell):
-    """
-    Root cell for parallel computations.
-
-    There is one ParallelRootCell per process.
-    """
-    def __init__(self, cell_manager=None, cell_size=0.1,
-                 pid=0, *args, **kwargs):
-        cell.RootCell.__init__(self, cell_manager=cell_manager,
-                               cell_size=cell_size)
-
+        self.pc = self.parallel_controller
+        self.pid = self.pc.rank
+        self.proc_map = ProcessorMap(cell_manager=self)
+        self.load_balancer = LoadBalancer(parallel_solver=self.solver, parallel_cell_manager=self)
+        self.load_balancing = load_balancing
+        
+        
+        # carried from ParallelRootCell
+        
         self.initial_redistribution_done = False
 
         # the list of remote cells that cells under this root cell are
@@ -508,53 +491,296 @@ cdef class ParallelRootCell(RootCell):
 
         # list of new cells that were added in a iteration.
         self.new_cells_added = {}
-
-        if cell_manager is None:
-            self.pid = pid
-        else:
-            self.pid = cell_manager.pid
-            self.parallel_controller = cell_manager.parallel_controller
-
-    cpdef Cell get_new_child(self, IntPoint id):
-        """
-        """
-        cdef int num_levels = self.cell_manager.num_levels
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
         
-        if num_levels == 1:
-            return ParallelLeafCell(id=id, cell_manager=self.cell_manager,
-                                    cell_size=cell_sizes.get(0),
-                                    level=0,
-                                    jump_tolerance=self.cell_manager.jump_tolerance,
-                                    pid=self.pid)
-        else:
-            return ParallelNonLeafCell(id=id, cell_manager=self.cell_manager,
-                                       cell_size=cell_sizes.get(self.level-1),
-                                       level=self.level-1,
-                                       pid=self.pid)
+        
+        if initialize is True:
+            self.initialize()
 
-    cpdef Cell get_new_child_for_copy(self, IntPoint id, int pid):
+    cpdef initialize(self):
         """
+        Initialization function for the cell manager.
+
+        **Algorithm**
+            - find the bounds of the data. - global/parallel.
+            - set the origin to be used.
+            - find the max and min cell sizes from the particle radii -
+              global/parallel.
+            - perform a proper update on the data. 
+            - May have to do a conflict resolutions at this point.
+            
         """
-        cdef int num_levels = self.cell_manager.num_levels
-        cdef DoubleArray cell_sizes = self.cell_manager.cell_sizes
+        logger.debug('%s initialize called'%(self))
+        if self.initialized == True:
+            logger.warn('Trying to initialize cell manager more than once')
+            return
 
-        if num_levels == 1:
-            return ParallelLeafCellRemoteCopy(
-                id=id,
-                cell_manager=self.cell_manager, 
-                cell_size=cell_sizes.get(0),
-                level=0,
-                jump_tolerance=self.cell_manager.jump_tolerance,
-                pid=pid)
-        else:
-            return ParallelNonLeafCellRemoteCopy(
-                id=id,
-                cell_manager=self.cell_manager,  
-                cell_size=cell_sizes.get(self.level-1),
-                level=self.level-1,
-                pid=pid)
+        pc = self.parallel_controller
+        # exchange bounds and interaction radii information.
+        self.initial_info_exchange()
 
+        # now setup the origin and cell size to use.
+        self.setup_origin()
+        self.setup_cell_size()
+
+        # setup array indices.
+        self.py_rebuild_array_indices()
+
+        # setup the cells_dict
+        self.py_setup_cells_dict()
+
+        #self.py_compute_cell_size(self.min_cell_size, self.max_cell_size)
+        
+        # setup information for the processor map.
+        self.setup_processor_map()
+
+        # build a single cell with all the particles
+        self._build_cell()
+        
+        pc = self.parallel_controller
+        logger.info('(%d) cell_size: %g'%(pc.rank,
+                                           self.cell_size))
+        self.cells_update()
+
+        self.py_reset_jump_tolerance()
+
+        self.initialized = True
+
+        # update the processor maps now.
+        self.glb_update_proc_map()
+
+    cpdef int update_status(self) except -1:
+        """
+        Sets the is_dirty to to true, We cannot decide the dirtyness of this
+        cell manager based on just the particle arrays here, as cell managers on
+        other processors could have become dirty at the same time.
+
+        We also force an update at this point. Reason being, the delayed updates
+        can cause stale neighbor information to be used before the actual update
+        happens. 
+        """
+        self.set_dirty(True)
+
+        self.cells_update()
+
+        return 0
+
+    def _build_cell(self):
+        """
+        Build a cell containing all the particles.
+        
+        This function is similar to the function in the CellManager, except that
+        the cells used are the Parallel variants.
+        """
+        cell_size = self.cell_size
+
+        # create a cell with all the particles.
+        cell = ParallelCell(id=IntPoint(0, 0, 0), cell_manager=self,
+                                     cell_size=cell_size,
+                                     jump_tolerance=INT_INF(),
+                                     pid=self.pid)
+
+        num_arrays = len(cell.arrays_to_bin)
+        # now add all particles of all arrays to this cell.
+        for i in range(num_arrays):
+            parray = cell.arrays_to_bin[i]
+            num_particles = parray.get_number_of_particles()
+            index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
+            index_arr = cell.index_lists[i]
+            index_arr.resize(num_particles)
+            index_arr.set_data(index_arr_source)
+
+        self.cells_dict.clear()
+        self.cells_dict[IntPoint(0, 0, 0)] = cell
+
+        # build the cells_dict also
+        #self.update_cell_hierarchy_list()        
+        
+    def initial_info_exchange(self):
+        """
+        Initial information exchange among processors.
+
+        The bounds and h values are exchanged amoung all the processors.
+
+        Based on the bounds and h values, the origin an cell sizes are computed.
+        """
+        data_min = {'x':0, 'y':0, 'z':0, 'h':0}
+        data_max = {'x':0, 'y':0, 'z':0, 'h':0}
+        
+        for key in data_min.keys():
+            mi, ma = self._find_min_max_of_property(key)
+            data_min[key] = mi
+            data_max[key] = ma
+
+        pc = self.parallel_controller
+        
+        glb_min, glb_max = pc.get_glb_min_max(data_min, data_max)
+
+        self.glb_bounds_min[0] = glb_min['x']
+        self.glb_bounds_min[1] = glb_min['y']
+        self.glb_bounds_min[2] = glb_min['z']
+        self.glb_bounds_max[0] = glb_max['x']
+        self.glb_bounds_max[1] = glb_max['y']
+        self.glb_bounds_max[2] = glb_max['z']
+        self.glb_min_h = glb_min['h']
+        self.glb_max_h = glb_max['h']
+
+        logger.info('(%d) bounds : %s %s'%(pc.rank, self.glb_bounds_min,
+                                           self.glb_bounds_max))
+        logger.info('(%d) min_h : %f, max_h : %f'%(pc.rank, self.glb_min_h,
+                                                   self.glb_max_h))
+    def setup_origin(self):
+        """
+        Sets up the origin from the global bounds.
+
+        Find the max bound range from x, y and z.
+        Use bounds_min - max_range as the origin.
+
+        """
+        bounds_range = [0, 0, 0]
+        bounds_range[0] = self.glb_bounds_max[0] - self.glb_bounds_min[0]
+        bounds_range[1] = self.glb_bounds_max[1] - self.glb_bounds_min[1]
+        bounds_range[2] = self.glb_bounds_max[2] - self.glb_bounds_min[2]
+        
+        max_range = max(bounds_range)
+
+        self.origin.x = self.glb_bounds_min[0] - max_range
+        self.origin.y = self.glb_bounds_min[1] - max_range
+        self.origin.z = self.glb_bounds_min[2] - max_range
+
+        pc = self.parallel_controller
+        logger.info('(%d) Origin : %s'%(pc.rank,
+                                        str(self.origin)))
+
+    def setup_cell_size(self):
+        """
+        Sets up the cell size to use from the 'h' values.
+        
+        The cell size is set to 2*self.max_radius_scale*self.glb_min_h
+        """
+        self.cell_size = 2*self.max_radius_scale*self.glb_min_h
+        logger.info('(R=%d) cell_size=%g'%(self.pc.rank, self.cell_size))
+
+    def setup_processor_map(self):
+        """
+        Setup information for the processor map.
+        """
+        proc_map = self.proc_map
+        proc_map.cell_manager = self
+        
+        proc_map.origin.x = self.origin.x
+        proc_map.origin.y = self.origin.y
+        proc_map.origin.z = self.origin.z
+
+        proc_map.pid = self.parallel_controller.rank
+        
+        # use a bin size of thrice the largest cell size
+        cell_size = self.cell_size
+        max_size = cell_size
+        proc_map.bin_size = max_size*3.0
+
+    cpdef glb_update_proc_map(self):
+        """
+        Brings the processor map up-to-date globally.
+        
+        After a call to this function, all processors, should have identical
+        processor maps.
+
+        **Algorithm**:
+        
+            - bring local data up to data.
+            - receive proc_map from children if any.
+            - merge with current p_map.
+            - send to parent if not root.
+            - receive updated proc_map from root.
+            - send updated proc_map to children.
+
+        """
+        cdef ParallelController pc = self.pc
+        cdef MPI.Comm comm = pc.comm
+        cdef int c_rank
+        cdef ProcessorMap c_proc_map, updated_proc_map
+        
+        self.proc_map.update()
+
+        # merge data from all children proc maps.
+        for c_rank in pc.children_proc_ranks:
+            c_proc_map = comm.recv(source=c_rank, 
+                                   tag=TAG_PROC_MAP_UPDATE)
+            self.proc_map.merge(c_proc_map)
+
+        # we now have partially merged data, send it to parent is not root.
+        if pc.parent_rank > -1:
+            comm.send(self.proc_map, dest=pc.parent_rank,
+                      tag=TAG_PROC_MAP_UPDATE)
+            # receive updated proc map from parent
+            updated_proc_map = comm.recv(source=pc.parent_rank,
+                                         tag=TAG_PROC_MAP_UPDATE)
+            # set our proc data with the updated data.
+            PyDict_Clear(self.proc_map.p_map)
+            PyDict_Update(self.proc_map.p_map, updated_proc_map.p_map)
+
+        # send updated data to children.
+        for c_rank in pc.children_proc_ranks:
+            comm.send(self.proc_map, dest=c_rank, 
+                      tag=TAG_PROC_MAP_UPDATE)
+
+        # setup the region neighbors.
+        self.proc_map.find_region_neighbors()
+
+    cpdef remove_remote_particles(self):
+        """
+        Remove all remote particles from the particle arrays.
+        These particles are those that have their 'local' flag set to 0.
+        
+        """
+        cdef ParticleArray parray
+        
+        for parray in self.arrays_to_bin:
+            parray.remove_flagged_particles('local', 0)
+
+    def _find_min_max_of_property(self, prop_name):
+        """
+        Find the min and max values of the property prop_name among all arrays
+        that have been binned.
+        """
+        min = 1e20
+        max = -1e20
+
+        num_particles = 0
+        
+        for arr in self.arrays_to_bin:
+            num_particles += arr.get_number_of_particles()
+            
+            if arr.get_number_of_particles() == 0:
+                continue
+
+            min_prop = numpy.min(arr.get(prop_name))
+            max_prop = numpy.max(arr.get(prop_name))
+
+            if min > min_prop:
+                min = min_prop
+            if max < max_prop:
+                max = max_prop
+
+        if num_particles == 0:
+            return 1e20, -1e20
+
+        return min, max
+
+    def update_property_bounds(self):
+        """
+        Updates the min and max values of all properties in all particle arrays
+        that are being binned by this cell manager.
+
+        Not sure if this is the correct place for such a function.
+
+        """
+        pass
+        
+    
+    
+    # carried from ParallelRootCell
+    
     cpdef find_adjacent_remote_cells(self):
         """
         Finds all cells from other processors that are adjacent to cells handled
@@ -576,7 +802,7 @@ cdef class ParallelRootCell(RootCell):
         cdef ParallelCellInfo pci
         cdef dict info
 
-        for cell in self.cell_dict.values():
+        for cell in self.cells_dict.values():
             pci = cell.parallel_cell_info
             
             for cid, pid in pci.neighbor_cell_pids.iteritems():
@@ -608,7 +834,7 @@ cdef class ParallelRootCell(RootCell):
         rpi = self.remote_particle_indices
         for pid in self.adjacent_processors:
             data = []
-            for i in range(len(self.cell_manager.arrays_to_bin)):
+            for i in range(len(self.arrays_to_bin)):
                 data.append([-1, -1])
             rpi[pid] = data
 
@@ -631,14 +857,14 @@ cdef class ParallelRootCell(RootCell):
             
         """
         cdef MPI.Comm comm = self.parallel_controller.comm
-        cdef ProcessorMap p_map = self.cell_manager.proc_map
+        cdef ProcessorMap p_map = self.proc_map
         cdef list nbr_procs = p_map.nbr_procs
         cdef IntPoint cid
         cdef int pid
         
         cdef list sorted_nbr_proces = sorted(nbr_procs)
         
-        cdef list cell_list = self.cell_dict.keys()
+        cdef list cell_list = self.cells_dict.keys()
         
         cdef dict nbr_proc_cell_list = share_data(self.pid,
                                                   sorted_nbr_proces,
@@ -662,7 +888,7 @@ cdef class ParallelRootCell(RootCell):
                             cid, pid, n_info))
         
         # update the neighbor information of all the children cells.
-        for cell in self.cell_dict.values():
+        for cell in self.cells_dict.values():
             cell.parallel_cell_info.update_neighbor_information(nbr_cell_info)
 
         # store to nbr_cell_info for later use.
@@ -672,11 +898,11 @@ cdef class ParallelRootCell(RootCell):
         # update the adjacent cell information of the root.
         self.find_adjacent_remote_cells()
 
-    cpdef int update(self, dict data) except -1:
+    cpdef int cells_update(self) except -1:
         """
         Update particle information.
         """
-        cdef ParallelCellManager cell_manager = <ParallelCellManager>self.cell_manager
+        cdef ParallelCellManager cell_manager = <ParallelCellManager>self
         # wait till all processors have reached this point.
         self.parallel_controller.comm.Barrier()
 
@@ -750,17 +976,18 @@ cdef class ParallelRootCell(RootCell):
         """
         cdef int i
         cdef int num_arrays, num_particles
-        num_arrays = len(self.cell_manager.arrays_to_bin)
+        num_arrays = len(self.arrays_to_bin)
         cdef ParticleArray parr
         cdef LongArray indices
+        cdef Cell cell
         
-        for i from 0 <= i < num_arrays:
-            self.clear_indices(i)
-
-        # we now have a skeleton tree without any particle indices.
+        for i in range(len(self.arrays_to_bin)):
+            for cell in self.cells_dict.values():
+                cell.clear_indices(i)
+        
         i = 0
         for i from 0 <= i < num_arrays:
-            parr = self.cell_manager.arrays_to_bin[i]
+            parr = self.arrays_to_bin[i]
             num_particles = parr.get_number_of_particles()
             indices = arange_long(num_particles, -1)
             self.insert_particles(i, indices)
@@ -780,7 +1007,7 @@ cdef class ParallelRootCell(RootCell):
         cdef dict collected_data = {}
         cdef IntPoint cid
 
-        for cid, smaller_cell in self.cell_dict.iteritems():
+        for cid, smaller_cell in self.cells_dict.iteritems():
             if smaller_cell.pid == self.pid:
                 (<Cell>smaller_cell).update(collected_data)
 
@@ -790,19 +1017,19 @@ cdef class ParallelRootCell(RootCell):
 
             # update the processor map once - no neighbor information is
             # available at this point.
-            self.cell_manager.glb_update_proc_map()
+            self.glb_update_proc_map()
 
-            c = self.cell_dict.values()[0]
+            c = self.cells_dict.values()[0]
             if (<Cell>c).get_number_of_particles() > 0:
                 collected_data[(<Cell>c).id.copy()] = c
             # remove it from the cell_dict
-            self.cell_dict.clear()
+            self.cells_dict.clear()
             self.initial_redistribution_done = True
             
         # we have a list of all new cells created by the smaller cells.
         for cid, smaller_cell in collected_data.iteritems():
             # check if this cell is already there in the list of children cells.
-            smaller_cell_1 = self.cell_dict.get(cid)
+            smaller_cell_1 = self.cells_dict.get(cid)
             if smaller_cell_1 is not None:
                 # check if this is a remote cell
                 if smaller_cell_1.pid != self.pid:
@@ -835,7 +1062,22 @@ cdef class ParallelRootCell(RootCell):
         logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
 
         return new_cells, remote_cells
-
+    
+    cpdef Cell get_new_cell(self, IntPoint id):
+        """get a new parallel cell"""
+        return ParallelCell(id=id, cell_manager=self,
+                                cell_size=self.cell_size,
+                                jump_tolerance=self.jump_tolerance,
+                                pid=self.pid)
+    
+    cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid):
+        """
+        """
+        return ParallelCellRemoteCopy(id=id, cell_manager=self, 
+                                      cell_size=self.cell_size,
+                                      jump_tolerance=self.jump_tolerance,
+                                      pid=pid)
+    
     cpdef create_new_particle_copies(self, dict cell_dict):
         """
         Copies all particles in cell_dict to new particle arrays - one for each
@@ -913,7 +1155,7 @@ cdef class ParallelRootCell(RootCell):
 
         """
         cdef MPI.Comm comm = self.parallel_controller.comm
-        cdef list nbr_procs = self.cell_manager.proc_map.nbr_procs
+        cdef list nbr_procs = self.proc_map.nbr_procs
         cdef int pid
         cdef IntPoint cid
         cdef ParticleArray p
@@ -1107,10 +1349,10 @@ cdef class ParallelRootCell(RootCell):
         for cid, parrays in particle_list.iteritems():
             count = 0
 
-            num_arrays = len(self.cell_manager.arrays_to_bin)
+            num_arrays = len(self.arrays_to_bin)
             for i from 0 <= i < num_arrays:
                 s_parr = parrays[i]
-                d_parr = self.cell_manager.arrays_to_bin[i]
+                d_parr = self.arrays_to_bin[i]
                 
                 # set the local property to '1'
                 s_parr.local[:] = 1
@@ -1151,11 +1393,11 @@ cdef class ParallelRootCell(RootCell):
         cdef ParticleArray d_parr, s_parr
         cdef str prop
         
-        num_arrays = len(self.cell_manager.arrays_to_bin)
+        num_arrays = len(self.arrays_to_bin)
         
         # make sure the props array is correct.
         if props is None:
-            props = [None]*len(self.cell_manager.arrays_to_bin)
+            props = [None]*len(self.arrays_to_bin)
 
         # exchange the data in the neighbor cells.
         for pid in nbr_procs:
@@ -1191,7 +1433,7 @@ cdef class ParallelRootCell(RootCell):
                         if prop not in props[i]:
                             s_parr.remove_property(prop)
                 
-                d_parr = self.cell_manager.arrays_to_bin[i]
+                d_parr = self.arrays_to_bin[i]
                 # copy only if si is not same as ei (which occurs when no
                 # particles were added for the give parray
                 if si != ei:
@@ -1256,7 +1498,7 @@ cdef class ParallelRootCell(RootCell):
         # we now have all the cells we require from the remote processors.
         # create new cells and add the particles to the particle array and the
         # cell.
-        num_arrays = len(self.cell_manager.arrays_to_bin)
+        num_arrays = len(self.arrays_to_bin)
         current_counts = LongArray(num_arrays)
 
         for pid, particle_data in remote_cell_data.iteritems():
@@ -1275,7 +1517,7 @@ cdef class ParallelRootCell(RootCell):
                 # store the start and end indices of the particles being added
                 # into this parray from this pid.
                 index_info = pid_index_info[i]
-                d_parr = self.cell_manager.arrays_to_bin[i]
+                d_parr = self.arrays_to_bin[i]
                 current_counts.data[i] = d_parr.get_number_of_particles()
                 index_info[0] = current_counts.data[i]
                 if parr.get_number_of_particles() > 0:
@@ -1295,12 +1537,12 @@ cdef class ParallelRootCell(RootCell):
             
             for cid in cell_ids:
                 # make sure this cell is not already present.
-                if self.cell_dict.has_key(cid):
+                if self.cells_dict.has_key(cid):
                     msg = 'Cell %s should not be present %d'%(cid, self.pid)
                     logger.error(msg)
                     raise SystemError, msg
 
-                c = self.get_new_child_for_copy(cid, pid)
+                c = self.get_new_cell_for_copy(cid, pid)
 
                 # add the new particle indices to the cell.
                 for j in range(num_arrays):
@@ -1322,7 +1564,7 @@ cdef class ParallelRootCell(RootCell):
                         (<Cell>c).insert_particles(j, indices)
                         
                 # insert the newly created cell into the cell_dict.
-                self.cell_dict[cid.copy()] = c
+                self.cells_dict[cid.copy()] = c
                 i += 1
 
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=None):
@@ -1366,20 +1608,20 @@ cdef class ParallelRootCell(RootCell):
         cdef LongArray pcount_temp = LongArray()
 
         # make sure the properties have been specified properly.
-        num_arrays = len(self.cell_manager.arrays_to_bin)
+        num_arrays = len(self.arrays_to_bin)
         
         if props is not None:
-            if len(props) != len(self.cell_manager.arrays_to_bin):
+            if len(props) != len(self.arrays_to_bin):
                 msg = 'Need information for each particle array'
                 logger.error(msg)
                 raise SystemError, msg
         else:
-            props = [None]*len(self.cell_manager.arrays_to_bin)
+            props = [None]*len(self.arrays_to_bin)
 
         num_cells = len(cell_list)
         
         # intialize some temp data structures.
-        for i in range(len(self.cell_manager.arrays_to_bin)):
+        for i in range(len(self.arrays_to_bin)):
             #collected_indices.append(LongArray())
             particle_counts.append(LongArray(num_cells))
 
@@ -1387,7 +1629,7 @@ cdef class ParallelRootCell(RootCell):
         # now collect all the particle indices that need to be returned.
         for i from 0 <= i < num_cells:
             cid = cell_list[i]
-            c = self.cell_dict[cid]
+            c = self.cells_dict[cid]
             
             # make sure the requested cell is local.
             if c.pid != self.pid:
@@ -1408,7 +1650,7 @@ cdef class ParallelRootCell(RootCell):
         # now extract the required particles from the local particle arrays and
         # return. 
         for i in range(num_arrays):
-            parr = self.cell_manager.arrays_to_bin[i]
+            parr = self.arrays_to_bin[i]
             parr_new = parr.extract_particles(collected_indices[i], props[i])
             parr_new.set_name(parr.name)
             parr_new.local[:] = 0
@@ -1431,389 +1673,15 @@ cdef class ParallelRootCell(RootCell):
             be asynchronously called to update the neighbor counts after say
             transfering cell to another process.
         """
-        for c in self.cell_dict.values():
+        for c in self.cells_dict.values():
             c.parallel_cell_info.compute_neighbor_counts()
 
     def update_neighbor_information_local(self):
         """
         Update the neighbor information locally.
         """
-        for c in self.cell_dict.values():
+        for c in self.cells_dict.values():
             c.parallel_cell_info.update_neighbor_information_local()
             c.parallel_cell_info.compute_neighbor_counts()            
-
-################################################################################
-# `ParallelCellManager` class.
-################################################################################
-cdef class ParallelCellManager(CellManager):
-    """
-    Cell manager for parallel invocations.
-    """
-    def __init__(self, arrays_to_bin=[], min_cell_size=0.1,
-                 max_cell_size=0.5, origin=Point(0, 0, 0),
-                 num_levels=2, initialize=True,
-                 parallel_controller=None,
-                 max_radius_scale=2.0, dimension=3,
-                 load_balancing=True,
-                 solver=None,
-                 *args, **kwargs):
-        """
-        Constructor.
-        """
-        cell.CellManager.__init__(self, arrays_to_bin=arrays_to_bin,
-                                  min_cell_size=min_cell_size,
-                                  max_cell_size=max_cell_size,
-                                  origin=origin,
-                                  num_levels=num_levels,
-                                  initialize=False)
-
-        self.solver=solver
-        self.dimension = dimension
-        self.glb_bounds_min = [0, 0, 0]
-        self.glb_bounds_max = [0, 0, 0]
-        self.glb_min_h = 0
-        self.glb_max_h = 0
-        self.max_radius_scale = max_radius_scale
-        self.pid = 0
-        self.parallel_cell_level = 0
-
-        # set the parallel controller.
-        if parallel_controller is None:
-            self.parallel_controller = ParallelController(cell_manager=self)
-        else:
-            self.parallel_controller = parallel_controller
-
-        self.pc = self.parallel_controller
-        self.pid = self.pc.rank
-        self.root_cell = ParallelRootCell(cell_manager=self)
-        self.proc_map = ProcessorMap(cell_manager=self)
-        self.load_balancer = LoadBalancer(parallel_solver=self.solver, parallel_cell_manager=self)
-        self.load_balancing = load_balancing
-                
-        if initialize is True:
-            self.initialize()
-
-    cpdef initialize(self):
-        """
-        Initialization function for the cell manager.
-
-        **Algorithm**
-            - find the bounds of the data. - global/parallel.
-            - set the origin to be used.
-            - find the max and min cell sizes from the particle radii -
-              global/parallel.
-            - perform a proper update on the data. 
-            - May have to do a conflict resolutions at this point.
-            
-        """
-        logger.debug('%s initialize called'%(self))
-        if self.initialized == True:
-            logger.warn('Trying to initialize cell manager more than once')
-            return
-
-        pc = self.parallel_controller
-        # exchange bounds and interaction radii information.
-        self.initial_info_exchange()
-
-        # now setup the origin and cell size to use.
-        self.setup_origin()
-        self.setup_cell_sizes()
-
-        # setup array indices.
-        self.py_rebuild_array_indices()
-
-        # setup the hierarchy list
-        self.py_setup_hierarchy_list()
-
-        self.root_cell.level = self.num_levels
-
-        self.py_compute_cell_sizes(self.min_cell_size, self.max_cell_size,
-                                   self.num_levels, self.cell_sizes)
-        
-        # setup the parallel cell level
-        self.parallel_cell_level = self.num_levels - 2
-
-        # setup information for the processor map.
-        self.setup_processor_map()
-
-        # buid a basic hierarchy with one cell at each level, and all
-        # particles in the leaf cell.
-        self.build_base_hierarchy()
-        
-        pc = self.parallel_controller
-        logger.info('(%d) cell sizes: %s'%(pc.rank,
-                                           self.cell_sizes.get_npy_array()))
-        logger.info('(%d) cell step: %s'%(pc.rank,
-                                           self.cell_size_step))
-        self.update()
-
-        self.py_reset_jump_tolerance()
-
-        self.initialized = True
-
-        # update the processor maps now.
-        self.glb_update_proc_map()
-
-    cpdef int update_status(self) except -1:
-        """
-        Sets the is_dirty to to true, We cannot decide the dirtyness of this
-        cell manager based on just the particle arrays here, as cell managers on
-        other processors could have become dirty at the same time.
-
-        We also force an update at this point. Reason being, the delayed updates
-        can cause stale neighbor information to be used before the actual update
-        happens. 
-        """
-        self.set_dirty(True)
-
-        self.update()
-
-        return 0
-
-    def build_base_hierarchy(self):
-        """
-        Build the initial hierachy tree.
-        
-        This function is similar to the function in the CellManager, except that
-        the cells used are the Parallel variants.
-        """
-        leaf_size = self.cell_sizes.get(0)
-        cell_list = []
-
-        # create a leaf with all the particles.
-        leaf_cell = ParallelLeafCell(id=IntPoint(0, 0, 0), cell_manager=self,
-                                     cell_size=leaf_size, level=0,
-                                     jump_tolerance=cell.INT_INF(), pid=self.pid)
-
-        num_arrays = len(leaf_cell.arrays_to_bin)
-
-        for i in range(num_arrays):
-            parray = leaf_cell.arrays_to_bin[i]
-            num_particles = parray.get_number_of_particles()
-            index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
-            index_arr = leaf_cell.index_lists[i]
-            index_arr.resize(num_particles)
-            index_arr.set_data(index_arr_source)
-
-        cell_list.append(leaf_cell)
-
-        # for each intermediate level in the hierarchy create a
-        # ParallelNonLeafCell
-        for i in range(1, self.num_levels):
-            inter_cell = ParallelNonLeafCell(id=IntPoint(0, 0, 0),
-                                             cell_manager=self,
-                                             cell_size=self.cell_sizes.get(i),
-                                             level=i, pid=self.pid)
-            # add the previous level cell to this cell.
-            inter_cell.cell_dict[IntPoint(0, 0, 0)] = cell_list[i-1]
-            cell_list.append(inter_cell)
-
-        self.root_cell.py_clear()
-        self.root_cell.cell_dict[IntPoint(0, 0, 0)] = \
-            cell_list[self.num_levels-1]
-
-        # build the hierarchy list also
-        self.update_cell_hierarchy_list()        
-        
-    def initial_info_exchange(self):
-        """
-        Initial information exchange among processors.
-
-        The bounds and h values are exchanged amoung all the processors.
-
-        Based on the bounds and h values, the origin an cell sizes are computed.
-        """
-        data_min = {'x':0, 'y':0, 'z':0, 'h':0}
-        data_max = {'x':0, 'y':0, 'z':0, 'h':0}
-        
-        for key in data_min.keys():
-            mi, ma = self._find_min_max_of_property(key)
-            data_min[key] = mi
-            data_max[key] = ma
-
-        pc = self.parallel_controller
-        
-        glb_min, glb_max = pc.get_glb_min_max(data_min, data_max)
-
-        self.glb_bounds_min[0] = glb_min['x']
-        self.glb_bounds_min[1] = glb_min['y']
-        self.glb_bounds_min[2] = glb_min['z']
-        self.glb_bounds_max[0] = glb_max['x']
-        self.glb_bounds_max[1] = glb_max['y']
-        self.glb_bounds_max[2] = glb_max['z']
-        self.glb_min_h = glb_min['h']
-        self.glb_max_h = glb_max['h']
-
-        logger.info('(%d) bounds : %s %s'%(pc.rank, self.glb_bounds_min,
-                                           self.glb_bounds_max))
-        logger.info('(%d) min_h : %f, max_h : %f'%(pc.rank, self.glb_min_h,
-                                                   self.glb_max_h))
-    def setup_origin(self):
-        """
-        Sets up the origin from the global bounds.
-
-        Find the max bound range from x, y and z.
-        Use bounds_min - max_range as the origin.
-
-        """
-        bounds_range = [0, 0, 0]
-        bounds_range[0] = self.glb_bounds_max[0] - self.glb_bounds_min[0]
-        bounds_range[1] = self.glb_bounds_max[1] - self.glb_bounds_min[1]
-        bounds_range[2] = self.glb_bounds_max[2] - self.glb_bounds_min[2]
-        
-        max_range = max(bounds_range)
-
-        self.origin.x = self.glb_bounds_min[0] - max_range
-        self.origin.y = self.glb_bounds_min[1] - max_range
-        self.origin.z = self.glb_bounds_min[2] - max_range
-
-        self.root_cell.origin.x = self.origin.x
-        self.root_cell.origin.y = self.origin.y
-        self.root_cell.origin.z = self.origin.z
-
-        pc = self.parallel_controller
-        logger.info('(%d) Origin : %s'%(pc.rank,
-                                        str(self.origin)))
-
-    def setup_cell_sizes(self):
-        """
-        Sets up the cell sizes to use from the 'h' values.
-
-        The smallest cell size is set to 2*max_radius_scale*min_h
-        The larger cell size is set to 2*smallest_cell_size
-
-        Set the number of levels to 2.
-        """
-        self.min_cell_size = 2*self.max_radius_scale*self.glb_max_h
-        self.max_cell_size = 2*self.min_cell_size
-        self.num_levels = 2
-        pc = self.parallel_controller
-        logger.info('(%d) cell sizes : %f %f'%(pc.rank, self.min_cell_size, 
-                                               self.max_cell_size))
-
-    def setup_processor_map(self):
-        """
-        Setup information for the processor map.
-        """
-        proc_map = self.proc_map
-        proc_map.cell_manager = self
-        
-        proc_map.origin.x = self.origin.x
-        proc_map.origin.y = self.origin.y
-        proc_map.origin.z = self.origin.z
-
-        proc_map.pid = self.parallel_controller.rank
-        
-        # use a bin size of thrice the largest cell size
-        cell_sizes = self.cell_sizes
-        max_size = cell_sizes.get(cell_sizes.length-1)
-        proc_map.bin_size = max_size*3.0        
-
-    cpdef glb_update_proc_map(self):
-        """
-        Brings the processor map up-to-date globally.
-        
-        After a call to this function, all processors, should have identical
-        processor maps.
-
-        **Algorithm**:
-        
-            - bring local data up to data.
-            - receive proc_map from children if any.
-            - merge with current p_map.
-            - send to parent if not root.
-            - receive updated proc_map from root.
-            - send updated proc_map to children.
-
-        """
-        cdef ParallelController pc = self.pc
-        cdef MPI.Comm comm = pc.comm
-        cdef int c_rank
-        cdef ProcessorMap c_proc_map, updated_proc_map
-        
-        self.proc_map.update()
-
-        # merge data from all children proc maps.
-        for c_rank in pc.children_proc_ranks:
-            c_proc_map = comm.recv(source=c_rank, 
-                                   tag=TAG_PROC_MAP_UPDATE)
-            self.proc_map.merge(c_proc_map)
-
-        # we now have partially merged data, send it to parent is not root.
-        if pc.parent_rank > -1:
-            comm.send(self.proc_map, dest=pc.parent_rank,
-                      tag=TAG_PROC_MAP_UPDATE)
-            # receive updated proc map from parent
-            updated_proc_map = comm.recv(source=pc.parent_rank,
-                                         tag=TAG_PROC_MAP_UPDATE)
-            # set our proc data with the updated data.
-            PyDict_Clear(self.proc_map.p_map)
-            PyDict_Update(self.proc_map.p_map, updated_proc_map.p_map)
-
-        # send updated data to children.
-        for c_rank in pc.children_proc_ranks:
-            comm.send(self.proc_map, dest=c_rank, 
-                      tag=TAG_PROC_MAP_UPDATE)
-
-        # setup the region neighbors.
-        self.proc_map.find_region_neighbors()
-
-    cpdef remove_remote_particles(self):
-        """
-        Remove all remote particles from the particle arrays.
-        These particles are those that have their 'local' flag set to 0.
-        
-        """
-        cdef ParticleArray parray
-        
-        for parray in self.arrays_to_bin:
-            parray.remove_flagged_particles('local', 0)
-
-    def _find_min_max_of_property(self, prop_name):
-        """
-        Find the min and max values of the property prop_name among all arrays
-        that have been binned.
-        """
-        min = 1e20
-        max = -1e20
-
-        num_particles = 0
-        
-        for arr in self.arrays_to_bin:
-            num_particles += arr.get_number_of_particles()
-            
-            if arr.get_number_of_particles() == 0:
-                continue
-
-            min_prop = numpy.min(arr.get(prop_name))
-            max_prop = numpy.max(arr.get(prop_name))
-
-            if min > min_prop:
-                min = min_prop
-            if max < max_prop:
-                max = max_prop
-
-        if num_particles == 0:
-            return 1e20, -1e20
-
-        return min, max
-
-    def update_remote_particle_properties(self, props=None):
-        """
-        Update the properties of all copies of remote particles with this
-        processor. 
-        """
-        self.root_cell.update_remote_particle_properties(props)
-
-    def update_property_bounds(self):
-        """
-        Updates the min and max values of all properties in all particle arrays
-        that are being binned by this cell manager.
-
-        Not sure if this is the correct place for such a function.
-
-        """
-        pass
-        
 
         

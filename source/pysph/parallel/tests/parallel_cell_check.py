@@ -110,9 +110,11 @@ pcm.initialize()
 pcm.set_jump_tolerance(INT_INF())
 
 # on processor 1 move all particles from cell (7, 5, 5) to cell (8, 5, 5).
+print rank, len(pcm.cells_dict)
+print rank, ('\n%d '%rank).join([str(c) for c  in pcm.cells_dict.values()])
+
 if rank == 1:
-    root = pcm.root_cell
-    c_7_5_5 = root.cell_dict.get(IntPoint(7, 5, 5))
+    c_7_5_5 = pcm.cells_dict.get(IntPoint(7, 5, 5))
     logger.debug('Cell (7, 5, 5) is %s'%(c_7_5_5))
     indices = []
     c_7_5_5.get_particle_ids(indices)
@@ -120,6 +122,8 @@ if rank == 1:
     logger.debug('NuM particles in (7, 5, 5) is %d'%(indices.length))
     parr = pcm.arrays_to_bin[0]
     x, y, z = parr.get('x', 'y', 'z')
+    print len(x), x
+    print indices.length, indices.get_npy_array()
     for i in range(indices.length):
         x[indices[i]] += c_7_5_5.cell_size
 
@@ -131,6 +135,6 @@ logger.debug('Is dirty %s'%(pcm.is_dirty))
 pcm.update()
 
 #logger.debug('hierarchy :%s'%(pcm.hierarchy_list))
-logger.debug('roots cells : %s'%(pcm.root_cell.cell_dict))
+logger.debug('roots cells : %s'%(pcm.cells_dict))
 logger.debug('num particles : %d'%(parray.get_number_of_particles()))
 logger.debug('real particles : %d'%(parray.num_real_particles))

@@ -335,7 +335,7 @@ def parallel_timings(args):
     lb.lb_max_iterations = options.num_load_balance_iterations
     lb.setup()
     lb.load_balance()
-    solver.cell_manager.root_cell.exchange_neighbor_particles()
+    solver.cell_manager.exchange_neighbor_particles()
     
     N = options.num_iterations
     for i in range(N):
@@ -409,4 +409,4 @@ def bench(args=None):
     
 if __name__ == '__main__':
     timings = bench(sys.argv[1:])
-    print timings
+    print '(R=%d)'%(rank), timings

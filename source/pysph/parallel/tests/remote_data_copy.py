@@ -61,6 +61,6 @@ if rank == 2:
     parray.t[0] = 3000.
 
 # get remote data.
-pcm.root_cell.update_remote_particle_properties([['t']])
+pcm.update_remote_particle_properties([['t']])
 
 logger.debug('t is %s'%(parray.get('t', only_real_particles=False)))

@@ -31,7 +31,6 @@ class LoadBalancer(Base):
         self.cell_manager = parallel_cell_manager
         self.solver = parallel_solver
         self.skip_iteration = 10
-        self.root_cell = None
         self.proc_map = None
         self.pid = 0
         self.num_procs = 1
@@ -56,7 +55,6 @@ class LoadBalancer(Base):
             return
 
         self.parallel_controller = self.cell_manager.parallel_controller
-        self.root_cell = self.cell_manager.root_cell
         self.pid = self.parallel_controller.rank
         self.proc_map = self.cell_manager.proc_map
         self.num_procs = self.parallel_controller.num_procs
@@ -190,9 +188,9 @@ class LoadBalancer(Base):
 
             # update the cell information.
             self.cell_manager.remove_remote_particles()
-            self.root_cell.bin_particles_top_down()
+            self.cell_manager.bin_particles_top_down()
             self.cell_manager.glb_update_proc_map()
-            self.root_cell.update_cell_neighbor_information()
+            self.cell_manager.update_cell_neighbor_information()
             
             self.comm.Barrier()
 
@@ -226,7 +224,7 @@ class LoadBalancer(Base):
         """
         self.procs_to_communicate = self._get_procs_to_communicate(
             self.particles_per_proc,
-            self.root_cell.adjacent_processors)
+            self.cell_manager.adjacent_processors)
         num_procs = len(self.procs_to_communicate)
 
         # PASS 1
@@ -350,7 +348,7 @@ class LoadBalancer(Base):
         data = self.comm.recv(source=pid, tag=TAG_LB_PARTICLE_REPLY)
         particle_data = data['particles']
 
-        self.root_cell.add_local_particles_to_parray(particle_data)
+        self.cell_manager.add_local_particles_to_parray(particle_data)
         
         logger.debug('DONE')
 
@@ -425,7 +423,7 @@ class LoadBalancer(Base):
                 return reply
 
         # if we have only one cell, do not donate.
-        if len(self.root_cell.cell_dict) == 1:
+        if len(self.cell_manager.cells_dict) == 1:
             logger.debug('Have only one cell - will not donate')
             reply['particles'] = {}
             return reply
@@ -448,7 +446,7 @@ class LoadBalancer(Base):
               pid.
             -
         """
-        cells = self.root_cell.cell_dict
+        cells = self.cell_manager.cells_dict
         max_neighbor_count = -1
         max_neighbor_cell_id = None
 
@@ -477,13 +475,13 @@ class LoadBalancer(Base):
                 max_neighbor_cell_id = cid
         
         if max_neighbor_cell_id is not None:
-            max_nbr_cell = self.root_cell.cell_dict[max_neighbor_cell_id]
-            particles = self.root_cell.create_new_particle_copies(
+            max_nbr_cell = self.cell_manager.cells_dict[max_neighbor_cell_id]
+            particles = self.cell_manager.create_new_particle_copies(
                 {max_neighbor_cell_id:max_nbr_cell})
             # change the pid of the cell that was donated.
             max_nbr_cell.pid = pid
             # update the neighbor information locally
-            self.root_cell.update_neighbor_information_local()
+            self.cell_manager.update_neighbor_information_local()
         else:
             logger.debug('No cells found for %d'%(pid))
             particles = {}
@@ -520,7 +518,7 @@ class LoadBalancer(Base):
             
             # add the particles in the parray
             particles = data['particles']
-            self.root_cell.add_local_particles_to_parray(particles)
+            self.cell_manager.add_local_particles_to_parray(particles)
             
             i -= 1
 
@@ -575,13 +573,10 @@ class LoadBalancer(Base):
             - choose the one with the least number of neighbors as the cell to donate.
 
         """
-        root_cell = self.root_cell
-        boundary_cells = {}
-
         min_neighbor_id = None
         min_neighbors = 27
 
-        for cid, c in root_cell.cell_dict.iteritems():
+        for cid, c in self.cell_manager.cells_dict.iteritems():
             if c.pid != self.pid:
                 continue
             pinfo = c.parallel_cell_info
@@ -598,7 +593,7 @@ class LoadBalancer(Base):
             # meaning there are no boundary cells to donate.
             # choose a cell with min number of local neighbors.
             min_neighbors = 27
-            for cid, c in root_cell.cell_dict.iteritems():
+            for cid, c in self.cell_manager.cells_dict.iteritems():
                 if c.pid != self.pid:
                     continue
                 pinfo = c.parallel_cell_info
@@ -610,13 +605,13 @@ class LoadBalancer(Base):
                     min_neighbors = pinfo.num_local_neighbors
                     min_neighbor_id = cid
 
-        min_nbr_cell = self.root_cell.cell_dict.get(min_neighbor_id)
+        min_nbr_cell = self.cell_manager.cells_dict.get(min_neighbor_id)
 
         if min_nbr_cell is not None:
             logger.debug('Transfering %s from proc %d to proc %d'%(min_neighbor_id,
                                                                    self.pid,
                                                                    pid))
-            particles = self.root_cell.create_new_particle_copies(
+            particles = self.cell_manager.create_new_particle_copies(
                 {min_neighbor_id:min_nbr_cell})
 
             # mark that cell as a remote cell
@@ -625,7 +620,7 @@ class LoadBalancer(Base):
             #self.cell_manager.remove_remote_particles()
             
             # recompute the neighbor counts of all local cells.
-            self.root_cell.update_neighbor_information_local()
+            self.cell_manager.update_neighbor_information_local()
         else:
             logger.debug('No suitable cell found to donate to processor %d'%(
                     pid))

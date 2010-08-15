@@ -5,7 +5,7 @@ Declaration file for cython parallel cell module.
 
 from pysph.solver.base cimport Base
 from pysph.base.point cimport Point, IntPoint
-from pysph.base.cell cimport CellManager, RootCell, Cell, LeafCell, NonLeafCell
+from pysph.base.cell cimport CellManager, Cell
 
 # forward declarations.
 cdef class ParallelCellManager(CellManager)
@@ -48,7 +48,7 @@ cdef class ParallelCellManager(CellManager):
 
 
 #rom pysph.parallel.parallel_controller cimport ParallelController
-cdef class ParallelRootCell(RootCell):
+#cdef class ParallelRootCell(RootCell):
     cdef public bint initial_redistribution_done
     cdef public dict adjacent_remote_cells
     cdef public dict remote_particle_indices
@@ -57,11 +57,8 @@ cdef class ParallelRootCell(RootCell):
     cdef public dict new_region_particles
     cdef public dict new_cells_added
     cdef public list adjacent_processors
+    
     #cdef public ParallelCellManager cell_manager
-    cdef public int pid
-    cdef public object parallel_controller
-
-    cpdef Cell get_new_child_for_copy(self, IntPoint id, int pid)
     cpdef find_adjacent_remote_cells(self)
     cpdef update_cell_neighbor_information(self)
     cpdef bin_particles_top_down(self)
@@ -71,6 +68,7 @@ cdef class ParallelRootCell(RootCell):
     cpdef dict _resolve_conflicts(self, dict data)
     cpdef exchange_crossing_particles_with_neighbors(self, dict remote_cells,
                                                      dict particles)
+    cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef add_entering_particles_from_neighbors(self, dict new_particles)
     cpdef add_local_particles_to_parray(self, dict particle_list)
     cpdef update_remote_particle_properties(self, list props=*)
@@ -79,26 +77,17 @@ cdef class ParallelRootCell(RootCell):
     
 cdef class ParallelCellInfo(Base):
     cdef public Cell cell
-    cdef public ParallelRootCell root_cell
+    cdef ParallelCellManager cell_manager
     cdef public dict neighbor_cell_pids
     cdef public dict remote_pid_cell_count
     cdef public int num_remote_neighbors
     cdef public int num_local_neighbors
     
-cdef class ParallelLeafCell(LeafCell):
+cdef class ParallelCell(Cell):
     cdef public int pid
     cdef public ParallelCellInfo parallel_cell_info
 
-cdef class ParallelNonLeafCell(NonLeafCell):
-    cdef public int pid
-    cdef public ParallelCellInfo parallel_cell_info
-
-cdef class ParallelLeafCellRemoteCopy(ParallelLeafCell):
-    cdef public list particle_start_indices
-    cdef public list particle_end_indices
-    cdef public int num_particles
-
-cdef class ParallelNonLeafCellRemoteCopy(ParallelNonLeafCell):
+cdef class ParallelCellRemoteCopy(ParallelCell):
     cdef public list particle_start_indices
     cdef public list particle_end_indices
     cdef public int num_particles

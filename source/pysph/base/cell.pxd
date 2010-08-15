@@ -57,7 +57,6 @@ cdef class CellManager:
     """
     cdef public Point origin
     cdef public double cell_size
-    cdef public double cell_size_step
     cdef public bint is_dirty    
     cdef public dict array_indices
     cdef public list arrays_to_bin
@@ -85,6 +84,8 @@ cdef class CellManager:
     cpdef _setup_cells_dict(self)
     cpdef set_jump_tolerance(self, int jump_tolerance)
     cpdef int delete_empty_cells(self) except -1
+    cpdef insert_particles(self, int parray_id, LongArray indices)
+    cpdef Cell get_new_cell(self, IntPoint id)
     
     cdef int get_potential_cells(self, Point pnt, double radius, list cell_list) except -1
 

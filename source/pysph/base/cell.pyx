@@ -774,9 +774,10 @@ cdef class CellManager:
         cell = Cell(id=IntPoint(0, 0, 0), cell_manager=self,
                              cell_size=self.cell_size,
                              jump_tolerance=INT_MAX)
+        
         num_arrays = len(cell.arrays_to_bin)
         # now add all particles of all arrays to this cell.
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             parray = cell.arrays_to_bin[i]
             num_particles = parray.get_number_of_particles()
 
@@ -932,6 +933,62 @@ cdef class CellManager:
         for i in range(len(self.cells_dict)):
             cell = cells_list[i]
             cell.jump_tolerance = 1       
+    
+    cpdef insert_particles(self, int parray_id, LongArray indices):
+        """Insert particles"""
+        cdef ParticleArray parray = self.arrays_to_bin[parray_id]
+        cdef dict particles_for_cells = dict()
+        cdef int num_particles = parray.get_number_of_particles()
+        cdef int i
+        cdef DoubleArray x, y, z
+        cdef double cell_size = self.cell_size
+        cdef IntPoint id = IntPoint()
+        cdef Point pnt = Point()
+        cdef LongArray cell_indices, la
+        cdef Cell cell
+        cdef IntPoint cid
+        
+        x = parray.get_carray(self.coord_x)
+        y = parray.get_carray(self.coord_y)
+        z = parray.get_carray(self.coord_z)
+        
+        for i from 0 <= i < indices.length:
+            if indices.data[i] >= num_particles:
+                # invalid particle being added.
+                # raise error and exit
+                msg = 'Particle %d does not exist'%(indices.data[i])
+                logger.error(msg)
+                raise ValueError, msg
+            
+            pnt.x = x.data[indices.data[i]]
+            pnt.y = y.data[indices.data[i]]
+            pnt.z = z.data[indices.data[i]]
+
+            # find the cell to which this particle belongs to 
+            find_cell_id(self.origin, pnt, cell_size, id)
+            if PyDict_Contains(particles_for_cells, id) == 1:
+                cell_indices = <LongArray>PyDict_GetItem(particles_for_cells, id)
+            else:
+                cell_indices = LongArray()
+                particles_for_cells[id.copy()] = cell_indices
+
+            cell_indices.append(indices.data[i])
+
+        for cid, la in particles_for_cells.iteritems():
+            if PyDict_Contains(self.cells_dict, cid):
+                cell = <Cell>PyDict_GetItem(self.cells_dict, cid)
+            else:
+                # create a cell with the given id.
+                cell = self.get_new_cell(cid)
+                self.cells_dict[cid.copy()] = cell
+
+            cell.insert_particles(parray_id, la)
+    
+    cpdef Cell get_new_cell(self, IntPoint id):
+        """Create and return a new cell. """
+        return Cell(id=id, cell_manager=self, 
+                            cell_size=self.cell_size,
+                            jump_tolerance=self.jump_tolerance)
     
     cpdef int delete_empty_cells(self) except -1:
         '''delete empty cells'''
