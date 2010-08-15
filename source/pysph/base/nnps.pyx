@@ -43,222 +43,6 @@ cpdef brute_force_nnps(Point pnt, double search_radius,
     return
 
 ################################################################################
-# `CellCache` class.
-################################################################################
-cdef class CellCache:
-    """
-    Class to maintain list of neighboring cells for every particle in a given
-    particle array.
-
-    **Members**
-
-     - p_array - the particle array whose particle's near cells are to be
-       cached.
-     - is_dirty - indicates, if the cached data is to be recomputed.
-     - cache_list - the actual cache, a list containing one list of cells for
-       each particle in parray.
-     - cell_manager - the cell manager to use for nearest cell queries.
-     - single_layer - indicates if exactly one neighboring layer of neighboring
-       cells are to be got from the cell manager.
-     - radius_scale - the scale to be applied to the interaction radius of each
-       particle to get the effective radius.
-     - h - name of the array containing the interaction radius property of the
-       particles.
-     - variable_h - indicates if the particles in p_array have same/different
-       interaction radii.
- 
-    """
-
-    def __init__(self, CellManager cell_manager, ParticleArray p_array,
-                 double radius_scale, bint variable_h=False, str h='h'):
-        """
-        Constructor.
-
-        **Parameters**
-
-         - cell_manager - the cell manager to be used for nearest cell queries.
-         - p_array - the particle array, whose particle's near cells are to be
-           cached.
-         - radius_scale - the scale to be applied to each particles interaction
-           radius to get the effective radius for caching.
-         - h - the name of the array containing the interaction radius property
-           of the particles.
-         
-        """
-        cdef DoubleArray h_array
-        cdef double eff_rad
-
-        self.cell_manager = cell_manager
-        self.p_array = p_array
-        self.is_dirty = True
-        self.cache_list = []
-        self.single_layer = False
-        self.radius_scale = radius_scale
-
-        self.h = h
-        self.variable_h = variable_h
-        
-        # now setup the single_layer variable
-        if not self.variable_h:
-            if cell_manager is not None and p_array is not None:
-                h_array = self.p_array.get_carray(self.h)
-                eff_rad = h_array.get(0)*self.radius_scale
-                if fabs(cell_manager.min_cell_size-eff_rad) < 1e-09:
-                    self.single_layer = True
-
-    cdef int update(self) except -1:
-        """
-        Recomputes the cached data if needed.
-        """
-        cdef DoubleArray xa, ya, za, ha
-        cdef double *x, *y, *z, *h, eff_radius
-        cdef Point pnt
-        cdef str xc, yc, zc
-        cdef int num_particles, i
-        cdef list empty_list = []
-        cdef list cl
-
-        if self.is_dirty:
-
-            self.is_dirty = False
-
-            # bring cell manager up-to-date.
-            self.cell_manager.update()
-
-            pnt = Point()
-            
-            # recompute the potential lists.
-            xc = self.cell_manager.coord_x
-            yc = self.cell_manager.coord_y
-            zc = self.cell_manager.coord_z
-
-            xa = self.p_array.get_carray(xc)
-            ya = self.p_array.get_carray(yc)
-            za = self.p_array.get_carray(zc)
-            ha = self.p_array.get_carray(self.h)
-
-            x = xa.get_data_ptr()
-            y = ya.get_data_ptr()
-            z = za.get_data_ptr()
-            h = ha.get_data_ptr()
-
-            num_particles = self.p_array.get_number_of_particles()
-
-            # resize the cache list, if needed.
-            if len(self.cache_list) != num_particles:
-                # clear up the list and add num_particles lists
-                self.cache_list[:] = empty_list
-                for i from 0 <= i < num_particles:
-                    self.cache_list.append([])
-
-            for i from 0 <= i < num_particles:
-
-                pnt.x = x[i]
-                pnt.y = y[i]
-                pnt.z = z[i]
-
-                cl = self.cache_list[i]
-                cl[:] = empty_list
-
-                eff_radius = h[i]*self.radius_scale
-                self.cell_manager.get_potential_cells(pnt, eff_radius, cl)
-            
-    cdef int get_potential_cells(self, int p_index, list output_list) except -1:
-        """
-        Appends the list of potential cells to output_list
-        """
-        cdef list pot_list
-
-        # make sure cache data is up-to-date
-        self.update()
-        
-        pot_list = self.cache_list[p_index]
-        output_list.extend(pot_list)
-
-        return 0
-
-    ######################################################################
-    # python wrappers.
-    ######################################################################
-    def py_get_potential_cells(self, int p_index, list output_list):
-        return self.get_potential_cells(p_index, output_list)
-
-    def py_update(self):
-        return self.update()
-
-
-################################################################################
-# `CellCacheManager` class.
-################################################################################
-cdef class CellCacheManager:
-    """
-    Manages a collection of cell caches.
-    """
-    def __init__(self, CellManager cell_manager=None, bint variable_h=False,
-                 str h='h'):
-        """
-        """
-        self.cell_manager = cell_manager
-        self.variable_h = variable_h
-        self.h = h
-        self.cell_cache_dict = {}
-        self.is_dirty = True
-
-    cdef int update(self) except -1:
-        """
-        Sets the is_dirty bit of all the caches, if any of the particle arrays
-        have changed. 
-        """
-        cdef CellCache cache
-        cdef bint dirty = False
-        cdef int i, num_caches
-        cdef list cache_list
-        
-        num_caches = len(self.cell_cache_dict)
-        cache_list = self.cell_cache_dict.values()
-
-        for i from 0 <= i < num_caches:
-            cache = cache_list[i]
-            if cache.p_array.is_dirty:
-                dirty = True
-                break
-
-        if dirty:
-            for i from 0 <= i < num_caches:
-                cache = cache_list[i]
-                cache.is_dirty = True        
-
-    cdef void add_cache_entry(self, ParticleArray pa, double radius_scale):
-        """
-        Add  a new entry to be cached, if it does not already exist.
-        """
-        cdef CellCache cache
-        if self.cell_cache_dict.has_key((pa.name, radius_scale)):
-            return
-        else:
-            cache = CellCache(self.cell_manager, pa, radius_scale,
-                              self.variable_h, self.h) 
-            self.cell_cache_dict[(pa.name, radius_scale)] = cache
-
-    cdef CellCache get_cell_cache(self, str pa_name, double radius_scale):
-        """
-        Return the said cache, if it exists, else return None.
-        """
-        return self.cell_cache_dict.get((pa_name, radius_scale))
-
-    ######################################################################
-    # python wrappers.
-    ######################################################################
-    def py_update(self):
-        return self.update()
-    
-    def py_add_cache_entry(self, ParticleArray pa, double radius_scale):
-        self.add_cache_entry(pa, radius_scale)
-
-    def py_get_cell_cache(self, str pa_name, double radius):
-        return self.get_cell_cache(pa_name, radius)
-    
-################################################################################
 # `NbrParticleLocatorBase` class.
 ################################################################################
 cdef class NbrParticleLocatorBase:
@@ -377,8 +161,7 @@ cdef class NbrParticleLocatorBase:
 ################################################################################
 # `FixedDestinationNbrParticleLocator` class.
 ################################################################################
-cdef class FixedDestinationNbrParticleLocator(
-    NbrParticleLocatorBase):
+cdef class FixedDestinationNbrParticleLocator(NbrParticleLocatorBase):
     """
     Class to represent particle locators, where neighbor queries will be for
     particles in another particle array.
@@ -436,7 +219,7 @@ cdef class FixedDestinationNbrParticleLocator(
          - dest_p_index - id of the paritcle in dest whose neighbors are to be
            found. 
          - radius_scale - the scale to be applied to the particles interaction
-           to ge the effective radius of interaction.
+           to get the effective radius of interaction.
          - output_array - array to store the neighbor indices into.
          - exclude_self - indicates if dest_p_index be excluded from
            output_array. 
@@ -479,7 +262,7 @@ cdef class ConstHFixedDestNbrParticleLocator(
 
         **Parameters**
 
-         - dest_p_index - id of the paritcle in dest whose neighbors are to be
+         - dest_p_index - id of the particle in dest whose neighbors are to be
            found. 
          - radius_scale - the scale to be applied to the particles interaction
            to ge the effective radius of interaction.
@@ -508,8 +291,7 @@ cdef class ConstHFixedDestNbrParticleLocator(
 ################################################################################
 # `VarHFixedDestNbrParticleLocator` class.
 ################################################################################
-cdef class VarHFixedDestNbrParticleLocator(
-    FixedDestinationNbrParticleLocator):
+cdef class VarHFixedDestNbrParticleLocator(FixedDestinationNbrParticleLocator):
     """
     FixedDestinationNbrParticleLocator to handle queries where particles could
     have different interaction radius.
@@ -555,7 +337,6 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
     
      - radius_scale - the scale to be applied to all particles interaction
        radius.
-     - cell_cache - a CellCache for the dest particle array.
      - caching_enabled - indicates if caching is enabled for this class.
      - particle_cache - the cache, containing one LongArray for each particle in
        dest. 
@@ -564,14 +345,13 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
 
     """
     def __init__(self, ParticleArray source, ParticleArray dest, double
-                 radius_scale, CellManager cell_manager=None, CellCache
-                 cell_cache=None, bint caching_enabled=False, str h='h'):
+                 radius_scale, CellManager cell_manager=None,
+                 bint caching_enabled=False, str h='h'):
 
         FixedDestinationNbrParticleLocator.__init__(
             self, source, dest, cell_manager, h)
 
         self.radius_scale = radius_scale
-        self.cell_cache = cell_cache
         self.caching_enabled = caching_enabled
 
         self.particle_cache = []
@@ -598,20 +378,6 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
         if not self.is_dirty:
             self.is_dirty = self.source.is_dirty or self.dest.is_dirty
 
-    cdef int _compute_nearest_particles_using_cell_cache(
-        self, long dest_p_index, Point dst_pnt, double radius, LongArray
-        output_array, long exclude_index=-1) except -1:
-        """
-        Compute the nearest particles using the cell cache.
-        """
-        cdef list cell_list = list()
-
-        self.cell_cache.get_potential_cells(dest_p_index, cell_list)
-
-        return NbrParticleLocatorBase._get_nearest_particles_from_cell_list(
-            self, dst_pnt, radius, cell_list, output_array, exclude_index
-            )
-
     cdef int update(self) except -1:
         """
         Computes contents of the cache if needed.
@@ -621,9 +387,6 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
 
         if self.is_dirty:
             self.is_dirty = False
-            if self.cell_cache is not None:
-                # update cell cache if we are using one.
-                self.cell_cache.update()
 
             if self.caching_enabled:
                 # make sure the cache list and number of particles are the same
@@ -635,10 +398,7 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
                     for i from 0 <= i < num_particles:
                         self.particle_cache.append(LongArray())
 
-                if self.cell_cache is not None:
-                    return self._update_cache_using_cell_cache()
-                else:
-                    return self._update_cache()
+                return self._update_cache()
 
         return 0
 
@@ -650,14 +410,6 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
         msg = 'CachedNbrParticleLocator::_update_cache'
         raise NotImplementedError, msg
 
-
-    cdef int _update_cache_using_cell_cache(self) except -1:
-        """
-        Updates the cache using the cell cache.
-        Implement this in derived classes.
-        """
-        msg = 'CachedNbrParticleLocator::_update_cache_using_cell_cache'
-        raise NotImplementedError, msg
 
     ######################################################################
     # python wrappers.
@@ -672,8 +424,7 @@ cdef class CachedNbrParticleLocator(FixedDestinationNbrParticleLocator):
 ################################################################################
 # `ConstHCachedNbrParticleLocator` class.
 ################################################################################
-cdef class ConstHCachedNbrParticleLocator(
-    CachedNbrParticleLocator):
+cdef class ConstHCachedNbrParticleLocator(CachedNbrParticleLocator):
     """
     Cached locator handling particles with constant interaction radius (h).
 
@@ -685,15 +436,13 @@ cdef class ConstHCachedNbrParticleLocator(
     """
     def __init__(self, ParticleArray source, ParticleArray dest, double
                  radius_scale, CellManager cell_manager=None, 
-                 CellCache cell_cache=None, bint caching_enabled=False,
-                 str h = 'h'):
+                 bint caching_enabled=False, str h = 'h'):
         """
         Constructor.
         """
         
         CachedNbrParticleLocator.__init__(self, source, dest, radius_scale,
-                                          cell_manager, cell_cache,
-                                          caching_enabled, h)
+                                          cell_manager, caching_enabled, h)
         self._locator = ConstHFixedDestNbrParticleLocator(source, dest,
                                                           cell_manager, h)
 
@@ -707,10 +456,10 @@ cdef class ConstHCachedNbrParticleLocator(
 
         **Parameters**
 
-         - dest_p_index - id of the paritcle in dest whose neighbors are to be
+         - dest_p_index - id of the particle in dest whose neighbors are to be
            found. 
          - radius_scale - the scale to be applied to the particles interaction
-           to ge the effective radius of interaction. This parameter will be
+           to get the effective radius of interaction. This parameter will be
            unused, if caching is enabled or cell cache is used.
          - output_array - array to store the neighbor indices into.
          - exclude_self - indicates if dest_p_index be excluded from
@@ -750,27 +499,10 @@ cdef class ConstHCachedNbrParticleLocator(
                     if to_remove.get(0) != -1:
                         output_array.remove(to_remove.get_npy_array())
         else:
-            if self.cell_cache is None:
-                # cell cache is also not present, just call the base class
-                # method to get nearest neighbors.
-                return self._locator.get_nearest_particles(
-                    dest_p_index, output_array, self.radius_scale, exclude_self)
-            else:
-                
-                pnt = Point()
-
-                pnt.x = self.d_x.get(dest_p_index)
-                pnt.y = self.d_y.get(dest_p_index)
-                pnt.z = self.d_z.get(dest_p_index)
-
-                eff_radius = self.d_h.get(dest_p_index)*self.radius_scale
-                
-                if self.source is self.dest:
-                    if exclude_self:
-                        exclude_index = dest_p_index
-                                
-                return self._compute_nearest_particles_using_cell_cache(
-                    dest_p_index, pnt, eff_radius, output_array, exclude_index)
+            # cell cache is also not present, just call the base class
+            # method to get nearest neighbors.
+            return self._locator.get_nearest_particles(
+                dest_p_index, output_array, self.radius_scale, exclude_self)
         return 0
 
     cdef int _update_cache(self) except -1:
@@ -791,49 +523,12 @@ cdef class ConstHCachedNbrParticleLocator(
 
         return 0
 
-    cdef int _update_cache_using_cell_cache(self) except -1:
-        """
-        Update the particle cache using the cell cache.
-        """
-        cdef long num_particles, i
-        cdef LongArray index_cache
-        cdef double *x, *y, *z, *h, eff_radius
-        cdef list cell_list = []
-        cdef list empty_list = []
-        cdef Point pnt = Point()
-        cdef int ret = 0
-        
-        num_particles = self.dest.get_number_of_particles()
-    
-        x = self.d_x.get_data_ptr()
-        y = self.d_y.get_data_ptr()
-        z = self.d_z.get_data_ptr()
-        h = self.d_h.get_data_ptr()
-        
-        for i from 0 <= i < num_particles:
-            index_cache = self.particle_cache[i]
-            index_cache.reset()
-
-            pnt.x = x[i]
-            pnt.y = y[i]
-            pnt.z = z[i]
-
-            eff_radius = h[i]*self.radius_scale
-
-            cell_list[:] = empty_list
-            
-            self._compute_nearest_particles_using_cell_cache(
-                i, pnt, eff_radius, index_cache, -1)
-
-        return ret
-
 ################################################################################
 # `VarHCachedNbrParticleLocator` class.
 ################################################################################
-cdef class VarHCachedNbrParticleLocator(
-    CachedNbrParticleLocator):
+cdef class VarHCachedNbrParticleLocator(CachedNbrParticleLocator):
     """
-    Cached locator handling particles with constant interaction radius (h).
+    Cached locator handling particles with variable interaction radius (h).
 
     **Members**
     
@@ -845,12 +540,11 @@ cdef class VarHCachedNbrParticleLocator(
      - implement various functions.
     """
     def __init__(self, ParticleArray source, ParticleArray dest, double
-                 radius_scale, CellManager cell_manager=None, CellCache
-                 cell_cache=None, bint caching_enabled=False, str h='h'):
+                 radius_scale, CellManager cell_manager=None,
+                 bint caching_enabled=False, str h='h'):
         
         CachedNbrParticleLocator.__init__(self, source, dest, radius_scale,
-                                          cell_manager, cell_cache, 
-                                          caching_enabled, h)
+                                          cell_manager, caching_enabled, h)
 
         self._locator = VarHFixedDestNbrParticleLocator(
             source, dest, cell_manager, h)
@@ -863,59 +557,15 @@ cdef class CachedNbrParticleLocatorManager:
     Class to manage a collection of CachedParticleLocators.
     """
     def __init__(self, CellManager cell_manager=None, 
-                 CellCacheManager cell_cache_manager=None,
-                 bint use_cell_cache=False, bint variable_h=False,
+                 bint variable_h=False,
                  str h='h'):
         """
         """
         self.cell_manager = cell_manager
-        self.cell_cache_manager = cell_cache_manager
-        self.use_cell_cache = use_cell_cache
         self.cache_dict = dict()
 
         self.variable_h = variable_h
         self.h = h
-
-    cpdef enable_cell_cache_usage(self):
-        """
-        """
-        self.use_cell_cache = True
-
-        # for every cache maintained, if it does not have a cell cache
-        # already, add a cell cache.
-        cdef list cache_list
-        cdef CellCache c_cache
-        cdef CachedNbrParticleLocator p_cache
-        cdef int num_caches, i
-        cache_list = self.cache_dict.values()
-        num_caches = len(cache_list)
-
-        for i from 0 <= i < num_caches:
-            p_cache = cache_list[i]
-            if p_cache.cell_cache is None:
-                self.cell_cache_manager.add_cache_entry(p_cache.dest,
-                                                        p_cache.radius_scale)
-                p_cache.cell_cache =  self.cell_cache_manager.get_cell_cache(
-                    p_cache.dest.name, p_cache.radius_scale)
-        
-    cpdef disable_cell_cache_usage(self):
-        """
-        """
-        cdef list cache_list
-        cdef CellCache c_cache
-        cdef CachedNbrParticleLocator p_cache
-        cdef int num_caches, i
-
-        self.use_cell_cache = False
-
-        # disable cell caching for all caches. the entries however are not
-        # removed from the cell cache manager
-        cache_list = self.cache_dict.values()
-        num_caches = len(cache_list)
-
-        for i from 0 <= i < num_caches:
-            p_cache = cache_list[i]
-            p_cache.cell_cache = None
 
     cdef int update(self) except -1:
         """
@@ -939,29 +589,17 @@ cdef class CachedNbrParticleLocatorManager:
         """
         cdef tuple t = (source.name, dest.name, radius_scale)
         cdef CachedNbrParticleLocator loc
-        cdef CellCache cell_cache=None
         
         loc = self.cache_dict.get(t)
         if loc is None:
-            if self.use_cell_cache:
-                # add an entry for this dest and radius_scale into
-                # cell_cache_manager.
-                self.cell_cache_manager.add_cache_entry(dest, radius_scale)
-                cell_cache = self.cell_cache_manager.get_cell_cache(dest.name,
-                                                                    radius_scale)
-                if cell_cache is None:
-                    raise RuntimeError, 'unable to add cell cache'
-                
             # create a new cache object and insert into dict.
             if not self.variable_h:
                 loc = ConstHCachedNbrParticleLocator(source, dest, radius_scale,
                                                      cell_manager=self.cell_manager,
-                                                     cell_cache=cell_cache,
                                                      h=self.h)
             else:
                 loc = VarHCachedNbrParticleLocator(source, dest, radius_scale, 
                                                    cell_manager=self.cell_manager,
-                                                   cell_cache=cell_cache,
                                                    h=self.h)
             self.cache_dict[t] = loc
         else:
@@ -992,54 +630,30 @@ cdef class NNPSManager:
 
     **Members**
     
-     - cell_caching - indicates if cell caching is to be enabled.
      - particle_caching - indicates if particle caching is to be enabled.
      - polygon_caching - indicates if polygon caching is enabled.
      - cell_manager - CellManager to compute nearest cells.
      - variable_h - indicates if variable-h computations are needed.
 
     """
-    def __init__(self, CellManager cell_manager=None, bint cell_caching=False,
+    def __init__(self, CellManager cell_manager=None,
                  bint particle_caching=True, polygon_caching=True, bint
                  variable_h=False, str h='h'):
         """
         Construct.
         """
-        self.cell_caching = cell_caching
         self.particle_caching = particle_caching
         self.polygon_caching = polygon_caching
         self.cell_manager = cell_manager
         self.variable_h = variable_h
         self.h = h
 
-        self.cell_cache_manager = CellCacheManager(
-            self.cell_manager, variable_h=self.variable_h, h=h )
-        
         self.particle_cache_manager = CachedNbrParticleLocatorManager(
-            self.cell_manager, self.cell_cache_manager, self.cell_caching,
-            self.variable_h, self.h)
+            self.cell_manager, self.variable_h, self.h)
 
         self.polygon_cache_manager = CachedNbrPolygonLocatorManager(
-            self.cell_manager, self.cell_cache_manager, self.cell_caching)
+            self.cell_manager)
         
-    cpdef enable_cell_caching(self):
-        """
-        Enables cell caching.
-        """
-        self.cell_caching = True
-        self.particle_cache_manager.enable_cell_cache_usage()
-        #self.polygon_cache_manager.enable_cell_cache_usage()
-        return 0
-
-    cpdef disable_cell_caching(self):
-        """
-        Disables cell caching.
-        """
-        self.cell_caching = False
-        self.particle_cache_manager.disable_cell_cache_usage()
-        #self.polygon_cache_manager.disable_cell_cache_usage()
-        return 0
-
     cpdef enable_particle_caching(self):
         """
         Enables particle caching.
@@ -1101,7 +715,6 @@ cdef class NNPSManager:
         """
         """
         # update the status of the caches.
-        self.cell_cache_manager.update()
         self.particle_cache_manager.update()
 
         # update the status of the cell manager.

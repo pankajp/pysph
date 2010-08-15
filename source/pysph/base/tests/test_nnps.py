@@ -23,288 +23,6 @@ def generate_sample_dataset_2_nnps_test():
     return dest, cell_manager
 
 
-################################################################################
-# `TestCellCache` class.
-################################################################################
-class TestCellCache(unittest.TestCase):
-    """ 
-    Tests the CellCache class.
-    """
-    def test_constructor(self):
-        """
-        """
-        cell_cache = CellCache(None, None, 1.0, False, 'H')
-        self.assertEqual(cell_cache.cell_manager, None)
-        self.assertEqual(cell_cache.p_array, None)
-        self.assertEqual(cell_cache.is_dirty, True)
-        self.assertEqual(cell_cache.cache_list, [])
-        self.assertEqual(cell_cache.radius_scale, 1.0)
-        self.assertEqual(cell_cache.h, 'H')
-        self.assertEqual(cell_cache.variable_h, False)
-
-        pa, cm = generate_sample_dataset_2_nnps_test()
-        # create a cache, with variable_h disabled and 
-        # radius_scale = 1.0
-        cell_cache = CellCache(cm, pa, 1.0, False)
-        self.assertEqual(cell_cache.p_array, pa)
-        self.assertEqual(cell_cache.cell_manager, cm)
-        self.assertEqual(cell_cache.is_dirty, True)
-        self.assertEqual(cell_cache.cache_list, [])
-        self.assertEqual(cell_cache.radius_scale, 1.0)
-        self.assertEqual(cell_cache.single_layer, True)
-        self.assertEqual(cell_cache.variable_h, False)
-
-        cell_cache = CellCache(cm, pa, 2.0, False)
-        self.assertEqual(cell_cache.p_array, pa)
-        self.assertEqual(cell_cache.cell_manager, cm)
-        self.assertEqual(cell_cache.is_dirty, True)
-        self.assertEqual(cell_cache.cache_list, [])
-        self.assertEqual(cell_cache.radius_scale, 2.0)
-        self.assertEqual(cell_cache.single_layer, False)
-        self.assertEqual(cell_cache.variable_h, False)
-
-        cell_cache = CellCache(cm, pa, 2.0, True)
-        self.assertEqual(cell_cache.p_array, pa)
-        self.assertEqual(cell_cache.cell_manager, cm)
-        self.assertEqual(cell_cache.is_dirty, True)
-        self.assertEqual(cell_cache.cache_list, [])
-        self.assertEqual(cell_cache.radius_scale, 2.0)
-        self.assertEqual(cell_cache.single_layer, False)
-        self.assertEqual(cell_cache.variable_h, True)        
-
-    def test_update(self):
-        """
-        Tests the update function.
-        """
-        pa, cm = generate_sample_dataset_2_nnps_test()
-        cell_cache = CellCache(cm, pa, 1.0, False)
-
-        x, y, z = pa.get('x', 'y', 'z')
-        pnt = Point()
-        
-        cell_cache.py_update()
-
-        self.assertEqual(cell_cache.is_dirty, False)
-        self.assertEqual(len(cell_cache.cache_list), 7)
-        
-        # make sure each particle has its appropriate list of cells
-        # present.
-        cache_list = cell_cache.cache_list
-        lst = []
-
-        for i in range(7):
-            pnt.x = x[i]
-            pnt.y = y[i]
-            pnt.z = z[i]
-
-            lst[:] = []
-            cm.py_get_potential_cells(pnt, 1.0, lst)
-            self.assertEqual(len(cache_list[i]), len(lst))
-            self.assertEqual(cache_list[i], lst)
-
-        # now increase the radius of interaction, check the potential cells
-        # returned.
-        cell_cache = CellCache(cm, pa, 2.0, False)
-        cell_cache.py_update()
-        
-        self.assertEqual(cell_cache.is_dirty, False)
-        self.assertEqual(len(cell_cache.cache_list), 7)
-        
-        cache_list = cell_cache.cache_list
-        
-        for i in range(7):
-            pnt.x = x[i]
-            pnt.y = y[i]
-            pnt.z = z[i]
-
-            lst[:] = []
-            cm.py_get_potential_cells(pnt, 2.0, lst)
-            
-            self.assertEqual(len(cache_list[i]), len(lst))
-            self.assertEqual(cache_list[i], lst)
-
-        cell_cache = CellCache(cm, pa, 5.0, False)
-        cell_cache.py_update()
-
-        self.assertEqual(cell_cache.is_dirty, False)
-        self.assertEqual(len(cell_cache.cache_list), 7)
-        
-        cache_list = cell_cache.cache_list
-
-        for i in range(7):
-            pnt.x = x[i]
-            pnt.y = y[i]
-            pnt.z = z[i]
-            
-            lst[:] = []
-            cm.py_get_potential_cells(pnt, 5.0, lst)
-            
-            self.assertEqual(len(cache_list[i]), len(lst))
-            self.assertEqual(cache_list[i], lst)
-
-    def test_get_potential_cells(self):
-        """
-        Tests the get_potential_cells function.
-        """
-        pa, cm = generate_sample_dataset_2_nnps_test()
-        cell_cache = CellCache(cm, pa, 1.0, False)
-        x, y, z = pa.get('x', 'y', 'z')
-        pnt = Point()
-        lst1 = []
-        lst2 = []
-
-        for i in range(7):
-            pnt.x = x[i]
-            pnt.y = y[i]
-            pnt.z = z[i]
-            
-            lst1[:] = []
-            lst2[:] = []
-            
-            cm.py_get_potential_cells(pnt, 1.0, lst1)
-            cell_cache.py_get_potential_cells(i, lst2)
-
-            self.assertEqual(len(lst1), len(lst2))
-            self.assertEqual(lst1, lst2)
-
-    def test_variable_h_cases(self):
-        """
-        Tests a variable-h input data.
-        """
-        msg = 'Variable-h test not implemented'
-        raise NotImplementedError, msg
-
-
-################################################################################
-# `TestCellCacheManager` class.
-################################################################################
-class TestCellCacheManager(unittest.TestCase):
-    """
-    Tests the CellCacheManager class.
-    """
-    def test_constructor(self):
-        """
-        Tests the constructor.
-        """
-        ccm = CellCacheManager()
-        
-        self.assertEqual(ccm.cell_manager, None)
-        self.assertEqual(ccm.variable_h, False)
-        self.assertEqual(ccm.h, 'h')
-
-        self.assertEqual(ccm.is_dirty, True)
-        self.assertEqual(len(ccm.cell_cache_dict), 0)
-
-        ccm = CellCacheManager(variable_h=True, h='H')
-        self.assertEqual(ccm.cell_manager, None)
-        self.assertEqual(ccm.variable_h, True)
-        self.assertEqual(ccm.h, 'H')
-
-        self.assertEqual(ccm.is_dirty, True)
-        self.assertEqual(len(ccm.cell_cache_dict), 0)
-
-    def test_add_cache_entry(self):
-        """
-        Tests the add_cache_entry function.
-        """
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
-
-        ccm = CellCacheManager(cm)
-        ccm.py_add_cache_entry(parrs[0], 1.0)
-        
-        self.assertEqual(len(ccm.cell_cache_dict), 1)
-        ccm.py_add_cache_entry(parrs[0], 1.0)
-        self.assertEqual(len(ccm.cell_cache_dict), 1)
-
-        ccm.py_add_cache_entry(parrs[0], 2.0)
-        self.assertEqual(len(ccm.cell_cache_dict), 2)
-
-        ccm.py_add_cache_entry(parrs[1], 2.0)
-        self.assertEqual(len(ccm.cell_cache_dict), 3)
-
-    def test_update(self):
-        """
-        """
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
-
-        ccm = CellCacheManager(cm)
-        
-        ccm.py_add_cache_entry(parrs[0], 1.0)
-        ccm.py_add_cache_entry(parrs[0], 2.0)
-        ccm.py_add_cache_entry(parrs[1], 2.0)
-        ccm.py_add_cache_entry(parrs[1], 5.0)
-
-        # although the parrays are themselves not dirty (reset by the
-        # cell_manager) each of the individual caches will be dirty, as they
-        # have not been updated yet.
-        for cache in ccm.cell_cache_dict.values():
-            cache.py_update()
-            
-        # call an update on ccm now
-        ccm.py_update()
-
-        # none of the caches should be dirty, as none of the parrays are dirty.
-        for cache in ccm.cell_cache_dict.values():
-            self.assertEqual(cache.is_dirty, False)
-
-        # now set parrs[0] to dirty
-        parrs[0].set_dirty(True)
-        ccm.py_update()
-
-        for cache in ccm.cell_cache_dict.values():
-            self.assertEqual(cache.is_dirty, True)
-
-        # manually update the caches.
-        for cache in ccm.cell_cache_dict.values():
-            cache.py_update()
-
-        parrs[1].set_dirty(True)
-        ccm.py_update()
-        
-        for cache in ccm.cell_cache_dict.values():
-            self.assertEqual(cache.is_dirty, True)
-
-        # manually update the caches.
-        for cache in ccm.cell_cache_dict.values():
-            cache.py_update()
-
-        for cache in ccm.cell_cache_dict.values():
-            self.assertEqual(cache.is_dirty, False)
-        
-    def test_get_cell_cache(self):
-        """
-        Tests the get_cell_cache function.
-        """
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
-
-        ccm = CellCacheManager(cm)
-        ccm.py_add_cache_entry(parrs[0], 1.0)
-
-        cc = ccm.py_get_cell_cache(parrs[0].name, 1.0)
-        self.assertEqual(cc is not None, True)
-        
-        cc = ccm.py_get_cell_cache(parrs[1].name, 1.0)
-        self.assertEqual(cc, None)
-        
-        cc = ccm.py_get_cell_cache(parrs[0].name, 1.0001)
-        self.assertEqual(cc, None)
-
-        cc = ccm.py_get_cell_cache(parrs[0].name, 1.0000000000001)
-        self.assertEqual(cc, None)
-
-    def test_variable_h_cases(self):
-        """
-        Test for variable-h input data.
-        """
-        msg = 'Variable-h test not implemented'
-        raise NotImplementedError, msg
-
 class TestNbrParticleLocatorBase(unittest.TestCase):
     """
     Tests the NbrParticleLocatorBase class.
@@ -581,11 +299,10 @@ class TestCachedNbrParticleLocator(unittest.TestCase):
         """
         Tests the constructor.
         """
-        nbrl = CachedNbrParticleLocator(None, None, 1.0, None, None)
+        nbrl = CachedNbrParticleLocator(None, None, 1.0, None)
         self.assertEqual(nbrl.radius_scale, 1.0)
         self.assertEqual(nbrl.source, None)
         self.assertEqual(nbrl.dest, None)
-        self.assertEqual(nbrl.cell_cache, None)
         self.assertEqual(len(nbrl.particle_cache), 0)
         self.assertEqual(nbrl.h, 'h')
 
@@ -593,13 +310,10 @@ class TestCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0, False, 'h')
-        
-        nbrl = CachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
+        nbrl = CachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
         self.assertEqual(nbrl.radius_scale, 1.0)
         self.assertEqual(nbrl.source, parrs[0])
         self.assertEqual(nbrl.dest, parrs[1])
-        self.assertEqual(nbrl.cell_cache, cell_cache)
         self.assertEqual(len(nbrl.particle_cache), 0)
 
     def test_update_status(self):
@@ -610,8 +324,7 @@ class TestCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0, False)
-        nbrl = CachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
+        nbrl = CachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
         
         nbrl.is_dirty = False
         # set either of the particle arrays to dirty and make sure 
@@ -638,11 +351,10 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         """
         Tests the constructor.
         """
-        nbrl = ConstHCachedNbrParticleLocator(None, None, 1.0, None, None)
+        nbrl = ConstHCachedNbrParticleLocator(None, None, 1.0, None)
         self.assertEqual(nbrl.radius_scale, 1.0)
         self.assertEqual(nbrl.source, None)
         self.assertEqual(nbrl.dest, None)
-        self.assertEqual(nbrl.cell_cache, None)
         self.assertEqual(len(nbrl.particle_cache), 0)
         self.assertEqual(type(nbrl._locator), ConstHFixedDestNbrParticleLocator)
         
@@ -650,17 +362,13 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0)
-        
-        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
+        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
         self.assertEqual(nbrl.radius_scale, 1.0)
         self.assertEqual(nbrl.source, parrs[0])
         self.assertEqual(nbrl.dest, parrs[1])
-        self.assertEqual(nbrl.cell_cache, cell_cache)
         self.assertEqual(len(nbrl.particle_cache), 0)
 
-        cell_cache = CellCache(cm, parrs[1], 2.0)
-        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm, cell_cache)
+        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm)
 
     def test_update_status(self):
         """
@@ -670,8 +378,7 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0)
-        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
+        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
         
         nbrl.is_dirty = False
         # set either of the particle arrays to dirty and make sure 
@@ -698,15 +405,12 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0)
-        
-        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, cell_cache)
+        nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
         nbrl.py_update()
 
         self.assertEqual(nbrl.is_dirty, False)
         # since caching has not been explicitly enabled, nothing will be cached.
-        self.assertEqual(len(nbrl.particle_cache),
-                         0)
+        self.assertEqual(len(nbrl.particle_cache), 0)
         nbrl.enable_caching()
         nbrl.py_update()
         self.assertEqual(len(nbrl.particle_cache),
@@ -731,11 +435,9 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
         
-        cell_cache = CellCache(cm, parrs[1], 1.0)
-        
         # test with no cell cache and no point caching.
         nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm,
-                                        cell_cache=None, caching_enabled=False)
+                                        caching_enabled=False)
         nbrl.py_update()
 
         fdnpl = ConstHFixedDestNbrParticleLocator(parrs[0], parrs[1], cm)
@@ -750,7 +452,6 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         # test with cell cache, but no point caching.
         a1.reset()
         nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm,
-                                        cell_cache=cell_cache,
                                         caching_enabled=False)
         nbrl.py_update()
         nbrl.py_get_nearest_particles(0, a1, 2.0)
@@ -759,7 +460,6 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         # test with no cell cache, but point caching enabled.
         a1.reset()
         nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm,
-                                        cell_cache=None,
                                         caching_enabled=True)
         nbrl.py_update()
         nbrl.py_get_nearest_particles(0, a1, 2.0)
@@ -768,7 +468,6 @@ class TestConstHCachedNbrParticleLocator(unittest.TestCase):
         # test with both cell and point caching enabled.
         a1.reset()
         nbrl = ConstHCachedNbrParticleLocator(parrs[0], parrs[1], 2.0, cm,
-                                        cell_cache=cell_cache,
                                         caching_enabled=True)
         nbrl.py_update()
         nbrl.py_get_nearest_particles(0, a1, 2.0)
@@ -795,20 +494,15 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         """
         m = CachedNbrParticleLocatorManager()
         self.assertEqual(m.cell_manager, None)
-        self.assertEqual(m.cell_cache_manager, None)
-        self.assertEqual(m.use_cell_cache, False)
         self.assertEqual(m.variable_h, False)
         self.assertEqual(m.h, 'h')
 
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
-        ccm = CellCacheManager(cm)
 
-        m = CachedNbrParticleLocatorManager(cm, ccm, True, variable_h=False, h='h')
+        m = CachedNbrParticleLocatorManager(cm, variable_h=False, h='h')
         self.assertEqual(m.cell_manager, cm)
-        self.assertEqual(m.cell_cache_manager, ccm)
-        self.assertEqual(m.use_cell_cache, True)
         self.assertEqual(m.variable_h, False)
         self.assertEqual(m.h, 'h')
 
@@ -819,18 +513,20 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
-        ccm = CellCacheManager(cm)
 
-        m = CachedNbrParticleLocatorManager(cm, ccm, True)
-        
+        m = CachedNbrParticleLocatorManager(cm)
+        print m.cache_dict
         m.add_interaction(parrs[0], parrs[1], 1.0)
+        print m.cache_dict
         e = m.cache_dict.get((parrs[0].name, parrs[1].name, 1.0))
+        print e
         self.assertEqual(e is not None, True)
         self.assertEqual(e.source, parrs[0])
         self.assertEqual(e.dest, parrs[1])
         self.assertEqual(e.radius_scale, 1.0)
         # because this interaction was added only once, caching should
         # not be enabled.
+        print 'dirty', e.is_dirty
         self.assertEqual(e.caching_enabled, False)
         m.add_interaction(parrs[0], parrs[1], 1.0)
         self.assertEqual(e.caching_enabled, True)
@@ -846,9 +542,7 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
 
-        ccm = CellCacheManager(cm, variable_h=True)
-
-        m = CachedNbrParticleLocatorManager(cm, ccm, True, variable_h=True)
+        m = CachedNbrParticleLocatorManager(cm, variable_h=True)
         
         m.add_interaction(parrs[0], parrs[1], 1.0)
         e = m.cache_dict.get((parrs[0].name, parrs[1].name, 1.0))
@@ -861,60 +555,19 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         e1 = m.cache_dict.get((parrs[0].name, parrs[1].name, 1.1))
         self.assertEqual(e1 is not e, True)        
         
-    def test_enable_disable_cell_cache_usage(self):
-        """
-        Tests the enable/disable_cell_cache_usage functions.
-        """
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
-        ccm = CellCacheManager(cm)
-        
-        m = CachedNbrParticleLocatorManager(cm, ccm, True)
-
-        self.assertEqual(m.use_cell_cache, True)
-        
-        # now any cache that is created should use the cell cache.
-        m.add_interaction(parrs[0], parrs[1], 1.0)
-        e = m.get_cached_locator(parrs[0].name, parrs[1].name, 1.0)
-        self.assertEqual(e.cell_cache is not None, True)
-
-        m.disable_cell_cache_usage()
-        self.assertEqual(m.use_cell_cache, False)
-        
-        m.add_interaction(parrs[0], parrs[1], 2.0)
-        e = m.get_cached_locator(parrs[0].name, parrs[1].name, 2.0)
-        self.assertEqual(e.cell_cache, None)
-        # the previously added interaction should also have their
-        # caches disabled.
-        e = m.get_cached_locator(parrs[0].name, parrs[1].name, 1.0)
-        self.assertEqual(e.cell_cache, None)
-
-        m.enable_cell_cache_usage()
-        self.assertEqual(m.use_cell_cache, True)
-        m.add_interaction(parrs[0], parrs[0], 1.0)
-        e = m.get_cached_locator(parrs[0].name, parrs[0].name, 1.0)
-        self.assertEqual(e.cell_cache is not None, True)
-        # add previous caches, should have cell caching enabled.
-        e1 = m.get_cached_locator(parrs[0].name, parrs[1].name, 1.0)
-        self.assertEqual(e1.cell_cache is not None, True)
-        e2 = m.get_cached_locator(parrs[0].name, parrs[1].name, 2.0)
-        self.assertEqual(e2.cell_cache is not None, True)
-        
     def test_update(self):
         """
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
-        ccm = CellCacheManager(cm)
         
-        m = CachedNbrParticleLocatorManager(cm, ccm, True)
+        m = CachedNbrParticleLocatorManager(cm)
         m.add_interaction(parrs[0], parrs[1], 1.0)
         m.add_interaction(parrs[0], parrs[1], 1.1)
         m.add_interaction(parrs[1], parrs[0], 1.0)
 
-        # force update all the cahces
+        # force update all the caches
         for c in m.cache_dict.values():
             c.py_update()
 
@@ -933,9 +586,8 @@ class TestCachedNbrParticleLocatorManager(unittest.TestCase):
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
-        ccm = CellCacheManager(cm)
         
-        m = CachedNbrParticleLocatorManager(cm, ccm, True)
+        m = CachedNbrParticleLocatorManager(cm)
         m.add_interaction(parrs[0], parrs[1], 1.0)
         m.add_interaction(parrs[1], parrs[1], 2.0)
         m.add_interaction(parrs[1], parrs[0], 1.0)
@@ -975,20 +627,17 @@ class TestNNPSManager(unittest.TestCase):
         """
         nm = NNPSManager()
 
-        self.assertEqual(nm.cell_caching, False)
         self.assertEqual(nm.particle_caching, True)
         self.assertEqual(nm.polygon_caching, True)
         self.assertEqual(nm.cell_manager, None)
         self.assertEqual(nm.variable_h, False)
         self.assertEqual(nm.h, 'h')
 
-        self.assertEqual(nm.cell_cache_manager is not None, True)
         self.assertEqual(nm.particle_cache_manager is not None, True)
         self.assertEqual(nm.polygon_cache_manager is not None, True)
 
-        nm = NNPSManager(cell_caching=False, particle_caching=False,
+        nm = NNPSManager(particle_caching=False,
                          polygon_caching=False, variable_h=True, h='H')
-        self.assertEqual(nm.cell_caching, False)
         self.assertEqual(nm.particle_caching, False)
         self.assertEqual(nm.polygon_caching, False)
         self.assertEqual(nm.variable_h, True)
@@ -1006,7 +655,7 @@ class TestNNPSManager(unittest.TestCase):
                          max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
-        nm = NNPSManager(cell_manager=cm, cell_caching=False,
+        nm = NNPSManager(cell_manager=cm,
                          particle_caching=False, polygon_caching=False)
         
         # now get a locator for a single source, without any destination
@@ -1039,14 +688,6 @@ class TestNNPSManager(unittest.TestCase):
         nl2 = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(nl1 is nl2, True)
         self.assertEqual(nl2.caching_enabled, True)
-        self.assertEqual(nl2.cell_cache, None)
-
-        # enable cell caching also
-        nm.enable_cell_caching()
-        
-        # make sure the particle cache manager used within has its cell_caching
-        # set
-        self.assertEqual(nm.particle_cache_manager.use_cell_cache, True)
 
         # all cached locators added previously should also have cell caching
         # this however is taken care by the CachedNbrParticleLocatorManager
@@ -1059,19 +700,14 @@ class TestNNPSManager(unittest.TestCase):
 
         nl1 = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(type(nl1), ConstHCachedNbrParticleLocator)
-        self.assertEqual(nl1.cell_cache is not None, True)
         
-        # now disable cell caching
-        nm.disable_cell_caching()
-        self.assertEqual(nm.particle_cache_manager.use_cell_cache, False)
-
         # now test for the variable h case ====================================
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
-        nm = NNPSManager(cell_manager=cm, cell_caching=False,
+        nm = NNPSManager(cell_manager=cm,
                          particle_caching=False, polygon_caching=False, 
                          variable_h=True, h='h')
 
@@ -1105,14 +741,6 @@ class TestNNPSManager(unittest.TestCase):
         nl2 = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(nl1 is nl2, True)
         self.assertEqual(nl2.caching_enabled, True)
-        self.assertEqual(nl2.cell_cache, None)
-
-        # enable cell caching also
-        nm.enable_cell_caching()
-        
-        # make sure the particle cache manager used within has its cell_caching
-        # set
-        self.assertEqual(nm.particle_cache_manager.use_cell_cache, True)
 
         # all cached locators added previously should also have cell caching
         # this however is taken care by the CachedNbrParticleLocatorManager
@@ -1125,12 +753,7 @@ class TestNNPSManager(unittest.TestCase):
 
         nl1 = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(type(nl1), VarHCachedNbrParticleLocator)
-        self.assertEqual(nl1.cell_cache is not None, True)
         
-        # now disable cell caching
-        nm.disable_cell_caching()
-        self.assertEqual(nm.particle_cache_manager.use_cell_cache, False)
-
     def test_update(self):
         """
         Tests the update function.
@@ -1140,7 +763,7 @@ class TestNNPSManager(unittest.TestCase):
                          max_cell_size=2.0)
 
         # create an nnps manager with all types of caching disabled.
-        nm = NNPSManager(cell_manager=cm, cell_caching=True,
+        nm = NNPSManager(cell_manager=cm,
                          particle_caching=True, polygon_caching=False)
 
         nm.get_neighbor_particle_locator(parrs[0], parrs[0], 1.0)
@@ -1151,8 +774,6 @@ class TestNNPSManager(unittest.TestCase):
         # force update all the caches
         for c in nm.particle_cache_manager.cache_dict.values():
             c.py_update()
-        for c in nm.cell_cache_manager.cell_cache_dict.values():
-            c.py_update()
 
         # now mark parrs[0] as dirty.
         parrs[0].set_dirty(True)
@@ -1162,9 +783,6 @@ class TestNNPSManager(unittest.TestCase):
         # make sure that the caches have been marked dirty.
         for c in nm.particle_cache_manager.cache_dict.values():
             self.assertEqual(c.is_dirty, True)
-
-        for c in nm.cell_cache_manager.cell_cache_dict.values():
-            self.assertEqual(c.is_dirty, True)        
 
 if __name__ == '__main__':
     unittest.main()
