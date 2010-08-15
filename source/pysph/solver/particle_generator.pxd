@@ -5,7 +5,7 @@ Base class for classes generating particle configurations.
 # local imports
 from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.base cimport Base
+
 from pysph.solver.solver_base cimport SolverBase
 
 cdef class MassComputationMode:
@@ -22,7 +22,7 @@ cdef class DensityComputationMode:
     """
     pass
 
-cdef class ParticleGenerator(Base):
+cdef class ParticleGenerator:
     """
     Base class for classes generating particle configurations.
     """

@@ -3,18 +3,18 @@
 Declaration file for cython parallel cell module.
 """
 
-from pysph.solver.base cimport Base
+
 from pysph.base.point cimport Point, IntPoint
 from pysph.base.cell cimport CellManager, Cell
 
 # forward declarations.
 cdef class ParallelCellManager(CellManager)
-cdef class ProcessorMap(Base)
+cdef class ProcessorMap
 
 ################################################################################
 # `ProcessorMap` class.
 ################################################################################
-cdef class ProcessorMap(Base):
+cdef class ProcessorMap:
      cdef public ParallelCellManager cell_manager
      cdef public Point origin
      cdef public dict local_p_map
@@ -75,7 +75,7 @@ cdef class ParallelCellManager(CellManager):
     cpdef exchange_neighbor_particles(self)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
     
-cdef class ParallelCellInfo(Base):
+cdef class ParallelCellInfo:
     cdef public Cell cell
     cdef ParallelCellManager cell_manager
     cdef public dict neighbor_cell_pids

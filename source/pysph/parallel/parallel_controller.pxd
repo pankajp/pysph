@@ -7,10 +7,10 @@ Declarations for the parallel_controller module
 from mpi4py cimport MPI
 
 # local imports
-from pysph.solver.base cimport Base
+
 #from pysph.parallel.parallel_cell cimport ParallelCellManager
 
-cdef class ParallelController(Base):
+cdef class ParallelController:
     """
     """
     cdef public object solver

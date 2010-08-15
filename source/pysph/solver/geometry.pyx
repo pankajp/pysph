@@ -4,13 +4,13 @@ Contains base classes for representing any kind of geometric objects.
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.base cimport Base
+
 
 
 ################################################################################
 # `GeometryBase` class.
 ################################################################################
-cdef class GeometryBase(Base):
+cdef class GeometryBase:
     """
     Base class for all geometries associtaed with entities.
     """    

@@ -16,7 +16,7 @@ from pysph.base.kernels cimport KernelBase
 from pysph.base.nnps cimport NNPSManager
 from pysph.base.cell cimport CellManager
 
-from pysph.solver.base cimport Base
+
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
@@ -35,7 +35,7 @@ from pysph.solver.timing import Timer
 ################################################################################
 # `SolverComponent` class.
 ################################################################################
-cdef class SolverComponent(Base):
+cdef class SolverComponent:
     """
     Base class for all components.
 
@@ -355,7 +355,7 @@ cdef class UserDefinedComponent(SolverComponent):
 ################################################################################
 # `ComponentManager` class.
 ################################################################################
-cdef class ComponentManager(Base):
+cdef class ComponentManager:
     """
     Class to manage components.
 
@@ -750,7 +750,7 @@ cdef class ComponentManager(Base):
 # `SolverBase` class.
 ################################################################################ 
 from pysph.solver.integrator_base cimport Integrator
-cdef class SolverBase(Base):
+cdef class SolverBase:
     """
     """
     def __cinit__(self,

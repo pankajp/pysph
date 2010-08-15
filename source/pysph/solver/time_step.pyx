@@ -2,12 +2,12 @@
 Contains a class to hold the time step.
 """
 
-from pysph.solver.base cimport Base
+
 
 ################################################################################
 # `TimeStep` class.
 ################################################################################
-cdef class TimeStep(Base):
+cdef class TimeStep:
     """
     Class to hold the current timestep.
 

@@ -9,7 +9,7 @@ logger = logging.getLogger()
 # local imports
 from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.base cimport Base
+
 
 cdef class MassComputationMode:
     """
@@ -41,7 +41,7 @@ cdef class DensityComputationMode:
         raise SystemError, "Do not instantiate the %s class"%(
             DensityComputationMode)
 
-cdef class ParticleGenerator(Base):
+cdef class ParticleGenerator:
     """
     Base class for classes generating particle configurations.
     """

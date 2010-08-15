@@ -6,17 +6,20 @@ from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
 
-from pysph.solver.base cimport Base
+
 
 ################################################################################
 # `EntityBase` class.
 ################################################################################
-cdef class EntityBase(Base):
+cdef class EntityBase:
     """
     Base class for any physical entity involved in a simulation.    
     """
     # properties whose value is the same for the whole entity.
     cdef public properties
+    
+    # AttrDict (Bunch) for storing various information about the entity
+    cdef public information 
     
     # unique type identifier for the entity.
     cdef public int type

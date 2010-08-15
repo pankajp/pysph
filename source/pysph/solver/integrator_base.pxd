@@ -3,7 +3,7 @@ Contains base classes for all integrators.
 """
 
 # local imports
-from pysph.solver.base cimport Base
+
 from pysph.solver.solver_base cimport SolverComponent
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.time_step cimport TimeStep
@@ -58,6 +58,9 @@ cdef class Integrator(SolverComponent):
     # the final list of components that will be executed at every call to
     # compute().
     cdef public list execute_list
+    
+    # An AttrDict (Bunch) for storing integration information
+    cdef public information
     
     # the dimension of the velocity and position vectors.
     cpdef public int dimension

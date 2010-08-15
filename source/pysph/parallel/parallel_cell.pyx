@@ -37,7 +37,7 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport LongArray, DoubleArray
 
 from pysph.solver.base import Base
-from pysph.solver.base cimport Base
+
 
 from pysph.solver.fast_utils cimport arange_long
 from pysph.parallel.parallel_controller cimport ParallelController
@@ -107,7 +107,7 @@ cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, i
 ################################################################################
 # `ProcessorMap` class.
 ################################################################################
-cdef class ProcessorMap(Base):
+cdef class ProcessorMap:
     """
     Class to maintain the assignment of processors to geometric regions.
     """
@@ -263,7 +263,7 @@ cdef class ProcessorMap(Base):
 ################################################################################
 # `ParallelCellInfo` class.
 ################################################################################
-cdef class ParallelCellInfo(Base):
+cdef class ParallelCellInfo:
     """
     Class to hold information to be maintained with any parallel cell.
 

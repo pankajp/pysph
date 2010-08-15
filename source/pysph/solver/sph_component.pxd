@@ -5,14 +5,14 @@ Base class for components doing some SPH summation.
 # local imports
 from pysph.base.kernels cimport KernelBase
 from pysph.base.nnps cimport NNPSManager
-from pysph.solver.base cimport Base
+
 from pysph.sph.sph_calc cimport SPHBase
 from pysph.sph.sph_func cimport SPHFunctionParticle
 from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
     ComponentManager 
 from pysph.solver.entity_base cimport EntityBase
 
-cdef class SPHSourceDestMode(Base):
+cdef class SPHSourceDestMode:
     """
     Class to hold the different ways in which source and destinations of a given
     SPH component should be handled.

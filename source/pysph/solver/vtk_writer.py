@@ -13,7 +13,7 @@ from pysph.solver.base import Base
 from pysph.solver.file_writer_component import *
 from pysph.solver.fast_utils import make_nd_array
 
-class ScalarInfo(Base):
+class ScalarInfo:
     """
     Information about a scalar to be written.
     """
@@ -22,7 +22,7 @@ class ScalarInfo(Base):
         self.array_name = array_name
         self.d_type = d_type
 
-class VectorInfo(Base):
+class VectorInfo:
     """
     Information about a vector to be written.
     """

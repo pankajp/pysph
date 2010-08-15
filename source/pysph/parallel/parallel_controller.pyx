@@ -15,9 +15,9 @@ import numpy
 cimport numpy
 
 # local imports
-from pysph.solver.base cimport Base
 
-cdef class ParallelController(Base):
+
+cdef class ParallelController:
     """
     Class to hold information requireed for a parallel solver.
     """

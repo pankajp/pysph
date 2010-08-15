@@ -14,7 +14,7 @@ import numpy
 # local imports
 from pysph.solver.base import Base
 
-class ParallelController(Base):
+class ParallelController:
     """
     Class to hold information requireed for a parallel solver.
     """

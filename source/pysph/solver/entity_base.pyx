@@ -10,18 +10,18 @@ logger = logging.getLogger()
 import types
 
 # local imports
-#from pysph.base.attrdict import AttrDict
+from pysph.base.attrdict import AttrDict
 from pysph.base.carray cimport BaseArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
 
-from pysph.solver.base cimport Base
+
 from pysph.solver.entity_types cimport EntityTypes
 
 ################################################################################
 # `EntityBase` class.
 ################################################################################
-cdef class EntityBase(Base):
+cdef class EntityBase:
     """
     Base class for any physical entity involved in a simulation.
 
@@ -55,6 +55,7 @@ cdef class EntityBase(Base):
         self.properties = dict()
         self.properties.update(properties)
         
+        self.information = AttrDict()
         self.information[self.INTEGRATION_PROPERTIES] = None
 
     cpdef add_entity_property(self, str prop_name, double default_value=0.0):

@@ -3,13 +3,13 @@ Includes classes to enable execution of certain components every few iterations.
 """
 
 # local imports
-from pysph.solver.base cimport Base
+
 from pysph.solver.solver_base cimport SolverComponent
 
 ################################################################################
 # `ComponentIterationSpec` class.
 ################################################################################
-cdef class ComponentIterationSpec(Base):
+cdef class ComponentIterationSpec:
     """
     Holds information about a component to be executed in an
     IterationSkipComponent.

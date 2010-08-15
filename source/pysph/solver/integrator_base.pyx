@@ -10,6 +10,7 @@ logger = logging.getLogger()
 cimport numpy
 
 # local imports
+from pysph.base.attrdict import AttrDict
 from pysph.base.carray cimport DoubleArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
@@ -285,7 +286,8 @@ cdef class Integrator(SolverComponent):
             self.time_step = TimeStep()
         else:
             self.time_step = solver.time_step
-
+            
+        self.information = AttrDict()
         self.information[self.INTEGRATION_PROPERTIES] = {}
         self.information[self.PRE_INTEGRATION_COMPONENTS] = []
         self.information[self.INTEGRATION_ORDER] = []

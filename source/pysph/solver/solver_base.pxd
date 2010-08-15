@@ -3,7 +3,7 @@ Module to hold base classes for different solver components.
 """
 
 # local imports
-from pysph.solver.base cimport Base
+
 from pysph.solver.entity_base cimport EntityBase
 
 from pysph.base.cell cimport CellManager
@@ -19,7 +19,7 @@ cdef class SolverBase
 ################################################################################
 # `SolverComponent` class.
 ################################################################################
-cdef class SolverComponent(Base):
+cdef class SolverComponent:
     """
     Base class for all solver components.
     """
@@ -102,7 +102,7 @@ cdef class UserDefinedComponent(SolverComponent):
 ################################################################################
 # `ComponentManager` class.
 ################################################################################
-cdef class ComponentManager(Base):
+cdef class ComponentManager:
     """
     Class to manage different components.
 
@@ -149,7 +149,7 @@ cdef class ComponentManager(Base):
 ################################################################################
 # `SolverBase` class.
 ################################################################################
-cdef class SolverBase(Base):
+cdef class SolverBase:
     """
     Base class for all solvers.
     

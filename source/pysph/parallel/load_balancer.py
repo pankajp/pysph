@@ -19,7 +19,7 @@ TAG_LB_PARTICLE_REPLY = 102
 ################################################################################
 # `LoadBalancer` class.
 ################################################################################
-class LoadBalancer(Base):
+class LoadBalancer:
     """
     Class to perform simple load balancing.
     """
