@@ -7,7 +7,8 @@ from pysph.base.particle_array cimport ParticleArray
 
 from pysph.sph.pressure_funcs cimport SPHSymmetricPressureGradient3D
 from pysph.solver.sph_component cimport *
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.fluid cimport Fluid
 
 ################################################################################
@@ -33,13 +34,13 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
         Constructor.
         """
         self.source_dest_mode = SPHSourceDestMode.Group_By_Type
-        self.source_types = [EntityTypes.Entity_Fluid]
-        self.dest_types = [EntityTypes.Entity_Fluid]
+        self.source_types = [Fluid]
+        self.dest_types = [Fluid]
         
         self.sph_func_class = SPHSymmetricPressureGradient3D
 
         # only accept fluids.
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
         
     cpdef int update_property_requirements(self) except -1:
         """

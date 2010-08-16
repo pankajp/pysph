@@ -16,7 +16,8 @@ from pysph.base.kernels cimport KernelBase
 from pysph.base.nnps cimport NNPSManager
 from pysph.base.cell cimport CellManager
 
-
+#from pysph.solver.integrator_base import Integrator
+import pysph.solver.integrator_base as integrator_base
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.speed_of_sound cimport SpeedOfSound
@@ -158,13 +159,13 @@ cdef class SolverComponent:
         """
         raise NotImplementedError, 'SolverComponent::set_entity_names'
         
-    cpdef add_input_entity_type(self, int etype):
+    cpdef add_input_entity_type(self, type etype):
         """
         Adds an entity type that will be accepted by this component.
         """
         self.input_types.add(etype)
 
-    cpdef remove_input_entity_type(self, int etype):
+    cpdef remove_input_entity_type(self, type etype):
         """
         Removes a particular entity type that was added.
         """
@@ -177,7 +178,7 @@ cdef class SolverComponent:
         self.input_types.clear()
         self.input_types.update(set(type_list))
 
-    cpdef add_read_prop_requirement(self, int e_type, list prop_list):
+    cpdef add_read_prop_requirement(self, type e_type, list prop_list):
         """
         Adds a property requirement for the given type.
 
@@ -192,7 +193,7 @@ cdef class SolverComponent:
 
         t_rp.update(set(prop_list))
 
-    cpdef add_write_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_write_prop_requirement(self, type e_type, str prop_name, double
                                      default_value=0.0):
         """
         Adds a property requirement for the given type.
@@ -208,7 +209,7 @@ cdef class SolverComponent:
 
         t_wp.append(e)
 
-    cpdef add_private_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_private_prop_requirement(self, type e_type, str prop_name, double
                                        default_value=0.0):
         """
         Adds a property requirement for the given type.
@@ -224,7 +225,7 @@ cdef class SolverComponent:
 
         t_pp.append(e)
 
-    cpdef add_flag_requirement(self, int e_type, str flag_name, int
+    cpdef add_flag_requirement(self, type e_type, str flag_name, int
                                default_value=0):
         """
         Adds a flag property requirement for the given type.
@@ -240,7 +241,7 @@ cdef class SolverComponent:
 
         t_f.append(e)
         
-    cpdef add_entity_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_entity_prop_requirement(self, type e_type, str prop_name, double
                                       default_value=0.0):
         """
         Add a property requirement of the entity.
@@ -395,13 +396,13 @@ cdef class ComponentManager:
         self.particle_props_write = {}
         self.particle_props_private = {}
         
-    cpdef get_entity_properties(self, int e_type):
+    cpdef get_entity_properties(self, type e_type):
         """
         Get the entity property requirements of all components.
         """
         return self.entity_props[e_type]
 
-    cpdef get_particle_properties(self, int e_type):
+    cpdef get_particle_properties(self, type e_type):
         """
         Get the particle property requirements of all components.
         """
@@ -443,7 +444,7 @@ cdef class ComponentManager:
 
             - Property requirements of the component should not change after it
               has been added to the component manager. The component manager
-              will not be able to consistenly report the property requirements
+              will not be able to consistently report the property requirements
               if that is done.
 
         """
@@ -555,9 +556,9 @@ cdef class ComponentManager:
                             msg += ' %s'%(p_name)
                             logger.warn(msg)
                             logger.warn('Using new value of %s'%p_default)
-                            p1['default'] = p_default                
+                            p1['default'] = p_default
         
-        # add the particle properites to particle_properties
+        # add the particle properties to particle_properties
         particle_props = self.particle_props
         
         # add the private particle properties.
@@ -595,7 +596,7 @@ cdef class ComponentManager:
 
         return True
 
-    cpdef _update_property_component_map(self, str prop, str comp_name, int
+    cpdef _update_property_component_map(self, str prop, str comp_name, type
                                          etype, str access_type):
         """
         """
@@ -628,7 +629,7 @@ cdef class ComponentManager:
                 msg = 'Make sure each property appears in exactly one class'
                 logger.warn(msg)
         
-    cpdef _add_particle_property(self, dict prop, int etype, str data_type='double'):
+    cpdef _add_particle_property(self, dict prop, type etype, str data_type='double'):
         """
         """
         cdef dict particle_props = self.particle_props
@@ -659,7 +660,7 @@ cdef class ComponentManager:
                     logger.warn(msg)
                     entry['default'] = prop['default']                    
         
-    cpdef bint _check_property(self, SolverComponent comp, dict prop, str access_mode, int etype) except *:
+    cpdef bint _check_property(self, SolverComponent comp, dict prop, str access_mode, type etype) except *:
         """
         Check if this property is safe.
         """
@@ -733,7 +734,6 @@ cdef class ComponentManager:
                         entity.properties[prop_name] = e_props[prop_name][
                             'default']
         
-
         # update the particle properties
         parray = entity.get_particle_array()
         if parray is None:
@@ -746,10 +746,9 @@ cdef class ComponentManager:
                     prop_inf = p_props[prop_name]
                     parray.add_property(prop_inf)
         
-################################################################################
+###############################################################################
 # `SolverBase` class.
-################################################################################ 
-from pysph.solver.integrator_base cimport Integrator
+###############################################################################
 cdef class SolverBase:
     """
     """
@@ -832,7 +831,7 @@ cdef class SolverBase:
         # the integrator.
         self.integrator = integrator
         if self.integrator is None:
-            self.integrator = Integrator(name='integrator_default', solver=self)
+            self.integrator = integrator_base.Integrator(name='integrator_default', solver=self)
         self.integrator.time_step = self.time_step
 
         # the timer

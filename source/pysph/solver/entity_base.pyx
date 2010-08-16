@@ -16,8 +16,6 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
 
 
-from pysph.solver.entity_types cimport EntityTypes
-
 ################################################################################
 # `EntityBase` class.
 ################################################################################
@@ -47,7 +45,7 @@ cdef class EntityBase:
         Constructor.
         """
         # set type to base.
-        self.type = EntityTypes.Entity_Base
+        self.type = EntityBase
 
         self.name = name
 
@@ -78,14 +76,16 @@ cdef class EntityBase:
         """
         return None
 
-    cpdef bint is_a(self, int type):
+    cpdef bint is_a(self, type etype):
         """
         Check if this entity is of the given type.
 
         This will be implemented differently in the derived classes.
         """
-        if EntityTypes.Entity_Base == type:
+        if self.type == etype or isinstance(self, etype):
             return True
+        else:
+            return False
 
     def set_properties_to_integrate(self, list prop_names):
         """

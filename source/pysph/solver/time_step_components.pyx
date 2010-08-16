@@ -16,7 +16,8 @@ from pysph.base.particle_tags cimport *
 
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.speed_of_sound cimport SpeedOfSound
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.solver_base cimport *
 from pysph.solver.time_step cimport TimeStep
 
@@ -107,7 +108,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
             self.nnps_manager = nnps_manager
 
         # accept all entities in input.
-        self.add_input_entity_type(EntityTypes.Entity_Base)
+        self.add_input_entity_type(EntityBase)
             
     cpdef int update_property_requirements(self) except -1:
         """

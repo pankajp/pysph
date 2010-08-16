@@ -10,7 +10,8 @@ cimport numpy
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.integrator_base cimport *
 from pysph.solver.solver_base cimport *
 from pysph.solver.component_factory import ComponentFactory as cfac
@@ -294,13 +295,13 @@ cdef class RK2Integrator(Integrator):
             if e_types is None or len(e_types) == 0:
                 for i in range(len(intgnd)):
                     p = intgnd[i]
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
+                    self.add_write_prop_requirement(EntityBase, p)
                     p = p+'_prev'
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
+                    self.add_write_prop_requirement(EntityBase, p)
                     p = intgl[i]
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
+                    self.add_write_prop_requirement(EntityBase, p)
                     p = p +'_prev'
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base, p)
+                    self.add_write_prop_requirement(EntityBase, p)
             else:
                 for e_type in e_types:
                     for i in range(len(intgnd)):

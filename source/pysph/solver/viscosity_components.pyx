@@ -14,7 +14,8 @@ from pysph.sph.sph_func cimport *
 from pysph.solver.sph_component cimport *
 from pysph.solver.solver_base cimport *
 from pysph.solver.speed_of_sound cimport SpeedOfSound
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 
 ################################################################################
 # `SPHMonaghanArtVisc3D` class.
@@ -124,10 +125,10 @@ cdef class MonaghanArtViscComponent(SPHComponent):
             self.speed_of_sound = speed_of_sound
 
         # artificial viscosity to be only computed on fluids.
-        self.dest_types=[EntityTypes.Entity_Fluid]
+        self.dest_types=[Fluid]
         
         # default we accept only fluids.
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
 
         # the sph function class to use.
         self.sph_func_class = SPHMonaghanArtVisc3D

@@ -12,7 +12,8 @@ from pysph.base.particle_array import ParticleArray
 
 from pysph.solver.entity_base import EntityBase
 from pysph.solver.fluid import Fluid
-from pysph.solver.entity_types import EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.time_step import TimeStep
 from pysph.solver.integrator_base import Integrator, ODEStepper
 from pysph.solver.solver_base import ComponentManager
@@ -95,17 +96,17 @@ def get_sample_integrator_setup():
     prop_name = 'density'
     integrand_arrays = ['rho_rate']
     integral_arrays = ['rho']
-    entity_types = [EntityTypes.Entity_Fluid, EntityTypes.Entity_Dummy]
+    entity_types = [Fluid, DummyEntity]
     stepper = {'default':'euler',
-               EntityTypes.Entity_Fluid:'ya_stepper'} 
+               Fluid:'ya_stepper'} 
     
     i.add_property(prop_name, integrand_arrays, integral_arrays,
                    entity_types, stepper)
 
     # setup the entities accepted for each property stepping.
-    i.add_entity_type('velocity', EntityTypes.Entity_Fluid)
-    i.add_entity_type('position', EntityTypes.Entity_Fluid)
-    i.add_entity_type('position', EntityTypes.Entity_Dummy)
+    i.add_entity_type('velocity', Fluid)
+    i.add_entity_type('position', Fluid)
+    i.add_entity_type('position', DummyEntity)
     
     # add pre-integration components.
     i.add_pre_integration_component(comp_name='c1')
@@ -257,9 +258,9 @@ class TestIntegrator(unittest.TestCase):
         prop_name = 'density'
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
-        entity_types = [EntityTypes.Entity_Fluid]
+        entity_types = [Fluid]
         stepper = {'default':'euler',
-                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+                   Fluid:'ya_stepper'} 
 
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
@@ -271,11 +272,11 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(density_info['integral'], ['rho'])
         self.assertEqual(density_info['integrand'], ['rho_rate'])
         self.assertEqual(density_info['entity_types'],
-                         [EntityTypes.Entity_Fluid])
+                         [Fluid])
         self.assertEqual(len(density_info['steppers']), 2)
         self.assertEqual(density_info['steppers']['default'],
                          'euler')
-        self.assertEqual(density_info['steppers'][EntityTypes.Entity_Fluid],
+        self.assertEqual(density_info['steppers'][Fluid],
                          'ya_stepper')
 
     def test_add_per_step_component(self):
@@ -299,9 +300,9 @@ class TestIntegrator(unittest.TestCase):
         prop_name = 'density'
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
-        entity_types = [EntityTypes.Entity_Fluid]
+        entity_types = [Fluid]
         stepper = {'default':'euler',
-                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+                   Fluid:'ya_stepper'} 
 
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
@@ -353,9 +354,9 @@ class TestIntegrator(unittest.TestCase):
         prop_name = 'density'
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
-        entity_types = [EntityTypes.Entity_Fluid]
+        entity_types = [Fluid]
         stepper = {'default':'euler',
-                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+                   Fluid:'ya_stepper'} 
 
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
@@ -375,33 +376,33 @@ class TestIntegrator(unittest.TestCase):
         prop_name = 'density'
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
-        entity_types = [EntityTypes.Entity_Fluid]
+        entity_types = [Fluid]
         stepper = {'default':'euler',
-                   EntityTypes.Entity_Fluid:'ya_stepper'} 
+                   Fluid:'ya_stepper'} 
         
         i.add_property(prop_name, integrand_arrays, integral_arrays, 
                        entity_types, stepper)
 
         print i.information[i.INTEGRATION_PROPERTIES]
 
-        s = i.get_stepper(EntityTypes.Entity_Fluid, 'velocity')
+        s = i.get_stepper(Fluid, 'velocity')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Solid, 'velocity')
+        s = i.get_stepper(Solid, 'velocity')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Base, 'velocity')
+        s = i.get_stepper(EntityBase, 'velocity')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Base, 'position')
+        s = i.get_stepper(EntityBase, 'position')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Fluid, 'position')
+        s = i.get_stepper(Fluid, 'position')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Solid, 'position')
+        s = i.get_stepper(Solid, 'position')
         self.assertEqual(type(s), ODEStepper)
 
-        s = i.get_stepper(EntityTypes.Entity_Solid, 'density')
+        s = i.get_stepper(Solid, 'density')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Base, 'density')
+        s = i.get_stepper(EntityBase, 'density')
         self.assertEqual(type(s), ODEStepper)
-        s = i.get_stepper(EntityTypes.Entity_Fluid, 'density')
+        s = i.get_stepper(Fluid, 'density')
         self.assertEqual(type(s), YAStepper)        
 
     def test_update_property_requirements(self):
@@ -413,12 +414,12 @@ class TestIntegrator(unittest.TestCase):
         prop_name = 'density'
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
-        entity_types = [EntityTypes.Entity_Fluid]
+        entity_types = [Fluid]
         i.add_property(prop_name, integrand_arrays, integral_arrays,
                        entity_types)
         
-        i.add_entity_type('velocity', EntityTypes.Entity_Base)
-        i.add_entity_type('position', EntityTypes.Entity_Base)
+        i.add_entity_type('velocity', EntityBase)
+        i.add_entity_type('position', EntityBase)
 
         
         # make sure NO property information is present currently.
@@ -434,10 +435,10 @@ class TestIntegrator(unittest.TestCase):
         # make sure the write properties were added.
         wp = i.particle_props_write
         
-        self.assertEqual(wp.has_key(EntityTypes.Entity_Base), True)
-        self.assertEqual(wp.has_key(EntityTypes.Entity_Fluid), True)
+        self.assertEqual(wp.has_key(EntityBase), True)
+        self.assertEqual(wp.has_key(Fluid), True)
 
-        f_props = wp[EntityTypes.Entity_Fluid]
+        f_props = wp[Fluid]
         # read each prop into a dict and confirm the necessary properties
         # are there.
         f_dict = {}
@@ -448,7 +449,7 @@ class TestIntegrator(unittest.TestCase):
         self.assertEqual(f_dict.has_key('rho_rate'), True)
 
         # base entity props
-        b_props = wp[EntityTypes.Entity_Base]
+        b_props = wp[EntityBase]
         b_dict = {}
         for b_prop in b_props:
             b_dict[b_prop['name']] = b_prop['name']

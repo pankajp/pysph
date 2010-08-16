@@ -9,7 +9,8 @@ Module containing various density components.
 from pysph.sph.sph_calc import SPHBase
 from pysph.sph.density_funcs import SPHRho3D, SPHDensityRate3D
 from pysph.solver.sph_component import *
-from pysph.solver.entity_types import EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 
 ################################################################################
 # `SPHDensityComponent` class.
@@ -35,12 +36,12 @@ class SPHDensityComponent(PYSPHComponent):
         """
         Constructor.
         """
-        self.source_types=[EntityTypes.Entity_Fluid]
-        self.dest_types=[EntityTypes.Entity_Fluid]
+        self.source_types=[Fluid]
+        self.dest_types=[Fluid]
 
         self.sph_func_class = SPHRho3D
 
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
 
     def update_property_requirements(self):
         """
@@ -104,12 +105,12 @@ class SPHDensityRateComponent(PYSPHComponent):
         """
         Constructor.
         """
-        self.source_types=[EntityTypes.Entity_Fluid]
-        self.dest_types=[EntityTypes.Entity_Fluid]
+        self.source_types=[Fluid]
+        self.dest_types=[Fluid]
 
         self.sph_func_class = SPHDensityRate3D
 
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
 
     def update_property_requirements(self):
         """

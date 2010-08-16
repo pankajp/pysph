@@ -11,7 +11,7 @@ import numpy
 
 # local imports
 from pysph.base.particle_array import ParticleArray
-from pysph.solver.base import Base
+
 
 TAG_LB_PARTICLE_REQUEST = 101
 TAG_LB_PARTICLE_REPLY = 102

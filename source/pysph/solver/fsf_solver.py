@@ -9,7 +9,8 @@ logger = logging.getLogger()
 
 # local imports
 from pysph.solver.solver_base import SolverBase
-from pysph.solver.entity_types import EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.density_components import SPHDensityComponent\
     , SPHDensityRateComponent
 from pysph.solver.pressure_components import TaitPressureComponent
@@ -237,7 +238,7 @@ class FSFSolver(SolverBase):
                                       values=[self.g])
         
         # make this component accept only fluids as inputs.
-        gravity_comp.add_input_entity_type(EntityTypes.Entity_Fluid)
+        gravity_comp.add_input_entity_type(Fluid)
 
         # add this to the component manager.
         self.component_manager.add_component(gravity_comp, notify=True)
@@ -275,7 +276,7 @@ class FSFSolver(SolverBase):
                 i.add_property_step_info(prop_name='density',
                                          integrand_arrays=['rho_rate'],
                                          integral_arrays=['rho'],
-                                         entity_types=[EntityTypes.Entity_Fluid],
+                                         entity_types=[Fluid],
                                          integrand_initial_values=[0.])
 
             # now add the density rate components.
@@ -306,7 +307,7 @@ class FSFSolver(SolverBase):
         particles_present = False
 
         for e in self.entity_list:
-            if e.is_a(EntityTypes.Entity_Fluid):
+            if e.is_a(Fluid):
                 particles = e.get_particle_array()
                 if particles.get_number_of_particles() == 0:
                     logger.info('No particles found for %s'%(e.name))

@@ -74,18 +74,18 @@ cdef class SolverComponent:
     cpdef remove_entity_name(self, str name)
     cpdef set_entity_names(self, list entity_names)
 
-    cpdef add_input_entity_type(self, int etype)
-    cpdef remove_input_entity_type(self, int etype)
+    cpdef add_input_entity_type(self, type etype)
+    cpdef remove_input_entity_type(self, type etype)
     cpdef set_input_entity_types(self, list type_list)
 
-    cpdef add_read_prop_requirement(self, int e_type, list prop_list)
-    cpdef add_write_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_read_prop_requirement(self, type e_type, list prop_list)
+    cpdef add_write_prop_requirement(self, type e_type, str prop_name, double
                                      default_value=*)
-    cpdef add_private_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_private_prop_requirement(self, type e_type, str prop_name, double
                                        default_value=*)
-    cpdef add_flag_requirement(self, int e_type, str flag_name, int
+    cpdef add_flag_requirement(self, type e_type, str flag_name, int
                                default_value=*)
-    cpdef add_entity_prop_requirement(self, int e_type, str prop_name, double
+    cpdef add_entity_prop_requirement(self, type e_type, str prop_name, double
                                       default_value=*)
     
 
@@ -130,18 +130,18 @@ cdef class ComponentManager:
     # checks if property requirements for component are safe.
     cpdef bint validate_property_requirements(self, SolverComponent c) except *
 
-    cpdef _add_particle_property(self, dict prop, int etype, str data_type=*)
+    cpdef _add_particle_property(self, dict prop, type etype, str data_type=*)
     cpdef bint _check_property(
-        self, SolverComponent comp, dict prop, str access_mode, int etype) except *
+        self, SolverComponent comp, dict prop, str access_mode, type etype) except *
     cpdef _update_property_component_map(
-        self, str prop, str comp_name, int etype, str access_type)
+        self, str prop, str comp_name, type etype, str access_type)
 
     cpdef remove_component(self, str comp_name)
 
     cpdef SolverComponent get_component(self, str component_name)
 
-    cpdef get_entity_properties(self, int e_type)
-    cpdef get_particle_properties(self, int e_type)
+    cpdef get_entity_properties(self, type e_type)
+    cpdef get_particle_properties(self, type e_type)
 
     cpdef setup_entity(self, EntityBase entity)
 

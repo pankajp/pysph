@@ -14,7 +14,7 @@ from pysph.parallel.parallel_controller import ParallelController
 from pysph.parallel.parallel_component import ParallelComponent
 from pysph.solver.parallel_property_updater import ParallelPropertyUpdater
 from pysph.solver.fsf_solver import *
-from pysph.solver.entity_types import *
+
 
 ################################################################################
 # `ParallelFsfSolver` class.
@@ -116,7 +116,7 @@ class ParallelFsfSolver(FSFSolver):
         y_max = -1e20
         particles_present = False
         for e in self.entity_list:
-            if e.is_a(EntityTypes.Entity_Fluid):
+            if e.is_a(Fluid):
                 particles = e.get_particle_array()
                 if particles.get_number_of_particles() == 0:
                     continue

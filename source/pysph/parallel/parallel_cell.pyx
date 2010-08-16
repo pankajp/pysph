@@ -36,7 +36,7 @@ from pysph.base.cell cimport CellManager, Cell
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport LongArray, DoubleArray
 
-from pysph.solver.base import Base
+
 
 
 from pysph.solver.fast_utils cimport arange_long

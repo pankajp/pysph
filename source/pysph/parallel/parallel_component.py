@@ -12,7 +12,7 @@ logger = logging.getLogger()
 # local imports 
 from pysph.solver.solver_base import UserDefinedComponent
 from pysph.parallel.parallel_controller import ParallelController
-from pysph.solver.entity_types import *
+
 
 class ParallelComponent(UserDefinedComponent):
     """
@@ -37,7 +37,7 @@ class ParallelComponent(UserDefinedComponent):
             entity_list=entity_list)
 
         # applies to all entities.
-        self.add_input_entity_type(EntityTypes.Entity_Base)
+        self.add_input_entity_type(EntityBase)
     
     def update_property_requirements(self):
         """

@@ -316,7 +316,7 @@ cdef class ParticleArray:
         the index_list and reduce the size of the array by one. This is done for
         every property and temporary arrays that is being maintained.
     
-	**Parameters**
+    	**Parameters**
         
          - index_list - an array of indices, this array should be a LongArray.
 
@@ -752,7 +752,7 @@ cdef class ParticleArray:
         if prop_name is None:
             logger.error('Cannot add property with no name')
             raise ValueError
-
+        
         # make sure the size of the supplied array is consistent.
         if (data is None or self.get_number_of_particles() == 0 or   
             len(data) == 0):
@@ -866,6 +866,9 @@ cdef class ParticleArray:
             arr = FloatArray(size)
         elif strcmp(PyString_AsString(data_type), 'int') == 0:
             arr = IntArray(size)
+        else:
+            logger.error('Trying to create carray of unknown '
+                   'datatype: %s' %PyString_AsString(data_type))
 
         if size > 0:
             arr.get_npy_array()[:] = default

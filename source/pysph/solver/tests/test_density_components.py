@@ -9,7 +9,8 @@ import unittest
 
 # local imports
 from pysph.solver.density_components import SPHDensityComponent
-from pysph.solver.entity_types import EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 
 def get_sample_data():
     """
@@ -30,8 +31,8 @@ class TestSPHDensityComponent(unittest.TestCase):
 
         self.assertEqual(c.kernel, None)
         self.assertEqual(c.name, '')
-        self.assertEqual(c.source_types, [EntityTypes.Entity_Fluid])
-        self.assertEqual(c.dest_types, [EntityTypes.Entity_Fluid])
+        self.assertEqual(c.source_types, [Fluid])
+        self.assertEqual(c.dest_types, [Fluid])
         
 
 if __name__ == '__main__':

@@ -6,47 +6,10 @@ Contains base classes for all integrators.
 
 from pysph.solver.solver_base cimport SolverComponent
 from pysph.solver.entity_base cimport EntityBase
+from pysph.solver.solid cimport Solid
+from pysph.solver.fluid cimport Fluid
 from pysph.solver.time_step cimport TimeStep
 
-# forward declarations.
-cdef class Integrator
-
-################################################################################
-# `ODEStepper` class.
-################################################################################
-cdef class ODEStepper(SolverComponent):
-    """
-    Class to step a given property by a given time step.
-    """
-    # name of the property that is being stepped.
-    cdef public str prop_name
-
-    # names of properties that have to be stepped
-    cdef public list integral_names
-
-    # names of arrays where the values of the next step will be stored.
-    cpdef public list next_step_names
-
-    # names of properties representing the 'rate' of change of properties that
-    # have to be stepped.
-    cdef public list integrand_names
-
-    # the time_step object to obtain the time step.
-    cdef public TimeStep time_step
-    
-    cpdef int setup_component(self) except -1
-    cdef int compute(self) except -1
-    cpdef set_properties(self, str prop_name, list integrands, list integrals)
-
-################################################################################
-# `PyODEStepper` class.
-################################################################################
-cdef class PyODEStepper(ODEStepper):
-    """
-    Class to implement some steppers in pure python if needed.
-    """
-    cdef int compute(self) except -1
-    cpdef int py_compute(self) except -1
 
 ################################################################################
 # `Integrator` class.
@@ -108,8 +71,45 @@ cdef class Integrator(SolverComponent):
     cpdef set_dimension(self, int dimension)
 
     # add an entity type for inclusion in integration of a given property.
-    cpdef add_entity_type(self, str prop_name, int entity_type)
-    cpdef remove_entity_type(self, str prop_name, int entity_type)
+    cpdef add_entity_type(self, str prop_name, type entity_type)
+    cpdef remove_entity_type(self, str prop_name, type entity_type)
 
     # updates internal data structures about property requirements.
     cpdef int update_property_requirements(self) except -1    
+
+################################################################################
+# `ODEStepper` class.
+################################################################################
+cdef class ODEStepper(SolverComponent):
+    """
+    Class to step a given property by a given time step.
+    """
+    # name of the property that is being stepped.
+    cdef public str prop_name
+
+    # names of properties that have to be stepped
+    cdef public list integral_names
+
+    # names of arrays where the values of the next step will be stored.
+    cpdef public list next_step_names
+
+    # names of properties representing the 'rate' of change of properties that
+    # have to be stepped.
+    cdef public list integrand_names
+
+    # the time_step object to obtain the time step.
+    cdef public TimeStep time_step
+    
+    cpdef int setup_component(self) except -1
+    cdef int compute(self) except -1
+    cpdef set_properties(self, str prop_name, list integrands, list integrals)
+
+################################################################################
+# `PyODEStepper` class.
+################################################################################
+cdef class PyODEStepper(ODEStepper):
+    """
+    Class to implement some steppers in pure python if needed.
+    """
+    cdef int compute(self) except -1
+    cpdef int py_compute(self) except -1

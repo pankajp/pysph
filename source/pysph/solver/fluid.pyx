@@ -4,7 +4,7 @@ Module to contain class to represent fluids.
 
 # local imports
 from pysph.base.cell cimport CellManager
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.fluid import Fluid
 from pysph.solver.entity_base cimport *
 
 cdef class Fluid(EntityBase):
@@ -17,7 +17,7 @@ cdef class Fluid(EntityBase):
         """
         Constructor.
         """
-        self.type = EntityTypes.Entity_Fluid
+        self.type = Fluid
         self.particle_array = particles
 
         # create an empty particle array if nothing give from input.
@@ -27,7 +27,7 @@ cdef class Fluid(EntityBase):
         # name of particle array same as name of entity.
         self.particle_array.name = self.name
 
-        # add any default properties that are requiered of fluids in all kinds
+        # add any default properties that are required of fluids in all kinds
         # of simulations.
         self.add_entity_property('rho', 1000.)
         self.add_entity_property('max_density_variation', 1.0)
@@ -38,13 +38,6 @@ cdef class Fluid(EntityBase):
         Returns the ParticleArray representing this entity.
         """
         return self.particle_array
-
-    cpdef bint is_a(self, int type):
-        """
-        Check if this entity is of the given type.
-        """
-        return (EntityTypes.Entity_Fluid == type or
-                EntityBase.is_a(self, type))
 
     cpdef add_arrays_to_cell_manager(self, CellManager cell_manager):
         """

@@ -16,13 +16,16 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.solver.solver_base cimport SolverComponent, SolverBase,\
     ComponentManager
 from pysph.solver.entity_base cimport EntityBase
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.time_step cimport TimeStep
 from pysph.solver.array_initializer import ArrayInitializer
 from utils import *
 
 # import component factory
 from pysph.solver.component_factory import ComponentFactory as cfac
+
+
 ################################################################################
 # `ODEStepper` class.
 ################################################################################
@@ -328,7 +331,7 @@ cdef class Integrator(SolverComponent):
         # sanity checks
         if dimension <= 0:
             logger.warn('Dimension of <0 specified')
-            logger.warn('Not adding velocity and position properites')
+            logger.warn('Not adding velocity and position properties')
             return
         if dimension > 3:
             dimension = 3
@@ -356,11 +359,11 @@ cdef class Integrator(SolverComponent):
             
         # now add the velocity and position properties to be stepped.
         self.add_property('velocity', accel_arrays, vel_arrays,
-                          [EntityTypes.Entity_Base], integrand_initial_values=[0.])
+                          [EntityBase], integrand_initial_values=[0.])
         self.add_property('position', vel_arrays, pos_arrays,
-                          [EntityTypes.Entity_Base])
+                          [EntityBase])
 
-    cpdef add_entity_type(self, str prop_name, int entity_type):
+    cpdef add_entity_type(self, str prop_name, type entity_type):
         """
         Includes the given entity type for integration of a given property.
         """
@@ -380,7 +383,7 @@ cdef class Integrator(SolverComponent):
         if entity_types.count(entity_type) == 0:
             entity_types.append(entity_type)
 
-    cpdef remove_entity_type(self, str prop_name, int entity_type):
+    cpdef remove_entity_type(self, str prop_name, type entity_type):
         """
         Remove the given entity type for integration of a given property.
         """
@@ -1029,9 +1032,9 @@ cdef class Integrator(SolverComponent):
                 # meaning this property is to be applied to all entity types. 
                 # add the integrand and integral arrays
                 for i in range(len(intgnd)):
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base, 
+                    self.add_write_prop_requirement(EntityBase, 
                                                     intgnd[i])
-                    self.add_write_prop_requirement(EntityTypes.Entity_Base,
+                    self.add_write_prop_requirement(EntityBase,
                                                     intgl[i])
             else:
                 for e_type in e_types:

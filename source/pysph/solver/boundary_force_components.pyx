@@ -14,7 +14,8 @@ logger = logging.getLogger()
 from pysph.base.point cimport Point
 from pysph.base.kernels cimport *
 from pysph.sph.sph_func cimport *
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.sph_component cimport *
 from pysph.solver.solver_base cimport *
 
@@ -194,14 +195,14 @@ cdef class SPHRepulsiveBoundaryForceComponent(SPHComponent):
         self.speed_of_sound = speed_of_sound
         
         # setup the accepted destination types.
-        self.dest_types =[EntityTypes.Entity_Fluid]
+        self.dest_types =[Fluid]
 
         # setup the accepted source types.
-        self.source_types = [EntityTypes.Entity_Solid]
+        self.source_types = [Solid]
         
         # allow for solids and liquids in the inputs
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
-        self.add_input_entity_type(EntityTypes.Entity_Solid)
+        self.add_input_entity_type(Fluid)
+        self.add_input_entity_type(Solid)
 
         # use the default kernel always
         self.kernel = RepulsiveBoundaryKernel()

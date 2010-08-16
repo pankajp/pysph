@@ -12,7 +12,7 @@ from mpi4py import MPI
 import numpy
 
 # local imports
-from pysph.solver.base import Base
+
 
 class ParallelController:
     """

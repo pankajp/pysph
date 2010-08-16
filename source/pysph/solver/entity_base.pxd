@@ -7,7 +7,6 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
 
 
-
 ################################################################################
 # `EntityBase` class.
 ################################################################################
@@ -22,7 +21,7 @@ cdef class EntityBase:
     cdef public information 
     
     # unique type identifier for the entity.
-    cdef public int type
+    cdef public type type
 
     # name of the entity
     cdef public str name
@@ -36,7 +35,7 @@ cdef class EntityBase:
     cpdef add_entity_property(self, str prop_name, double default_value=*)
 
     # check if the entity is of type etype.
-    cpdef bint is_a(self, int etype)
+    cpdef bint is_a(self, type etype)
 
     # function to return the set of particles representing the entity.
     cpdef ParticleArray get_particle_array(self)

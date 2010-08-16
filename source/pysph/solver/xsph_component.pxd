@@ -4,7 +4,8 @@ Component to implement XSPH velocity correction.
 
 from pysph.sph.sph_func cimport *
 from pysph.solver.sph_component cimport *
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.integrator_base cimport *
 
 cdef class XSPHFunction3D(SPHFunctionParticle3D):

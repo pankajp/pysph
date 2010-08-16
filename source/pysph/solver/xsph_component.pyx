@@ -9,7 +9,8 @@ logger = logging.getLogger()
 # local imports
 from pysph.sph.sph_func cimport *
 from pysph.solver.sph_component cimport *
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.integrator_base cimport *
 
 ################################################################################
@@ -88,11 +89,11 @@ cdef class XSPHVelocityComponent(SPHComponent):
         """
         Constructor.
         """
-        self.source_types = [EntityTypes.Entity_Fluid]
-        self.dest_types = [EntityTypes.Entity_Fluid]
+        self.source_types = [Fluid]
+        self.dest_types = [Fluid]
 
         self.sph_func_class = XSPHFunction3D
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
 
         self.epsilon = epsilon
 

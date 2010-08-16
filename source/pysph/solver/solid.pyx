@@ -10,7 +10,6 @@ logger = logging.getLogger()
 # local imports
 from pysph.base.point cimport Point
 from pysph.solver.entity_base cimport *
-from pysph.solver.entity_types cimport EntityTypes
 
 from pysph.base.cell cimport CellManager
 
@@ -52,9 +51,8 @@ cdef class Solid(EntityBase):
         """
         Constructor.
         """
-        self.type = EntityTypes.Entity_Fluid
         self.sph_particles = particles
-        self.type = EntityTypes.Entity_Solid
+        self.type = Solid
 
         if self.sph_particles is None:
             self.sph_particles = ParticleArray(name=self.name)
@@ -63,13 +61,6 @@ cdef class Solid(EntityBase):
 
         # add any default properties that must be there for solids.        
         
-    cpdef bint is_a(self, int e_type):
-        """
-        Check if this entity is of the given type.
-        """
-        return (EntityTypes.Entity_Solid == e_type or
-                EntityBase.is_a(self, e_type))
-
     cpdef ParticleArray get_particle_array(self):
         """
         """

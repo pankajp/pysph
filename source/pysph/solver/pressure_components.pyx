@@ -12,7 +12,8 @@ import numpy
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.entity_base cimport EntityBase
 from pysph.solver.fluid cimport Fluid
 from pysph.solver.solver_base cimport SolverComponent, SolverBase\
@@ -51,7 +52,7 @@ cdef class TaitPressureComponent(SolverComponent):
             self.speed_of_sound = speed_of_sound
 
         # set the accepted input types of this component.
-        self.add_input_entity_type(EntityTypes.Entity_Fluid)
+        self.add_input_entity_type(Fluid)
 
     cpdef int update_property_requirements(self) except -1:
         """

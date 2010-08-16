@@ -9,7 +9,7 @@ from enthought.tvtk.api import tvtk, write_data
 import numpy
 
 # local imports
-from pysph.solver.base import Base
+
 from pysph.solver.file_writer_component import *
 from pysph.solver.fast_utils import make_nd_array
 

@@ -49,7 +49,7 @@ bench :
 	#
 	#####################################################################
 	#
-	-$(MAKE) -f $(MAKEFILE) -C $(PKG)/bench/ cython ROOT=$(ROOT)
+	-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
 	cd $(PKG)/bench; python bench.py $(BENCH)
 
 coverage :

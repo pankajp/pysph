@@ -10,7 +10,7 @@ from pysph.solver.solver_base import SolverComponent, ComponentManager, SolverBa
 from pysph.solver.entity_base import EntityBase
 from pysph.solver.fluid import Fluid
 from pysph.solver.solid import Solid
-from pysph.solver.entity_types import *
+
 from pysph.solver.dummy_components import DummyComponent1, \
     DummyComponent2, DummyComponent3
 from pysph.base.particle_array import ParticleArray
@@ -46,6 +46,7 @@ def check_entity_properties(prop_dict, prop_names, default_vals):
         msg = '%s != %s'%(str(prop['default']), str(default_vals[i]))
         msg += ' for property %s'%(prop_names[i])
         assert val, msg
+    
 ################################################################################
 # `TestSolverComponent` class.
 ################################################################################ 
@@ -79,33 +80,33 @@ class TestSolverComponent(unittest.TestCase):
         input_types = c.input_types
 
         # make the component accept Fluids only.
-        input_types.add(EntityTypes.Entity_Fluid)
+        input_types.add(Fluid)
         self.assertEqual(c.filter_entity(e), True)
         
         # remove any type requirements.
         # now the entity should be accepted.
-        input_types.remove(EntityTypes.Entity_Fluid)
+        input_types.remove(Fluid)
         self.assertEqual(c.filter_entity(e), False)
 
         e = Solid()
-        input_types.add(EntityTypes.Entity_Solid)
+        input_types.add(Solid)
         self.assertEqual(c.filter_entity(e), False)
 
         #  Solid should be accepted when the component has a type requirement of
         #  Base.
-        input_types.remove(EntityTypes.Entity_Solid)
-        input_types.add(EntityTypes.Entity_Base)
+        input_types.remove(Solid)
+        input_types.add(EntityBase)
         self.assertEqual(c.filter_entity(e), False)
 
-        input_types.remove(EntityTypes.Entity_Base)
-        input_types.add(EntityTypes.Entity_Fluid)
+        input_types.remove(EntityBase)
+        input_types.add(Fluid)
         self.assertEqual(c.filter_entity(e), True)
 
         # now add some named requirements.
         entity_names = c.entity_names
 
-        entity_names[EntityTypes.Entity_Fluid] = set(['f1'])
-        entity_names[EntityTypes.Entity_Solid] = set(['s1'])
+        entity_names[Fluid] = set(['f1'])
+        entity_names[Solid] = set(['s1'])
         
         # clear all property requirements.
         input_types.clear()
@@ -123,41 +124,36 @@ class TestSolverComponent(unittest.TestCase):
         Tests functions that add property requirements to the component. 
         """
         s = SolverComponent()
-        s.add_read_prop_requirement(EntityTypes.Entity_Fluid, ['a', 'b', 'c'])
-        s.add_read_prop_requirement(EntityTypes.Entity_Base, ['d', 'e', 'f'])
+        s.add_read_prop_requirement(Fluid, ['a', 'b', 'c'])
+        s.add_read_prop_requirement(EntityBase, ['d', 'e', 'f'])
 
         rp = s.particle_props_read
-        self.assertEqual(rp[EntityTypes.Entity_Fluid], set(['a', 'b', 'c']))
-        self.assertEqual(rp[EntityTypes.Entity_Base], set(['d', 'e', 'f']))
+        self.assertEqual(rp[Fluid], set(['a', 'b', 'c']))
+        self.assertEqual(rp[EntityBase], set(['d', 'e', 'f']))
 
-        s.add_write_prop_requirement(EntityTypes.Entity_Base, 't')
-        s.add_write_prop_requirement(EntityTypes.Entity_Fluid, 'u', -1.02)
+        s.add_write_prop_requirement(EntityBase, 't')
+        s.add_write_prop_requirement(Fluid, 'u', -1.02)
         
         wp = s.particle_props_write
-        self.assertEqual(wp[EntityTypes.Entity_Base], [{'name':'t', 'default':0.0}])
-        self.assertEqual(wp[EntityTypes.Entity_Fluid], [{'name':'u',
-                                                        'default':-1.02}])
+        self.assertEqual(wp[EntityBase], [{'name':'t', 'default':0.0}])
+        self.assertEqual(wp[Fluid], [{'name':'u', 'default':-1.02}])
 
         pp = s.particle_props_private
-        s.add_private_prop_requirement(EntityTypes.Entity_Base, 'g', 9.0)
-        s.add_private_prop_requirement(EntityTypes.Entity_Base, 'h', 6.0)
+        s.add_private_prop_requirement(EntityBase, 'g', 9.0)
+        s.add_private_prop_requirement(EntityBase, 'h', 6.0)
         
-        self.assertEqual(pp[EntityTypes.Entity_Base], [{'name':'g',
-                                                        'default':9.0},
-                                                       {'default':6.0,
-                                                        'name':'h'}])
+        self.assertEqual(pp[EntityBase], [{'name':'g', 'default':9.0},
+                                          {'name':'h', 'default':6.0}])
 
         fl = s.particle_flags
-        s.add_flag_requirement(EntityTypes.Entity_Solid, 'boundary', 1)
-        s.add_flag_requirement(EntityTypes.Entity_Fluid, 'real', 5)
-        self.assertEqual(fl[EntityTypes.Entity_Solid], [{'name':'boundary',
-                                                        'default':1}])
-        self.assertEqual(fl[EntityTypes.Entity_Fluid], [{'name':'real',
-                                                        'default':5}])
+        s.add_flag_requirement(Solid, 'boundary', 1)
+        s.add_flag_requirement(Fluid, 'real', 5)
+        self.assertEqual(fl[Solid], [{'name':'boundary', 'default':1}])
+        self.assertEqual(fl[Fluid], [{'name':'real', 'default':5}])
 
         ep = s.entity_props
-        s.add_entity_prop_requirement(EntityTypes.Entity_Solid, 'ht', 5.0)
-        self.assertEqual(ep[EntityTypes.Entity_Solid], [{'name':'ht', 'default':5.0}])
+        s.add_entity_prop_requirement(Solid, 'ht', 5.0)
+        self.assertEqual(ep[Solid], [{'name':'ht', 'default':5.0}])
                              
     def test_entity_type_specs(self):
         """
@@ -165,20 +161,20 @@ class TestSolverComponent(unittest.TestCase):
         set_input_entity_types functions.
         """
         s = SolverComponent()
-        s.add_input_entity_type(EntityTypes.Entity_Solid)
-        s.add_input_entity_type(EntityTypes.Entity_Dummy)
+        s.add_input_entity_type(Solid)
+        s.add_input_entity_type(DummyEntity)
         
         input_types = s.input_types
-        self.assertEqual(EntityTypes.Entity_Dummy in input_types, True)
-        self.assertEqual(EntityTypes.Entity_Solid in input_types, True)
+        self.assertEqual(DummyEntity in input_types, True)
+        self.assertEqual(Solid in input_types, True)
 
-        s.remove_input_entity_type(EntityTypes.Entity_Solid)
+        s.remove_input_entity_type(Solid)
 
-        self.assertEqual(EntityTypes.Entity_Dummy in input_types, True)
-        self.assertEqual(EntityTypes.Entity_Solid in input_types, False)
+        self.assertEqual(DummyEntity in input_types, True)
+        self.assertEqual(Solid in input_types, False)
 
-        s.set_input_entity_types([EntityTypes.Entity_Fluid])
-        self.assertEqual(EntityTypes.Entity_Fluid in input_types, True)
+        s.set_input_entity_types([Fluid])
+        self.assertEqual(Fluid in input_types, True)
 
 ################################################################################
 # `TestComponentManager` class.
@@ -218,24 +214,24 @@ class TestComponentManager(unittest.TestCase):
         particle_props = cm.particle_props
         entity_props = cm.entity_props
 
-        solid_props = particle_props[EntityTypes.Entity_Solid]
+        solid_props = particle_props[Solid]
         check_particle_properties(solid_props,
                                   ['a', 'b', 'f2'],
                                   ['double', 'double', 'int'],
                                   [1.0, 2.0, 5])
 
-        fluid_props = particle_props[EntityTypes.Entity_Fluid]
+        fluid_props = particle_props[Fluid]
         check_particle_properties(fluid_props, 
                          ['c', 'd', 'e', 'f', 'f1'],
                          ['double', 'double', 'double', 'double', 'int'],
                          [None, None, 10.0, 11.0, 4])
 
         # check if the entity properties were added.
-        fluid_entity_props = entity_props[EntityTypes.Entity_Fluid]
+        fluid_entity_props = entity_props[Fluid]
         check_entity_properties(fluid_entity_props,
                                 ['h', 'mu'],
                                 [0.1, None])
-        solid_entity_props = entity_props[EntityTypes.Entity_Solid]
+        solid_entity_props = entity_props[Solid]
         check_entity_properties(solid_entity_props,
                                 ['mu'],
                                 [None])
@@ -258,11 +254,11 @@ class TestComponentManager(unittest.TestCase):
                          [None, None, None, 10.0, 11.0, 4])
 
         # check if the entity properties were added.
-        fluid_entity_props = entity_props[EntityTypes.Entity_Fluid]
+        fluid_entity_props = entity_props[Fluid]
         check_entity_properties(fluid_entity_props,
                                 ['h', 'mu', 'nu'],
                                 [0.1, None, 3.0])
-        solid_entity_props = entity_props[EntityTypes.Entity_Solid]
+        solid_entity_props = entity_props[Solid]
         check_entity_properties(solid_entity_props,
                                 ['mu'],
                                 [1.0])

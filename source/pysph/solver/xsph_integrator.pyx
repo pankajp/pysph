@@ -7,7 +7,8 @@ import logging
 logger = logging.getLogger()
 
 # local imports
-from pysph.solver.entity_types cimport EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 from pysph.solver.solver_base cimport *
 from pysph.solver.integrator_base cimport *
 from pysph.solver.runge_kutta_integrator cimport *
@@ -52,11 +53,11 @@ cdef class EulerXSPHIntegrator(Integrator):
         # add the property required for storing the velocity corrections.
         cdef dict wp = self.particle_props_write
         
-        fluid_props = wp.get(EntityTypes.Entity_Fluid)
+        fluid_props = wp.get(Fluid)
 
         if fluid_props is None:
             fluid_props = []
-            wp[EntityTypes.Entity_Fluid] = fluid_props
+            wp[Fluid] = fluid_props
 
         fluid_props.extend([{'name':'del_u', 'default':0.0},
                             {'name':'del_v', 'default':0.0},
@@ -83,7 +84,7 @@ cdef class EulerXSPHIntegrator(Integrator):
             prop_info['steppers'] = steppers
         
         # set fluids to use xsph steppers
-        steppers[EntityTypes.Entity_Fluid] = 'euler_xsph_position_stepper'
+        steppers[Fluid] = 'euler_xsph_position_stepper'
 
 ################################################################################
 # `RK2XSPHIntegrator` class.
@@ -125,11 +126,11 @@ cdef class RK2XSPHIntegrator(RK2Integrator):
         # add the property required for storing the velocity corrections.
         cdef dict wp = self.particle_props_write
         
-        fluid_props = wp.get(EntityTypes.Entity_Fluid)
+        fluid_props = wp.get(Fluid)
 
         if fluid_props is None:
             fluid_props =  []
-            wp[EntityTypes.Entity_Fluid] = fluid_props
+            wp[Fluid] = fluid_props
 
         fluid_props.extend([{'name':'del_u', 'default':0.0},
                             {'name':'del_v', 'default':0.0},
@@ -165,7 +166,7 @@ cdef class RK2XSPHIntegrator(RK2Integrator):
             first_step = {}
             prop_info[1] = first_step
 
-        first_step[EntityTypes.Entity_Fluid] = 'rk2_xsph_step1_position_stepper'
+        first_step[Fluid] = 'rk2_xsph_step1_position_stepper'
         
         second_step = prop_info.get(2)
 
@@ -173,5 +174,5 @@ cdef class RK2XSPHIntegrator(RK2Integrator):
             second_step = {}
             prop_info[2] = second_step
 
-        second_step[EntityTypes.Entity_Fluid] =(
+        second_step[Fluid] =(
             'rk2_xsph_step2_position_stepper')

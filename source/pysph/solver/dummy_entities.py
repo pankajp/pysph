@@ -5,7 +5,8 @@ Set of dummy entities used for tests.
 # local imports
 from pysph.base.particle_array import ParticleArray
 from pysph.solver.entity_base import EntityBase
-from pysph.solver.entity_types import EntityTypes
+from pysph.solver.solid import Solid
+from pysph.solver.fluid import Fluid
 
 class DummyEntity(EntityBase):
     """
@@ -15,7 +16,7 @@ class DummyEntity(EntityBase):
         """
         """
 
-        self.type = EntityTypes.Entity_Dummy
+        self.type = DummyEntity
         self.parr = ParticleArray(name=self.name, **particle_props)
 
     def get_particle_array(self):
