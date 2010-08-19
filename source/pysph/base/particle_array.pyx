@@ -351,13 +351,13 @@ cdef class ParticleArray:
 
         property_arrays = self.properties.values()
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             prop_array = property_arrays[i]
             prop_array.remove(sorted_indices, 1)
 
         temp_arrays = self.temporary_arrays.values()
         num_arrays = len(temp_arrays)
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             prop_array = temp_arrays[i]
             prop_array.remove(sorted_indices, 1)
             
@@ -381,7 +381,7 @@ cdef class ParticleArray:
         cdef int i
         
         # find the indices of the particles to be removed.
-        for i from 0 <= i < tag_array.length:
+        for i in range(tag_array.length):
             if tagarrptr[i] == tag:
                 indices.append(i)
 
@@ -401,7 +401,7 @@ cdef class ParticleArray:
         cdef int i
 
         # find the indices of the particles to be removed.
-        for i from 0 <= i < flag_array.length:
+        for i in range(flag_array.length):
             if flagarrptr[i] == flag_value:
                 indices.append(i)
 
@@ -596,7 +596,7 @@ cdef class ParticleArray:
             return
         
         if only_real_particles == True:
-            for i from 0 <= i < nargs:
+            for i in range(nargs):
                 arg = args[i]
                 self._check_property(arg)
             
@@ -609,7 +609,7 @@ cdef class ParticleArray:
                         self.temporary_arrays[arg].get_npy_array()[
                             :self.num_real_particles])
         else:
-            for i from 0 <= i < nargs:
+            for i in range(nargs):
                 arg = args[i]
                 self._check_property(arg)
             
@@ -963,7 +963,7 @@ cdef class ParticleArray:
         # malloc the new index array
         index_array = LongArray(num_particles)
         
-        for i from 0 <= i < num_particles:
+        for i in range(num_particles):
             if tag_arr.data[i] == LocalReal:
                 num_real_particles += 1
                 if i != next_insert:
@@ -984,14 +984,14 @@ cdef class ParticleArray:
         arrays = self.properties.values()
         num_arrays = len(arrays)
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             arr = arrays[i]
             arr._align_array(index_array)
 
         # now the temporary arrays
         arrays = self.temporary_arrays.values()
         num_arrays = len(arrays)
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             arr = arrays[i]
             arr._align_array(index_array)
 
@@ -1064,7 +1064,7 @@ cdef class ParticleArray:
         cdef IntArray flag_arr = self.get_carray(flag_name)
         cdef int i
 
-        for i from 0 <= i < indices.length:
+        for i in range(indices.length):
             flag_arr.data[indices.data[i]] = flag_value
 
     cpdef set_tag(self, long tag_value, LongArray indices):
@@ -1075,7 +1075,7 @@ cdef class ParticleArray:
         cdef LongArray tag_array = self.get_carray('tag')
         cdef int i
         
-        for i from 0 <= i < indices.length:
+        for i in range(indices.length):
             tag_array.data[indices.data[i]] = tag_value
 
     cpdef copy_properties(self, ParticleArray source, long start_index=-1, long

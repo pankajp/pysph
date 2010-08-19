@@ -11,9 +11,9 @@ from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 from pysph.solver.fluid cimport Fluid
 
-################################################################################
+###############################################################################
 # `SPHSymmetricPressureGradientComponent` class.
-################################################################################
+###############################################################################
 cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
     """
     Computes the pressure gradient using the SPHSymmetricPressureGradient3D
@@ -77,7 +77,7 @@ cdef class SPHSymmetricPressureGradientComponent(SPHComponent):
 
         num_dest = len(self.dest_list)
         
-        for i from 0 <= i < num_dest:
+        for i in range(num_dest):
             fluid = self.dest_list[i]
             parr = fluid.get_particle_array()
             calc = self.sph_calcs[i]

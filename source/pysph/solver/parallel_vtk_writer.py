@@ -13,12 +13,13 @@ import numpy
 from pysph.base.particle_array import ParticleArray
 from pysph.base.particle_tags import *
 from pysph.solver.vtk_writer import *
+from pysph.solver.entity_base import EntityBase
 from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 
-################################################################################
+###############################################################################
 # `ParallelVTKWriter` class.
-################################################################################
+###############################################################################
 class ParallelVTKWriter(VTKWriter):
     """
     Component to write entities into VTK files in a parallel simulation.

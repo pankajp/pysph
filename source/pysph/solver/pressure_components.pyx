@@ -20,9 +20,9 @@ from pysph.solver.solver_base cimport SolverComponent, SolverBase\
     ,ComponentManager
 from pysph.solver.speed_of_sound cimport SpeedOfSound
 
-################################################################################
+###############################################################################
 # `TaitPressureComponent` class.
-################################################################################
+###############################################################################
 cdef class TaitPressureComponent(SolverComponent):
     """
     Component to compute pressure of fluids using the Tait equation.
@@ -125,7 +125,7 @@ cdef class TaitPressureComponent(SolverComponent):
 
         num_entities = len(self.entity_list)
         
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
 
             entity = self.entity_list[i]
             parr = entity.get_particle_array()

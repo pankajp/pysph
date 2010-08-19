@@ -20,9 +20,9 @@ from pysph.solver.sph_component cimport *
 from pysph.solver.solver_base cimport *
 
 
-################################################################################
+###############################################################################
 # `RepulsiveBoundaryKernel` class.
-################################################################################
+###############################################################################
 cdef class RepulsiveBoundaryKernel(KernelBase):
     """
     Kernel class to be used for boundary SPH summations.
@@ -101,9 +101,9 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
     cpdef double radius(self):
         return 2.0
 
-################################################################################
+###############################################################################
 # `SPHRepulsiveBoundaryFunction` class.
-################################################################################
+###############################################################################
 cdef class SPHRepulsiveBoundaryFunction(SPHFunctionParticle3D):
     """
     Class to compute iteration of boundary and non-boundary particles.
@@ -170,9 +170,9 @@ cdef class SPHRepulsiveBoundaryFunction(SPHFunctionParticle3D):
         nr[0] += cs_2*dir.x
         nr[1] += cs_2*dir.y
         nr[2] += cs_2*dir.z
-################################################################################
+###############################################################################
 # `SPHRepulsiveBoundaryForceComponent` class.
-################################################################################
+###############################################################################
 cdef class SPHRepulsiveBoundaryForceComponent(SPHComponent):
     """
     Component to compute repulsive boundary forces.
@@ -268,7 +268,7 @@ cdef class SPHRepulsiveBoundaryForceComponent(SPHComponent):
 
         nd = len(self.dest_list)
 
-        for i from 0 <= i < nd:
+        for i in range(nd):
             e = self.dest_list[i]
             parr = e.get_particle_array()
             

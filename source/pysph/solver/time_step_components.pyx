@@ -10,7 +10,7 @@ logger = logging.getLogger()
 from pysph.base.carray cimport DoubleArray, LongArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.nnps cimport NNPSManager, \
-    FixedDestinationNbrParticleLocator
+    FixedDestNbrParticleLocator
 from pysph.base.point cimport Point
 from pysph.base.particle_tags cimport *
 
@@ -28,9 +28,9 @@ cdef extern from "math.h":
 cimport numpy    
 import numpy
 
-################################################################################
+###############################################################################
 # `TimeStepComponent` class.
-################################################################################
+###############################################################################
 cdef class TimeStepComponent(SolverComponent):
     """
     Base class for all components computing time step.
@@ -65,9 +65,9 @@ cdef class TimeStepComponent(SolverComponent):
         raise NotImplementedError, 'TimeStepComponent::compute'
 
 
-################################################################################
+###############################################################################
 # `MonaghanKosUpdate` class.
-################################################################################
+###############################################################################
 cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
     """
     Component to compute time step based on the paper 'Solitary waves on a
@@ -185,7 +185,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
             logger.warn('No input entities, using %f'%(self.max_time_step))
             return 0
 
-        for i from 0 <= i < num_entites:
+        for i in range(num_entites):
 
             self._compute_sigmas(i)
 
@@ -244,7 +244,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
         cdef int np, i, j, idx, k
         cdef int num_entities
         cdef list e_locators
-        cdef FixedDestinationNbrParticleLocator s_loc
+        cdef FixedDestNbrParticleLocator s_loc
         cdef Point s_pnt, d_pnt, v_ab, r_ab
         cdef LongArray indices = LongArray(0)
         cdef double search_radius = 0.0
@@ -276,10 +276,10 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
         d_sigma = d_parr.get_carray('_ts_sigma')
         # set all values to -INFINITY
         
-        for i from 0 <= i < np:
+        for i in range(np):
             d_sigma.data[i] = -INFINITY
         
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             source_e = self.entity_list[i]
 
             s_parr = source_e.get_particle_array()
@@ -298,7 +298,7 @@ cdef class MonaghanKosTimeStepComponent(TimeStepComponent):
                 if d_tag.data[j] != LocalReal:
                     continue
 
-                s_loc.get_nearest_particles(j, indices, 1.0, True)
+                s_loc.get_nearest_particles(j, indices, True)
 
                 d_pnt.x = d_x.data[j]
                 d_pnt.y = d_y.data[j]
@@ -406,7 +406,7 @@ cdef class MonaghanKosForceBasedTimeStepComponent(MonaghanKosTimeStepComponent):
 
         num_entities = len(self.entity_list)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             
             e = self.entity_list[i]
 

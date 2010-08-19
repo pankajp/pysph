@@ -150,9 +150,9 @@ cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
                         return False
     return True
 
-################################################################################
+###############################################################################
 # `Cell` class.
-################################################################################
+###############################################################################
 cdef class Cell:
     """
     The Cell class.
@@ -258,7 +258,7 @@ cdef class Cell:
         cdef IntPoint pdiff
         cdef str msg
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             
             parray = self.arrays_to_bin[i]
             
@@ -373,7 +373,7 @@ cdef class Cell:
         num_arrays = len(self.arrays_to_bin)
         
         import sys; sys.stdout.flush()
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             parr = self.arrays_to_bin[i]
             num_particles = parr.get_number_of_particles()
             source_array = cell.index_lists[i]
@@ -423,10 +423,10 @@ cdef class Cell:
 
         if len(particle_id_list) == 0:
             # create num_arrays LongArrays
-            for i from 0 <= i < num_arrays:
+            for i in range(num_arrays):
                 particle_id_list.append(LongArray())
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             dest = particle_id_list[i]
             source = self.index_lists[i]
             dest.extend(source.get_npy_array())
@@ -455,7 +455,7 @@ cdef class Cell:
         num_arrays = len(self.arrays_to_bin)
 
         if len(particle_id_list) == 0:
-            for i from 0 <= i < num_arrays:
+            for i in range(num_arrays):
                 particle_id_list.append(LongArray(0))
                 
         if particle_counts.length == 0:
@@ -463,7 +463,7 @@ cdef class Cell:
             # set the values to zero
             particle_counts._npy_array[:] = 0
 
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             dest = particle_id_list[i]
             source = self.index_lists[i]
             dest.extend(source.get_npy_array())
@@ -485,7 +485,7 @@ cdef class Cell:
         num_arrays = len(self.arrays_to_bin)
         self.index_lists[:] = []
         
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             self.index_lists.append(LongArray())
 
     def py_add_particles(self, Cell cell):
@@ -506,12 +506,12 @@ cdef class Cell:
     def py_clear(self):
         self.clear()
 
-################################################################################
+###############################################################################
 
 
-################################################################################
+###############################################################################
 # `CellManager` class.
-################################################################################
+###############################################################################
 cdef class CellManager:
     """Cell Manager class"""
     # FIXME:
@@ -589,7 +589,7 @@ cdef class CellManager:
             # reset the dirty bit of all particle arrays.
             num_arrays = len(self.arrays_to_bin)
         
-            for i from 0 <= i < num_arrays:
+            for i in range(num_arrays):
                 parray = self.arrays_to_bin[i]
                 parray.set_dirty(False)
 
@@ -803,7 +803,7 @@ cdef class CellManager:
 
         self.array_indices.clear()
 
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             parr  = self.arrays_to_bin[i]
             self.array_indices[parr.name] = i
 
@@ -904,7 +904,7 @@ cdef class CellManager:
         diff.y += 1
         diff.z += 1
 
-        for i from 0 <= i < diff.x:
+        for i in range(diff.x):
             for j from 0 <= j < diff.y:
                 for k from 0 <= k < diff.z:
                     id.x = min_cell.x + i
@@ -952,7 +952,7 @@ cdef class CellManager:
         y = parray.get_carray(self.coord_y)
         z = parray.get_carray(self.coord_z)
         
-        for i from 0 <= i < indices.length:
+        for i in range(indices.length):
             if indices.data[i] >= num_particles:
                 # invalid particle being added.
                 # raise error and exit

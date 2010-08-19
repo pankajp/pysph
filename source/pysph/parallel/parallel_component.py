@@ -10,6 +10,7 @@ import logging
 logger = logging.getLogger()
 
 # local imports 
+from pysph.solver.entity_base import EntityBase
 from pysph.solver.solver_base import UserDefinedComponent
 from pysph.parallel.parallel_controller import ParallelController
 

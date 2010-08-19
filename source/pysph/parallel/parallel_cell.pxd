@@ -11,9 +11,9 @@ from pysph.base.cell cimport CellManager, Cell
 cdef class ParallelCellManager(CellManager)
 cdef class ProcessorMap
 
-################################################################################
+###############################################################################
 # `ProcessorMap` class.
-################################################################################
+###############################################################################
 cdef class ProcessorMap:
      cdef public ParallelCellManager cell_manager
      cdef public Point origin
@@ -27,9 +27,9 @@ cdef class ProcessorMap:
      cpdef find_region_neighbors(self)
 
 
-################################################################################
+###############################################################################
 # `ParallelCellManager` class.
-################################################################################
+###############################################################################
 cdef class ParallelCellManager(CellManager):
     cdef public object solver 
     cdef public int dimension

@@ -7,9 +7,9 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.cell cimport CellManager
 
 
-################################################################################
+###############################################################################
 # `EntityBase` class.
-################################################################################
+###############################################################################
 cdef class EntityBase:
     """
     Base class for any physical entity involved in a simulation.    

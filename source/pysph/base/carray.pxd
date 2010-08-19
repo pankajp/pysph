@@ -1,5 +1,5 @@
 # This file (carray.pxd) has been generated automatically on
-# Fri Aug  6 18:06:52 2010
+# Wed Aug 18 17:29:33 2010
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -16,10 +16,12 @@ cimport numpy as np
 cdef class BaseArray
 cdef class LongArray(BaseArray)
 
+cdef class BaseArrayIter:
+    cdef BaseArray arr
+    cdef long i
+
 cdef class BaseArray:
-    """
-    Base class for managed C-arrays.
-    """
+    """Base class for managed C-arrays."""
     cdef public long length, alloc
     cdef np.ndarray _npy_array
 
@@ -40,9 +42,9 @@ cdef class BaseArray:
     cpdef update_min_max(self)
 
 
-################################################################################
+###############################################################################
 # `IntArray` class.
-################################################################################
+###############################################################################
 cdef class IntArray(BaseArray):
     """This class defines a managed array of ints. """
     cdef int *data
@@ -66,9 +68,9 @@ cdef class IntArray(BaseArray):
     cdef void _align_array(self, LongArray new_indices)
 
 
-################################################################################
+###############################################################################
 # `DoubleArray` class.
-################################################################################
+###############################################################################
 cdef class DoubleArray(BaseArray):
     """This class defines a managed array of doubles. """
     cdef double *data
@@ -92,9 +94,9 @@ cdef class DoubleArray(BaseArray):
     cdef void _align_array(self, LongArray new_indices)
 
 
-################################################################################
+###############################################################################
 # `FloatArray` class.
-################################################################################
+###############################################################################
 cdef class FloatArray(BaseArray):
     """This class defines a managed array of floats. """
     cdef float *data
@@ -118,9 +120,9 @@ cdef class FloatArray(BaseArray):
     cdef void _align_array(self, LongArray new_indices)
 
 
-################################################################################
+###############################################################################
 # `LongArray` class.
-################################################################################
+###############################################################################
 cdef class LongArray(BaseArray):
     """This class defines a managed array of longs. """
     cdef long *data
@@ -142,6 +144,5 @@ cdef class LongArray(BaseArray):
     cpdef reset(self)
 
     cdef void _align_array(self, LongArray new_indices)
-
 
 

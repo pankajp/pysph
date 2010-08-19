@@ -55,9 +55,9 @@ TAG_REMOTE_DATA_REQUEST = 7
 TAG_REMOTE_DATA_REPLY = 8
 
 
-################################################################################
+###############################################################################
 # `share_data` function.
-################################################################################
+###############################################################################
 cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, int
                      tag=0, bool multi=False):
     """
@@ -83,11 +83,11 @@ cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, i
 
     cdef dict proc_data = {}
     
-    for i from 0 <= i < num_procs:
+    for i in range(num_procs):
         pid = sorted_procs[i]
         proc_data[pid] = {}
     
-    for i from 0 <= i < num_procs:
+    for i in range(num_procs):
         pid = sorted_procs[i]
         if pid == mypid:
             for dest in sorted_procs:
@@ -104,9 +104,9 @@ cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, i
 
     return proc_data
 
-################################################################################
+###############################################################################
 # `ProcessorMap` class.
-################################################################################
+###############################################################################
 cdef class ProcessorMap:
     """
     Class to maintain the assignment of processors to geometric regions.
@@ -208,7 +208,7 @@ cdef class ProcessorMap:
         bin_list = o_pm.keys()
         num_bins = len(bin_list)
 
-        for i from 0 <= i < num_bins:
+        for i in range(num_bins):
             o_id = bin_list[i]
             o_procs = <set>PyDict_GetItem(o_pm, o_id)
                             
@@ -242,7 +242,7 @@ cdef class ProcessorMap:
             # constructor list of neighbor cell ids in the proc_map.
             construct_immediate_neighbor_list(id, nids)
             len_nids = len(nids)
-            for i from 0 <= i < len_nids:
+            for i in range(len_nids):
                 nid = nids[i]
 
                 # if cell exists, collect all occupying processor ids
@@ -260,9 +260,9 @@ cdef class ProcessorMap:
         rep += 'Region neighbors : %s'%(self.nbr_procs)
         return rep
 
-################################################################################
+###############################################################################
 # `ParallelCellInfo` class.
-################################################################################
+###############################################################################
 cdef class ParallelCellInfo:
     """
     Class to hold information to be maintained with any parallel cell.
@@ -361,9 +361,9 @@ cdef class ParallelCellInfo:
         logger.error(msg)
         raise ValueError, msg
         
-################################################################################
+###############################################################################
 # `ParallelCell` class.
-################################################################################
+###############################################################################
 cdef class ParallelCell(Cell):
     """
     Cell to be used in parallel computations.
@@ -392,9 +392,9 @@ cdef class ParallelCell(Cell):
     def __repr__(self):
         return str(self)
     
-################################################################################
+###############################################################################
 # `ParallelCellRemoteCopy` class.
-################################################################################
+###############################################################################
 cdef class ParallelCellRemoteCopy(ParallelCell):
     """
     Cells holding information from another processor.
@@ -417,9 +417,9 @@ cdef class ParallelCellRemoteCopy(ParallelCell):
         return str(self)
     
 
-################################################################################
+###############################################################################
 # `ParallelCellManager` class.
-################################################################################
+###############################################################################
 cdef class ParallelCellManager(CellManager):
     """
     Cell manager for parallel invocations.
@@ -986,7 +986,7 @@ cdef class ParallelCellManager(CellManager):
                 cell.clear_indices(i)
         
         i = 0
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             parr = self.arrays_to_bin[i]
             num_particles = parr.get_number_of_particles()
             indices = arange_long(num_particles, -1)
@@ -1109,7 +1109,7 @@ cdef class ParallelCellManager(CellManager):
             c.get_particle_ids(index_lists)
 
             num_index_lists = len(index_lists)
-            for i from 0 <= i < num_index_lists:
+            for i in range(num_index_lists):
                 index_array = index_lists[i]
                 parr = c.arrays_to_bin[i]
                 
@@ -1350,7 +1350,7 @@ cdef class ParallelCellManager(CellManager):
             count = 0
 
             num_arrays = len(self.arrays_to_bin)
-            for i from 0 <= i < num_arrays:
+            for i in range(num_arrays):
                 s_parr = parrays[i]
                 d_parr = self.arrays_to_bin[i]
                 
@@ -1478,7 +1478,7 @@ cdef class ParallelCellManager(CellManager):
         
         # get data from all procs and send data to all procs.
         num_nbrs = len(nbr_procs)
-        for i from 0 <= i < num_nbrs:
+        for i in range(num_nbrs):
             pid = nbr_procs[i]
             if pid == self.pid:
                 for j from 0 <= j < num_nbrs:
@@ -1627,7 +1627,7 @@ cdef class ParallelCellManager(CellManager):
 
         
         # now collect all the particle indices that need to be returned.
-        for i from 0 <= i < num_cells:
+        for i in range(num_cells):
             cid = cell_list[i]
             c = self.cells_dict[cid]
             

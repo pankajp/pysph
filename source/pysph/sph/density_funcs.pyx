@@ -10,9 +10,9 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.sph.sph_func cimport SPHFunctionParticle1D, SPHFunctionParticle2D, \
     SPHFunctionParticle3D, make_coords_3d
 
-################################################################################
+###############################################################################
 # `SPHRho3D` class.
-################################################################################
+###############################################################################
 cdef class SPHRho3D(SPHFunctionParticle3D):
     """
     SPH function to compute density for 3d particles.
@@ -56,9 +56,9 @@ cdef class SPHRho3D(SPHFunctionParticle3D):
         return 1
 
 
-################################################################################
+###############################################################################
 # `SPHDensityRate3D` class.
-################################################################################
+###############################################################################
 cdef class SPHDensityRate3D(SPHFunctionParticle3D):
     """
     """

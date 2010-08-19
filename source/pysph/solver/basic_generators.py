@@ -16,9 +16,9 @@ from pysph.solver.particle_generator import MassComputationMode as MCM
 from pysph.solver.particle_generator import DensityComputationMode as DCM
 
 
-################################################################################
+###############################################################################
 # `compute_particle_mass` function.
-################################################################################
+###############################################################################
 def compute_particle_mass(parray, kernel, density=1000.0, h=0.1, dim=3):
     """
     Given a particle array, kernel, target density and interaction radius, find
@@ -76,9 +76,9 @@ def compute_particle_mass(parray, kernel, density=1000.0, h=0.1, dim=3):
     logger.info('Computed mass : %f'%(m))
     return m
 
-################################################################################
+###############################################################################
 # `find_best_particle_spacing' function.
-################################################################################
+###############################################################################
 def find_best_particle_spacing(length=1.0,
                                initial_spacing=0.1,
                                end_points_exact=True,
@@ -102,9 +102,9 @@ def find_best_particle_spacing(length=1.0,
 
     return new_spacing, (n_intervals+1)
 
-################################################################################
+###############################################################################
 # `LineGenerator` class.
-################################################################################
+###############################################################################
 class LineGenerator(ParticleGenerator):
     """
     Generate a line of points.
@@ -216,9 +216,9 @@ class LineGenerator(ParticleGenerator):
         """
         return 1
 
-################################################################################
+###############################################################################
 # `RectangleGenerator` class.
-################################################################################
+###############################################################################
 class RectangleGenerator(ParticleGenerator):
     """
     Class to generate rectangles of particles - filled and hollow.
@@ -530,9 +530,9 @@ class RectangleGenerator(ParticleGenerator):
             output.m[:] = m
 
 
-################################################################################
+###############################################################################
 # `CuboidGenerator` class.
-################################################################################
+###############################################################################
 class CuboidGenerator(ParticleGenerator):
     """
     Class to generate cuboids of particles (filled and hollow).

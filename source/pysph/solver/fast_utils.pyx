@@ -16,13 +16,13 @@ cpdef make_nd_array(list arrays=[]):
 
     # make sure each array given in input is of same size.
     a_size = len(arrays[0])
-    for i from 0 <= i < na:
+    for i in range(na):
         if <int>len(arrays[0]) != a_size:
             return None
     
     a = numpy.zeros((a_size, na))
     
-    for i from 0 <= i < na:
+    for i in range(na):
         _a = arrays[i]
         for j from 0 <= j < a_size:
             a[j][i] = _a[j]
@@ -42,13 +42,13 @@ cpdef LongArray arange_long(long start, long stop=-1):
     
     if stop == -1:
         arange = LongArray(start)
-        for i from 0 <= i < start:
+        for i in range(start):
             arange.data[i] = i
         return arange
     else:
         size = stop-start+1
         arange = LongArray(size)
-        for i from 0 <= i < size:
+        for i in range(size):
             arange.data[i] = start + i
         return arange
         

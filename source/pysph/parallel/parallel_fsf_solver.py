@@ -16,9 +16,9 @@ from pysph.solver.parallel_property_updater import ParallelPropertyUpdater
 from pysph.solver.fsf_solver import *
 
 
-################################################################################
+###############################################################################
 # `ParallelFsfSolver` class.
-################################################################################
+###############################################################################
 class ParallelFsfSolver(FSFSolver):
     """
     Parallel version of the FSF solver.

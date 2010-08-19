@@ -8,9 +8,9 @@ from pysph.base.plane cimport Plane
 from pysph.base.particle_array cimport ParticleArray
 
 
-################################################################################
+###############################################################################
 # `GeometryBase` class.
-################################################################################
+###############################################################################
 cdef class GeometryBase:
     """
     Base class for all geometries associtaed with entities.
@@ -25,9 +25,9 @@ cdef class GeometryBase:
 
     cpdef ParticleArray get_particle_array(self)
 
-################################################################################
+###############################################################################
 # `AnalyticalGeometry` class.
-################################################################################ 
+############################################################################### 
 cdef class AnalyticalGeometry(GeometryBase):
     """
     Base class to represent geometries that can be represented by some
@@ -40,9 +40,9 @@ cdef class AnalyticalGeometry(GeometryBase):
     # object is defined.
     cdef ParticleArray reference_points
 
-################################################################################
+###############################################################################
 # `PolygonalGeometry` class.
-################################################################################ 
+############################################################################### 
 cdef class PolygonalGeometry(GeometryBase):
     """
     Class to represent geometries that are a collection of polygons.

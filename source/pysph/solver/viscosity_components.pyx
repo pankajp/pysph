@@ -17,9 +17,9 @@ from pysph.solver.speed_of_sound cimport SpeedOfSound
 from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 
-################################################################################
+###############################################################################
 # `SPHMonaghanArtVisc3D` class.
-################################################################################
+###############################################################################
 cdef class SPHMonaghanArtVisc3D(SPHFunctionParticle3D):
     """
     SPH function to compute artificial viscosity.
@@ -90,9 +90,9 @@ cdef class SPHMonaghanArtVisc3D(SPHFunctionParticle3D):
         nr[1] += pi_ab*grad.y
         nr[2] += pi_ab*grad.z
         
-################################################################################
+###############################################################################
 # `MonaghanArtViscComponent` class.
-################################################################################
+###############################################################################
 cdef class MonaghanArtViscComponent(SPHComponent):
     """
     Component to compute artificial viscosity.
@@ -170,7 +170,7 @@ cdef class MonaghanArtViscComponent(SPHComponent):
 
         num_dest = len(self.dest_list)
         
-        for i from 0 <= i < num_dest:
+        for i in range(num_dest):
             e = self.dest_list[i]
             parr = e.get_particle_array()
             

@@ -2,7 +2,8 @@ ROOT = $(shell pwd)
 MAKEFILE = $(ROOT)/Makefile
 SRC = $(ROOT)/source
 PKG = $(SRC)/pysph
-DIRS = $(PKG)/base $(PKG)/sph $(PKG)/solver $(PKG)/parallel
+SUBPKG = base sph solver parallel
+DIRS := $(foreach dir,$(SUBPKG),$(PKG)/$(dir))
 
 # this is used for cython files on recursive call to make
 PYX = $(wildcard *.pyx)

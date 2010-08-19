@@ -6,9 +6,9 @@ Includes classes to enable execution of certain components every few iterations.
 
 from pysph.solver.solver_base cimport SolverComponent
 
-################################################################################
+###############################################################################
 # `ComponentIterationSpec` class.
-################################################################################
+###############################################################################
 cdef class ComponentIterationSpec:
     """
     Holds information about a component to be executed in an
@@ -17,9 +17,9 @@ cdef class ComponentIterationSpec:
     cdef public SolverComponent component
     cdef public int skip_iteration
 
-################################################################################
+###############################################################################
 # `IterationSkipComponent` class.
-################################################################################
+###############################################################################
 cdef class IterationSkipComponent(SolverComponent):
     """
     Class to enable execution of certain components every few iterations.

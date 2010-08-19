@@ -1,5 +1,5 @@
 # This file (carray.pxd) has been generated automatically on
-# Sun Aug  8 22:13:27 2010
+# Thu Aug 19 14:16:23 2010
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -144,6 +144,29 @@ cdef class BaseArray:
     cpdef update_min_max(self):
         """ Update the min and max values of the array. """
         raise NotImplementedError, 'BaseArray::update_min_max'
+    
+    def __len__(self):
+        return self.length
+    
+    def __iter__(self):
+        """ Support the iteration protocol"""
+        return BaseArrayIter(self)
+    
+cdef class BaseArrayIter:
+    """ Iteration object to support iteration over BaseArray. """
+    def __init__(self, BaseArray arr):
+        self.arr = arr
+        self.i = -1
+    
+    def __next__(self):
+        self.i = self.i+1
+        if self.i < self.arr.length:
+            return self.arr[self.i]
+        else:
+            raise StopIteration
+    
+    def __iter__(self):
+        return self
 
 
 ###############################################################################
@@ -361,7 +384,7 @@ cdef class IntArray(BaseArray):
         memcpy(<void*>temp, <void*>self.data, n_bytes)
 
         # copy the data from the resized portion to the actual positions.
-        for i from 0 <= i < length:
+        for i in range(length):
             if i != new_indices.data[i]:
                 self.data[i] = temp[new_indices.data[i]]
 
@@ -378,7 +401,7 @@ cdef class IntArray(BaseArray):
         cdef long i, num_values
         num_values = indices.length
 
-        for i from 0 <= i < num_values:
+        for i in range(num_values):
             dest_array.data[i] = self.data[indices.data[i]]
 
     cpdef copy_subset(self, BaseArray source, long start_index=-1,
@@ -441,7 +464,7 @@ cdef class IntArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i from si <= i <= ei:
+        for i in range(si, ei+1):
             self.data[i] = src.data[j]
             j += 1
 
@@ -458,7 +481,7 @@ cdef class IntArray(BaseArray):
         min_val = self.data[0]
         max_val = self.data[0]
 
-        for i from 0 <= i < self.length:
+        for i in range(self.length):
             if min_val > self.data[i]:
                 min_val = self.data[i]
             if max_val < self.data[i]:
@@ -466,6 +489,7 @@ cdef class IntArray(BaseArray):
 
         self.minimum = min_val
         self.maximum = max_val
+
 
 ###############################################################################
 # `DoubleArray` class.
@@ -682,7 +706,7 @@ cdef class DoubleArray(BaseArray):
         memcpy(<void*>temp, <void*>self.data, n_bytes)
 
         # copy the data from the resized portion to the actual positions.
-        for i from 0 <= i < length:
+        for i in range(length):
             if i != new_indices.data[i]:
                 self.data[i] = temp[new_indices.data[i]]
 
@@ -699,7 +723,7 @@ cdef class DoubleArray(BaseArray):
         cdef long i, num_values
         num_values = indices.length
 
-        for i from 0 <= i < num_values:
+        for i in range(num_values):
             dest_array.data[i] = self.data[indices.data[i]]
 
     cpdef copy_subset(self, BaseArray source, long start_index=-1,
@@ -762,7 +786,7 @@ cdef class DoubleArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i from si <= i <= ei:
+        for i in range(si, ei+1):
             self.data[i] = src.data[j]
             j += 1
 
@@ -779,7 +803,7 @@ cdef class DoubleArray(BaseArray):
         min_val = self.data[0]
         max_val = self.data[0]
 
-        for i from 0 <= i < self.length:
+        for i in range(self.length):
             if min_val > self.data[i]:
                 min_val = self.data[i]
             if max_val < self.data[i]:
@@ -787,6 +811,7 @@ cdef class DoubleArray(BaseArray):
 
         self.minimum = min_val
         self.maximum = max_val
+
 
 ###############################################################################
 # `FloatArray` class.
@@ -1003,7 +1028,7 @@ cdef class FloatArray(BaseArray):
         memcpy(<void*>temp, <void*>self.data, n_bytes)
 
         # copy the data from the resized portion to the actual positions.
-        for i from 0 <= i < length:
+        for i in range(length):
             if i != new_indices.data[i]:
                 self.data[i] = temp[new_indices.data[i]]
 
@@ -1020,7 +1045,7 @@ cdef class FloatArray(BaseArray):
         cdef long i, num_values
         num_values = indices.length
 
-        for i from 0 <= i < num_values:
+        for i in range(num_values):
             dest_array.data[i] = self.data[indices.data[i]]
 
     cpdef copy_subset(self, BaseArray source, long start_index=-1,
@@ -1083,7 +1108,7 @@ cdef class FloatArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i from si <= i <= ei:
+        for i in range(si, ei+1):
             self.data[i] = src.data[j]
             j += 1
 
@@ -1100,7 +1125,7 @@ cdef class FloatArray(BaseArray):
         min_val = self.data[0]
         max_val = self.data[0]
 
-        for i from 0 <= i < self.length:
+        for i in range(self.length):
             if min_val > self.data[i]:
                 min_val = self.data[i]
             if max_val < self.data[i]:
@@ -1108,6 +1133,7 @@ cdef class FloatArray(BaseArray):
 
         self.minimum = min_val
         self.maximum = max_val
+
 
 ###############################################################################
 # `LongArray` class.
@@ -1324,7 +1350,7 @@ cdef class LongArray(BaseArray):
         memcpy(<void*>temp, <void*>self.data, n_bytes)
 
         # copy the data from the resized portion to the actual positions.
-        for i from 0 <= i < length:
+        for i in range(length):
             if i != new_indices.data[i]:
                 self.data[i] = temp[new_indices.data[i]]
 
@@ -1341,7 +1367,7 @@ cdef class LongArray(BaseArray):
         cdef long i, num_values
         num_values = indices.length
 
-        for i from 0 <= i < num_values:
+        for i in range(num_values):
             dest_array.data[i] = self.data[indices.data[i]]
 
     cpdef copy_subset(self, BaseArray source, long start_index=-1,
@@ -1404,7 +1430,7 @@ cdef class LongArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i from si <= i <= ei:
+        for i in range(si, ei+1):
             self.data[i] = src.data[j]
             j += 1
 
@@ -1421,7 +1447,7 @@ cdef class LongArray(BaseArray):
         min_val = self.data[0]
         max_val = self.data[0]
 
-        for i from 0 <= i < self.length:
+        for i in range(self.length):
             if min_val > self.data[i]:
                 min_val = self.data[i]
             if max_val < self.data[i]:

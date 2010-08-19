@@ -17,9 +17,9 @@ from pysph.solver.solver_base cimport SolverComponent, SolverBase, \
 from pysph.solver.entity_base cimport EntityBase
 
 
-################################################################################
+###############################################################################
 # `SPHSourceDestMode` class.
-################################################################################
+###############################################################################
 cdef class SPHSourceDestMode:
     """
     Class to hold the different ways in which source and destinations of a given
@@ -36,9 +36,9 @@ cdef class SPHSourceDestMode:
         """
         raise SystemError, 'Do not instantiate this class'
 
-################################################################################
+###############################################################################
 # `SPHComponent` class.
-################################################################################
+###############################################################################
 cdef class SPHComponent(SolverComponent):
     """
     Base class for components doing SPH summations.
@@ -301,9 +301,9 @@ cdef class SPHComponent(SolverComponent):
         """
         """
         raise NotImplementedError, 'SPHComponent::compute'
-################################################################################
+###############################################################################
 # `PYSPHComponent` class.
-################################################################################
+###############################################################################
 cdef class PYSPHComponent(SPHComponent):
     """
     Component to implement SPH components from pure python.

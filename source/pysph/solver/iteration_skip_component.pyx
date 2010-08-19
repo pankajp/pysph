@@ -10,9 +10,9 @@ logger = logging.getLogger()
 from pysph.solver.solver_base cimport *
 
 
-################################################################################
+###############################################################################
 # `ComponentIterationSpec` class.
-################################################################################
+###############################################################################
 cdef class ComponentIterationSpec:
     """
     Holds information about a component to be executed in an

@@ -290,9 +290,9 @@ class TestCell(unittest.TestCase):
         self.assertRaises(RuntimeError, cell1.py_add_particles, cell3)
     
 
-################################################################################
+###############################################################################
 # `TestCellManager` class.
-################################################################################
+###############################################################################
 class TestCellManager(unittest.TestCase):
     """Tests for the CellManager class."""
     

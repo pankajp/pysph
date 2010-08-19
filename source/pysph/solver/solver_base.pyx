@@ -33,9 +33,9 @@ from pysph.solver.timing import Timer
 #
 # 2. Default values of properties should/need not be specified by the
 # component. It may have to be specified somewhere else.
-################################################################################
+###############################################################################
 # `SolverComponent` class.
-################################################################################
+###############################################################################
 cdef class SolverComponent:
     """
     Base class for all components.
@@ -319,9 +319,9 @@ cdef class SolverComponent:
         """
         return 0
 
-################################################################################
+###############################################################################
 # `UserDefinedComponent` class.
-################################################################################
+###############################################################################
 cdef class UserDefinedComponent(SolverComponent):
     """
     """
@@ -353,9 +353,9 @@ cdef class UserDefinedComponent(SolverComponent):
         """
         raise NotImplementedError, 'UserDefinedComponent::py_compute'
 
-################################################################################
+###############################################################################
 # `ComponentManager` class.
-################################################################################
+###############################################################################
 cdef class ComponentManager:
     """
     Class to manage components.

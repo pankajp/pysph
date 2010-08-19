@@ -9,9 +9,9 @@ from pysph.solver.solver_base import ComponentManager, SolverComponent
 from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 
-################################################################################
+###############################################################################
 # `YAStepper` class.
-################################################################################
+###############################################################################
 class YAStepper(PyODEStepper):
     """
     Yet another stepper.
@@ -26,9 +26,9 @@ class YAStepper(PyODEStepper):
         Constructor.
         """
         pass
-################################################################################
+###############################################################################
 # `DummyComponent1` class.
-################################################################################
+###############################################################################
 class DummyComponent1(SolverComponent):
     """
     Component for testing the ComponentManager class.
@@ -64,9 +64,9 @@ class DummyComponent1(SolverComponent):
 
         ep[Solid] = [{'name':'mu', 'default':None}]
 
-################################################################################
+###############################################################################
 # `DummyComponent2` class.
-################################################################################
+###############################################################################
 class DummyComponent2(SolverComponent):
     """
     Component for testing the ComponentManager class.
@@ -106,9 +106,9 @@ class DummyComponent2(SolverComponent):
 
         ep[Solid] = [{'name':'g', 'default':None}]
 
-################################################################################
+###############################################################################
 # `DummyComponent2` class.
-################################################################################
+###############################################################################
 class DummyComponent3(SolverComponent):
     """
     Component for testing the ComponentManager class.

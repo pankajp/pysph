@@ -12,9 +12,9 @@ from pysph.solver.fluid import Fluid
 from pysph.solver.solver_base cimport *
 from pysph.solver.integrator_base cimport *
 from pysph.solver.runge_kutta_integrator cimport *
-################################################################################
+###############################################################################
 # `EulerXSPHIntegrator` class.
-################################################################################
+###############################################################################
 cdef class EulerXSPHIntegrator(Integrator):
     """
     Euler integrator to perform xsph corrected stepping of velocity.
@@ -86,9 +86,9 @@ cdef class EulerXSPHIntegrator(Integrator):
         # set fluids to use xsph steppers
         steppers[Fluid] = 'euler_xsph_position_stepper'
 
-################################################################################
+###############################################################################
 # `RK2XSPHIntegrator` class.
-################################################################################
+###############################################################################
 cdef class RK2XSPHIntegrator(RK2Integrator):
     """
     RK2 integrator to perform xsph corrected stepping of velocity.

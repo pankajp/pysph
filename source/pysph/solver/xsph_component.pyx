@@ -13,9 +13,9 @@ from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 from pysph.solver.integrator_base cimport *
 
-################################################################################
+###############################################################################
 # `XSPHFunction3D` class.
-################################################################################
+###############################################################################
 cdef class XSPHFunction3D(SPHFunctionParticle3D):
     """
     """
@@ -65,9 +65,9 @@ cdef class XSPHFunction3D(SPHFunctionParticle3D):
         """
         return 3
 
-################################################################################
+###############################################################################
 # `XSPHVelocityComponent` class.
-################################################################################
+###############################################################################
 cdef class XSPHVelocityComponent(SPHComponent):
     """
     Component to compute velocity correction using the XSPH method.
@@ -129,7 +129,7 @@ cdef class XSPHVelocityComponent(SPHComponent):
 
         num_entities = len(self.dest_list)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.dest_list[i]
             calc = self.sph_calcs[i]
             parr = e.get_particle_array()
@@ -152,9 +152,9 @@ cdef class XSPHVelocityComponent(SPHComponent):
         return particle_array.del_u, particle_array.del_v, particle_array.del_w
 
 
-################################################################################
+###############################################################################
 # `XPSHPositionStepper` class.
-################################################################################
+###############################################################################
 cdef class EulerXSPHPositionStepper(ODEStepper):
     """
     Position stepper with XSPH correction.
@@ -223,7 +223,7 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             
             parr = e.get_particle_array()
@@ -244,9 +244,9 @@ cdef class EulerXSPHPositionStepper(ODEStepper):
 
         return 0
 
-################################################################################
+###############################################################################
 # `RK2Step1XSPHPositionStepper` class.
-################################################################################
+###############################################################################
 cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
     """
     Position stepper with XSPH correction.
@@ -297,13 +297,13 @@ cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
         num_props = len(self.integrand_names)
         self.prev_correct_velocity_names = []
 
-        for i from 0 <= i < num_props:
+        for i in range(num_props):
             arr_name = self.integrand_names[i]
             self.prev_correct_velocity_names.append(arr_name+'_correct_prev')
 
         num_entities = len(self.entity_list)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             parr = e.get_particle_array()
             for j from 0 <= j < num_props:
@@ -341,7 +341,7 @@ cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             
             parr = e.get_particle_array()
@@ -368,9 +368,9 @@ cdef class RK2Step1XSPHPositionStepper(EulerXSPHPositionStepper):
 
         return 0
 
-################################################################################
+###############################################################################
 # `RK2Step2XSPHPositionStepper` class.
-################################################################################
+###############################################################################
 cdef class RK2Step2XSPHPositionStepper(EulerXSPHPositionStepper):
     """
     Position stepper with XSPH correction.
@@ -443,7 +443,7 @@ cdef class RK2Step2XSPHPositionStepper(EulerXSPHPositionStepper):
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             
             parr = e.get_particle_array()

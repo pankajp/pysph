@@ -47,9 +47,9 @@ def check_entity_properties(prop_dict, prop_names, default_vals):
         msg += ' for property %s'%(prop_names[i])
         assert val, msg
     
-################################################################################
+###############################################################################
 # `TestSolverComponent` class.
-################################################################################ 
+############################################################################### 
 class TestSolverComponent(unittest.TestCase):
     """
     Tests for the SolverComponent class.
@@ -176,9 +176,9 @@ class TestSolverComponent(unittest.TestCase):
         s.set_input_entity_types([Fluid])
         self.assertEqual(Fluid in input_types, True)
 
-################################################################################
+###############################################################################
 # `TestComponentManager` class.
-################################################################################
+###############################################################################
 class TestComponentManager(unittest.TestCase):
     """
     Tests for the ComponentManager class.
@@ -351,9 +351,9 @@ class TestComponentManager(unittest.TestCase):
         self.assertEqual(c1.entity_list, [e1, e2])
         self.assertEqual(c2.entity_list, [])
 
-################################################################################
+###############################################################################
 # `TestSolverBase` class.
-################################################################################
+###############################################################################
 class TestSolverBase(unittest.TestCase):
     """
     Tests the SolverBase class.

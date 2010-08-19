@@ -17,9 +17,9 @@ from pysph.solver.solver_base cimport *
 from pysph.solver.component_factory import ComponentFactory as cfac
 
 
-################################################################################
+###############################################################################
 # `RK2TimeStepSetter` class.
-################################################################################
+###############################################################################
 cdef class RK2TimeStepSetter(SolverComponent):
     """
     """
@@ -61,9 +61,9 @@ cdef class RK2TimeStepSetter(SolverComponent):
 
         return 0
 
-################################################################################
+###############################################################################
 # `RK2Integrator` class.
-################################################################################
+###############################################################################
 cdef class RK2Integrator(Integrator):
     """
     Runge-Kutta-2 integrator class.
@@ -316,9 +316,9 @@ cdef class RK2Integrator(Integrator):
 
         return 0
 
-################################################################################
+###############################################################################
 # `RK2SecondStep` class.
-################################################################################
+###############################################################################
 cdef class RK2SecondStep(ODEStepper):
     """
     Class to perform the 2nd step of runge kutta 2 integrator.
@@ -351,7 +351,7 @@ cdef class RK2SecondStep(ODEStepper):
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             
             parr = e.get_particle_array()

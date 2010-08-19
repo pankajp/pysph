@@ -26,9 +26,9 @@ from utils import *
 from pysph.solver.component_factory import ComponentFactory as cfac
 
 
-################################################################################
+###############################################################################
 # `ODEStepper` class.
-################################################################################
+###############################################################################
 cdef class ODEStepper(SolverComponent):
     """
     Class to step a given property by a given time step.
@@ -100,14 +100,14 @@ cdef class ODEStepper(SolverComponent):
         
         num_props = len(self.integral_names)
         
-        for i from 0 <= i < num_props:
+        for i in range(num_props):
             arr_name = self.integral_names[i]
             self.next_step_names.append(
                 arr_name + '_next')
 
         # now make sure that all the entities have the _next property.
         num_entities = len(self.entity_list)
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             logger.debug('Setting up %s'%(e.name))
             parr = e.get_particle_array()
@@ -155,7 +155,7 @@ cdef class ODEStepper(SolverComponent):
         num_entities = len(self.entity_list)
         num_props = len(self.integrand_names)
 
-        for i from 0 <= i < num_entities:
+        for i in range(num_entities):
             e = self.entity_list[i]
             
             parr = e.get_particle_array()
@@ -172,9 +172,9 @@ cdef class ODEStepper(SolverComponent):
                 an1[:] = an + bn*self.time_step.value
 
         return 0
-################################################################################
+###############################################################################
 # `PyODEStepper` class.
-################################################################################
+###############################################################################
 cdef class PyODEStepper(ODEStepper):
     """
     Simple class to implement some ODEStepper in python.
@@ -198,9 +198,9 @@ cdef class PyODEStepper(ODEStepper):
         """
         """
         self.py_compute()
-################################################################################
+###############################################################################
 # `StepperInfo` class.
-################################################################################
+###############################################################################
 cdef class StepperInfo:
     """
     Contains information about stepping a particular property.
@@ -213,9 +213,9 @@ cdef class StepperInfo:
         """
         pass
     
-################################################################################
+###############################################################################
 # `Integrator` class.
-################################################################################
+###############################################################################
 cdef class Integrator(SolverComponent):
     """
     Base class for all integrators. Integrates a set of given properties.
@@ -848,7 +848,7 @@ cdef class Integrator(SolverComponent):
                 accept = True
 
             if accept == False:
-                msg = 'Entity type (%d) not accepted for %s'%(e.type, prop_name)
+                msg = 'Entity type (%s) not accepted for %s'%(str(e.type), prop_name)
                 logger.info(msg)
                 continue        
 
@@ -873,7 +873,7 @@ cdef class Integrator(SolverComponent):
                 self.execute_list.append(stepper)
             else:
                 msg = 'No stepper found for entity type'
-                msg += ' (%d) for property%s'%(e.type, prop_name)
+                msg += ' (%s) for property%s'%(str(e.type), prop_name)
                 logger.error(msg)
 
         # setup the post step components
@@ -999,7 +999,7 @@ cdef class Integrator(SolverComponent):
 
         n_comps = len(self.execute_list)
         
-        for i from 0 <= i < n_comps:
+        for i in range(n_comps):
             comp = self.execute_list[i]
             comp.compute()
 

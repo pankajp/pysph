@@ -16,9 +16,9 @@ from pysph.solver.speed_of_sound cimport SpeedOfSound
 cdef class ComponentManager
 cdef class SolverBase
 
-################################################################################
+###############################################################################
 # `SolverComponent` class.
-################################################################################
+###############################################################################
 cdef class SolverComponent:
     """
     Base class for all solver components.
@@ -89,9 +89,9 @@ cdef class SolverComponent:
                                       default_value=*)
     
 
-################################################################################
+###############################################################################
 # `UserDefinedComponent` class.
-################################################################################
+###############################################################################
 cdef class UserDefinedComponent(SolverComponent):
     """
     Base class to enable users to implement components in Python.
@@ -99,9 +99,9 @@ cdef class UserDefinedComponent(SolverComponent):
     cdef int compute(self) except -1
     cpdef int py_compute(self) except -1
 
-################################################################################
+###############################################################################
 # `ComponentManager` class.
-################################################################################
+###############################################################################
 cdef class ComponentManager:
     """
     Class to manage different components.
@@ -146,9 +146,9 @@ cdef class ComponentManager:
     cpdef setup_entity(self, EntityBase entity)
 
 
-################################################################################
+###############################################################################
 # `SolverBase` class.
-################################################################################
+###############################################################################
 cdef class SolverBase:
     """
     Base class for all solvers.

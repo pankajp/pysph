@@ -12,9 +12,9 @@ from pysph.solver.solver_base cimport SolverComponent, ComponentManager, \
     SolverBase
 
 
-################################################################################
+###############################################################################
 # `NNPSUpdater` class.
-################################################################################
+###############################################################################
 cdef class NNPSUpdater(SolverComponent):
     """
     Component to perform nnps updates every iteration.

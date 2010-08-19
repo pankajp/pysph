@@ -61,9 +61,9 @@ class TestMakeCoords(unittest.TestCase):
         self.assertEqual(p.y, 5.0)
         self.assertEqual(p.z, 0.1)
         
-################################################################################
+###############################################################################
 # `TestSPHFunctionParticle` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionParticle(unittest.TestCase):
     """
     Tests the SPHFunctionParticle class.
@@ -184,9 +184,9 @@ class TestSPHFunctionParticle1D(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, f.output_fields)
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionParticle2D` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionParticle2D(unittest.TestCase):
     """
     Tests the SPHFunctionParticle2D class.
@@ -263,9 +263,9 @@ class TestSPHFunctionParticle2D(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, f.output_fields)
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionParticle3D` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionParticle3D(unittest.TestCase):
     """
     Tests the SPHFunctionParticle3D class.
@@ -354,9 +354,9 @@ class TestSPHFunctionParticle3D(unittest.TestCase):
         self.assertRaises(NotImplementedError, f.output_fields)
 
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionPoint` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionPoint(unittest.TestCase):
     """
     Tests the SPHFunctionPoint class.
@@ -403,9 +403,9 @@ class TestSPHFunctionPoint(unittest.TestCase):
         self.assertRaises(NotImplementedError, f.output_fields)
 
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionPoint1D` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionPoint1D(unittest.TestCase):
     """
     Tests the SPHFunctionPoint1D class.
@@ -457,9 +457,9 @@ class TestSPHFunctionPoint1D(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, f.output_fields)
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionPoint2D` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionPoint2D(unittest.TestCase):
     """
     Tests the SPHFunctionPoint2D class.
@@ -516,9 +516,9 @@ class TestSPHFunctionPoint2D(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, f.output_fields)
 
-################################################################################
+###############################################################################
 # `TestSPHFunctionPoint3D` class.
-################################################################################
+###############################################################################
 class TestSPHFunctionPoint3D(unittest.TestCase):
     """
     Tests the SPHFunctionPoint3D class.

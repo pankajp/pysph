@@ -12,9 +12,9 @@ from pysph.solver.sph_component import *
 from pysph.solver.solid import Solid
 from pysph.solver.fluid import Fluid
 
-################################################################################
+###############################################################################
 # `SPHDensityComponent` class.
-################################################################################
+###############################################################################
 class SPHDensityComponent(PYSPHComponent):
     """
     Basic SPH density computing component.
@@ -82,9 +82,9 @@ class SPHDensityComponent(PYSPHComponent):
             
         return 0
 
-################################################################################
+###############################################################################
 # `SPHDensityRateComponent` class.
-################################################################################
+###############################################################################
 class SPHDensityRateComponent(PYSPHComponent):
     """
     Component to compute the rate of change of density.

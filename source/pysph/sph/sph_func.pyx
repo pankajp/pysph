@@ -69,9 +69,9 @@ def py_make_coords_3d(DoubleArray x, DoubleArray y, DoubleArray z, Point
     """
     make_coords_3d(x, y, z, pnt, pid)
 
-################################################################################
+###############################################################################
 # `SPHFunctionParticle` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionParticle:
     """
     Base class to represent an interaction between two particles from two
@@ -218,7 +218,7 @@ cdef class SPHFunctionParticle:
 
         self.eval(source_pid, dest_pid, kernel, _nr, _dnr)
 
-        for i from 0 <= i <  self.output_fields():
+        for i in range(self.output_fields()):
             nr[i]  += _nr[i]
             dnr[i] += _dnr[i]
 
@@ -226,9 +226,9 @@ cdef class SPHFunctionParticle:
         free(<void*>_dnr)
     
 
-################################################################################
+###############################################################################
 # `SPHFuncParticleUser` class.
-################################################################################
+###############################################################################
 cdef class SPHFuncParticleUser(SPHFunctionParticle):
     """
     User defined SPHFunctionParticle.
@@ -250,7 +250,7 @@ cdef class SPHFuncParticleUser(SPHFunctionParticle):
 
         self.py_eval(source_pid, dest_pid, kernel, _nr, _dnr)
 
-        for i from 0 <= i < num_fields:
+        for i in range(num_fields):
             nr[i] = _nr[i]
             dnr[i] = _dnr[i]        
 
@@ -261,9 +261,9 @@ cdef class SPHFuncParticleUser(SPHFunctionParticle):
         """
         raise NotImplementedError, 'SPHFuncParticleUser::py_eval'
         
-################################################################################
+###############################################################################
 # `SPHFunctionPoint` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionPoint:
     """
     Base class to compute the contribution of an SPH particle, on a point in
@@ -336,7 +336,7 @@ cdef class SPHFunctionPoint:
 
         self.eval(pnt, dest_pid, kernel, _nr, _dnr)
 
-        for i from 0 <= i <  self.output_fields():
+        for i in range(self.output_fields()):
             nr[i] += _nr[i]
             dnr[i] += _dnr[i]
 
@@ -352,9 +352,9 @@ cdef class SPHFunctionPoint:
         """
         raise NotImplementedError, 'SPHFunctionPoint::output_fields'
 
-################################################################################
+###############################################################################
 # `SPHFunctionParticle1D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionParticle1D(SPHFunctionParticle):
     """
     SPHFunctionParticle for purely 1-D simulations.
@@ -407,9 +407,9 @@ cdef class SPHFunctionParticle1D(SPHFunctionParticle):
         self.s_velx = self.source.get_carray(self.velx)
         self.d_velx = self.dest.get_carray(self.velx)
 
-################################################################################
+###############################################################################
 # `SPHFunctionPoint1D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionPoint1D(SPHFunctionPoint):
     """
     SPHFunctionPoint for purely 1-D interpolations.
@@ -453,9 +453,9 @@ cdef class SPHFunctionPoint1D(SPHFunctionPoint):
         self.s_x = self.source.get_carray(self.coord_x)
         self.s_velx = self.source.get_carray(self.velx)
 
-################################################################################
+###############################################################################
 # `SPHFunctionParticle2D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionParticle2D(SPHFunctionParticle):
     """
     SPHFunctionParticle for purely 2-D simulations.
@@ -527,9 +527,9 @@ cdef class SPHFunctionParticle2D(SPHFunctionParticle):
         self.s_vely = self.source.get_carray(self.vely)
         self.d_vely = self.dest.get_carray(self.vely)
 
-################################################################################
+###############################################################################
 # `SPHFunctionPoint2D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionPoint2D(SPHFunctionPoint):
     """
     SPHFunctionPoint for interpolating from 2-D data.
@@ -583,9 +583,9 @@ cdef class SPHFunctionPoint2D(SPHFunctionPoint):
         self.s_velx = self.source.get_carray(self.velx)
         self.s_vely = self.source.get_carray(self.vely)
 
-################################################################################
+###############################################################################
 # `SPHFunctionParticle3D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionParticle3D(SPHFunctionParticle):
     """
     SPHFunctionParticle for 3-D simulations.
@@ -680,9 +680,9 @@ cdef class SPHFunctionParticle3D(SPHFunctionParticle):
         self.s_velz = self.source.get_carray(self.velz)
         self.d_velz = self.dest.get_carray(self.velz)
 
-################################################################################
+###############################################################################
 # `SPHFunctionPoint3D` class.
-################################################################################
+###############################################################################
 cdef class SPHFunctionPoint3D(SPHFunctionPoint):
     """
     SPHFunctionPoint for interpolating from 3-D data.

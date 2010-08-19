@@ -25,9 +25,9 @@ class DummyGenerator(ParticleGenerator):
         print 'returning %d'%(self.num)
         return self.num
 
-################################################################################
+###############################################################################
 # `TestParticleGenerator` class.
-################################################################################
+###############################################################################
 class TestParticleGenerator(unittest.TestCase):
     """
     Tests the ParticleGenerator class.

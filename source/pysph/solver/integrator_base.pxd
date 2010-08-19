@@ -11,9 +11,9 @@ from pysph.solver.fluid cimport Fluid
 from pysph.solver.time_step cimport TimeStep
 
 
-################################################################################
+###############################################################################
 # `Integrator` class.
-################################################################################
+###############################################################################
 cdef class Integrator(SolverComponent):
     """
     Base class for all integrators. Integrates a set of given properties.
@@ -77,9 +77,9 @@ cdef class Integrator(SolverComponent):
     # updates internal data structures about property requirements.
     cpdef int update_property_requirements(self) except -1    
 
-################################################################################
+###############################################################################
 # `ODEStepper` class.
-################################################################################
+###############################################################################
 cdef class ODEStepper(SolverComponent):
     """
     Class to step a given property by a given time step.
@@ -104,9 +104,9 @@ cdef class ODEStepper(SolverComponent):
     cdef int compute(self) except -1
     cpdef set_properties(self, str prop_name, list integrands, list integrals)
 
-################################################################################
+###############################################################################
 # `PyODEStepper` class.
-################################################################################
+###############################################################################
 cdef class PyODEStepper(ODEStepper):
     """
     Class to implement some steppers in pure python if needed.

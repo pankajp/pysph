@@ -9,9 +9,9 @@ import unittest
 from pysph.solver.fluid import Fluid
 from pysph.solver.vtk_writer import *
 
-################################################################################
+###############################################################################
 # `TestVTKWriter` class.
-################################################################################
+###############################################################################
 class TestVTKWriter(unittest.TestCase):
     """
     Tests for the VTKWriter class.
