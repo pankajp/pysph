@@ -43,15 +43,15 @@ logger=logging.getLogger()
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.point cimport Point
 from pysph.base.carray cimport DoubleArray, LongArray
-from pysph.base.nnps cimport NNPSManager, FixedDestinationNbrParticleLocator
+from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator
 from pysph.base.nnps cimport NbrParticleLocatorBase
 from pysph.base.particle_tags cimport *
 
 from pysph.sph.sph_func cimport SPHFunctionParticle
 
-################################################################################
+###############################################################################
 # `SPHBase` class.
-################################################################################
+###############################################################################
 cdef class SPHBase:
     """
     A general purpose class for SPH calculations.
@@ -182,7 +182,7 @@ cdef class SPHBase:
 
         """
         cdef long dest_pid, source_pid
-        cdef FixedDestinationNbrParticleLocator nbr_loc
+        cdef FixedDestNbrParticleLocator nbr_loc
         cdef LongArray nbrs
         cdef SPHFunctionParticle func
         cdef LongArray tag_array
@@ -212,7 +212,7 @@ cdef class SPHBase:
 
         radius_scale = self.kernel.radius()
 
-        for i from 0 <= i < nsrc:
+        for i in range(nsrc):
             nbr_loc = self.nbr_locators[i]
             func = self.sph_funcs[i]
             for j from 0 <= j < np:
@@ -224,8 +224,7 @@ cdef class SPHBase:
                 nr = 0.0
                 
                 nbrs.reset()
-                nbr_loc.get_nearest_particles(j, nbrs, radius_scale,
-                                              exclude_self)
+                nbr_loc.get_nearest_particles(j, nbrs, exclude_self)
                 
                 for k from 0 <= k < nbrs.length:
                     s_idx = nbrs.get(k)
@@ -275,7 +274,7 @@ cdef class SPHBase:
 
         """
         cdef long dest_pid, source_pid
-        cdef FixedDestinationNbrParticleLocator nbr_loc
+        cdef FixedDestNbrParticleLocator nbr_loc
         cdef LongArray nbrs
         cdef SPHFunctionParticle func
         cdef LongArray tag_array
@@ -306,7 +305,7 @@ cdef class SPHBase:
 
         radius_scale = self.kernel.radius()
 
-        for i from 0 <= i < nsrc:
+        for i in range(nsrc):
             nbr_loc = self.nbr_locators[i]
             func = self.sph_funcs[i]
 
@@ -319,8 +318,7 @@ cdef class SPHBase:
                 nr[0] = nr[1] = 0.0
                 
                 nbrs.reset()
-                nbr_loc.get_nearest_particles(j, nbrs, radius_scale,
-                                              exclude_self)
+                nbr_loc.get_nearest_particles(j, nbrs, exclude_self)
                 
                 for k from 0 <= k < nbrs.length:
                     s_idx = nbrs.get(k)
@@ -363,7 +361,7 @@ cdef class SPHBase:
 
         """
         cdef long dest_pid, source_pid
-        cdef FixedDestinationNbrParticleLocator nbr_loc
+        cdef FixedDestNbrParticleLocator nbr_loc
         cdef LongArray nbrs
         cdef SPHFunctionParticle func
         cdef LongArray tag_array
@@ -394,7 +392,7 @@ cdef class SPHBase:
 
         radius_scale = self.kernel.radius()
 
-        for i from 0 <= i < nsrc:
+        for i in range(nsrc):
             nbr_loc = self.nbr_locators[i]
             func = self.sph_funcs[i]
 
@@ -407,8 +405,7 @@ cdef class SPHBase:
                 nr[0] = nr[1] = nr[2] = 0.0
                 
                 nbrs.reset()
-                nbr_loc.get_nearest_particles(j, nbrs, radius_scale,
-                                              exclude_self)
+                nbr_loc.get_nearest_particles(j, nbrs, exclude_self)
                 
                 for k from 0 <= k < nbrs.length:
                     s_idx = nbrs.get(k)
@@ -436,7 +433,7 @@ cdef class SPHBase:
         cdef DoubleArray arr
         num_arrays = len(op_names)
 
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             name = op_names[i]
             arr = self.dest.get_carray(name)
             arr_lst.append(arr)
@@ -460,7 +457,7 @@ cdef class SPHBase:
 
         """
         cdef long dest_pid, source_pid
-        cdef FixedDestinationNbrParticleLocator nbr_loc
+        cdef FixedDestNbrParticleLocator nbr_loc
         cdef LongArray nbrs
         cdef SPHFunctionParticle func
         cdef LongArray tag_array
@@ -495,7 +492,7 @@ cdef class SPHBase:
         # make sure length of each array is equal to number of particles in
         # dest.
         num_arrays = len(op_arrays)
-        for i from 0 <= i < num_arrays:
+        for i in range(num_arrays):
             output_array = op_arrays[i]
             if output_array.length != np:
                 msg = 'Length of output array not equal to number of particles' 
@@ -506,7 +503,7 @@ cdef class SPHBase:
         dnr = <double*>malloc(sizeof(double)*num_fields)
         radius_scale = self.kernel.radius()
 
-        for i from 0 <= i < nsrc:
+        for i in range(nsrc):
             nbr_loc = self.nbr_locators[i]
             func = self.sph_funcs[i]
 
@@ -520,8 +517,7 @@ cdef class SPHBase:
                     nr[k] = 0.0
                 
                 nbrs.reset()
-                nbr_loc.get_nearest_particles(j, nbrs, radius_scale,
-                                              exclude_self)
+                nbr_loc.get_nearest_particles(j, nbrs, exclude_self)
                 
                 for k from 0 <= k < nbrs.length:
                     s_idx = nbrs.get(k)
