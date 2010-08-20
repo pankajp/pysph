@@ -36,9 +36,6 @@ from pysph.base.cell cimport CellManager, Cell
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport LongArray, DoubleArray
 
-
-
-
 from pysph.solver.fast_utils cimport arange_long
 from pysph.parallel.parallel_controller cimport ParallelController
 from pysph.parallel.load_balancer import LoadBalancer
@@ -341,25 +338,10 @@ cdef class ParallelCellInfo:
         """
         cdef int dim = self.cell.cell_manager.dimension
         cdef int num_neighbors = len(self.neighbor_cell_pids.keys())
-        if dim == 1:
-           if num_neighbors < 2:
-               return True
-           else:
-               return False
-        elif dim == 2:
-            if num_neighbors < 8:
-                return True
-            else:
-                return False
-        elif dim == 3:
-            if num_neighbors < 26:
-                return True
-            else:
-                return False
-
-        msg = 'Invalid dimension'
-        logger.error(msg)
-        raise ValueError, msg
+        if num_neighbors < 3**dim - 1:
+            return True
+        else:
+            return False
         
 ###############################################################################
 # `ParallelCell` class.

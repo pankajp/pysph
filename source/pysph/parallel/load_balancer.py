@@ -67,8 +67,8 @@ class LoadBalancer:
         The load balance function.
         """
         self.setup()
-
-        if self.solver.current_iteration % self.skip_iteration == 0:
+        
+        if self.solver is None or self.solver.current_iteration % self.skip_iteration == 0:
             self.load_balance_func()
 
         self.current_iteration += 1
