@@ -1,5 +1,5 @@
 """
-Simple scripy to check if the load balancing works on 2-d data.
+Simple script to check if the load balancing works on 2-d data.
 """
 
 # mpi imports
