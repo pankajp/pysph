@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger()
 
 # local imports
-from pysph.base.point cimport Point
+from pysph.base.point cimport Point, Point_new
 from pysph.base.kernels cimport *
 from pysph.sph.sph_func cimport *
 from pysph.solver.solid import Solid
@@ -154,7 +154,7 @@ cdef class SPHRepulsiveBoundaryFunction(SPHFunctionParticle3D):
         cdef double h = 0.5*(self.s_h.data[source_pid] +
                              self.d_h.data[dest_pid])
         cdef double mtemp, cs_2
-        cdef Point dir = Point()
+        cdef Point dir = Point_new()
 
         make_coords_3d(self.s_x, self.s_y, self.s_z, self._pnt1, source_pid)
         make_coords_3d(self.d_x, self.d_y, self.d_z, self._pnt2, dest_pid)

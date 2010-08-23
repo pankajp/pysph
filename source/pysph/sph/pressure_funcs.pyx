@@ -55,7 +55,7 @@ cdef class SPHSymmetricPressureGradient3D(SPHFunctionParticle3D):
         cdef double h = 0.5*(self.s_h.data[source_pid] +
                              self.d_h.data[dest_pid])
         cdef double temp = 0.0
-        cdef Point grad = Point()
+        cdef Point grad = Point_new()
 
         make_coords_3d(self.s_x, self.s_y, self.s_z, self._pnt1, source_pid)
         make_coords_3d(self.d_x, self.d_y, self.d_z, self._pnt2, dest_pid)

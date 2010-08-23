@@ -158,17 +158,6 @@ class TestIntPoint(unittest.TestCase):
         self.assertEqual(p.y, 4)
         self.assertEqual(p.z, 6)
 
-    def test_set(self):
-        """
-        Tests the set function.
-        """
-        p = IntPoint()
-        p.set(-1, -2, -3)
-
-        self.assertEqual(p.x, -1)
-        self.assertEqual(p.y, -2)
-        self.assertEqual(p.z, -3)
-
     def test_is_equal(self):
         """
         Test the is_equal function.
@@ -176,9 +165,7 @@ class TestIntPoint(unittest.TestCase):
         p1 = IntPoint()
         self.assertEqual(p1.py_is_equal(IntPoint()), True)
 
-        p1.x = 1
-        p1.y = 2
-        p1.z = 3
+        p1 = IntPoint(1,2,3)
         
         self.assertEqual(IntPoint(1, 2, 3).py_is_equal(p1), True)
         self.assertEqual(IntPoint(1, 2, 3) == p1, True)

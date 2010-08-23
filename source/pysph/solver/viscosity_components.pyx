@@ -57,9 +57,9 @@ cdef class SPHMonaghanArtVisc3D(SPHFunctionParticle3D):
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
         """
-        cdef Point vel_ds = Point()
-        cdef Point pos_ds = Point()
-        cdef Point grad = Point()
+        cdef Point vel_ds = Point_new()
+        cdef Point pos_ds = Point_new()
+        cdef Point grad = Point_new()
         cdef double pi_ab = 0.0
         cdef double h = 0.5*(self.s_h.data[source_pid] + self.d_h.data[dest_pid])
         cdef double temp = 0.0

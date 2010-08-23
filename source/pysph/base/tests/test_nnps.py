@@ -436,7 +436,7 @@ class TestVarHNbrParticleLocator(unittest.TestCase):
         parrs[0].get('h')[:] = 0.1
         parrs[0].get('h')[5] = 3
         parrs[0].set_dirty(True)
-        
+        nbrl.py_update_status()
         output_array.reset()
         
         # should only return white point 6

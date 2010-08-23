@@ -37,7 +37,7 @@ cdef class XSPHFunction3D(SPHFunctionParticle3D):
         """
         """
         cdef double w, rho_bar, fac, h
-        cdef Point vel = Point()
+        cdef Point vel = Point_new()
         cdef Point s_pos = self._pnt1
         cdef Point d_pos = self._pnt2
         

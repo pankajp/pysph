@@ -7,7 +7,7 @@ cimport numpy
 # local imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray
-from pysph.base.point cimport Point
+from pysph.base.point cimport Point, Point_new
 
 from pysph.base.kernels cimport KernelBase
 
@@ -155,8 +155,8 @@ cdef class SPHFunctionParticle:
         self.d_h = None
         self.d_rho = None
 
-        self._pnt1 = Point()
-        self._pnt2 = Point()
+        self._pnt1 = Point_new()
+        self._pnt2 = Point_new()
 
         if setup_arrays:
             self.setup_arrays()
@@ -290,8 +290,8 @@ cdef class SPHFunctionPoint:
         self.s_h = None
         self.s_rho = None
         
-        self._pnt1 = Point()
-        self._pnt2 = Point()
+        self._pnt1 = Point_new()
+        self._pnt2 = Point_new()
         
         if setup_arrays:
             self.setup_arrays()

@@ -1,9 +1,11 @@
 """API module to simplify import of common names from pysph.solver package"""
 
-from basic_generators import LineGenerator, CuboidGenerator, RectangleGenerator
+from adder_component import AdderComponent
+
+#from basic_generators import LineGenerator, CuboidGenerator, RectangleGenerator
 
 from boundary_force_components import RepulsiveBoundaryKernel, \
-        SPHRepulsiveBoundaryFunction
+        SPHRepulsiveBoundaryFunction, SPHRepulsiveBoundaryForceComponent
 
 from entity_base import EntityBase
 
@@ -13,7 +15,7 @@ from fluid import Fluid
 
 from solid import Solid, SolidMotionType, RigidBody
 
-from file_writer_component import FileWriterComponent
+#from file_writer_component import FileWriterComponent
 
 from geometry import GeometryBase, AnalyticalGeometry, PolygonalGeometry
 
@@ -27,25 +29,29 @@ from nnps_updater import NNPSUpdater
 #from particle_generator import DensityComputationMode, MassComputationMode, \
 #        ParticleGenerator
 
-#from pressure_components import TaitPressureComponent
+from pressure_components import TaitPressureComponent
 
-#from pressure_gradient_components import SPHSymmetricPressureGradientComponent
+from pressure_gradient_components import SPHSymmetricPressureGradientComponent
 
 #from property_db import PropertyDb
 
-from runge_kutta_integrator import RK2TimeStepSetter
+from runge_kutta_integrator import RK2TimeStepSetter, RK2Integrator
 
 from solver_base import SolverComponent, UserDefinedComponent, \
         ComponentManager, SolverBase
 
+#from speed_of_sound import SpeedOfSound
+
 from sph_component import SPHComponent, PYSPHComponent, SPHSourceDestMode
 
-from time_step_components import TimeStepComponent, 
+from time_step_components import TimeStepComponent, \
         MonaghanKosTimeStepComponent, MonaghanKosForceBasedTimeStepComponent
 
 from time_step import TimeStep
 
 #from timing import Timer
+
+from viscosity_components import MonaghanArtViscComponent, SPHMonaghanArtVisc3D
 
 #from vtk_writer import ScalarInfo, VectorInfo, VTKWriter, write_data
 

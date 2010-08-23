@@ -1,6 +1,7 @@
 """
 """
 
+from python cimport *
 # numpy imports
 cimport numpy
 import numpy
@@ -8,6 +9,12 @@ import numpy
 cdef extern from "math.h":
     double sqrt(double)
     double ceil(double)
+
+cdef extern from 'limits.h':
+    cdef int INT_MAX
+
+# IntPoint's maximum value must be less than `IntPoint_maxint`
+cdef int IntPoint_maxint = 2**21
 
 DTYPE = numpy.float
 ctypedef numpy.float_t DTYPE_t
@@ -153,12 +160,9 @@ cdef class Point:
         r[2] = self.z
         return r
 
-    cpdef double norm(self):
+    cpdef inline double norm(self):
         """Return the square of the Euclidean distance to this point."""
-        cdef double x = self.x
-        cdef double y = self.y
-        cdef double z = self.z
-        return (x*x + y*y + z*z)
+        return (self.x*self.x + self.y*self.y + self.z*self.z)
 
     cpdef double length(self):
         """Return the Euclidean distance to this point."""
@@ -210,22 +214,10 @@ cdef class IntPoint:
     def __repr__(self):
         return 'IntPoint(%d,%d,%d)'%(self.x, self.y, self.z)
 
-    cpdef set(self, int x, int y, int z):
-        self.x = x
-        self.y = y
-        self.z = z
-
     cdef IntPoint copy(self):
-        cdef IntPoint pt = IntPoint()
-
-        pt.x = self.x
-        pt.y = self.y
-        pt.z = self.z
-
-        return pt
+        return IntPoint_new(self.x, self.y, self.z)
 
     cpdef numpy.ndarray asarray(self):
-
         cdef numpy.ndarray arr = numpy.empty(3, dtype=numpy.int)
 
         arr[0] = self.x
@@ -235,23 +227,15 @@ cdef class IntPoint:
         return arr
 
     cdef bint is_equal(self, IntPoint p):
-        
         if self.x == p.x and self.y == p.y and self.z == p.z:
             return True
         else:
             return False
 
     cdef IntPoint diff(self, IntPoint p):
-        cdef IntPoint ret  = IntPoint()
-        ret.x = self.x - p.x
-        ret.y = self.y - p.y
-        ret.z = self.z - p.z
-        
-        return ret
+        return IntPoint_new(self.x-p.x, self.y-p.y, self.z-p.z)
 
     cdef tuple to_tuple(self):
-        """
-        """
         cdef tuple t = (self.x, self.y, self.z)
         return t        
 
@@ -267,8 +251,17 @@ cdef class IntPoint:
         else:
             raise TypeError('No ordering is possible for Points.')
 
-    def __hash__(self):
+    cdef long hash(self):
+        cdef long ret = self.x
+        return (ret * IntPoint_maxint + self.y) * IntPoint_maxint + self.z
+    
+    def hash2(self):
         return (self.x, self.y, self.z).__hash__()
+    
+    def __hash__(self):
+        return self.hash()
+        # code below is almost 8 times slower
+        #return (self.x, self.y, self.z).__hash__()
 
     def py_is_equal(self, IntPoint p):
         return self.is_equal(p)

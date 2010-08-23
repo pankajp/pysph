@@ -3,7 +3,7 @@ SPH functions for density and related computation.
 """
 
 # local imports
-from pysph.base.point cimport Point
+from pysph.base.point cimport Point, Point_new
 from pysph.base.kernels cimport KernelBase
 from pysph.base.particle_array cimport ParticleArray
 
@@ -84,8 +84,8 @@ cdef class SPHDensityRate3D(SPHFunctionParticle3D):
         make_coords_3d(self.s_x, self.s_y, self.s_z, self._pnt1, source_pid)
         make_coords_3d(self.d_x, self.d_y, self.d_z, self._pnt2, dest_pid)
 
-        cdef Point vel = Point()
-        cdef Point grad = Point()
+        cdef Point vel = Point_new()
+        cdef Point grad = Point_new()
 
         vel.x = self.d_velx.data[dest_pid] - self.s_velx.data[source_pid]
         vel.y = self.d_vely.data[dest_pid] - self.s_vely.data[source_pid]

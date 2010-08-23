@@ -22,16 +22,16 @@ cpdef Point Point_add(Point pa, Point pb)
 
 
 cdef class IntPoint:
-    cdef public int x
-    cdef public int y
-    cdef public int z
+    cdef readonly int x
+    cdef readonly int y
+    cdef readonly int z
 
-    cpdef set(self, int x, int y, int z)
     cpdef numpy.ndarray asarray(self)
     cdef bint is_equal(self, IntPoint)
     cdef IntPoint diff(self, IntPoint)
     cdef tuple to_tuple(self)
     cdef IntPoint copy(self)
+    cdef long hash(self)
 
 cpdef IntPoint IntPoint_new(int x=*, int y=*, int z=*)
 cpdef IntPoint IntPoint_sub(IntPoint pa, IntPoint pb)

@@ -3,6 +3,9 @@
 from pysph.base.point import Point, Point_new, Point_add, Point_sub
 from pysph.base.point cimport Point, Point_new, Point_add, Point_sub
 
+from pysph.base.point import IntPoint, IntPoint_new, IntPoint_add, IntPoint_sub
+from pysph.base.point cimport IntPoint, IntPoint_new, IntPoint_add, IntPoint_sub
+
 from time import time
 
 cdef long N = 1000000
@@ -117,9 +120,37 @@ cpdef dict sub():
             'Point_sub(p1,p2)':t2/N
             }
 
+cpdef dict i_hash():
+    """addition of two points bench"""
+    cdef IntPoint p
+    cdef long i
+    cdef double t, t1, t2, t3
+    cdef h
+    p = IntPoint(1,2,3)
+    
+    t = time()
+    for i in range(N):
+        h = p.hash()
+    t1 = time()-t
+    
+    t = time()
+    for i in range(N):
+        h = p.hash2()
+    t2 = time()-t
+    
+    t = time()
+    for i in range(N):
+        h = hash(p)
+    t3 = time()-t
+    
+    return {'ipnt hash':t1/N,
+            'ipnt hash2':t2/N,
+            'ipnt hash()':t3/N
+            }
+
 
 # all benchmark functions defined
-cdef list funcs = [init, add, sub]
+cdef list funcs = [init, add, sub, i_hash]
 
 
 cpdef bench():
