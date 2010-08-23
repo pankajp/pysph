@@ -25,7 +25,7 @@ $(DIRS) :
 	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
 
 %.c : %.pyx
-	cython -I$(SRC) -I$(MPI4PY_INCL) -a $<
+	cython --directive profile=True -I$(SRC) -I$(MPI4PY_INCL) -a $<
 
 cython : $(PYX:.pyx=.c)
 

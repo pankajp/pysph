@@ -1,4 +1,3 @@
-# cython: profile=True
 """ 
 Module to implement various SPH kernels in multiple dimensions 
 """

@@ -1,4 +1,3 @@
-
 # standard imports
 import logging
 logger = logging.getLogger()
@@ -369,7 +368,6 @@ cdef class Cell:
         cdef LongArray source_array
         cdef ParticleArray parr
         
-        #print self.arrays_to_bin; import sys; sys.stdout.flush()
         num_arrays = len(self.arrays_to_bin)
         
         import sys; sys.stdout.flush()

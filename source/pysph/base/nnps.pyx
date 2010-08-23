@@ -190,7 +190,7 @@ cdef class NbrParticleLocatorBase:
         
         # now extract the exact points from the cell_list
         self._get_nearest_particles_from_cell_list(pnt, radius, cell_list,
-                                       output_array, exclude_index)        
+                                       output_array, exclude_index)
         
         return 0
 
@@ -403,8 +403,8 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     cdef int update(self) except -1:
         """Computes contents of the cache if needed."""
-        cdef long num_particles
-        cdef int ret
+        cdef long num_particles, i
+        cdef int ret = 0
 
         if self.is_dirty:
 
@@ -418,10 +418,10 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
                     for i in range(num_particles):
                         self.particle_cache.append(LongArray())
 
-                return self._update_cache()
+                ret = self._update_cache()
             self.is_dirty = False
 
-        return 0
+        return ret
 
     cdef int _update_cache(self) except -1:
         """Update the particle cache. """
