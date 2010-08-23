@@ -121,7 +121,7 @@ cpdef dict sub():
             }
 
 cpdef dict i_hash():
-    """addition of two points bench"""
+    """IntPoint hash functions benchmark"""
     cdef IntPoint p
     cdef long i
     cdef double t, t1, t2, t3
@@ -130,22 +130,10 @@ cpdef dict i_hash():
     
     t = time()
     for i in range(N):
-        h = p.hash()
-    t1 = time()-t
-    
-    t = time()
-    for i in range(N):
-        h = p.hash2()
-    t2 = time()-t
-    
-    t = time()
-    for i in range(N):
         h = hash(p)
     t3 = time()-t
     
-    return {'ipnt hash':t1/N,
-            'ipnt hash2':t2/N,
-            'ipnt hash()':t3/N
+    return {'ipnt hash()':t3/N
             }
 
 

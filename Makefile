@@ -45,7 +45,7 @@ test :
 
 bench :
 	# try '$$ make bench BENCH="point kernels"' etc to limit the benchmarks run
-	# AVAILABLE: carray kernels parallel_timings point serial_timings
+	# AVAILABLE: carray cell kernels nnps parallel_timings point serial_timings
 	# '$$ make bench BENCH=' runs all benchmarks
 	#
 	#####################################################################

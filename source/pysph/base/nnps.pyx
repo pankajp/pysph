@@ -199,7 +199,6 @@ cdef class NbrParticleLocatorBase:
                     LongArray output_array, long exclude_index=-1) except -1: 
         """ Get the neighboring particles to `pnt` from the `cell_list` """
         cdef Cell cell
-        cdef list tmp_list = list()
         cdef int i
         cdef DoubleArray xa, ya, za
         cdef str xc, yc, zc
@@ -208,8 +207,6 @@ cdef class NbrParticleLocatorBase:
         cdef Point pnt1 = Point()
         cdef long idx
         
-        tmp_list.extend(cell_list)
-
         # get the coordinate arrays.
         xc = self.cell_manager.coord_x
         yc = self.cell_manager.coord_y
@@ -223,8 +220,7 @@ cdef class NbrParticleLocatorBase:
         y = ya.get_data_ptr()
         z = za.get_data_ptr()
           
-        while len(tmp_list) != 0:
-            cell = tmp_list.pop(0)
+        for cell in cell_list:
             # find neighbors from the cell
             src_indices = cell.index_lists[self.source_index]
             
@@ -414,7 +410,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
                 num_particles = self.dest.get_number_of_particles()
 
                 if len(self.particle_cache) != num_particles:
-                    self.particle_cache[:] = []
+                    self.particle_cache = []
                     for i in range(num_particles):
                         self.particle_cache.append(LongArray())
 
@@ -544,7 +540,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
     
     cdef int _update_cache(self) except -1:
         """Update the particle cache without using the cell cache. """
-        cdef long num_particles, i, j, k
+        cdef long num_d_particles, num_s_particles, i, j, k
         cdef LongArray index_cache
         cdef LongArray rev_cache = LongArray()
         
@@ -565,7 +561,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
             self._rev_locator.get_nearest_particles_nocache(j,
                                             rev_cache, False)
             for k in range(rev_cache.length):
-                index_cache = self.particle_cache[rev_cache[k]]
+                index_cache = self.particle_cache[rev_cache.data[k]]
                 if j not in index_cache:
                     index_cache.append(j)
         return 0

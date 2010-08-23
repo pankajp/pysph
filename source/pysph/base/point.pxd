@@ -31,7 +31,6 @@ cdef class IntPoint:
     cdef IntPoint diff(self, IntPoint)
     cdef tuple to_tuple(self)
     cdef IntPoint copy(self)
-    cdef long hash(self)
 
 cpdef IntPoint IntPoint_new(int x=*, int y=*, int z=*)
 cpdef IntPoint IntPoint_sub(IntPoint pa, IntPoint pb)

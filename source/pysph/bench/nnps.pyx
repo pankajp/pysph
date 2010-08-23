@@ -20,8 +20,8 @@ cdef extern from "stdlib.h":
     int RAND_MAX
     int crand "rand" ()
 
-Nps = {'2d1':(40,40,1), '3d1':(10,10,10), '1d1':(100,1,1),
-       '2d2':(60,60,1), '3d2':(16,16,16), '1d2':(400,1,1),}
+Nps = {'2d1':(40,40,1), '3d1':(10,10,10), '1d1':(100,1,1),}
+       #'2d2':(60,60,1), '3d2':(16,16,16), '1d2':(400,1,1),}
 
 
 def get_data(variable_h=True, Nps=(40,40,1), cell_size=4.0):
@@ -47,8 +47,7 @@ cpdef dict nnps():
     cdef LongArray output_array = LongArray()
     cdef int np, i
     cdef FixedDestNbrParticleLocator nbrl
-    # var_h locator is horribly slow
-    for var_h in [False]:#, True]:
+    for var_h in [False, True]:
         vh = 'var-h' if var_h else 'fixed-h'
         for nam,nps in Nps.items():
             np = nps[0]*nps[1]*nps[2]

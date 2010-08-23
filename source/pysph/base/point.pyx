@@ -251,17 +251,9 @@ cdef class IntPoint:
         else:
             raise TypeError('No ordering is possible for Points.')
 
-    cdef long hash(self):
+    def __hash__(self):
         cdef long ret = self.x
         return (ret * IntPoint_maxint + self.y) * IntPoint_maxint + self.z
-    
-    def hash2(self):
-        return (self.x, self.y, self.z).__hash__()
-    
-    def __hash__(self):
-        return self.hash()
-        # code below is almost 8 times slower
-        #return (self.x, self.y, self.z).__hash__()
 
     def py_is_equal(self, IntPoint p):
         return self.is_equal(p)
