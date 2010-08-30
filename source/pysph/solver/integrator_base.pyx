@@ -643,7 +643,7 @@ cdef class Integrator(SolverComponent):
 
         **Parameters**
         
-            - order - a list containg the properties in the required integration
+            - order - list containing the properties in the required integration
             order.
 
         """

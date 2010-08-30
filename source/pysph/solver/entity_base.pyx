@@ -82,7 +82,7 @@ cdef class EntityBase:
 
         This will be implemented differently in the derived classes.
         """
-        if self.type == etype or isinstance(self, etype):
+        if self.type == etype or isinstance(self, (etype,)):
             return True
         else:
             return False
@@ -107,7 +107,7 @@ cdef class EntityBase:
 
     cpdef bint is_type_included(self, list types):
         """
-        Returns true if the entities type or any of its parent types is included
+        Returns true if the entity's type or any of its parent types is included
         in the the list of types passed.
         """
         for e_type in types:
