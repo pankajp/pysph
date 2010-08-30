@@ -41,7 +41,7 @@ cdef class ParallelCellManager(CellManager):
     cdef public object parallel_controller, pc
     cdef public load_balancer
     cdef public ProcessorMap proc_map
-    cdef public bool load_balancing
+    cdef public bint load_balancing
 
     cpdef glb_update_proc_map(self)
     cpdef remove_remote_particles(self)

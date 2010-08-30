@@ -57,12 +57,12 @@ cdef class AnalyticalGeometry(GeometryBase):
         else:
             self.reference_points = ParticleArray()      
             rp = self.reference_points
-            rp.add_property({'name':'x', 'data':[0]},
-                            {'name':'y', 'data':[0]},
-                            {'name':'z', 'data':[0]},
-                            {'name':'u', 'data':[0]},
-                            {'name':'v', 'data':[0]},
-                            {'name':'w', 'data':[0]})
+            rp.add_property({'name':'x', 'data':[0]})
+            rp.add_property({'name':'y', 'data':[0]})
+            rp.add_property({'name':'z', 'data':[0]})
+            rp.add_property({'name':'u', 'data':[0]})
+            rp.add_property({'name':'v', 'data':[0]})
+            rp.add_property({'name':'w', 'data':[0]})
 
     cpdef ParticleArray get_particle_array(self):
         """

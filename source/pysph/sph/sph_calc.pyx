@@ -31,7 +31,8 @@ This module provdies the SPHBase class, which does the actual SPH summation.
      
 """
 
-include "stdlib.pxd"
+#include "stdlib.pxd"
+from stdlib cimport *
 
 cimport numpy
 

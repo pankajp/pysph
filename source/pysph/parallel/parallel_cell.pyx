@@ -56,7 +56,7 @@ TAG_REMOTE_DATA_REPLY = 8
 # `share_data` function.
 ###############################################################################
 cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, int
-                     tag=0, bool multi=False):
+                     tag=0, bint multi=False):
     """
     Shares the given data among the processors in nbr_proc_list. Returns a
     dictionary containing data from each other processor.

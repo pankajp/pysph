@@ -1,6 +1,6 @@
 
 # include for malloc
-include "stdlib.pxd"
+from stdlib cimport *
 
 cimport numpy
 
