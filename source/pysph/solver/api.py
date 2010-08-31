@@ -33,8 +33,6 @@ from pressure_components import TaitPressureComponent
 
 from pressure_gradient_components import SPHSymmetricPressureGradientComponent
 
-#from property_db import PropertyDb
-
 from runge_kutta_integrator import RK2TimeStepSetter, RK2Integrator
 
 from solver_base import SolverComponent, UserDefinedComponent, \

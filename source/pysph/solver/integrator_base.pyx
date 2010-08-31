@@ -878,7 +878,7 @@ cdef class Integrator(SolverComponent):
 
         **Parameters**
         
-            - entity_type - an integer specifying the entities type.
+            - entity_type - a type/class specifying the entity type.
             - prop_name - a string specifying the property_name.
 
         **Algorithm**::
@@ -975,7 +975,7 @@ cdef class Integrator(SolverComponent):
         
     cdef int compute(self) except -1:
         """
-        Perform the integraiton.
+        Perform the integration.
         """
         cdef int i, n_comps
         cdef SolverComponent comp
