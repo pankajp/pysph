@@ -17,14 +17,14 @@ be performed is given below:
 
         - some SPH algorithms need to add dummy particles. For example, the
           ghost particles that are added for each fluid particle near a solid wall
-          to acheive no penetration through the wall. 
+          to achieve no penetration through the wall. 
         - Another example is the implementation of periodic boundary
           conditions. Here particles will need to be mirrored from the `other'
           side of the periodic boundary, before any computations can be done.
         - A paper by ferrai et. al. needs to add dummy particles for every
           boundary particle that is near a given fluid particle.
         - Thus the requirement of adding dummy particles is fairly
-          ubiquitous. Many algorimths will need it. Hence this step seems valid.
+          ubiquitous. Many algorithms will need it. Hence this step seems valid.
         - A special case. What if some algorithm wants to add some dummy
           particles in every loop of the SPH calculation ? Meaning that in the
           SPH summation, once it has found all the required neighbors, it adds

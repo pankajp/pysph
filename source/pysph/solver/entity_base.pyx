@@ -40,7 +40,7 @@ cdef class EntityBase:
     # list of information keys provided by this object.
     INTEGRATION_PROPERTIES = 'INTEGRATION_PROPERTIES'
     
-    def __cinit__(self, str name ='', dict properties={}, *args, **kwargs):
+    def __cinit__(self, str name ='', properties={}, *args, **kwargs):
         """
         Constructor.
         """
@@ -50,10 +50,10 @@ cdef class EntityBase:
         self.name = name
 
         # set the properties.
-        self.properties = dict()
+        self.properties = AttrDict()
         self.properties.update(properties)
         
-        self.information = AttrDict()
+        self.information = dict()
         self.information[self.INTEGRATION_PROPERTIES] = None
 
     cpdef add_entity_property(self, str prop_name, double default_value=0.0):
@@ -82,7 +82,9 @@ cdef class EntityBase:
 
         This will be implemented differently in the derived classes.
         """
-        if self.type == etype or isinstance(self, (etype,)):
+        # nasty bug if not stored (gc issues)
+        t = (etype,)
+        if self.type == etype or isinstance(self, t):
             return True
         else:
             return False

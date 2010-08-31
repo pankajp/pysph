@@ -100,7 +100,7 @@ def get_sample_integrator_setup():
     stepper = {'default':'euler',
                Fluid:'ya_stepper'} 
     
-    i.add_property(prop_name, integrand_arrays, integral_arrays,
+    i.add_property_step_info(prop_name, integrand_arrays, integral_arrays,
                    entity_types, stepper)
 
     # setup the entities accepted for each property stepping.
@@ -262,7 +262,7 @@ class TestIntegrator(unittest.TestCase):
         stepper = {'default':'euler',
                    Fluid:'ya_stepper'} 
 
-        i.add_property(prop_name, integrand_arrays, integral_arrays,
+        i.add_property_step_info(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
 
         ip = i.information[i.INTEGRATION_PROPERTIES]
@@ -304,7 +304,7 @@ class TestIntegrator(unittest.TestCase):
         stepper = {'default':'euler',
                    Fluid:'ya_stepper'} 
 
-        i.add_property(prop_name, integrand_arrays, integral_arrays,
+        i.add_property_step_info(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
 
         i.add_pre_step_component('pre_den_1', 'density')
@@ -358,7 +358,7 @@ class TestIntegrator(unittest.TestCase):
         stepper = {'default':'euler',
                    Fluid:'ya_stepper'} 
 
-        i.add_property(prop_name, integrand_arrays, integral_arrays,
+        i.add_property_step_info(prop_name, integrand_arrays, integral_arrays,
                        entity_types, stepper)
 
         i.set_integration_order(['density', 'velocity', 'position'])
@@ -380,7 +380,7 @@ class TestIntegrator(unittest.TestCase):
         stepper = {'default':'euler',
                    Fluid:'ya_stepper'} 
         
-        i.add_property(prop_name, integrand_arrays, integral_arrays, 
+        i.add_property_step_info(prop_name, integrand_arrays, integral_arrays, 
                        entity_types, stepper)
 
         print i.information[i.INTEGRATION_PROPERTIES]
@@ -415,7 +415,7 @@ class TestIntegrator(unittest.TestCase):
         integrand_arrays = ['rho_rate']
         integral_arrays = ['rho']
         entity_types = [Fluid]
-        i.add_property(prop_name, integrand_arrays, integral_arrays,
+        i.add_property_step_info(prop_name, integrand_arrays, integral_arrays,
                        entity_types)
         
         i.add_entity_type('velocity', EntityBase)

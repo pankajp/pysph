@@ -358,9 +358,9 @@ cdef class Integrator(SolverComponent):
             pos_arrays.append('z')
             
         # now add the velocity and position properties to be stepped.
-        self.add_property('velocity', accel_arrays, vel_arrays,
+        self.add_property_step_info('velocity', accel_arrays, vel_arrays,
                           [EntityBase], integrand_initial_values=[0.])
-        self.add_property('position', vel_arrays, pos_arrays,
+        self.add_property_step_info('position', vel_arrays, pos_arrays,
                           [EntityBase])
 
     cpdef add_entity_type(self, str prop_name, type entity_type):
@@ -369,7 +369,6 @@ cdef class Integrator(SolverComponent):
         """
         cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]
         cdef dict prop_info = ip.get(prop_name)
-        
         if prop_info is None:
             logger.warn('No such property %s'%(prop_name))
             return
@@ -415,23 +414,9 @@ cdef class Integrator(SolverComponent):
         
         return ip.get(prop_name)
 
-    def add_property_step_info(self, prop_name, list integrand_arrays, list
-                               integral_arrays, list entity_types=[], dict
-                               steppers={}, integrand_initial_values=None):
-        """
-        """
-        # FIXME
-        # remove the add_property function and make this the primary function.
-        self.add_property(prop_name=prop_name,
-                          integrand_arrays=integrand_arrays,
-                          integral_arrays=integral_arrays,
-                          entity_types=entity_types,
-                          steppers=steppers,
-                          integrand_initial_values=integrand_initial_values)        
-
-    cpdef add_property(self, str prop_name, list integrand_arrays, list
-                       integral_arrays, list entity_types=[], dict steppers={},
-                       list integrand_initial_values=None):
+    cpdef add_property_step_info(self, str prop_name, list integrand_arrays,
+                         list integral_arrays, list entity_types=[],
+                         dict steppers={}, list integrand_initial_values=None):
         """
         Adds a new property that has to be integrated to the
         INTEGRATION_PROPERTIES dictionary in the components information.
@@ -446,7 +431,7 @@ cdef class Integrator(SolverComponent):
               property. 
             - integral_arrays - names of the arrays making up the integral of
               this property.
-            - entity_types - a list of accepeted entity types for this
+            - entity_types - a list of accepted entity types for this
               property. If an empty list is provided, all entities will be
               accepted.
             - steppers - Optional information about the stepper class to use
@@ -473,7 +458,7 @@ cdef class Integrator(SolverComponent):
         - If a single stepper can be used for any entity and any property that
           can also be done.
         - Also, if no stepper information is provided at all, defaults from the
-          integrator class will be used.        
+          integrator class will be used.
 
         """
         cdef dict ip = self.information[self.INTEGRATION_PROPERTIES]

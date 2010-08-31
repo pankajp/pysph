@@ -43,7 +43,7 @@ cdef class Integrator(SolverComponent):
     cpdef add_post_step_component(self, str comp_name, str property_name=*, bint
                                   at_tail=*)
     
-    # add a component to be exectued before integration of any property is done.
+    # add a component to be executed before integration of any property is done.
     cpdef add_pre_integration_component(self, str comp_name, bint
                                         at_tail=*)
     # add a component to be executed after integration has been done - for
@@ -61,7 +61,7 @@ cdef class Integrator(SolverComponent):
 
     # add a new property to be integrated along with arrays representing the
     # properties. 
-    cpdef add_property(self, str prop_name, list integrand_arrays, list
+    cpdef add_property_step_info(self, str prop_name, list integrand_arrays, list
                        integral_arrays, list entity_types=*, dict steppers=*,
                        list integrand_initial_values=*)
 
