@@ -13,8 +13,9 @@ cdef extern from "math.h":
 cdef extern from 'limits.h':
     cdef int INT_MAX
 
-# IntPoint's maximum value must be less than `IntPoint_maxint`
-cdef int IntPoint_maxint = 2**21
+# IntPoint's maximum absolute value must be less than `IntPoint_maxint`
+# this is due to the hash implementation
+cdef int IntPoint_maxint = 2**20
 
 DTYPE = numpy.float
 ctypedef numpy.float_t DTYPE_t
@@ -252,8 +253,9 @@ cdef class IntPoint:
             raise TypeError('No ordering is possible for Points.')
 
     def __hash__(self):
-        cdef long ret = self.x
-        return (ret * IntPoint_maxint + self.y) * IntPoint_maxint + self.z
+        cdef long ret = self.x + IntPoint_maxint
+        ret = 2 * IntPoint_maxint * ret + self.y + IntPoint_maxint
+        return 2 * IntPoint_maxint * ret + self.z + IntPoint_maxint
 
     def py_is_equal(self, IntPoint p):
         return self.is_equal(p)

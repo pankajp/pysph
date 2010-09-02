@@ -177,7 +177,19 @@ class TestIntPoint(unittest.TestCase):
         p1 = IntPoint(1, 5, 2)
         p2 = IntPoint(1, 5, 2)
         p3 = IntPoint(3, 4, 1)
-
+        
+        h1 = hash(IntPoint(2**19+1, 2**19+1, 2**19+1))
+        self.assertEqual(0<=h1<2**63, True)
+        
+        h2 = hash(IntPoint(-2**19-1, -2**19-1, -2**19-1))
+        self.assertEqual(0<=h2<2**63, True)
+        
+        h1 = hash(IntPoint(2**20-1, 2**20-1, 2**20-1))
+        self.assertEqual(0<=h1<2**63, True)
+        
+        h2 = hash(IntPoint(-2**20+1, -2**20+1, -2**20+1))
+        self.assertEqual(0<=h2<2**63, True)
+        
         d = {}
         
         d[p1] = 'p1'
@@ -218,3 +230,5 @@ class TestIntPoint(unittest.TestCase):
         self.assertEqual(arr[1], 33)
         self.assertEqual(arr[2], 1)
     
+if __name__ == '__main__':
+    unittest.main()
