@@ -448,7 +448,7 @@ class LoadBalancer:
         """
         cells = self.cell_manager.cells_dict
         max_neighbor_count = -1
-        max_neighbor_cell_id = None
+        max_neighbor_cells_id = []
 
         for cid, c in cells.iteritems():
             if c.pid != self.pid:
@@ -472,14 +472,18 @@ class LoadBalancer:
 
             if num_nbrs_in_pid > max_neighbor_count:
                 max_neighbor_count = num_nbrs_in_pid
-                max_neighbor_cell_id = cid
+                max_neighbor_cell_id = [cid]
+            elif num_nbrs_in_pid == max_neighbor_count:
+                max_neighbor_cells_id.append(cid)
         
-        if max_neighbor_cell_id is not None:
-            max_nbr_cell = self.cell_manager.cells_dict[max_neighbor_cell_id]
-            particles = self.cell_manager.create_new_particle_copies(
-                {max_neighbor_cell_id:max_nbr_cell})
-            # change the pid of the cell that was donated.
-            max_nbr_cell.pid = pid
+        if not max_neighbor_cell_id:
+            cell_dict = {}
+            for cid in max_neighbor_cell_id:
+                max_nbr_cell = self.cell_manager.cells_dict[cid]
+                # change the pid of the cell that was donated.
+                max_nbr_cell.pid = pid
+                cell_dict[cid] = max_nbr_cell
+            particles = self.cell_manager.create_new_particle_copies(cell_dict)
             # update the neighbor information locally
             self.cell_manager.update_neighbor_information_local()
         else:

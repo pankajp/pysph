@@ -32,7 +32,7 @@ from pysph.base.nnps import NNPSManager
 from pysph.parallel.parallel_cell import ParallelCellManager
 from pysph.parallel.parallel_controller import ParallelController
 from pysph.parallel.parallel_component import ParallelComponent
-from pysph.base.particle_array cimport ParticleArray
+from pysph.base.particle_array import ParticleArray
 from pysph.solver.fluid import Fluid
 from pysph.solver.solver_base import SolverBase, ComponentManager
 from pysph.parallel.dummy_solver import DummySolver
@@ -146,7 +146,7 @@ def parse_options(args=None):
 
     # logging
     options.logger = logger = logging.getLogger()
-    log_filename = os.path.join(options.destdir, 'log_pysph')
+    log_filename = os.path.join(options.destdir, 'log_pysph_%d'%rank)
     if options.verbose:
         log_level = logging.DEBUG
     else:
@@ -230,7 +230,7 @@ def setup_solver(options):
                                        solver=None,
                                        max_cell_scale=options.max_cell_scale)
     # enable load balancing
-    cell_manager.load_balancing = False
+    cell_manager.load_balancing = False # balancing will be done manually
     cell_manager.load_balancer.skip_iteration = 1
     cell_manager.load_balancer.threshold_ratio = 10.
     cell_manager.dimension = 2

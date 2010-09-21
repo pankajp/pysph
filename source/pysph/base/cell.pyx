@@ -370,7 +370,6 @@ cdef class Cell:
         
         num_arrays = len(self.arrays_to_bin)
         
-        import sys; sys.stdout.flush()
         for i in range(num_arrays):
             parr = self.arrays_to_bin[i]
             num_particles = parr.get_number_of_particles()

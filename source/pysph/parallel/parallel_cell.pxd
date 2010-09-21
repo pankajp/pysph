@@ -9,7 +9,6 @@ from pysph.base.cell cimport CellManager, Cell
 
 # forward declarations.
 cdef class ParallelCellManager(CellManager)
-cdef class ProcessorMap
 
 ###############################################################################
 # `ProcessorMap` class.

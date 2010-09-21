@@ -9,18 +9,9 @@ import numpy
 
 from pysph.base.cell import INT_INF
 
-class DummyLogger:
-    def debug(*args, **kwargs):
-        pass
-    def info(*args, **kwargs):
-        pass
-    def error(*args, **kwargs):
-        pass
-
 # logger imports
 import logging
 logger = logging.getLogger()
-#logger = DummyLogger()
 
 # mpi imports
 cimport mpi4py.MPI as MPI
@@ -181,8 +172,7 @@ cdef class ProcessorMap:
         
         for cid, cel in cells.iteritems():
             cel.get_centroid(centroid)
-            find_cell_id(self.origin, centroid,
-                              self.bin_size, id)
+            find_cell_id(self.origin, centroid, self.bin_size, id)
             pm.setdefault(id.copy(), set([pid]))
         
         self.p_map = pm
@@ -330,7 +320,7 @@ cdef class ParallelCellInfo:
         for cid in nbr_cell_pids:
             c = self.cell_manager.cells_dict.get(cid)
             if c is not None:
-                self.neighbor_cell_pids[cid.copy()] = c.pid        
+                self.neighbor_cell_pids[cid.copy()] = c.pid
     
     def is_boundary_cell(self):
         """
@@ -655,7 +645,7 @@ cdef class ParallelCellManager(CellManager):
 
         proc_map.pid = self.parallel_controller.rank
         
-        # use a bin size of thrice the largest cell size
+        # FIXME: use a bin size of thrice the largest cell size
         cell_size = self.cell_size
         max_size = cell_size
         proc_map.bin_size = max_size*3.0
