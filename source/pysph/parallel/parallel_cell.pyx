@@ -1148,7 +1148,7 @@ cdef class ParallelCellManager(CellManager):
 
         logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')
         for pid, cells in proc_data.iteritems():
-            logger.debug('FROM PID %d'%(pid))
+            logger.debug('FROM PID %d received %d cells'%(pid,len(cells)))
             for cid in cells:
                 logger.debug('  received : (%s)'%(cid))
         logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')

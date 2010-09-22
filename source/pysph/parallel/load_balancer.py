@@ -135,12 +135,12 @@ class LoadBalancer:
         self.load_difference = [0]*num_procs
         
         while balancing_done == False:
-            logger.debug('Load Balance iteration %d -------------------'%(
+            logger.info('Load Balance iteration %d -------------------'%(
                     current_balance_iteration))
 
             if current_balance_iteration >= self.lb_max_iterations:
                 balancing_done = True
-                logger.debug('MAX LB ITERATIONS EXCEEDED')
+                logger.info('MAX LB ITERATIONS EXCEEDED')
                 continue
             
             # get the number of particles with each process.
@@ -401,7 +401,7 @@ class LoadBalancer:
         reply = {}
 
         if request['need_particles'] == False:
-            logger.debug('%d requeste for NO particles'%(pid))
+            logger.debug('%d request for NO particles'%(pid))
             reply['particles'] = {}
             return reply
 
@@ -413,7 +413,7 @@ class LoadBalancer:
             reply['particles'] = {}
             return reply
         
-        # if our number of particles is withing the threshold, do not donate
+        # if our number of particles is within the threshold, do not donate
         # particles. 
         if abs(self.ideal_load-num_particles) < self.threshold_margin:
             if (not (num_particles-num_particles_in_pid) >
@@ -448,7 +448,7 @@ class LoadBalancer:
         """
         cells = self.cell_manager.cells_dict
         max_neighbor_count = -1
-        max_neighbor_cells_id = []
+        cells_for_nbr = []
 
         for cid, c in cells.iteritems():
             if c.pid != self.pid:
@@ -472,17 +472,20 @@ class LoadBalancer:
 
             if num_nbrs_in_pid > max_neighbor_count:
                 max_neighbor_count = num_nbrs_in_pid
-                max_neighbor_cell_id = [cid]
+                cells_for_nbr = [cid]
             elif num_nbrs_in_pid == max_neighbor_count:
-                max_neighbor_cells_id.append(cid)
+                cells_for_nbr.append(cid)
         
-        if not max_neighbor_cell_id:
+        if cells_for_nbr:
             cell_dict = {}
-            for cid in max_neighbor_cell_id:
+            for cid in cells_for_nbr:
                 max_nbr_cell = self.cell_manager.cells_dict[cid]
                 # change the pid of the cell that was donated.
                 max_nbr_cell.pid = pid
                 cell_dict[cid] = max_nbr_cell
+            # if all cells are being sent away, keep the last cid with self
+            if len(cells) == len(cell_dict):
+                del cell_dict[cid]
             particles = self.cell_manager.create_new_particle_copies(cell_dict)
             # update the neighbor information locally
             self.cell_manager.update_neighbor_information_local()
