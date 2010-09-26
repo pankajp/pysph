@@ -107,7 +107,7 @@ cdef class Point:
     def __neg__(self):
         return Point(-self.x, -self.y, -self.z)
 
-    def __richcmp__(self, Point p, int oper):
+    def __richcmp__(Point self, Point p, int oper):
         if oper == 2: # ==
             if self.x == p.x and self.y == p.y and self.z == p.z:
                 return True
