@@ -219,8 +219,8 @@ cdef class IntPoint:
         return IntPoint_new(self.x, self.y, self.z)
 
     cpdef numpy.ndarray asarray(self):
-        cdef numpy.ndarray arr = numpy.empty(3, dtype=numpy.int)
-
+        cdef numpy.ndarray[ndim=1,dtype=numpy.int_t] arr = numpy.empty(3,
+                                                            dtype=numpy.int)
         arr[0] = self.x
         arr[1] = self.y
         arr[2] = self.z
@@ -228,10 +228,7 @@ cdef class IntPoint:
         return arr
 
     cdef bint is_equal(self, IntPoint p):
-        if self.x == p.x and self.y == p.y and self.z == p.z:
-            return True
-        else:
-            return False
+        return (self.x == p.x and self.y == p.y and self.z == p.z)
 
     cdef IntPoint diff(self, IntPoint p):
         return IntPoint_new(self.x-p.x, self.y-p.y, self.z-p.z)
@@ -240,15 +237,12 @@ cdef class IntPoint:
         cdef tuple t = (self.x, self.y, self.z)
         return t        
 
-    def __richcmp__(self, IntPoint p, int oper):
+    def __richcmp__(IntPoint self, IntPoint p, int oper):
+        # strange cython performance bug (cython 0.13) self is untyped
         if oper == 2: # ==
-            if self.x == p.x and self.y == p.y and self.z == p.z:
-                return True
-            return False
+            return (self.x == p.x and self.y == p.y and self.z == p.z)
         elif oper == 3: # !=
-            if self.x == p.x and self.y == p.y and self.z == p.z:
-                return False 
-            return True
+            return not (self.x == p.x and self.y == p.y and self.z == p.z)
         else:
             raise TypeError('No ordering is possible for Points.')
 

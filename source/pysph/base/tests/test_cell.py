@@ -38,19 +38,19 @@ class TestModuleFunctions(unittest.TestCase):
         pnt = Point(0, 0, 1)
         out = IntPoint(0, 0, 0)
 
-        py_find_cell_id(origin, pnt, 1.0, out)
+        out = py_find_cell_id(origin, pnt, 1.0)
         self.assertEqual(out.x, 0)
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
         pnt.x = -2
-        py_find_cell_id(origin, pnt, 1.0, out)
+        out = py_find_cell_id(origin, pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
         pnt.y = -1
-        py_find_cell_id(origin, pnt, 1.0, out)
+        out = py_find_cell_id(origin, pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, -2)
         self.assertEqual(out.z, 1)

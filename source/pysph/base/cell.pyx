@@ -30,12 +30,11 @@ def INT_INF():
 def py_real_to_int(real_val, step):
     return real_to_int(real_val, step)
 
-def py_find_cell_id(origin, pnt, cell_size, outpoint):
-    find_cell_id(origin, pnt, cell_size, outpoint)
+def py_find_cell_id(origin, pnt, cell_size):
+    return find_cell_id(origin, pnt, cell_size)
 
 cdef inline int real_to_int(double real_val, double step):
-    """
-    """
+    """ return an int corresponding to the position suitable as cell index"""
     cdef int ret_val
     if real_val < 0.0:
         ret_val =  <int>(real_val/step) - 1
@@ -44,11 +43,10 @@ cdef inline int real_to_int(double real_val, double step):
 
     return ret_val
 
-cdef inline void find_cell_id(Point origin, Point pnt, double cell_size,
-                              IntPoint id):
-    id.x = real_to_int(pnt.x-origin.x, cell_size)
-    id.y = real_to_int(pnt.y-origin.y, cell_size)
-    id.z = real_to_int(pnt.z-origin.z, cell_size)
+cdef inline IntPoint find_cell_id(Point origin, Point pnt, double cell_size):
+    return IntPoint_new(real_to_int(pnt.x-origin.x, cell_size),
+                        real_to_int(pnt.y-origin.y, cell_size),
+                        real_to_int(pnt.z-origin.z, cell_size))
 
 def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
                                          include_self=True, distance=1):
@@ -252,7 +250,7 @@ cdef class Cell:
         cdef long *indices
         cdef long num_particles
         cdef Point pnt = Point()
-        cdef IntPoint id = IntPoint()
+        cdef IntPoint id
         cdef Cell cell
         cdef IntPoint pdiff
         cdef str msg
@@ -291,7 +289,7 @@ cdef class Cell:
                     pnt.z = z[indices[j]]
 
                     # find the cell containing this point
-                    find_cell_id(self.origin, pnt, self.cell_size, id)
+                    id = find_cell_id(self.origin, pnt, self.cell_size)
                     
                     if id.is_equal(self.id):
                         continue
@@ -321,7 +319,7 @@ cdef class Cell:
                         # cell = Cell(id, self.cell_manager, self.cell_size,
                         #                 self.jump_tolerance)
                         cell = self.get_new_sibling(id)
-                        data[id.copy()] = cell
+                        data[id] = cell
                         
                     index_array1 = cell.index_lists[i]
                     index_array1.append(indices[j])
@@ -638,7 +636,7 @@ cdef class CellManager:
                 # meaning there does not exist any cell for the
                 # region occupied by smaller_cell, so we just
                 # add 'smaller_cell' to the cell list
-                self.cells_dict[smaller_cell.id.copy()] = smaller_cell
+                self.cells_dict[smaller_cell.id] = smaller_cell
             else:
                 smaller_cell_1.add_particles(smaller_cell)
 
@@ -826,7 +824,7 @@ cdef class CellManager:
         cdef list neighbor_list = list()
         cdef int i
 
-        find_cell_id(self.origin, pnt, self.cell_size, cell_id)
+        cell_id = find_cell_id(self.origin, pnt, self.cell_size)
 
         # construct ids of all neighbors around cell_id, this
         # will include the cell also.
@@ -882,19 +880,19 @@ cdef class CellManager:
         cdef Cell cell
 
         # find the cell within which this point is located.
-        find_cell_id(self.origin, pnt, self.cell_size, curr_id)
+        curr_id = find_cell_id(self.origin, pnt, self.cell_size)
 
         tmp_pt.x = pnt.x - radius
         tmp_pt.y = pnt.y - radius
         tmp_pt.z = pnt.z - radius
 
-        find_cell_id(self.origin, tmp_pt, self.cell_size, min_cell)
+        min_cell = find_cell_id(self.origin, tmp_pt, self.cell_size)
 
         tmp_pt.x = pnt.x + radius
         tmp_pt.y = pnt.y + radius
         tmp_pt.z = pnt.z + radius
 
-        find_cell_id(self.origin, tmp_pt, self.cell_size, max_cell)
+        max_cell = find_cell_id(self.origin, tmp_pt, self.cell_size)
 
         diff = max_cell.diff(min_cell)
         diff.x += 1
@@ -962,12 +960,12 @@ cdef class CellManager:
             pnt.z = z.data[indices.data[i]]
 
             # find the cell to which this particle belongs to 
-            find_cell_id(self.origin, pnt, cell_size, id)
+            id = find_cell_id(self.origin, pnt, cell_size)
             if PyDict_Contains(particles_for_cells, id) == 1:
                 cell_indices = <LongArray>PyDict_GetItem(particles_for_cells, id)
             else:
                 cell_indices = LongArray()
-                particles_for_cells[id.copy()] = cell_indices
+                particles_for_cells[id] = cell_indices
 
             cell_indices.append(indices.data[i])
 
@@ -977,7 +975,7 @@ cdef class CellManager:
             else:
                 # create a cell with the given id.
                 cell = self.get_new_cell(cid)
-                self.cells_dict[cid.copy()] = cell
+                self.cells_dict[cid] = cell
 
             cell.insert_particles(parray_id, la)
     

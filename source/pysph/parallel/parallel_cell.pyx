@@ -46,8 +46,8 @@ TAG_REMOTE_DATA_REPLY = 8
 ###############################################################################
 # `share_data` function.
 ###############################################################################
-cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm, int
-                     tag=0, bint multi=False):
+cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm,
+                     int tag=0, bint multi=False):
     """
     Shares the given data among the processors in nbr_proc_list. Returns a
     dictionary containing data from each other processor.
@@ -172,8 +172,8 @@ cdef class ProcessorMap:
         
         for cid, cel in cells.iteritems():
             cel.get_centroid(centroid)
-            find_cell_id(self.origin, centroid, self.bin_size, id)
-            pm.setdefault(id.copy(), set([pid]))
+            id = find_cell_id(self.origin, centroid, self.bin_size)
+            pm.setdefault(id, set([pid]))
         
         self.p_map = pm
         self.local_p_map = copy.deepcopy(pm)
@@ -284,7 +284,7 @@ cdef class ParallelCellInfo:
         for nbr_id in nbr_ids:
             if glb_nbr_cell_pids.has_key(nbr_id):
                 nbr_pid = glb_nbr_cell_pids.get(nbr_id)
-                self.neighbor_cell_pids[nbr_id.copy()] = nbr_pid
+                self.neighbor_cell_pids[nbr_id] = nbr_pid
         
     def compute_neighbor_counts(self):
         """
@@ -301,11 +301,7 @@ cdef class ParallelCellInfo:
                 self.num_local_neighbors += 1
             else:
                 self.num_remote_neighbors += 1
-                cnt = self.remote_pid_cell_count.get(pid)
-                if cnt is None:
-                    self.remote_pid_cell_count[pid] = 1
-                else:
-                    self.remote_pid_cell_count[pid] = cnt + 1
+                self.remote_pid_cell_count[pid] = self.remote_pid_cell_count.get(pid,0)+1
 
     def update_neighbor_information_local(self):
         """
@@ -320,7 +316,7 @@ cdef class ParallelCellInfo:
         for cid in nbr_cell_pids:
             c = self.cell_manager.cells_dict.get(cid)
             if c is not None:
-                self.neighbor_cell_pids[cid.copy()] = c.pid
+                self.neighbor_cell_pids[cid] = c.pid
     
     def is_boundary_cell(self):
         """
@@ -431,7 +427,8 @@ cdef class ParallelCellManager(CellManager):
         self.pc = self.parallel_controller
         self.pid = self.pc.rank
         self.proc_map = ProcessorMap(cell_manager=self)
-        self.load_balancer = LoadBalancer(parallel_solver=self.solver, parallel_cell_manager=self)
+        self.load_balancer = LoadBalancer(parallel_solver=self.solver,
+                                          parallel_cell_manager=self)
         self.load_balancing = load_balancing
         
         
@@ -787,7 +784,7 @@ cdef class ParallelCellManager(CellManager):
                 else:
                     info = <dict>PyDict_GetItem(arc, pid)
                 # add cellid to the list of cell from processor pid.
-                info[cid.copy()] = None
+                info[cid] = None
 
         # copy temp data in arc into self.adjacent_remote_cells
         for pid, cell_dict in arc.iteritems():
@@ -854,7 +851,7 @@ cdef class ParallelCellManager(CellManager):
             for cid in cell_list:
                 n_info = nbr_cell_info.get(cid)
                 if n_info is None:
-                    nbr_cell_info[cid.copy()] = pid
+                    nbr_cell_info[cid] = pid
                 else:
                     logger.error('Cell %s in more than one processor : %d, %d'%(
                             cid, pid, n_info))
@@ -993,7 +990,7 @@ cdef class ParallelCellManager(CellManager):
 
             c = self.cells_dict.values()[0]
             if (<Cell>c).get_number_of_particles() > 0:
-                collected_data[(<Cell>c).id.copy()] = c
+                collected_data[(<Cell>c).id] = c
             # remove it from the cell_dict
             self.cells_dict.clear()
             self.initial_redistribution_done = True
@@ -1009,7 +1006,7 @@ cdef class ParallelCellManager(CellManager):
                     r_cell = remote_cells.get(cid)
                     if r_cell is None:
                         smaller_cell.pid = smaller_cell_1.pid
-                        remote_cells[cid.copy()] = smaller_cell
+                        remote_cells[cid] = smaller_cell
                     else:
                         (<Cell>r_cell).add_particles(smaller_cell)
                 else:
@@ -1019,7 +1016,7 @@ cdef class ParallelCellManager(CellManager):
                 # check if this cell is in new cells
                 smaller_cell_1 = new_cells.get(cid)
                 if smaller_cell_1 is None:
-                    new_cells[cid.copy()] = smaller_cell
+                    new_cells[cid] = smaller_cell
                 else:
                     (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
 
@@ -1094,7 +1091,7 @@ cdef class ParallelCellManager(CellManager):
                 # also set them as dummy particles.
                 parr.set_tag(get_dummy_tag(), index_array)
 
-            copies[cid.copy()] = parrays
+            copies[cid] = parrays
 
         logger.debug('<<<<<<<<<<<<<create_new_particle_copies>>>>>>>>>>>')
         for cid, parrays in copies.iteritems():
@@ -1167,8 +1164,8 @@ cdef class ParallelCellManager(CellManager):
                 c = cell_data.get(cid)
                 if c is None:
                     c = {}
-                    cell_data[cid.copy()] = c
-                    num_particles[cid.copy()] = {}
+                    cell_data[cid] = c
+                    num_particles[cid] = {}
                 c[pid] = parr_list
                 np = 0
                 for p in parr_list:
@@ -1186,7 +1183,7 @@ cdef class ParallelCellManager(CellManager):
             c_data = cell_data[cid]
             
             for parrays in c_data.values():
-                self.add_local_particles_to_parray({cid.copy():parrays})
+                self.add_local_particles_to_parray({cid:parrays})
 
     cpdef dict _resolve_conflicts(self, dict data):
         """
@@ -1217,7 +1214,7 @@ cdef class ParallelCellManager(CellManager):
                 
         for cid, p_data in data.iteritems():
             if len(p_data) == 1:
-                winning_procs[cid.py_copy()] = p_data.keys()[0]
+                winning_procs[cid] = p_data.keys()[0]
                 continue
             pids = p_data.keys()
             num_particles = p_data.values()
@@ -1227,7 +1224,7 @@ cdef class ParallelCellManager(CellManager):
             for pid in pids:
                 if p_data[pid] == max_contribution:
                     procs.append(pid)
-            winning_procs[cid.copy()] = max(procs)
+            winning_procs[cid] = max(procs)
 
         for cid, proc in winning_procs.iteritems():
             logger.debug('Cell %s assigned to proc %d'%(cid, proc))
@@ -1277,7 +1274,7 @@ cdef class ParallelCellManager(CellManager):
             p_data = proc_data[c.pid]
             parrays = particles[cid]
             
-            p_data[cid.copy()] = parrays
+            p_data[cid] = parrays
             
         new_particles = share_data(self.pid,
                                    self.adjacent_processors,
@@ -1333,9 +1330,9 @@ cdef class ParallelCellManager(CellManager):
 
             cnt = self.new_cells_added.get(cid)
             if cnt is None:
-                self.new_cells_added[cid.copy()] = count
+                self.new_cells_added[cid] = count
             else:
-                self.new_cells_added[cid.copy()] += count
+                self.new_cells_added[cid] += count
 
     cpdef update_remote_particle_properties(self, list props=None):
         """
@@ -1536,7 +1533,7 @@ cdef class ParallelCellManager(CellManager):
                         (<Cell>c).insert_particles(j, indices)
                         
                 # insert the newly created cell into the cell_dict.
-                self.cells_dict[cid.copy()] = c
+                self.cells_dict[cid] = c
                 i += 1
 
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=None):

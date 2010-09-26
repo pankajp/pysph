@@ -7,8 +7,7 @@ from pysph.base.particle_array cimport ParticleArray
 cdef class CellManager
 
 cdef inline int real_to_int(double val, double step)
-cdef inline void find_cell_id(Point origin, Point pnt,
-                              double cell_size, IntPoint id)
+cdef inline IntPoint find_cell_id(Point origin, Point pnt, double cell_size)
 cdef inline void construct_immediate_neighbor_list(IntPoint pnt, list
                neighbor_list, bint include_self=*, int distance=*)
 
