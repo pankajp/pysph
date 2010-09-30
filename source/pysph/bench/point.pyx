@@ -1,9 +1,7 @@
 """module to test the timings of point operations"""
 
-from pysph.base.point import Point, Point_new, Point_add, Point_sub
 from pysph.base.point cimport Point, Point_new, Point_add, Point_sub
 
-from pysph.base.point import IntPoint, IntPoint_new, IntPoint_add, IntPoint_sub
 from pysph.base.point cimport IntPoint, IntPoint_new, IntPoint_add, IntPoint_sub
 
 from time import time

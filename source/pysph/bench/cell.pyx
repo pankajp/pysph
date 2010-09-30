@@ -1,12 +1,11 @@
-"""module to test the timings of carray operations"""
+"""module to test the timings of cell operations"""
 
-import numpy
 cimport numpy
+import numpy
 
-import pysph.base.cell as cell
 cimport pysph.base.cell as cell
+import pysph.base.cell as cell
 
-from pysph.base.point import Point_new, Point_add, Point_sub, IntPoint
 from pysph.base.point cimport Point_new, Point_add, Point_sub, IntPoint
 
 from time import time

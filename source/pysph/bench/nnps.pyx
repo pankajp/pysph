@@ -1,14 +1,16 @@
 
 import numpy
 
-from pysph.base.api import brute_force_nnps, ParticleArray, LongArray, \
-        CellManager
-from pysph.base.nnps import NNPSManager, FixedDestNbrParticleLocator, \
-        VarHNbrParticleLocator, NbrParticleLocatorBase
-from pysph.base.carray cimport LongArray
 from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator, \
         VarHNbrParticleLocator, NbrParticleLocatorBase
+from pysph.base.carray cimport LongArray
 from pysph.base.point cimport Point
+from pysph.base.nnps import brute_force_nnps
+from pysph.base.particle_array import ParticleArray
+from pysph.base.carray import LongArray
+from pysph.base.cell import CellManager
+#from pysph.base.api import brute_force_nnps, ParticleArray, LongArray, \
+#        CellManager
 
 from time import time
 

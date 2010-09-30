@@ -35,7 +35,7 @@ cdef class ParallelCellManager(CellManager):
     cdef public list glb_bounds_min, glb_bounds_max
     cdef public double glb_min_h, glb_max_h
     cdef public double max_radius_scale
-    cdef public int pid, parallel_cell_level
+    cdef public int pid
 
     cdef public object parallel_controller, pc
     cdef public load_balancer

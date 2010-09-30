@@ -13,8 +13,18 @@ which returns a list of a dict having string (name of bench) keys and
 float (time taken) values. The list is only as a way group different tests.
 The modules may implement the bench function in whichever way they deem fit.
 
+To run bench modules which need mpi to execute multiple processes,
+name the bench module as "mpi<num_procs>_<bench_name>.pyx",
+replacing <num_procs> with the number of processes in which to run the bench
+and <bench_name> with the name of you would use for the file.
+An easy way to run in different number of processes is to create symlinks with
+different names.
+The result of a parallel bench is that returned by the bench function
+of the root process.
+
 The results of all the bench tests are displayed in a tabular format
 Any output from the test modules id redirected to file `bench.log`
+Output from mpi runs is redirected to `mpirunner.log.<rank>'
 """
 
 import os
@@ -23,11 +33,23 @@ import sys
 # local relative import
 import setup
 
-
 def list_pyx_extensions(path):
     """list the files in the path having .pyx extension w/o the extension"""
-    return sorted([f[:-4] for f in os.listdir(path) if f.endswith('pyx')])
+    ret = [f[:-4] for f in os.listdir(path) if f[-3:]=='pyx' and f[0]!='_']
+    ret.sort()
+    return ret
 
+def mpirun(bench_name, num_procs):
+    from mpi4py import MPI
+    comm = MPI.COMM_SELF.Spawn(sys.executable,
+                               args=['mpirunner.py'],
+                               maxprocs=num_procs)
+    
+    comm.bcast(bench_name, root=MPI.ROOT)
+    ret = comm.recv(0)
+    comm.Disconnect()
+    return ret
+    
 
 def run(extns=None, dirname=None, num_runs=3):
     """run the benchmarks in the modules given
@@ -57,20 +79,34 @@ def run(extns=None, dirname=None, num_runs=3):
     setup.compile_extns(extns, dirname)#, [os.path.join(dirname,'..','..')])
     
     for bench_name in extns:
-        bench_mod = __import__(bench_name)
         logfile = open('bench.log', 'w')
         stdout_orig = sys.stdout
         stderr_orig = sys.stderr
         sys.stdout = sys.stderr = logfile
+        mpi = False
+        if bench_name.startswith('mpi'):
+            mpi = True
+            num_procs = int(bench_name.lstrip('mpi').split('_')[0])
         try:
-            res = bench_mod.bench()
+            # bench to be run in mpi
+            if mpi:
+                res = mpirun(bench_name, num_procs)
+            # normal single process bench
+            else:
+                bench_mod = __import__(bench_name)
+                res = bench_mod.bench()
         except:
             stderr_orig.write('Failure running bench %s: %s\n' %(bench_name,
                                     str(sys.exc_info())))
             continue
         # take minimum over `num_runs` runs
         for i in range(num_runs-1):
-            r = bench_mod.bench()
+            # bench to be run in mpi
+            if mpi:
+                r = mpirun(bench_name, num_procs)
+            # normal single process bench
+            else:
+                r = bench_mod.bench()
             for jn,j in enumerate(res):
                 for k,v in j.items():
                     j[k] = min(v, r[jn].get(k, 1e1000))
@@ -78,9 +114,13 @@ def run(extns=None, dirname=None, num_runs=3):
         sys.stdout = stdout_orig
         sys.stderr = stderr_orig
         logfile.close()
-        
-        print bench_name
-        print '#'*len(bench_name)
+        if mpi:
+            s = bench_name.split('_',2)[1]+' %d'%num_procs
+            print s
+            print '#'*len(s)
+        else:
+            print bench_name
+            print '#'*len(bench_name)
         for func in res:
             for k in sorted(func.keys()):
                 print k.ljust(40), '\t', func[k]
@@ -95,12 +135,12 @@ if __name__ == '__main__':
         print '''usage:
         python setup.py [extension1, [extension2, [...]]]
         
-        compiles the cython extensions present in the current directory
+        runs the bench extensions present in the current directory
         '''
     elif len(sys.argv) > 1:
-        # compile specified extensions
+        # run specified extensions
         run(sys.argv[1:])
     else:
-        # compile all extensions found in current directory
+        # run all extensions found in current directory
         run()
     
