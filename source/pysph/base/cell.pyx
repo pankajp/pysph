@@ -34,7 +34,15 @@ def py_find_cell_id(origin, pnt, cell_size):
     return find_cell_id(origin, pnt, cell_size)
 
 cdef inline int real_to_int(double real_val, double step):
-    """ return an int corresponding to the position suitable as cell index"""
+    """ return an int corresponding to the position suitable as cell index
+
+    Example:
+    --------
+    real_val = 1.5, step = 1.0 --> ret_val = 1
+
+    real_val = -0.5, step = 1.0 --> real_val = -1
+    
+    """
     cdef int ret_val
     if real_val < 0.0:
         ret_val =  <int>(real_val/step) - 1
@@ -44,19 +52,37 @@ cdef inline int real_to_int(double real_val, double step):
     return ret_val
 
 cdef inline IntPoint find_cell_id(Point origin, Point pnt, double cell_size):
+    """ Find the cell index for the corresponding point 
+
+    Parameters:
+    -----------
+    origin -- a cell's origin
+    pnt -- the point for which the index is soughted
+    cell_size -- the cell size to use
+    id -- output parameter holding the cell index 
+
+    Algorithm:
+    ----------
+    performs a box sort based on the point, cell origin and cell size
+
+    Notes:
+    ------
+    Uses the function  `real_to_int`
+    
+    """
     return IntPoint_new(real_to_int(pnt.x-origin.x, cell_size),
                         real_to_int(pnt.y-origin.y, cell_size),
                         real_to_int(pnt.z-origin.z, cell_size))
 
 def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
                                          include_self=True, distance=1):
-    """Construct a list of cell ids neighboring the given cell."""
+    """ Construct a list of cell ids neighboring the given cell."""
     construct_immediate_neighbor_list(cell_id, neighbor_list, include_self,
                                       distance)
 
 cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
                neighbor_list, bint include_self=True, int distance=1): 
-    """Construct a list of cell ids neighboring the given cell."""
+    """Return the 27 nearest neighbors for a given cell when distance = 1"""
     cdef list cell_list = []
     cdef int i,j,k
     for i in range(-distance, distance+1):
@@ -69,19 +95,16 @@ cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
     neighbor_list.extend(cell_list)
 
 def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
-    """
-    Construct a list of cell ids, which share a face(3d) or edge(2d) with the
-    given cell_id.
+    """ Construct a list of cell ids, which share a face(3d) or 
+    edge(2d) with the given cell_id.
     """
     construct_face_neighbor_list(cell_id, neighbor_list, include_self)
 
 cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
                                          bint include_self=True, int
                                          dimension=3):
-    """
-    Construct a list of cell ids, which share a face(3d) or edge(2d) with the
-    given cell_id.
-    """
+    """ Construct a list of nearest 27 nearest neighbors """
+
     if include_self:
         neighbor_list.append(cell_id)
     
@@ -105,25 +128,28 @@ def py_cell_encloses_sphere(IntPoint id, Point world_origin, double cell_size,
 cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
                                 double cell_size, Point pnt, double radius):
     """
-    Checks if sphere of `radius` centered at 'pnt' is completely enclosed by a cell.
+    Checks if sphere of `radius` centered at 'pnt' is completely 
+    enclosed by a cell.
     
-    **Parameters**
-    
-     - id - id of the cell.
-     - world_origin - origin with respect to which this 'id' was calculated.
-     - cell_size - size of the sides of the cells.
-     - pnt - center of sphere.
-     - radius - radius of sphere.
+    Parameters:
+    -----------
+    id -- id of the cell.
+    world_origin -- origin with respect to which this 'id' was calculated.
+    cell_size -- size of the sides of the cells.
+    pnt -- center of sphere.
+    radius -- radius of sphere.
 
-    **Algorithm**::
-    
-     for each vertex of the cell
-         if distance of vertex from pnt is less than or equal to radius
-             return false
+    Algorithm:
+    ----------
+
+    for each vertex of the cell
+        if distance of vertex from pnt is less than or equal to radius
+            return false
 
      return true
 
     """
+
     cdef double distance
     cdef Point cell_vertex = Point()
     cdef int i,j,k
@@ -152,8 +178,42 @@ cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
 ###############################################################################
 cdef class Cell:
     """
-    The Cell class.
+    The Cell class is a generalization of the standard bins used for box sort.
+    A Cell maintains an index_list of particle indices corresponding to 
+    particle arrays.
+
+    Data Attributes:
+    ----------------
+    IntPoint id -- a unique identifier for the cell
+    double cell_size --  extents of the cell
+    list arrays_to_bin -- particle arrays to be binned within this cell.
+    list index_list -- mapping of particle indices contained to arrays_to_bin
+    int jump_tolerance -- limit the particle's movement 
+
+    Notes:
+    ------
+    The cell defines an origin with respect to which it has an extent 
+    defined to be it's `size`. Indices of particles corresponding to 
+    ParticleArrays in `arrays_to_bin` are maintained in `index_lists`, one
+    for each particle array.
+    When a cell's update method is called, the cell checks for particles 
+    that have possibly escaped it's limits and creates a new cell id for 
+    those partices, while removing the corresponding indices from the 
+    appropriate list in `index_lists`. This new cell data can then 
+    be used in any which way one wants.    
+
     """
+
+    #Defined in the .pxd file 
+    #cdef public IntPoint id
+    #cdef public double cell_size
+    #cdef public CellManager cell_manager
+    #cdef public list arrays_to_bin
+    #cdef public Point origin
+
+    #cdef public int jump_tolerance
+    #cdef public list index_lists
+
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
                  cell_size=0.1, int jump_tolerance=1):
 
@@ -219,26 +279,28 @@ cdef class Cell:
 
     cpdef int update(self, dict data) except -1:
         """
-        Finds particles that have escaped this cell.
+        Locate particles that have escaped this Cell.
         
-        **Parameters**
+        Parameters
+        ----------
          
-         - data - output parameter, to store cell ids and particles that have
-           moved to those cells.
+        data -- output parameter, to store cell ids and particles that have
+                escaped this cell
         
-        **Algorithm**::
+        Algorithm::
+        -----------
         
-         for each array in arrays_to_bin
-             if array is dirty
-                 for each particle of that array that is in this cell
-                     check if the particle is still there in this cell
-                     if not
-                         find the new cell this particles has moved to.
-                         if an entry for that cell does not exist in data
-                             create a cell for that cell.
-                         
-                         add this particle entry to the appropriate array in the
-                         newly created cell.
+        for pa in arrays_to_bin
+            if pa is dirty
+                for those particles that are in this Cell
+                    if particle has escaped 
+                        mark this particle for removal from this Cell
+                        find the cell to which it has escaped
+                        create a new entry for that cell if required
+                        add this particle's index to the newly created cell
+                        
+                remove markied particles 
+
         """
         cdef int i,j
         cdef int num_arrays = len(self.arrays_to_bin)
@@ -298,31 +360,17 @@ cdef class Cell:
                     
                     pdiff = self.id.diff(id)
 
-                    # make sure particles have not moved more than 
-                    # the permitted jump_tolerance.
-                    if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
-                        self.jump_tolerance or abs(pdiff.z) >
-                        self.jump_tolerance):
-                        
-                        msg = 'Particle moved by more than one cell width\n'
-                        msg += 'Point (%f, %f, %f)\n'%(pnt.x, pnt.y, pnt.z)
-                        msg += 'self id : (%d, %d, %d)\n'%(self.id.x, self.id.y,
-                                                         self.id.z)
-                        msg += 'new id  : (%d, %d, %d)\n'%(id.x, id.y, id.z)
-                        msg += 'Jump tolerance is : %s, %d\n'%(self, self.jump_tolerance)
-                        raise RuntimeError, msg
+                    # has the particle moved too far??
+                    self.check_jump_tolerance(id)
 
-                    # add this particle to the particles that are to be removed.
+                    #create new cell if id doesn't exist and add particles
                     cell = data.get(id)
                     if cell is None:
-                        # create a cell and add it to dict.
-                        # cell = Cell(id, self.cell_manager, self.cell_size,
-                        #                 self.jump_tolerance)
                         cell = self.get_new_sibling(id)
-                        data[id] = cell
+                        data[id.copy()] = cell
                         
-                    index_array1 = cell.index_lists[i]
-                    index_array1.append(indices[j])
+                    cell_index_array = cell.index_lists[i]
+                    cell_index_array.append(indices[j])
 
             # now remove all escaped and invalid particles.
             index_array.remove(to_remove.get_npy_array())
@@ -330,6 +378,14 @@ cdef class Cell:
         return 0
 
     cpdef long get_number_of_particles(self):
+        """ Return the total number of particles in the Cell 
+
+        Note:
+        -----
+        This is the cumulative sum of particle arrays if multiple 
+        arrays exist. 
+        
+        """
         cdef int i, num_arrays
         cdef long num_particles = 0
         cdef LongArray arr
@@ -349,17 +405,18 @@ cdef class Cell:
             return False
 
     cpdef int add_particles(self, Cell cell) except -1:
-        """Add particle indices in cell to the current cell.
-        
-        **Parameters**
-         
-         - cell - a cell from which to add the new particle indices.
+        """ Add particle indices from a given cell
 
-        **Notes**
-         
-         - the input cell should have the same set of particle arrays.
+        Parameters:
+        -----------
+        cell -- cell from which to add particle indices.
+
+        Notes:
+        ------
+        The input cell is assumed to have the same set of particle arrays. 
 
         """
+
         cdef int i, j, id
         cdef int num_arrays, num_particles
         cdef LongArray dest_array
@@ -375,18 +432,13 @@ cdef class Cell:
             dest_array = self.index_lists[i]
             for j from 0 <= j < source_array.length:
                 id = source_array.get(j)
-                if id >= num_particles or id < 0:
-                    msg = 'trying to add invalid particle\n'
-                    msg += 'num_particles : %d\n'%(num_particles)
-                    msg += 'pid : %d\n'%(id)
-                    raise RuntimeError, msg
-                else:
-                    dest_array.append(id)
+                self.check_particle_id(id, num_particles)
+                dest_array.append(id)
 
         return 0
 
     cpdef int clear(self) except -1:
-        """empties the index_lists"""
+        """Clear the index_lists"""
         self.index_lists[:] = []   
         return 0
 
@@ -400,16 +452,14 @@ cdef class Cell:
         
     cpdef get_particle_ids(self, list particle_id_list):
         """
-        Finds the indices of particle ids for each particle array in
-        arrays_to_bin.
+        Get the particle indices corresponding to arrays_to_bin  
 
-        **Parameters**
-
-            - particle_id_list - output parameter, should contain one 
-              LongArray for each array in arrays_to_bin. Particle ids will be
-              appended to the LongArrays
+        Parameters:
+        -----------
+        particle_id_list - output parameter. Particle ids will be appended.
 
         """
+
         cdef int num_arrays = 0
         cdef int i = 0
         cdef LongArray source, dest
@@ -436,8 +486,9 @@ cdef class Cell:
         **Parameters**
 
             - particle_id_list - output parameter, should contain one LongArray
-            for each array in arrays_to_bin. Particle ids will be appended to the
-            LongArrays.
+            for each array in arrays_to_bin. Particle ids will be appended 
+            to the LongArrays.
+
             - counts - output parameter, A LongArray with one value per array in
             arrays_to_bin. Each entry will contain the number of particle ids
             that were appended to each of the arrays in particle_id_list in this
@@ -470,7 +521,12 @@ cdef class Cell:
         index_array.reset()
 
     cdef _init_index_lists(self):
-        """initialize the index_lists (to empty LongArrays)"""
+        """initialize the index_lists.
+
+        An empty LongArray is created for each ParticleArray in 
+        `arrays_to_bin`
+
+        """
         cdef int i
         cdef int num_arrays
 
@@ -482,6 +538,31 @@ cdef class Cell:
         
         for i in range(num_arrays):
             self.index_lists.append(LongArray())
+
+    def check_jump_tolerance(self, IntPoint id):
+        """ Check if the particle has moved more than the jump tolerance """
+
+        pdiff = self.id.diff(id)                    
+        if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
+            self.jump_tolerance or abs(pdiff.z) >
+            self.jump_tolerance):
+            
+            msg = 'Particle moved by more than one cell width\n'
+            #msg += 'Point (%f, %f, %f)\n'%(pnt.x, pnt.y, pnt.z)
+            msg += 'self id : (%d, %d, %d)\n'%(self.id.x, self.id.y,
+                                               self.id.z)
+            msg += 'new id  : (%d, %d, %d)\n'%(id.x, id.y, id.z)
+            msg +='J Tolerance is : %s, %d\n'%(self, 
+                                               self.jump_tolerance)
+            raise RuntimeError, msg
+
+    def check_particle_id(self, int id, int num_particles):
+        """ Sanity check on the particle index """
+        if id >= num_particles or id < 0:
+            msg = 'trying to add invalid particle\n'
+            msg += 'num_particles : %d\n'%(num_particles)
+            msg += 'pid : %d\n'%(id)
+            raise RuntimeError, msg
 
     def py_add_particles(self, Cell cell):
         self.add_particles(cell)
@@ -517,6 +598,18 @@ cdef class CellManager:
     # been initialized. Will require some dirty changes to all cells that have
     # already been created. Whether this feature is required can be thought over
     # again. 
+
+    #Defined in the .pxd file
+    #cdef public Point origin
+    #cdef public double cell_size
+    #cdef public bint is_dirty    
+    #cdef public dict array_indices
+    #cdef public list arrays_to_bin
+    #cdef public dict cells_dict
+    #cdef public double min_cell_size, max_cell_size
+    #cdef public int jump_tolerance
+    #cdef public bint initialized    
+    #cdef public str coord_x, coord_y, coord_z
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=0.1,
                   double max_cell_size=0.5, Point origin=Point(0,0,0),
@@ -596,21 +689,22 @@ cdef class CellManager:
     cpdef int cells_update(self) except -1:
         """Update particle information.
         
-        **Algorithm**::
+        Algorithm:
+        ----------
+        All escaping particles (in newly created cells) are got from 
+        all the cells
         
-             All escaping particles (in newly created cells) are got from 
-             all the cells
+        For all new cells returned, if some already exist, the data is
+        merged with them.
         
-             For all new cells returned, if some already exist, the data is
-             merged with them.
+        If a newly created cell does not exists, it is added.
         
-             If a newly created cell does not exists, it is added.
-        
-        **Notes**
-            
-            Called from update()
+        Notes:
+        ------
+        Called from update()
         
         """
+
         cdef int i
         cdef int num_cells = len(self.cells_dict)
         cdef dict collected_data
@@ -658,9 +752,16 @@ cdef class CellManager:
     cpdef int update_status(self):
         """Updates the is_dirty flag to indicate is an update is required.
 
+        Algorithm:
+        ----------
+        if any particle array's is_dirty bit is True
+            set cell manager's is_dirty bit to True
+
+        Notes:
+        ------
         Any module that may modify the particle data, should call the cell
-        managers update_status function. The particle array's is_dirty
-        flag is checked to see if is_dirty flag is to be set
+        managers update_status function.
+
         """
         cdef int i,  num_arrays
         cdef ParticleArray parray
@@ -683,17 +784,16 @@ cdef class CellManager:
         """
         Initialize the cell manager.
     
-        **Algorithm**::
-        
-         clear current data
-         
-         rebuild the cells by calling _build_cell() and update()
+        Algorithm::
+        -----------
+        clear current data
+        build the cell structure
 
-    	**Notes**
-        
-         - previous data will be cleared.
+    	Warning:
+        ------
+        All previously stored data will be cleared
+
     	"""
-
         if self.initialized == True:
             logger.warn('Trying to initialize cell manager more than once')
             return
@@ -724,27 +824,26 @@ cdef class CellManager:
         self.initialized = True
 
     cpdef clear(self):
-        """Clears all information in the cell manager."""
-        # clear the cells dict.
+        """Clear the dictionary `cells_dict`."""
         self.cells_dict.clear()
 
     cpdef _setup_cells_dict(self):
-        """create a empty cells_dict dict"""
+        """ Create an empty dict for `cells_dict`"""
         self.cells_dict = dict()
 
     cpdef double compute_cell_size(self, double min_size, double max_size):
         # TODO: compute size depending on some variation of 'h'
         """
-        get the cell_size
+        # TODO: compute size depending on some variation of 'h'
         
-    	**Parameters**
-        
-         - min_size - smallest cell size needed.
-         - max_size - largest cell size needed.
+    	Parameters:
+        -----------
+        min_size - smallest cell size needed.
+        max_size - largest cell size needed.
 
-        **Algorithm**::
+        Algorithm::
+        choose the minumum cell size as the cell size
         
-            currently the min_size is choosen as the cell_size
         """
         # TODO: implement
         
@@ -752,13 +851,16 @@ cdef class CellManager:
         return self.cell_size
 
     cpdef _build_cell(self):
-        """Create a cell containing all the particles.
+        """ Build the base cell and add it to `cells_dict`
         
-        **Algorithm**::
-        
-             A single cell at origin is created with all the particles and
-             a jump_tolerance of infinity.
+        Algorithm::
+        -----------
+        create a cell at origon
+        set the jump_tolerance to infinity
+        add all particle indices to this cell
+
     	"""
+
         cdef int i, num_arrays, num_particles
         cdef ParticleArray parry
         cdef numpy.ndarray index_arr_source
@@ -785,13 +887,9 @@ cdef class CellManager:
         self.cells_dict.clear()
         self.cells_dict[IntPoint(0, 0, 0)] = cell
         
-        # build the cells_dict also
-        #self.update_cells_dict()
-        
     cpdef _rebuild_array_indices(self):
-        """
-        Rebuild the mapping from array name to position in arrays_to_bin list.
-        """
+        """ Reset the mapping from array name to array in arrays_to_bin """
+
         cdef int i 
         cdef int num_arrays = len(self.arrays_to_bin)
         cdef ParticleArray parr
@@ -807,18 +905,20 @@ cdef class CellManager:
         """
         Gets cell that will potentially contain neighbors the the given point.
     
-    	**Parameters**
+    	Parameters:
+        -----------
          
-         - pnt - the point whose neighbors are to be found.
-         - radius - the radius within which neighbors are to be found.
-         - cell_list - output parameter, where potential cells are appended.
+        pnt -- the point whose neighbors are to be found.
+        radius -- the radius within which neighbors are to be found.
+        cell_list -- output parameter, where potential cells are appended.
 
-        **Algorithm**::
-        
-         cell_id <- get cell containing point.
+        Algorithm::
+        -----------
+        find the cell id to which the point belongs
+        construct an immediate neighbor id list
+        return cells corresponding to these cell ids
         
     	"""
-
         cdef IntPoint cell_id = IntPoint()
         cdef IntPoint id
         cdef list neighbor_list = list()
@@ -829,7 +929,8 @@ cdef class CellManager:
         # construct ids of all neighbors around cell_id, this
         # will include the cell also.
         construct_immediate_neighbor_list(cell_id, neighbor_list,
-                                          True, <int>ceil(radius/self.cell_size))
+                                          True, 
+                                          <int>ceil(radius/self.cell_size))
 
         for i in range(len(neighbor_list)):
             id = neighbor_list[i]
@@ -998,8 +1099,8 @@ cdef class CellManager:
                 self.cells_dict.pop(cell.id)
 
         return 0
-    
-    # python functions for each corresponding cython function for testing purposes.
+   
+    # python functions for each corresponding cython function for testing.
     def py_update(self):
         return self.update()
 

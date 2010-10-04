@@ -75,10 +75,7 @@ cpdef brute_force_nnps(Point pnt, double search_radius,
                        LongArray neighbor_indices,
                        DoubleArray neighbor_distances,
                        long exclude_index=-1):
-    """
-    Brute force search for neighbors, can be used when nnps, cell manager
-    may not be available.
-    """
+    """ Perform a brute force search for the nearest neighbors """ 
     cdef long n = len(xa)
     cdef double r2 = search_radius*search_radius
     cdef long i
@@ -133,23 +130,30 @@ cpdef numpy.ndarray get_adjacency_matrix_pa(ParticleArray parray,
 ###############################################################################
 cdef class NbrParticleLocatorBase:
     """
-    Base class for neighbor particle locators.
+    Nearest neighbor locator for a source particle array. 
+    The main use is to return nearest particles for a query point.
 
-    **Members**
+    Members:
+    --------
     
-     - source - particle array in which neighbors will be searched for.
-     - cell_manager - the cell manager to be used for searching.
-     - source_index - index of the source particle array in the cell manager.
+    source -- particle array in which neighbors will be searched for.
+    cell_manager -- cell manager for the source
+    source_index -- index of the source particle array in the cell manager.
 
     """
     def __init__(self, ParticleArray source, CellManager cell_manager=None):
-        """Constructor:
+        """ Constructor
         
-        ** Parameters **
-        
-        - source - `ParticleArray` in which neighbors will be searched for.
-        - cell_manager - `CellManager` which bins the source particle array
-            into cells
+        Parameters:
+        -----------        
+
+        source -- `ParticleArray` in which neighbors will be searched for.
+        cell_manager - `CellManager` which bins the source into cells.
+
+        Warning:
+        -------
+        An error is raised if the source is not available in the cell manager 
+
         """
         self.source = source
         self.cell_manager = cell_manager
@@ -166,18 +170,19 @@ cdef class NbrParticleLocatorBase:
                                             LongArray output_array, 
                                             long exclude_index=-1) except -1: 
         """
-        Return indices of particles with distance < 'radius' to pnt.
+        Return source indices that are within a certain radius from a point.
 
-        **Parameters**
+        Parameters:        
         
-         - pnt - the query point whose nearest neighbors are to be searched for.
-         - radius - the radius within which particles are to be searched for.
-         - output_array - array to store the neighbor indices.
-         - exclude_index - an index that should be excluded from the neighbors.
+        pnt -- the query point whose nearest neighbors are to be searched for.
+        radius -- the radius within which particles are to be searched for.
+        output_array -- array to store the neighbor indices.
+        exclude_index -- an index that should be excluded from the neighbors.
 
-        **Helper Functions**
+        Helper Functions:
+        -----------------
         
-         - _get_nearest_particles_from_cell_list
+         _get_nearest_particles_from_cell_list
 
         """
         cdef list cell_list = list()
@@ -197,7 +202,31 @@ cdef class NbrParticleLocatorBase:
     cdef int _get_nearest_particles_from_cell_list(self, Point pnt,
                     double radius, list cell_list,
                     LongArray output_array, long exclude_index=-1) except -1: 
-        """ Get the neighboring particles to `pnt` from the `cell_list` """
+        """ Extract nearest neighbors from a cell_list
+        
+        Parameters:
+        -----------
+        pnt -- query point for searching
+        radius -- radius of search
+        output_array -- output parameter. indices are appended to it.
+
+        Algorithm:
+        ----------
+        for each cell in the cell list
+            find cell indices of `source` particle array in that cell
+            compute the norm of distance
+            append to output_array if norm <= radius
+
+        Notes:
+        ------
+        A cell has a list called `index_lists` which stores particle indices
+        for a particular array. Since the `source` array is assumed to be 
+        present in cell's `arrays_to_bin` with index `source_index`, we 
+        can access particles for this source in the cell.
+
+        `source_index` is setup at construction of this class.
+
+        """
         cdef Cell cell
         cdef int i
         cdef DoubleArray xa, ya, za
@@ -241,16 +270,18 @@ cdef class NbrParticleLocatorBase:
     def py_get_nearest_particles_to_point(self, Point pnt, double radius,
                                           LongArray output_array, long
                                           exclude_index=-1):
-        """Return indices of particles with distance < 'radius' to pnt.
-
-        **Parameters**
-        
-         - pnt - the query point whose nearest neighbors are to be searched for.
-         - radius - the radius within which particles are to be searched for.
-         - output_array - array to store the neighbor indices.
-         - exclude_index - an index that should be excluded from the neighbors.
-         
         """
+        Return source indices that are within a certain radius from a point.
+
+        Parameters:        
+        
+        pnt -- the query point whose nearest neighbors are to be searched for.
+        radius -- the radius within which particles are to be searched for.
+        output_array -- array to store the neighbor indices.
+        exclude_index -- an index that should be excluded from the neighbors.
+
+        """
+
         return self.get_nearest_particles_to_point(
             pnt, radius, output_array, exclude_index)
 
@@ -258,28 +289,42 @@ cdef class NbrParticleLocatorBase:
 # `FixedDestNbrParticleLocator` class.
 ###############################################################################
 cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
-    """Class to represent particle locators, where neighbor queries will be for
-    particles in another particle array and where all particles are assumed to
-    have the same interaction radius
-
-    **Members**
-    
-     - dest - the particle array containing particles for whom neighbor queries
-       will be made.
-     - radius_scale - the scale to be applied to the particles interaction
-     - dest_index - the index of the dest particle array in the cell manager.
-     - h - name of the array holding the interaction radius for each particle.
-     - d_h, d_x,d_y,d_z - the arrays of the destination storing the interaction
-       radii and position x,y,z for each particle.
-     - caching_enabled - indicates if caching is enabled for this class.
-     - particle_cache - the cache, containing one LongArray for each particle
-       in dest. 
-     - is_dirty - indicates if the cache contents are stale and need to be
-       recomputed.
     """
+    Nearest neighbor locator between a destination and a source particle
+    array. The query points will be the destination particle positions.
+    It is assumed that the particles have constant smoothing length.
+
+    Data Members:
+    -------------    
+    dest - the query point particle array
+    radius_scale - kernel support radius factor `kfac`
+    dest_index - destination index in the cell manager
+    h -- destination interaction radius
+    d_h, d_x,d_y,d_z -- destination particles properties
+    caching_enabled -- flag to turn caching on 
+    particle_cache -- a cache object. one LongArray for each particle in dest
+    is_dirty -- flag to recompute the cache
+
+    """
+
     def __init__(self, ParticleArray source, ParticleArray dest,
                  double radius_scale, CellManager cell_manager=None,
                  bint caching_enabled=False, str h='h'):
+        """ Constructor
+        
+        Parameters:
+        -----------
+        source -- the source particle array
+        dest -- the destination patrticle array
+        radius_scale -- the kernel radius support `kfac`
+        
+        Notes:
+        ------
+        The destination is assumed to be in the cell manager if provided.
+        This is used to set the `dest_index` attribute. 
+        
+        """
+
         NbrParticleLocatorBase.__init__(self, source, cell_manager)
         self.dest = dest
         self.h = h
@@ -311,16 +356,22 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
                                    LongArray output_array,
                                    bint exclude_self=False) except -1:
         """
-        Gets particles in source, that are nearest to the particle dest_p_index
-        in dest.
+        Get the nearest source particles to particles in `dest_p_index`
 
-        **Parameters**
+        Parameters:
+        -----------
 
-         - dest_p_index - id of the particle in dest whose neighbors are to be
-           found. 
-         - output_array - array to store the neighbor indices into.
-         - exclude_self - indicates if dest_p_index be excluded from
-           output_array.
+        dest_p_index -- index of query destination particle
+        output_array -- array to store the neighbor indices into.
+        exclude_self -- indicates if dest_p_index be excluded from
+                        output_array.
+
+        Algorithm:
+        ----------
+        if caching is enabled:
+            return cache data after removing self if exclude_self is true
+        else:
+           call get_nearest_particles_nocache to get neighbors directly
         
         """
         cdef LongArray index_array
@@ -363,9 +414,22 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
     cdef int get_nearest_particles_nocache(self, long dest_p_index, 
                                    LongArray output_array,
                                    bint exclude_self=False) except -1:
-        """Get the nearest particles without using cache (direct computation)
+        """ Direct computation of the neighbor search
         
+        Algorithm:
+        ----------
+        calculate the effective radus of search
+        call parent class to get the neighbors from source
+
+        Notes:
+        ------
+        The parent class NbrParticleLocatorBase provides functions for 
+        returning a list of neighbors given a point and a radius.
+        This function is called with point determined by `dest_p_index` in
+        the destination particle manager.
+
         This is a convenience internal method and works only for constant h
+
         """
         cdef Point pnt = Point()
         cdef long exclude_index = -1
@@ -398,7 +462,16 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             self.is_dirty = self.source.is_dirty or self.dest.is_dirty
 
     cdef int update(self) except -1:
-        """Computes contents of the cache if needed."""
+        """ Computes contents of the cache 
+
+        Algorithm:
+        ----------
+        if cache is to be recomputed
+            if caching is enabled
+                resize particle cache if required
+                call _update_cache to populate the cache contents
+
+        """
         cdef long num_particles, i
         cdef int ret = 0
 
@@ -420,7 +493,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         return ret
 
     cdef int _update_cache(self) except -1:
-        """Update the particle cache. """
+        """Update `particle_cache` by appending to each LongArray """
         cdef long num_particles, i
         cdef LongArray index_cache
 
@@ -476,6 +549,24 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
     def __init__(self, ParticleArray source, ParticleArray dest,
                  double radius_scale, CellManager cell_manager=None,
                  str h='h'):
+        """ Constructor:
+        
+        Parameters:
+        -----------
+        source -- the source particle array 
+        dest -- the destination particle array
+        radius_scale -- kernel support radius `kfac`
+
+        Notes:
+        ------
+        Subclassed from FixedDestNbrParticleLocator, the constructor of which
+        is called. Remember this was for fixed smoothing length neighbor 
+        queries.
+        
+        A reversed FixedDestNbrParticleLocator is also created where the 
+        roles of the source and destination are reversed.
+
+        """
         FixedDestNbrParticleLocator.__init__(
             self, source, dest, radius_scale, cell_manager, h)
         
@@ -488,18 +579,17 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
                                    LongArray output_array,
                                    bint exclude_self=False) except -1:
         """
-        Gets particles in source, that are nearest to the particle dest_p_index
-        in dest.
+        Get neighbors from source to `dest_p_index` particle in dest
 
-        **Parameters**
+        Parameters:
+        -----------
 
-         - dest_p_index - id of the particle in dest whose neighbors are to be
-           found.
-         - output_array - array to store the neighbor indices into.
-         - exclude_self - indicates if dest_p_index be excluded from
-           output_array.
-
+        dest_p_index -- query destination particle index
+        output_array -- array to store the neighbor indices into.
+        exclude_self -- exclude dest_p_index if true
+        
         """
+
         cdef LongArray index_array
         cdef int self_id = -1
         cdef int i
@@ -534,12 +624,36 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         return 0
     
     cdef int update(self) except -1:
-        """Computes contents of the cache if needed. """
+        """Computes contents of the cache. 
+        
+        Notes:
+        ------
+        Caches for both NeighborLocators are updated as before.
+        The magic happens because _update_cache is different now.
+
+        """
         self._rev_locator.update()
         return FixedDestNbrParticleLocator.update(self)
     
     cdef int _update_cache(self) except -1:
-        """Update the particle cache without using the cell cache. """
+        """Update the particle cache without using the cell cache.
+
+        Algorithm:
+        ----------
+        update index_cache as before finding source particle ids
+        for each source particle
+            get nearest particles from rev_loc -> rev_cache
+            for each index in rev_cache
+                retreive from the cache the destination index_cache
+                add source to index_cache if not present
+
+        
+        Notes:
+        ------
+        index_cache refers to the cache to beused
+        rev_cache is used only internally like _rev_loc                    
+        
+        """
         cdef long num_d_particles, num_s_particles, i, j, k
         cdef LongArray index_cache
         cdef LongArray rev_cache = LongArray()
@@ -570,16 +684,27 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
 # `NNPSManager` class.
 ###############################################################################
 cdef class NNPSManager:
-    """
-    Class to provide management of all nearest neighbor search related
+    """ Class to provide management of all nearest neighbor search related
     functionality.
 
-    **Members**
-    
-     - cell_manager - CellManager to compute nearest cells.
-     - variable_h - indicates if variable-h computations are needed.
+    Implemented are a single source neighbor locator as well as neighbor
+    locators between particle arrays with both fixed smoothing length and
+    variable smoothing length.
+
+    Members:
+    --------
+    cell_manager -- CellManager to compute nearest cells.
+    variable_h -- indicates if variable-h computations are needed.
+    particle_locator_cache -- cache object for source destination interactions
 
     """
+
+    #Defined in the .pxd file
+    #cdef public CellManager cell_manager
+    #cdef public bint variable_h
+    #cdef public str h
+    #cdef public dict particle_locator_cache
+
     def __init__(self, CellManager cell_manager=None,
                  bint variable_h=False, str h='h'):
         self.cell_manager = cell_manager
@@ -594,7 +719,15 @@ cdef class NNPSManager:
     cpdef NbrParticleLocatorBase get_neighbor_particle_locator(
         self, ParticleArray source, ParticleArray dest=None, double
         radius_scale=1.0):
-        """Returns an appropriate neighbor particle locator. """
+        """Returns an appropriate neighbor particle locator. 
+
+        Notes:
+        ------
+        if no destination is specified return a base locator
+        else check if the cache already has a locator between two arrays
+        and return that locator if it exists
+        
+        """
         if dest is None:
             return NbrParticleLocatorBase(source, self.cell_manager)
         else:
@@ -609,7 +742,23 @@ cdef class NNPSManager:
         raise NotImplementedError, msg
 
     cdef int update(self) except -1:
-        """ Update the status of the neighbor locators. """
+        """ Update the status of the neighbor locators. 
+        
+        Algorithm:
+        ----------
+        for all NbrParticleLocators being maintained
+            call it's update_status (set is_dirty if src or dst is_dirty)
+        call cell_manager's update_status (set if any pa is_dirty)
+
+        Notes:
+        ------
+        This is the most important function as on proper setup,
+        the solver will call this function. This in turn will calculate
+        the locator caches if required thus providing us with up to date
+        neighbor locators.
+
+        """
+
         # update the status of the caches.
         # Calls update_status on each CachedParticleLocators being maintained.
         cdef int i, num_caches
@@ -630,9 +779,16 @@ cdef class NNPSManager:
     
     cpdef add_interaction(self, ParticleArray source, ParticleArray dest,
                           double radius_scale):
-        """
-        Check if this interaction already exists in the internal dict, if
-        yes, enable caching for that entry
+        """ Add an interaction between a source and desti particle array
+
+        Algorithm:
+        ----------
+        check in the cache if it already exists
+        if not
+            create an appropriate locator and add to the cache
+        else
+            explicitly enable caching for the locator (it exists)
+
         """
         cdef tuple t = (source.name, dest.name, radius_scale)
         cdef FixedDestNbrParticleLocator loc
