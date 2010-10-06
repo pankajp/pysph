@@ -25,7 +25,7 @@ $(DIRS) :
 	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
 
 %.c : %.pyx
-	cython --directive profile=True -I$(SRC) -I$(MPI4PY_INCL) -a $<
+	python `which cython` --directive profile=True -I$(SRC) -I$(MPI4PY_INCL) -a $<
 
 cython : $(PYX:.pyx=.c)
 
@@ -41,7 +41,7 @@ cleanall : clean
 #	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
 
 test :
-	nosetests --exe $(PKG)
+	python `which nosetests` --exe $(PKG)
 
 bench :
 	# try '$$ make bench BENCH="point kernels"' etc to limit the benchmarks run
@@ -54,7 +54,7 @@ bench :
 	cd $(PKG)/bench; python bench.py $(BENCH)
 
 coverage :
-	nosetests --exe --cover-erase --with-coverage --cover-html-dir=cover/ --cover-html --cover-package=pysph source/pysph/
+	python `which nosetests` --exe --cover-erase --with-coverage --cover-html-dir=cover/ --cover-html --cover-package=pysph source/pysph/
 
 epydoc :
 	python cython-epydoc.py --config epydoc.cfg pysph

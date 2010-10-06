@@ -11,6 +11,7 @@ import unittest
 from subprocess import Popen, PIPE
 from threading import Timer
 import os
+import sys
 
 directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,7 +31,7 @@ def run_mpi_script(filename, path=None):
     if path is None:
         path = directory
     path = os.path.join(path, filename)
-    cmd = ['mpiexec','-n', str(nprocs), 'python', path]
+    cmd = ['mpiexec','-n', str(nprocs), sys.executable, path]
     print 'running test:', cmd
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     timer = Timer(timeout, kill_process, [process])
