@@ -34,10 +34,10 @@ extn : $(DIRS)
 
 clean : 
 	python setup.py clean
-	-for dir in $(DIRS); do rm -f $$dir/*.so; done
+	-for dir in $(DIRS) $(PKG)/bench; do rm -f $$dir/*.so; done
 
 cleanall : clean
-	-for dir in $(DIRS); do rm -f $$dir/*.c; done
+	-for dir in $(DIRS) $(PKG)/bench; do rm -f $$dir/*.c; done
 #	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
 
 test :

@@ -51,7 +51,7 @@ def mpirun(bench_name, num_procs):
     return ret
     
 
-def run(extns=None, dirname=None, num_runs=3):
+def run(extns=None, dirname=None, num_runs=1):
     """run the benchmarks in the modules given
     
     `extns` is names of python modules to benchmark (None => all cython
@@ -78,8 +78,10 @@ def run(extns=None, dirname=None, num_runs=3):
     # compile the bench .pyx files
     setup.compile_extns(extns, dirname)#, [os.path.join(dirname,'..','..')])
     
+    logfile = open('bench.log', 'w')
+    outtext = ''
+    
     for bench_name in extns:
-        logfile = open('bench.log', 'w')
         stdout_orig = sys.stdout
         stderr_orig = sys.stderr
         sys.stdout = sys.stderr = logfile
@@ -113,19 +115,25 @@ def run(extns=None, dirname=None, num_runs=3):
         
         sys.stdout = stdout_orig
         sys.stderr = stderr_orig
-        logfile.close()
         if mpi:
-            s = bench_name.split('_',2)[1]+' %d'%num_procs
+            s = bench_name.split('_',2)[1]+' %d\n'%num_procs
+            s += '#'*len(s)
             print s
-            print '#'*len(s)
+            outtext += s + '\n'
         else:
-            print bench_name
-            print '#'*len(bench_name)
+            s = bench_name + '\n' + '#'*len(bench_name)
+            print s
+            outtext += s + '\n'
         for func in res:
             for k in sorted(func.keys()):
-                print k.ljust(40), '\t', func[k]
+                s = k.ljust(40) + '\t%g'%func[k]
+                print s
+                outtext += s + '\n'
             print
-            
+            outtext += '\n'
+    logfile.write(outtext)
+    logfile.close()
+    
     sys.argv = sys.argvold
     os.chdir(olddir)
 
