@@ -1251,18 +1251,16 @@ class LoadBalancer:
                 z[cell_idx[cell_id]] = cell_id.z
                 p[cell_idx[cell_id]] = procno
                 i += 1
-        mlab.clf()
-        plot = mlab.points3d(x,y,z,p,mode='cube',colormap='jet',scale_mode='none',scale_factor=0.8)
+        
+        figure = mlab.figure(0, size=(800,600))
+        plot = mlab.points3d(x, y, z, p, mode='cube', colormap='jet',
+                             scale_mode='none', scale_factor=0.8, figure=figure)
         engine = mlab.get_engine()
         scene = engine.scenes[0]
         scene.scene.parallel_projection = True
-        scene.scene.parallel_projection = True
         #scene.scene.camera.view_up = [0.0, 1.0, 0.0]
         mlab.view(0,0)
-        if save_filename is not None:
-            mlab.gcf().scene.set_size((800,600))
-            mlab.options.offscreen = True
-            mlab.savefig(save_filename)
-            mlab.options.offscreen = False
+        if save_filename:
+            mlab.savefig(save_filename, figure=figure)
         if show:
             mlab.show()

@@ -12,10 +12,7 @@ def morton_sfc(cell_id, maxlen=20, dim=3):
     """Returns key of indices using Morton's space filling curve """
     if isinstance(cell_id, IntPoint):
         cell_id = (cell_id.x,cell_id.y,cell_id.z)
-        if dim==2:
-            cell_id = (cell_id[0],cell_id[1])
-        elif dim==1:
-            cell_id = (cell_id[0])
+    cell_id = cell_id[:dim]
     binary_repr = numpy.binary_repr
     s = 2**maxlen
     #x_bin = binary_repr(cell_id.x+s)
@@ -25,25 +22,21 @@ def morton_sfc(cell_id, maxlen=20, dim=3):
     #maxlen = len(binary_repr(2**self.level))
     bins = []
     for bin in binr:
-        if len(bin) < maxlen:
+        if len(bin) < maxlen+1:
             bin = '0'*(maxlen-len(bin)) + bin
         bins.append(bin)
     #x_bin ,y_bin,z_bin = bins
-    key = ''
-    for i in range(maxlen):
+    key = 0
+    for i in range(maxlen+1):
         for bin in bins:
-            key += bin[i]
-    key = int(key)
+            key = 2*key + (bin[i] == '1')
     return key
 
 def hilbert_sfc(cell_id, maxlen=20, dim=3):
     """Returns key of indices using Hilbert space filling curve """
     if isinstance(cell_id, IntPoint):
         cell_id = (cell_id.x,cell_id.y,cell_id.z)
-        if dim==2:
-            cell_id = (cell_id[0],cell_id[1])
-        elif dim==2:
-            cell_id = (cell_id[0])
+    cell_id = cell_id[:dim]
     s = 2**maxlen
     return Hilbert_to_int([int(i+s) for i in cell_id])
 
