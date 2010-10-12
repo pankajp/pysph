@@ -42,7 +42,8 @@ class LoadBalancerSFC(LoadBalancer):
         if start_origin is None:
             start_origin = self.start_origin
         sfc_func = self.sfc_func_dict[sfc_func_name]
-        self.load_balance_func_serial('sfc', sfc_func=sfc_func, **args)
+        self.load_balance_func_serial('sfc', sfc_func=sfc_func,
+                                      start_origin=start_origin, **args)
         
     def load_redistr_sfc(self, cell_proc, proc_cell_np, sfc_func=None,
                          start_origin=None, **args):

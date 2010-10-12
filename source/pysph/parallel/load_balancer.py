@@ -75,6 +75,9 @@ class LoadBalancer:
                 func(**args)
 
     def load_balance_func(self):
+        return self.load_balance_func_normal()
+    
+    def load_balance_func_normal(self):
         """
         Perform the load balancing.
         
@@ -189,9 +192,6 @@ class LoadBalancer:
             current_balance_iteration += 1
             # store the old particle counts in prev_particle_count
             self.prev_particle_count[:] = self.particles_per_proc
-    
-    def load_balance_func_normal(self):
-        return self.load_balance_func()
     
     def collect_num_particles(self):
         """
@@ -647,10 +647,6 @@ class LoadBalancer:
         """
         Perform the load balancing serially by gathering all data on root proc
         
-        method: 'serial' or 'parallel'
-            - if 'serial' all data is collected on root proc and redistributed
-            - if 'parallel' the super class method (parallel) is called
-        
         **Algorithm**
         
             - on root proc
@@ -842,7 +838,21 @@ class LoadBalancer:
                 self.single_lb_transfer_cells(pid, pidr)
         logger.debug('load_redistr_single done')
         return self.cell_proc, self.particles_per_proc
-
+    
+    def load_redistr_auto(self, cell_proc=None, proc_cell_np=None, **args):
+        """ load redistribution by automatic selection of method
+        
+        If only one proc has all the particles, then use the
+        load_redistr_geometric method, else use load_redistr_simple
+        """
+        non_zeros = len([1 for p in self.particles_per_proc if p > 0])
+        if non_zeros == 1:
+            ret = self.load_redistr_geometric(self.cell_proc, self.proc_cell_np)
+            self.balancing_done = False
+            return ret
+        else:
+            return self.load_redistr_single(self.cell_proc, self.proc_cell_np)
+    
     def single_lb_transfer_cells(self, pid, pidr):
         """ Allocate particles from proc pidr to proc pid (on root cell) """
         num_particles = self.particles_per_proc[pid]
@@ -1049,6 +1059,7 @@ class LoadBalancer:
         for cnp in proc_cell_np:
             cell_np.update(cnp)
         proc_cells, proc_num_particles = self.distribute_particles_geometric(cell_np, num_procs)
+        self.balancing_done = True
         return self.get_cell_proc(proc_cells=proc_cells), proc_num_particles
 
     @staticmethod
@@ -1120,10 +1131,10 @@ class LoadBalancer:
         # allocate regions to procs
         
         # deficit of actual processes to allocate
-        deficit = numpy.cumprod(s)[-1] - num_procs
+        deficit = int(numpy.cumprod(s)[-1] - num_procs)
         # sorted s
         ss = numpy.argsort(s)
-        # reversed dict (valur to index
+        # reversed dict (value to index)
         rss = numpy.empty(len(ss), dtype='int')
         for i,si in enumerate(ss):
             rss[si] = i
@@ -1140,24 +1151,19 @@ class LoadBalancer:
                         continue
                     proc_map[tuple(numpy.array((i,j,k),dtype='int')[rss])] = proc
                     proc += 1
-                    #print k, len(s), deficit
-                    if deficit > 0 and k != len(s)-1:
+                    if deficit > 0 and k==0:
                         deficit -= 1
-                        proc_map[tuple(numpy.array(i,j,k+1,dtype='int')[rss])] = proc
+                        proc_map[tuple(numpy.array((i,j,k+1),dtype='int')[rss])] = proc-1
                         done = True
-        print 'proc_map', proc_map
         
         # allocate cell_np to procs
         for i,cell_id in enumerate(cell_np):
-            #print i, cell_id
             index = (int((cell_id.x-lmin)//ld), int((cell_id.y-bmin)//bd), int((cell_id.z-hmin)//hd))
-            print i, cell_id, index
             proc_cells[proc_map[index]].append(cell_id)
             proc_num_particles[proc_map[index]] += cell_np[cell_id]
         
-        # add cell_npto empty procs
+        # add cell_np to empty procs
         proc_particles_s = numpy.argsort(proc_num_particles)
-        #print [len(i) for i in proc_cells]
         empty_procs = [proc for proc,np in enumerate(proc_num_particles) if np==0]
         i = num_procs - 1
         while len(empty_procs) > 0:
@@ -1202,8 +1208,6 @@ class LoadBalancer:
         for cid,proc_np in cell_nbr_proc.iteritems():
             pid = cell_proc[cid]
             cells_nbr += 26 - proc_np.get(-1, 0) - proc_np.get(pid, 0)
-            assert 26 - proc_np.get(-1, 0) - proc_np.get(pid, 0) <= max_nbrs
-            assert proc_np.get(0,0) + proc_np.get(1,0) + proc_np.get(-1, 0) == 26
             cells_nbr_proc += len(proc_np) - 1 - (-1 in proc_np)
             proc_nbrs[pid].update(proc_np)
         for pid, proc_nbrs_data in enumerate(proc_nbrs):
@@ -1252,7 +1256,7 @@ class LoadBalancer:
                 p[cell_idx[cell_id]] = procno
                 i += 1
         
-        figure = mlab.figure(0, size=(800,600))
+        figure = mlab.figure(0, size=(1200,900))
         plot = mlab.points3d(x, y, z, p, mode='cube', colormap='jet',
                              scale_mode='none', scale_factor=0.8, figure=figure)
         engine = mlab.get_engine()
