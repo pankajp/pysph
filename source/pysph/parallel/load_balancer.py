@@ -847,10 +847,19 @@ class LoadBalancer:
         """
         non_zeros = len([1 for p in self.particles_per_proc if p > 0])
         if non_zeros == 1:
-            ret = self.load_redistr_geometric(self.cell_proc, self.proc_cell_np)
+            logger.info('load_redistr_auto: geometric')
+            cell_proc, np_per_proc = self.load_redistr_geometric(self.cell_proc, self.proc_cell_np)
             self.balancing_done = False
-            return ret
+            self.cell_nbr_proc = self.construct_nbr_cell_info(cell_proc)
+            cell_np = {}
+            for proc,c_np in enumerate(self.proc_cell_np):
+                cell_np.update(c_np)
+            self.proc_cell_np = [{} for i in range(self.num_procs)]
+            for cid,pid in cell_proc.iteritems():
+                self.proc_cell_np[pid][cid] = cell_np[cid]
+            return cell_proc, np_per_proc
         else:
+            logger.info('load_redistr_auto: serial')
             return self.load_redistr_single(self.cell_proc, self.proc_cell_np)
     
     def single_lb_transfer_cells(self, pid, pidr):
@@ -1217,7 +1226,7 @@ class LoadBalancer:
         fac = num_cells**((ndim-1.0)/ndim) * max_nbrs
         cells_nbr = cells_nbr / fac
         cells_nbr_proc = cells_nbr_proc / fac
-        procs_nbr = sum([len(i) for i in proc_nbrs])/num_procs
+        procs_nbr = sum([len(i) for i in proc_nbrs])/float(num_procs)
         return cells_nbr, cells_nbr_proc, procs_nbr
     
     @classmethod
