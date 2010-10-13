@@ -76,7 +76,7 @@ class LoadBalancerSFC(LoadBalancer):
         else:
             cell_ids.sort(key=lambda x: sfc_func(x, dim=dim))
         
-        ret_cells = [[]]
+        ret_cells = [[] for i in range(num_procs)]
         proc_num_particles = [0]*num_procs
         np = 0
         proc = 0
@@ -88,8 +88,7 @@ class LoadBalancerSFC(LoadBalancer):
                 proc_num_particles[proc] = np
                 np -= np_per_proc
                 proc += 1
-                ret_cells.append([])
-        ret_cells.pop()
+        
         self.particles_per_proc = [0]*self.num_procs
         
         cell_np = {}
