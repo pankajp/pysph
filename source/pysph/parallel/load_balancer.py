@@ -1053,7 +1053,7 @@ class LoadBalancer:
     # but may provide a good method to initiate laod balancing
     ###########################################################################
     
-    def load_redistr_geometric(self, cell_proc, proc_cell_np, **args):
+    def load_redistr_geometric(self, cell_proc, proc_cell_np, allow_zero=False, **args):
         """ distribute cell_np to processors in a simple geometric way
         
         **algorithm**
@@ -1067,7 +1067,8 @@ class LoadBalancer:
         cell_np = {}
         for cnp in proc_cell_np:
             cell_np.update(cnp)
-        proc_cells, proc_num_particles = self.distribute_particles_geometric(cell_np, num_procs)
+        proc_cells, proc_num_particles = self.distribute_particles_geometric(
+                                                cell_np, num_procs, allow_zero)
         self.balancing_done = True
         return self.get_cell_proc(proc_cells=proc_cells), proc_num_particles
 
@@ -1101,7 +1102,7 @@ class LoadBalancer:
         return s
     
     @staticmethod
-    def distribute_particles_geometric(cell_np, num_procs):
+    def distribute_particles_geometric(cell_np, num_procs, allow_zero=False):
         """ distribute cell_npto processors in a simple way
         
         **algorithm**
@@ -1126,16 +1127,17 @@ class LoadBalancer:
         lmin = numpy.min(cell_arr[:,0])
         bmin = numpy.min(cell_arr[:,1])
         hmin = numpy.min(cell_arr[:,2])
+        # range of cells in each dimension
         l = numpy.max(cell_arr[:,0])+1 - lmin
         b = numpy.max(cell_arr[:,1])+1 - bmin
         h = numpy.max(cell_arr[:,2])+1 - hmin
         
+        # distribution sizes in each dimension
         s = LoadBalancer.get_distr_sizes(l,b,h,num_procs)
-        #print 's', s
+        
         ld = numpy.ceil(l/s[0])
         bd = numpy.ceil(b/s[1])
         hd = numpy.ceil(h/s[2])
-        #print ld, bd, hd
         
         # allocate regions to procs
         
@@ -1171,16 +1173,20 @@ class LoadBalancer:
             proc_cells[proc_map[index]].append(cell_id)
             proc_num_particles[proc_map[index]] += cell_np[cell_id]
         
+        # return the distribution if procs with zero cells are permitted
+        if allow_zero:
+            return proc_cells, proc_num_particles
+        
         # add cell_np to empty procs
         proc_particles_s = numpy.argsort(proc_num_particles)
         empty_procs = [proc for proc,np in enumerate(proc_num_particles) if np==0]
         i = num_procs - 1
         while len(empty_procs) > 0:
             nparts = int(min(numpy.ceil(
-                            proc_num_particles[proc_particles_s[i]]/np_per_proc),
+                            proc_num_particles[proc_particles_s[i]]/float(np_per_proc)),
                          len(empty_procs)))
             cell_np = proc_cells[proc_particles_s[i]]
-            ncells = int(numpy.ceil(len(cell_np)/nparts))
+            ncells = int((len(cell_np)/float(nparts+1)))
             #print nparts, ncells, len(cell_np
             proc_cells[proc_particles_s[i]] = []
             cells_sorted = sorted(cell_np, key=hash)
@@ -1242,7 +1248,11 @@ class LoadBalancer:
     
     @classmethod
     def plot(self, proc_cells, show=True, save_filename=None):
-        from enthought.mayavi import mlab
+        try:
+            from enthought.mayavi import mlab
+        except:
+            logger.critical('LoadBalancer.plot(): need mayavi to plot')
+            return
         cell_idx = {}
         #print [len(i) for i in proc_cells]
         i = 0
