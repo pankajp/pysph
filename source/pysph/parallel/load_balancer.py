@@ -1071,7 +1071,7 @@ class LoadBalancer:
             cell_np.update(cnp)
         proc_cells, proc_num_particles = self.distribute_particles_geometric(
                                                 cell_np, num_procs, allow_zero)
-        #self.balancing_done = True
+        self.balancing_done = True
         return self.get_cell_proc(proc_cells=proc_cells), proc_num_particles
 
     @staticmethod

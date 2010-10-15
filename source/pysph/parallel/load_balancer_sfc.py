@@ -30,7 +30,7 @@ class LoadBalancerSFC(LoadBalancer):
         self.sfc_func = sfc_func_name
         self.start_origin = start_origin
     
-    def load_balance_func_serial_sfc_iter(self, sfc_func_name=None,
+    def load_balance_func_serial_sfc(self, sfc_func_name=None,
                                      start_origin=None, **args):
         """ serial load balance function which uses SFCs
         
@@ -51,6 +51,8 @@ class LoadBalancerSFC(LoadBalancer):
         
         This is called by :class:Loadbalancer :meth:load_balance_func_serial
         """
+        if isinstance(sfc_func, str):
+            sfc_func = self.sfc_func_dict[sfc_func]
         if sfc_func is None:
             sfc_func = self.sfc_func_dict[self.sfc_func]
         if start_origin is None:
