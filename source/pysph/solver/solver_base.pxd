@@ -209,4 +209,3 @@ cdef class SolverBase:
     cpdef _setup_components_input(self)
     cpdef _setup_integrator(self)
     cpdef _setup_nnps(self)
-    cpdef _compute_cell_sizes(self)

@@ -489,10 +489,10 @@ cdef class ParallelCellManager(CellManager):
 
         # now setup the origin and cell size to use.
         self.setup_origin()
-        if self.min_cell_size < 0:
-            self.setup_cell_size()
+        if self.min_cell_size > 0.0:
+            self.cell_size = self.min_cell_size
         else:
-            self.py_compute_cell_size(self.min_cell_size, self.max_cell_size)
+            self.compute_cell_size(self.min_cell_size, self.max_cell_size)
 
         # setup array indices.
         self.py_rebuild_array_indices()
@@ -621,7 +621,7 @@ cdef class ParallelCellManager(CellManager):
         logger.info('(%d) Origin : %s'%(pc.rank,
                                         str(self.origin)))
 
-    def setup_cell_size(self):
+    cpdef double compute_cell_size(self, double min_cell_size, double max_cell_size):
         """
         Sets up the cell size to use from the 'h' values.
         
@@ -629,6 +629,7 @@ cdef class ParallelCellManager(CellManager):
         """
         self.cell_size = 2*self.max_radius_scale*self.glb_min_h
         logger.info('(R=%d) cell_size=%g'%(self.pc.rank, self.cell_size))
+        return self.cell_size
 
     def setup_processor_map(self):
         """

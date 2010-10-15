@@ -846,10 +846,43 @@ cdef class CellManager:
         
         """
         # TODO: implement
-        
+        if min_size < 0:
+            min_h, max_h = self._compute_minmax_h()
+            # arbitrarily set min_size as thrice the min_h
+            min_size = 2 * min_h
+        if min_size < 0:
+            # default min_size as set in the constructor
+            min_size = 0.1
         self.cell_size = min_size
+        logger.info('using cell size of %f'%(min_size))
         return self.cell_size
+    
+    def _compute_minmax_h(self):
+        """
+        Find the minimum 'h' value from all particle arrays of all entities.
+        Use twice the size as the cell size.
 
+        This is very simplistic method to find the cell sizes, derived solvers
+        may want to use something more sophisticated or probably set the cell
+        sizes manually.
+        """
+        cdef double min_h = 1e100, max_h = -1.0
+        cdef bint size_computed = False
+        for parr in self.arrays_to_bin:
+            if parr is None or parr.get_number_of_particles() == 0:
+                continue
+            h = parr.h
+            if h is None:
+                continue
+            min_h = min(numpy.min(h), min_h)
+            max_h = max(numpy.max(h), max_h)
+
+        if size_computed == False:
+            logger.info('No particles found - using default cell sizes')
+            return -1, -1
+        
+        return min_h, max_h
+    
     cpdef _build_cell(self):
         """ Build the base cell and add it to `cells_dict`
         

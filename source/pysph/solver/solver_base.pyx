@@ -982,12 +982,6 @@ cdef class SolverBase:
         for e in self.entity_list:
             e.add_arrays_to_cell_manager(self.cell_manager)
 
-        min_cell_size, max_cell_size = self._compute_cell_sizes()
-
-        if min_cell_size != -1 and max_cell_size != -1:
-            self.cell_manager.min_cell_size = min_cell_size
-            self.cell_manager.max_cell_size = max_cell_size
-
         # initialize the cell manager.
         self.cell_manager.initialize()
 
@@ -1014,36 +1008,6 @@ cdef class SolverBase:
         """
         for e in self.entity_list:
             self.component_manager.add_input(e)
-
-    cpdef _compute_cell_sizes(self):
-        """
-        Find the minimum 'h' value from all particle arrays of all entities.
-        Use twice the size as the cell size.
-
-        This is very simplistic method to find the cell sizes, derived solvers
-        may want to use something more sophisticated or probably set the cell
-        sizes manually.
-        """
-        cdef double min_h = 100.0
-        cdef bint size_computed = False
-        for e in self.entity_list:
-            parr = e.get_particle_array()
-            if parr is None or parr.get_number_of_particles() == 0:
-                continue
-            h = parr.h
-            if h is None:
-                continue
-            min_h1 = numpy.min(h)*2.0
-            size_computed = True
-            if min_h1 < min_h:
-                min_h = min_h1
-
-        if size_computed == False:
-            logger.info('No particles found - using default cell sizes')
-            return -1, -1
-
-        logger.info('using cell size of %f'%(min_h))
-        return min_h, min_h
 
     cpdef _setup_integrator(self):
         """
