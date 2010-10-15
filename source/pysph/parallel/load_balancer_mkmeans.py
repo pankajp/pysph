@@ -273,7 +273,7 @@ class LoadBalancerMKMeans(LoadBalancerSFC):
     def load_balance_func_serial_mkmeans(self, **args):
         self.load_balance_func_serial('mkmeans', **args)
     
-    def load_redistr_mkmeans(self, cell_proc=None, proc_cell_np=None, max_iter=200, n=3, **args):
+    def load_redistr_mkmeans(self, cell_proc=None, proc_cell_np=None, max_iter=None, n=3, **args):
         """ distribute particles according to the modified k-means clustering
         algorithm implemented by the `ParDecompose` class
         
@@ -284,6 +284,8 @@ class LoadBalancerMKMeans(LoadBalancerSFC):
         args2 = {}
         args2.update(self.args)
         args2.update(args)
+        if max_iter is None:
+            max_iter = self.lb_max_iterations
         #print args
         pd = ParDecompose(cell_proc, proc_cell_np, **args)
         pd.calc()

@@ -11,7 +11,7 @@ import numpy
 
 # local imports
 from pysph.base.particle_array import ParticleArray
-from pysph.base.cell import py_construct_immediate_neighbor_list
+from pysph.base.cell import CellManager, py_construct_immediate_neighbor_list
 
 TAG_LB_PARTICLE_REQUEST = 101
 TAG_LB_PARTICLE_REPLY = 102
@@ -704,47 +704,13 @@ class LoadBalancer:
                 self.balancing_done = True
                 logger.info('MAX LB ITERATIONS EXCEEDED')
                 continue
-            
-            # get the number of particles with each process.
-            #self.particles_per_proc = self.collect_num_particles()
-            self.calc_load_thresholds(self.particles_per_proc)
-            min_diff = min(self.load_difference)
-            max_diff = max(self.load_difference)
-            
-            if (abs(min_diff) < self.threshold_margin and max_diff < 
-                self.threshold_margin):
-                self.balancing_done = True
-                logger.info('BALANCE ACHIEVED')
-                logger.debug('Num particles are : %s' % (self.particles_per_proc))
-                continue
-
-            if self.particles_per_proc == self.prev_particle_count and self.pid == 0:
-                # meaning that the previous load balancing iteration did not
-                # change the particle counts, we do not do anything now.
-                self.balancing_done = True
-                logger.info('Load unchanged')
-                continue
-            
-            if logger.getEffectiveLevel() <= 20: # only for level <= INFO
-                logger.debug('Total particles : %d' % (self.total_particles))
-                logger.debug('Ideal load : %d' % (self.ideal_load))
-                logger.debug('Load Difference : %s' % (self.load_difference))
-                logger.info('Particle counts : %s' % (self.particles_per_proc))
-                logger.debug('Threshold margin: %f' % (self.threshold_margin))
-                logger.debug('Upper threshold : %f' % (self.upper_threshold))
-                logger.debug('Lower threshold : %f' % (self.lower_threshold))
-            
-            if not self.balancing_done:
-                # store the old particle counts in prev_particle_count
-                self.prev_particle_count[:] = self.particles_per_proc
                 
-                self.cell_proc, self.particles_per_proc = redistr_func(
-                                        self.cell_proc, self.proc_cell_np, **args)
-                current_balance_iteration += 1
+            self.load_balance_serial_iter(redistr_func, **args)
+            current_balance_iteration += 1
         
         # do the actual transfer of particles now
         self.redistr_cells(self.old_distr, self.cell_proc)
-        logger.info('load distribution : ' + str(self.particles_per_proc))
+        logger.info('load distribution : %s : '%(str(set(self.cell_proc.values()))) + str(self.particles_per_proc))
         # update the cell information.
         self.cell_manager.remove_remote_particles()
         self.cell_manager.bin_particles_top_down()
@@ -762,7 +728,43 @@ class LoadBalancer:
                 np += cell_np[cellid]
             
             logger.info('(%d) %d particles in %d cells' % (self.pid, np, len(cell_np)))
+    
+    def load_balance_serial_iter(self, redistr_func, **args):
+        # get the number of particles with each process.
+        #self.particles_per_proc = self.collect_num_particles()
+        self.calc_load_thresholds(self.particles_per_proc)
+        min_diff = min(self.load_difference)
+        max_diff = max(self.load_difference)
+        
+        if (abs(min_diff) < self.threshold_margin and max_diff < 
+            self.threshold_margin):
+            self.balancing_done = True
+            logger.info('BALANCE ACHIEVED')
+            logger.debug('Num particles are : %s' % (self.particles_per_proc))
+            return
 
+        if self.particles_per_proc == self.prev_particle_count and self.pid == 0:
+            # meaning that the previous load balancing iteration did not
+            # change the particle counts, we do not do anything now.
+            self.balancing_done = True
+            logger.info('Load unchanged')
+            return
+        
+        if logger.getEffectiveLevel() <= 20: # only for level <= INFO
+            logger.debug('Total particles : %d' % (self.total_particles))
+            logger.debug('Ideal load : %d' % (self.ideal_load))
+            logger.debug('Load Difference : %s' % (self.load_difference))
+            logger.info('Particle counts : %s' % (self.particles_per_proc))
+            logger.debug('Threshold margin: %f' % (self.threshold_margin))
+            logger.debug('Upper threshold : %f' % (self.upper_threshold))
+            logger.debug('Lower threshold : %f' % (self.lower_threshold))
+        
+        if not self.balancing_done:
+            # store the old particle counts in prev_particle_count
+            self.prev_particle_count[:] = self.particles_per_proc
+            self.cell_proc, self.particles_per_proc = redistr_func(
+                                    self.cell_proc, self.proc_cell_np, **args)
+    
     def _gather_cell_particles_info(self):
         self.particles_per_proc = [0] * self.num_procs
         cell_np = {}
@@ -900,7 +902,7 @@ class LoadBalancer:
                 return []
 
         # if pidr has only one cell, do not donate
-        if len(self.cell_manager.cells_dict) == 1:
+        if len(self.proc_cell_np[pidr]) == 1:
             logger.debug('Have only one cell - will not donate')
             return []
 
@@ -1069,7 +1071,7 @@ class LoadBalancer:
             cell_np.update(cnp)
         proc_cells, proc_num_particles = self.distribute_particles_geometric(
                                                 cell_np, num_procs, allow_zero)
-        self.balancing_done = True
+        #self.balancing_done = True
         return self.get_cell_proc(proc_cells=proc_cells), proc_num_particles
 
     @staticmethod
@@ -1098,6 +1100,7 @@ class LoadBalancer:
                 continue
             else:
                 cont = False
+        #print 'sizes: %s'%(str(s))
         #print distortion(*s/x)
         return s
     
@@ -1135,9 +1138,9 @@ class LoadBalancer:
         # distribution sizes in each dimension
         s = LoadBalancer.get_distr_sizes(l,b,h,num_procs)
         
-        ld = numpy.ceil(l/s[0])
-        bd = numpy.ceil(b/s[1])
-        hd = numpy.ceil(h/s[2])
+        ld = l/s[0]
+        bd = b/s[1]
+        hd = h/s[2]
         
         # allocate regions to procs
         
@@ -1151,7 +1154,6 @@ class LoadBalancer:
             rss[si] = i
         proc = 0
         proc_cells = [[] for i in range(num_procs)]
-        proc_num_particles = [0 for i in range(num_procs)]
         proc_map = {}
         done = False
         for i in range(int(s[ss[0]])):
@@ -1168,11 +1170,12 @@ class LoadBalancer:
                         done = True
         
         # allocate cell_np to procs
+        proc_num_particles = [0 for i in range(num_procs)]
         for i,cell_id in enumerate(cell_np):
             index = (int((cell_id.x-lmin)//ld), int((cell_id.y-bmin)//bd), int((cell_id.z-hmin)//hd))
             proc_cells[proc_map[index]].append(cell_id)
             proc_num_particles[proc_map[index]] += cell_np[cell_id]
-        
+
         # return the distribution if procs with zero cells are permitted
         if allow_zero:
             return proc_cells, proc_num_particles
@@ -1185,14 +1188,18 @@ class LoadBalancer:
             nparts = int(min(numpy.ceil(
                             proc_num_particles[proc_particles_s[i]]/float(np_per_proc)),
                          len(empty_procs)))
-            cell_np = proc_cells[proc_particles_s[i]]
-            ncells = int((len(cell_np)/float(nparts+1)))
-            #print nparts, ncells, len(cell_np
+            cells = proc_cells[proc_particles_s[i]]
+            ncells = int((len(cells)/float(nparts+1)))
+            
             proc_cells[proc_particles_s[i]] = []
-            cells_sorted = sorted(cell_np, key=hash)
+            cells_sorted = sorted(cells, key=hash)
             
             for j in range(nparts):
-                proc_cells[empty_procs[j]][:] = cells_sorted[j*ncells:(j+1)*ncells]
+                cells2send = cells_sorted[j*ncells:(j+1)*ncells]
+                proc_cells[empty_procs[j]][:] = cells2send
+                for cid in cells2send:
+                    proc_num_particles[empty_procs[j]] += cell_np[cid]
+                    proc_num_particles[proc_particles_s[i]] -= cell_np[cid]                    
             proc_cells[proc_particles_s[i]][:] = cells_sorted[(j+1)*ncells:]
             empty_procs[:nparts] = []
             i -= 1
@@ -1287,3 +1294,84 @@ class LoadBalancer:
             mlab.savefig(save_filename, figure=figure)
         if show:
             mlab.show()
+    
+    @classmethod
+    def distribute_particle_arrays(cls, particle_arrays, num_procs, cell_size, max_iter=100, distr_func='single', **args):
+        """Convenience function to distribute given particles into procs
+        
+        Uses the load_balance_func_serial() function of LoadBalancer class to
+        distribute the particles. Balancing methods can be changed by passing
+        the same `args` as to the load_balance_func_serial method
+        """
+        try:
+            from load_balancer_mkmeans import LoadBalancerMKMeans as LoadBalancer
+        except ImportError:
+            try:
+                from load_balancer_sfc import LoadBalancerSFC as LoadBalancer
+            except ImportError:
+                pass
+        #print LoadBalancer
+        lb = LoadBalancer()
+        lb.pid = 0
+        lb.num_procs = num_procs
+        lb.lb_max_iteration = max_iter
+        
+        redistr_func = getattr(lb, 'load_redistr_'+distr_func)
+        #print redistr_func
+        lb.load_difference = [0] * lb.num_procs
+        
+        cm = CellManager(particle_arrays, cell_size, cell_size)
+        #print 'num_cells=', len(cm.cells_dict), cm.cell_size
+        
+        lb.particles_per_proc = [0] * lb.num_procs
+        cell_np = {}
+        for cellid, cell in cm.cells_dict.items():
+            cell_np[cellid] = cell.get_number_of_particles()
+        lb.proc_cell_np = [{} for i in range(num_procs)]
+        lb.proc_cell_np[0] = cell_np
+        #print '(%d)'%self.pid, self.proc_cell_np
+        
+        for i, c in enumerate(lb.proc_cell_np):
+            for cnp in c.values():
+                lb.particles_per_proc[i] += cnp
+        
+        old_distr = {}
+        for proc_no, cells in enumerate(lb.proc_cell_np):
+            for cellid in cells:
+                old_distr[cellid] = proc_no
+        lb.old_distr = old_distr
+        lb.cell_proc = {}
+        lb.cell_proc.update(old_distr)
+        #print '(%d)'%self.pid, self.cell_proc
+        lb.cell_nbr_proc = lb.construct_nbr_cell_info(lb.cell_proc)
+        
+        lb.balancing_done = False
+        current_balance_iteration = 0
+        while lb.balancing_done == False and current_balance_iteration < max_iter:
+            #print '\riteration', current_balance_iteration, 
+            lb.load_balance_serial_iter(redistr_func, **args)
+            current_balance_iteration += 1
+        
+        na = len(cm.arrays_to_bin)
+        particle_arrays_per_proc = [[ParticleArray() for j in range(na)] for i in range(num_procs)]
+        
+        cells_dict = cm.cells_dict
+        a2b = cm.arrays_to_bin
+        for cid, proc in lb.cell_proc.iteritems():
+            cell = cells_dict[cid]
+            pid_list = []
+            cell.get_particle_ids(pid_list)
+            for i in range(na):
+                arr = particle_arrays_per_proc[proc][i]
+                arr.append_parray(a2b[i].extract_particles(pid_list[i]))
+        
+        return particle_arrays_per_proc
+    
+    @classmethod
+    def distribute_particles(cls, particle_array, num_procs, cell_size, max_iter=100, distr_func='auto', **args):
+        """Same as distribute_particle_arrays but for a single particle array
+        """
+        ret =  cls.distribute_particle_arrays([particle_array], num_procs, cell_size, max_iter, distr_func, **args)
+        ret = [i[0] for i in ret]
+        return ret
+    

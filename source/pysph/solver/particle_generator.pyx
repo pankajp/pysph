@@ -154,8 +154,10 @@ cdef class ParticleGenerator:
             num_outputs = self.num_output_arrays()
             self.output_particle_arrays[:] = [None]*num_outputs
             for i in range(num_outputs):
-                self.output_particle_arrays[i] = ParticleArray()                
-
+                self.output_particle_arrays[i] = ParticleArray()
+        else:
+            for pa in self.output_particle_arrays:
+                pa.clear()
         # make sure the setup arrays have the required properties.
         # first add the coordinate arrays
         for i in range(num_outputs):

@@ -392,7 +392,7 @@ cdef class ParallelCellManager(CellManager):
     """
     Cell manager for parallel invocations.
     """
-    def __init__(self, arrays_to_bin=[], min_cell_size=0.1,
+    def __init__(self, arrays_to_bin=[], min_cell_size=-1.0,
                  max_cell_size=0.5, origin=Point(0, 0, 0),
                  initialize=True,
                  parallel_controller=None,
@@ -489,15 +489,16 @@ cdef class ParallelCellManager(CellManager):
 
         # now setup the origin and cell size to use.
         self.setup_origin()
-        self.setup_cell_size()
+        if self.min_cell_size < 0:
+            self.setup_cell_size()
+        else:
+            self.py_compute_cell_size(self.min_cell_size, self.max_cell_size)
 
         # setup array indices.
         self.py_rebuild_array_indices()
 
         # setup the cells_dict
         self.py_setup_cells_dict()
-
-        #self.py_compute_cell_size(self.min_cell_size, self.max_cell_size)
         
         # setup information for the processor map.
         self.setup_processor_map()

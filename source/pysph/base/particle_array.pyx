@@ -312,7 +312,7 @@ cdef class ParticleArray:
         """
         Remove particles whose indices are given in index_list.
 
-        We repeatedy interchange the values of the last element and values from
+        We repeatedly interchange the values of the last element and values from
         the index_list and reduce the size of the array by one. This is done for
         every property and temporary arrays that is being maintained.
     

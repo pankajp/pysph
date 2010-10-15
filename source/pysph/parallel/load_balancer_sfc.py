@@ -30,7 +30,7 @@ class LoadBalancerSFC(LoadBalancer):
         self.sfc_func = sfc_func_name
         self.start_origin = start_origin
     
-    def load_balance_func_serial_sfc(self, sfc_func_name=None,
+    def load_balance_func_serial_sfc_iter(self, sfc_func_name=None,
                                      start_origin=None, **args):
         """ serial load balance function which uses SFCs
         
@@ -52,7 +52,7 @@ class LoadBalancerSFC(LoadBalancer):
         This is called by :class:Loadbalancer :meth:load_balance_func_serial
         """
         if sfc_func is None:
-            sfc_func = self.sfc_func_dict[sfc_func]
+            sfc_func = self.sfc_func_dict[self.sfc_func]
         if start_origin is None:
             start_origin = self.start_origin
         num_procs = len(proc_cell_np)
@@ -68,7 +68,7 @@ class LoadBalancerSFC(LoadBalancer):
             dim = 2
             if min(cell_arr[:,1])==max(cell_arr[:,1]):
                 dim = 1
-        np_per_proc = sum(self.particles_per_proc)/self.num_procs
+        np_per_proc = sum(self.particles_per_proc)/float(self.num_procs)
         cell_ids = cell_proc.keys()
         if start_origin:
             idmin = cell_arr.min(axis=0)
