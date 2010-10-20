@@ -72,8 +72,10 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
                 #self.assertEqual(len(self.cm.cells_dict), 11
                 proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
                 nps = [sum([pa.get_number_of_particles() for pa in pas]) for pas in proc_pas]
-                print nps
-                assert sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas])
+                self.assertTrue(sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas]))
+                for pa in pas:
+                    self.assertEqual(len(pa.get('x')),pa.get_number_of_particles())
+                    self.assertEqual(len(pa.get('y')),pa.get_number_of_particles())
                 # each proc should have at least one cell since num_cells>num_procs
                 for np in nps:
                     assert np > 0

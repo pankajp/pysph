@@ -12,6 +12,8 @@ from pysph.base import particle_array
 from pysph.base.carray import LongArray, IntArray, DoubleArray
 from pysph.base import carray
 
+import pickle
+
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
     1e-16."""
@@ -559,7 +561,22 @@ class ParticleArrayTest(unittest.TestCase):
         self.assertEqual(check_array(p1.t, [0, 0, 0, 0, 0, -1, -1, -1, -1, 0]),
                          True)
         self.assertEqual(check_array(p1.s, [0, 0, 0, 0, 0, 2, 3, 4, 5, 0]), True)
-               
+    
+    def test_pickle(self):
+	"""
+	Tests the pickle and unpicle functions
+	"""
+	p1 = particle_array.ParticleArray()
+        p1.add_property({'name':'x', 'data':[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+        p1.add_property({'name':'y'})
+        p1.add_property({'name':'t'})
+        p1.align_particles()
+	
+	s = pickle.dumps(p1)
+	p2 = pickle.loads(s)
+	
+        check_array(p1.x, p2.x)
+
 if __name__ == '__main__':
     import logging
     logger = logging.getLogger()
