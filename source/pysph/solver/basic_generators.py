@@ -11,6 +11,7 @@ import numpy
 from pysph.base.carray import DoubleArray, LongArray
 from pysph.base.nnps import *
 from pysph.base.point import Point
+
 from pysph.solver.particle_generator import *
 from pysph.solver.particle_generator import MassComputationMode as MCM
 from pysph.solver.particle_generator import DensityComputationMode as DCM

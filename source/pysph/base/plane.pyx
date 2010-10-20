@@ -9,7 +9,7 @@ cimport numpy
 from pysph.base.point cimport Point
 
 #include "stdlib.pxd"
-from stdlib cimport *
+from libc.stdlib cimport *
 
 # The dtype of the float arrays
 DTYPE = numpy.float

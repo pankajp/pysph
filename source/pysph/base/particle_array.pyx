@@ -59,10 +59,10 @@ import numpy
 # Local imports
 from pysph.base.carray cimport *
 from pysph.base.particle_tags cimport *
-
-from python_ref cimport PyObject
-from python_dict cimport *
-from python_string cimport *
+from particle_types import ParticleType
+from cpython cimport PyObject
+from cpython cimport *
+from cython cimport *
 
 cdef class ParticleArray:
     """
@@ -90,7 +90,8 @@ cdef class ParticleArray:
     # `object` interface
     ######################################################################
     def __cinit__(self, str name='', default_particle_tag=LocalReal,
-                        *args, **props):
+                  particle_type = ParticleType.Fluid,
+                  *args, **props):
         """
         Constructor.
 
@@ -109,6 +110,8 @@ cdef class ParticleArray:
         self.name = name
         self.is_dirty = True
         self.indices_invalid = True
+        
+        self.particle_type = particle_type
 
         if props:
             self.initialize(**props)
@@ -906,7 +909,8 @@ cdef class ParticleArray:
             a = DoubleArray(np)
             a.set_data(np_array)
         else:
-            raise TypeError, 'unknown numpy data type passed %s'%(np_array.dtype)
+            msg = 'unknown numpy data type passed %s'%(np_array.dtype)
+            raise TypeError, msg
 
         return a
 
@@ -1117,3 +1121,5 @@ cdef class ParticleArray:
         """
         for prop_array in self.properties.values():
             prop_array.update_min_max()
+
+##############################################################################

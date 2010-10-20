@@ -28,7 +28,8 @@ The numpy array may however be copied and used in any manner.
 
 """
 # For malloc etc.
-from stdlib cimport *
+#from stdlib cimport *
+from libc.stdlib cimport *
 
 cimport numpy as np
 

@@ -563,18 +563,20 @@ class ParticleArrayTest(unittest.TestCase):
         self.assertEqual(check_array(p1.s, [0, 0, 0, 0, 0, 2, 3, 4, 5, 0]), True)
     
     def test_pickle(self):
-	"""
-	Tests the pickle and unpicle functions
-	"""
-	p1 = particle_array.ParticleArray()
+        """
+        Tests the pickle and unpicle functions
+        """
+        p1 = particle_array.ParticleArray()
+        x = range(10)
         p1.add_property({'name':'x', 'data':[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
         p1.add_property({'name':'y'})
         p1.add_property({'name':'t'})
         p1.align_particles()
-	
-	s = pickle.dumps(p1)
-	p2 = pickle.loads(s)
-	
+        
+        s = pickle.dumps(p1)
+        p2 = pickle.loads(s)
+        
+        self.assertEqual(len(p1.x), len(p2.x))
         check_array(p1.x, p2.x)
 
 if __name__ == '__main__':

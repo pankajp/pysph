@@ -6,6 +6,9 @@ cdef class ParticleArray:
     """
     Maintains various properties for particles.
     """
+    #the type of particles
+    cdef public int particle_type
+
     # dictionary to hold the properties held per particle.
     cdef public dict properties
     cdef public list property_arrays
@@ -84,3 +87,5 @@ cdef class ParticleArray:
 
     cpdef copy_properties(self, ParticleArray source, long start_index=*, long
                           end_index=*)
+
+

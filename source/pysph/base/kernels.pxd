@@ -7,10 +7,10 @@
 from pysph.base.point cimport Point, Point_sub
 
 ##############################################################################
-#`KernelBase`
+#`MultidimensionalKernel`
 ##############################################################################
-cdef class KernelBase:
-    cdef readonly int dim
+cdef class MultidimensionalKernel:
+    cdef public int dim
 
     cdef double function(self, Point pa, Point pb, double h)
     cdef void gradient(self, Point pa, Point pb, double h, Point result)
@@ -20,21 +20,15 @@ cdef class KernelBase:
     cpdef int dimension(self)
 
 ##############################################################################
-# `Poly6Kernel` class.
-##############################################################################
-cdef class Poly6Kernel(KernelBase):
-    pass
-
-##############################################################################
 #`CubicSplineKernel`
 ##############################################################################
-cdef class CubicSplineKernel(KernelBase):
+cdef class CubicSplineKernel(MultidimensionalKernel):
     pass
 
 ##############################################################################
 #`HarmonicKernel`
 ##############################################################################
-cdef class HarmonicKernel(KernelBase):
+cdef class HarmonicKernel(MultidimensionalKernel):
     cdef public int n
     cdef public dict facs
 
@@ -42,24 +36,28 @@ cdef class HarmonicKernel(KernelBase):
 ##############################################################################
 #'Gaussian Kernel'
 ##############################################################################
-cdef class GaussianKernel(KernelBase):
+cdef class GaussianKernel(MultidimensionalKernel):
     pass
 
 ##############################################################################
 #`M6SplineKernel`
 ##############################################################################
-cdef class M6SplineKernel(KernelBase):
+cdef class M6SplineKernel(MultidimensionalKernel):
     pass
 
 ##############################################################################
 #'W8 Kernel'
 ##############################################################################
-cdef class W8Kernel(KernelBase):
+cdef class W8Kernel(MultidimensionalKernel):
     pass
 
 ##############################################################################
 #`W10Kernel`
 ##############################################################################
-cdef class W10Kernel(KernelBase):
+cdef class W10Kernel(MultidimensionalKernel):
     pass
 
+cdef class RepulsiveBoundaryKernel(MultidimensionalKernel):
+    """
+    """
+    pass

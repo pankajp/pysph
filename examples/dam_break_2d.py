@@ -91,4 +91,4 @@ pic = solver.component_categories['post_integration']
 pic.append(it_skipper)
 
 # start the solver.
-solver.solve()
+#solver.solve()

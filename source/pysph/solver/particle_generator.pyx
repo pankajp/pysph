@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger()
 
 # local imports
-from pysph.base.kernels cimport KernelBase
+from pysph.base.kernels cimport MultidimensionalKernel
 from pysph.base.particle_array cimport ParticleArray
 
 
@@ -52,7 +52,7 @@ cdef class ParticleGenerator:
                   double particle_density=1000.0,
                   int density_computation_mode=DensityComputationMode.Set_Constant, 
                   double particle_h=0.1,
-                  KernelBase kernel=None,
+                  MultidimensionalKernel kernel=None,
                   *args, **kwargs):
         """
         Constructor.
@@ -74,7 +74,7 @@ cdef class ParticleGenerator:
                  particle_density=1000.0,
                  density_computation_mode=DensityComputationMode.Set_Constant,
                  particle_h=0.1,
-                 KernelBase kernel=None,
+                 MultidimensionalKernel kernel=None,
                  *args, **kwargs):
         """
         Python constructor.

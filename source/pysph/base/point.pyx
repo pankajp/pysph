@@ -1,7 +1,7 @@
 """
 """
 
-from python cimport *
+from cpython cimport *
 # numpy imports
 cimport numpy
 import numpy

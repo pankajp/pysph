@@ -8,7 +8,7 @@ syntax: glob
 *.orig
 docs/build/
 source/build/
-pysph.egg-info/
+source/PySPH.egg-info/
 dist/
 build/
 

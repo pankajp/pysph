@@ -8,7 +8,7 @@ from pysph.base.carray cimport *
 from pysph.base.particle_array cimport ParticleArray
 
 # python c-api imports
-from python_dict cimport *
+from cpython cimport *
 
 cdef extern from 'math.h':
     int abs(int)

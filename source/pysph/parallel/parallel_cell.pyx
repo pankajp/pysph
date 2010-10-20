@@ -27,7 +27,7 @@ from pysph.base.cell cimport CellManager, Cell
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport LongArray, DoubleArray
 
-from pysph.solver.fast_utils cimport arange_long
+from fast_utils cimport arange_long
 from pysph.parallel.parallel_controller cimport ParallelController
 from pysph.parallel.load_balancer import LoadBalancer
 
@@ -464,6 +464,9 @@ cdef class ParallelCellManager(CellManager):
         
         if initialize is True:
             self.initialize()
+
+    def barrier(self):
+        self.parallel_controller.comm.barrier()
 
     cpdef initialize(self):
         """
