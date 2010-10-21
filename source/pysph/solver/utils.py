@@ -172,10 +172,10 @@ def _savez(file, args, kwds, compress):
 
 #############################################################################
 
-from pysph.parallel.load_balancer import LoadBalancer
 
 def get_distributed_particles(pa, comm, cell_size):
     
+    from pysph.parallel.load_balancer import LoadBalancer
     num_procs=comm.Get_size()
     rank = comm.Get_rank()
 
