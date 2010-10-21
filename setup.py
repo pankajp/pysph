@@ -66,47 +66,47 @@ sph = [
 
         Extension("pysph.sph.funcs.basic_funcs",
                   ["source/pysph/sph/funcs/basic_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.position_funcs",
                   ["source/pysph/sph/funcs/position_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.boundary_funcs",
                   ["source/pysph/sph/funcs/boundary_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.external_force",
                   ["source/pysph/sph/funcs/external_force.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.density_funcs",
                   ["source/pysph/sph/funcs/density_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.energy_funcs",
                   ["source/pysph/sph/funcs/energy_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
 #         Extension("pysph.sph.funcs.eval_funcs",
 #                   ["source/pysph/sph/funcs/eval_funcs.pyx"], 
-#                   include_dirs=[inc_dirs]),
+#                   include_dirs=inc_dirs),
 
          Extension("pysph.sph.funcs.viscosity_funcs",
                    ["source/pysph/sph/funcs/viscosity_funcs.pyx"], 
-                   include_dirs=[inc_dirs]),
+                   include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.pressure_funcs",
                   ["source/pysph/sph/funcs/pressure_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
          Extension("pysph.sph.funcs.xsph_funcs",
                    ["source/pysph/sph/funcs/xsph_funcs.pyx"], 
-                   include_dirs=[inc_dirs]),
+                   include_dirs=inc_dirs),
 
         Extension("pysph.sph.funcs.eos_funcs",
                   ["source/pysph/sph/funcs/eos_funcs.pyx"], 
-                  include_dirs=[inc_dirs]),
+                  include_dirs=inc_dirs),
 
         ]
 
