@@ -5,7 +5,17 @@ in Python.  The framework emphasizes flexibility and efficiency while
 allowing most of the user code to be written in pure Python.
 """
 
-from setuptools import setup, find_packages, Extension
+from distutils.extension import Extension
+
+from setuptools import find_packages, setup
+
+# undo the changes done by setuptools in setuptools.extension
+import sys, distutils.core, distutils.extension
+distutils.core.Extension = Extension
+distutils.extension.Extension = Extension
+if 'distutils.command.build_ext' in sys.modules:
+    sys.modules['distutils.command.build_ext'].Extension = Extension
+
 from Cython.Distutils import build_ext
 import numpy
 import os
