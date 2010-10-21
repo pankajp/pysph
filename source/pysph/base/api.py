@@ -5,7 +5,8 @@ from carray import LongArray, DoubleArray
 from cell import Cell, CellManager
 
 from kernels import MultidimensionalKernel, CubicSplineKernel, \
-        HarmonicKernel, GaussianKernel, M6SplineKernel, W8Kernel, W10Kernel
+        HarmonicKernel, GaussianKernel, M6SplineKernel, W8Kernel, W10Kernel,\
+        QuinticSplineKernel, WendlandQuinticSplineKernel
 
 from nnps import NbrParticleLocatorBase, FixedDestNbrParticleLocator, \
         VarHNbrParticleLocator, NNPSManager, brute_force_nnps

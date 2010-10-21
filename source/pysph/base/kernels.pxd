@@ -26,6 +26,18 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
     pass
 
 ##############################################################################
+#`QuinticSplineKernel`
+##############################################################################
+cdef class QuinticSplineKernel(MultidimensionalKernel):
+    pass
+
+##############################################################################
+#`WendlandQuinticSplineKernel`
+##############################################################################
+cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
+    pass
+
+##############################################################################
 #`HarmonicKernel`
 ##############################################################################
 cdef class HarmonicKernel(MultidimensionalKernel):

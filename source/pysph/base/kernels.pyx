@@ -171,7 +171,6 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
         elif q > 1.0:
             val = 0.25 * (2 - q) * (2 - q) * (2 - q)
         else:
-            #val = 1 - 1.5 * (q*q) + 0.75 * (q*q*q)
             val = 1 - 1.5 * (q*q) * (1 - 0.5 * q)
 
         return val * fac
@@ -230,6 +229,193 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
     cpdef double radius(self):
         return 2
 ##############################################################################
+
+
+##############################################################################
+#`QuinticSplineKernel`
+##############################################################################
+cdef class QuinticSplineKernel(MultidimensionalKernel):
+    """ The Quintic spline kernel defined in 
+
+    "Modelling Low Reynolds Number Incompressible Flows Using SPH",
+    Joseph P. Morris, Patrik J. Fox and Yi Zhu, Journal of Computational
+    Physics, 136, 214-226
+
+    """
+    cdef double function(self, Point pa, Point pb, double h):
+        """ Evaluate the strength of the kernel centered at `pa` at
+        the point `pb`.         
+        """
+        cdef double fac = self._fac(h)
+        cdef Point r = Point_sub(pa, pb)
+        cdef double rab = r.length()
+        cdef double q = rab/h
+        cdef double val
+
+        cdef double tmp1 = (3-q)
+        cdef double tmp2 = (2-q)
+        cdef double tmp3 = (1-q)
+      
+        if q > 3.0:
+            val = 0.0
+        else:
+            tmp1 *= (tmp1 * tmp1 * tmp1 * tmp1)
+            
+            if q > 2.0:
+                val = tmp1
+            else:
+                tmp2 *= (tmp2 * tmp2 * tmp2 * tmp2)
+                val = tmp1 - 6 * tmp2
+                if q > 1.0:
+                    pass    
+                else:
+                    tmp3 *= (tmp3 * tmp3 * tmp3 * tmp3)
+                    val += tmp3
+
+        return val * fac
+
+    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+        """Evaluate the gradient of the kernel centered at `pa`, at the
+        point `pb`.
+        """
+        cdef double fac = self._fac(h)
+        cdef Point r = Point_sub(pa, pb)
+        cdef double rab = r.length()
+        cdef double q = rab/h
+        cdef double val
+        cdef double power
+
+        cdef double tmp1 = (3-q)
+        cdef double tmp2 = (2-q)
+        cdef double tmp3 = (1-q)
+
+        if rab < 1e-16:
+            val = 0.0
+        else:
+            fac *= 1./(h*rab)
+            if q > 3.0:
+                val = 0.0
+            else:
+                tmp1 *= (tmp1 * tmp1 * tmp1)
+            
+                if q > 2.0:
+                    val = 5*tmp1
+                else:
+                    tmp2 *= (tmp2 * tmp2 * tmp2)
+                    val = 5*tmp1 - 30 * tmp2
+                    if q > 1.0:
+                        pass    
+                    else:
+                        tmp3 *= (tmp3 * tmp3 * tmp3)
+                        val += 75*tmp3
+
+        grad.x = r.x * (val * fac)
+        grad.y = r.y * (val * fac)
+        grad.z = r.z * (val * fac)
+
+    cdef double laplacian(self, Point pa, Point pb, double h):
+        """Evaluate the laplacina of the kernel centered at `pa`, at the
+        point `pb`
+        """
+        raise NotImplementedError
+    
+    cdef double _fac(self, double h):
+        """ Return the normalizing factor given the smoothing length. """
+        cdef int dim = self.dim
+        if dim == 1:
+            raise NotImplementedError
+        elif dim == 2:
+            return 7./(478*PI)
+        elif dim == 3:
+            raise NotImplementedError
+        else:
+            raise ValueError
+
+    cpdef double radius(self):
+        return 3
+
+
+##############################################################################
+#`WendlandQuinticSplineKernel`
+##############################################################################
+cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
+    """ The Quintic spline kernel defined in 
+
+    "Modelling Low Reynolds Number Incompressible Flows Using SPH",
+    Joseph P. Morris, Patrik J. Fox and Yi Zhu, Journal of Computational
+    Physics, 136, 214-226
+
+    """
+    cdef double function(self, Point pa, Point pb, double h):
+        """ Evaluate the strength of the kernel centered at `pa` at
+        the point `pb`.         
+        """
+        cdef double fac = self._fac(h)
+        cdef Point r = Point_sub(pa, pb)
+        cdef double rab = r.length()
+        cdef double q = rab/h
+        cdef double val
+
+        cdef double tmp = (1-0.5*q)
+      
+        if q > 2.0:
+            val = 0.0
+        else:
+            tmp *= (tmp * tmp * tmp)
+            tmp *= (2*q + 1)
+            
+            val = tmp
+
+        return val * fac
+
+    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+        """Evaluate the gradient of the kernel centered at `pa`, at the
+        point `pb`.
+        """
+        cdef double fac = self._fac(h)
+        cdef Point r = Point_sub(pa, pb)
+        cdef double rab = r.length()
+        cdef double q = rab/h
+        cdef double val
+        cdef double power
+
+        cdef double tmp = (1-0.5*q)
+
+        if rab < 1e-16:
+            val = 0.0
+        else:
+            fac *= 1./(h*rab)
+
+            if q > 2.0:
+                val = 0
+            else:
+                tmp *= (tmp * tmp)
+                val = -5*q*tmp            
+
+        grad.x = r.x * (val * fac)
+        grad.y = r.y * (val * fac)
+        grad.z = r.z * (val * fac)
+
+    cdef double laplacian(self, Point pa, Point pb, double h):
+        """Evaluate the laplacina of the kernel centered at `pa`, at the
+        point `pb`
+        """
+        raise NotImplementedError
+    
+    cdef double _fac(self, double h):
+        """ Return the normalizing factor given the smoothing length. """
+        cdef int dim = self.dim
+        if dim == 1:
+            raise NotImplementedError
+        elif dim == 2:
+            return (7./4*PI*h*h)
+        elif dim == 3:
+            raise NotImplementedError
+        else:
+            raise ValueError
+
+    cpdef double radius(self):
+        return 2
 
 ##############################################################################
 #`HarmonicKernel`

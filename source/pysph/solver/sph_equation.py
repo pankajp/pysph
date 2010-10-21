@@ -69,7 +69,7 @@ class SPHOperation(object):
             #create an entry in the dict if this is a destination array
 
             if dst.particle_type in self.on_types:
-                calc_data[i] = {'sources':[], 'funcs':[], 'dnum':i}
+                calc_data[i] = {'sources':[], 'funcs':[], 'dnum':i, 'id':""}
 
                 #from types can be zero for a no-neighbor calc
 
@@ -77,6 +77,7 @@ class SPHOperation(object):
                     func = self.function.get_func(dst, dst)
                     func.id = self.id
                     calc_data[i]['funcs'] = [func]
+                    calc_data[i]['id'] = self.id
 
                 else:
                     #check for the sources for this destination
@@ -89,7 +90,7 @@ class SPHOperation(object):
                  
                         if src.particle_type in self.from_types:
 
-                        #get the function for this pair
+                        #get the function for this pair and set the id
 
                             func = self.function.get_func(source=src, dest=dst)
                             func.id = self.id
@@ -98,6 +99,7 @@ class SPHOperation(object):
 
                             calc_data[i]['sources'].append(src)
                             calc_data[i]['funcs'].append(func)
+                            calc_data[i]['id'] = self.id
                      
         return calc_data
 
@@ -138,12 +140,13 @@ class SPHSimpleODE(SPHOperation):
                 srcs = calc_data[i]['sources']
                 funcs = calc_data[i]['funcs']
                 dnum = calc_data[i]['dnum']
+                id = calc_data[i]['id']
                 
                 calc = sph.SPHEquation(particles=particles, sources=srcs,
                                        dest=dest, kernel=kernel, 
                                        funcs=funcs, updates=self.updates,
                                        integrates=True, dnum=dnum,
-                                       nbr_info=False)
+                                       nbr_info=False, id=id)
                 calcs.append(calc)
 
         return calcs
@@ -177,11 +180,12 @@ class SPHSummationODE(SPHOperation):
                 srcs = calc_data[i]['sources']
                 funcs = calc_data[i]['funcs']
                 dnum = calc_data[i]['dnum']
+                id = calc_data[i]['id']
                 
                 calc = sph.SPHCalc(particles=particles, sources=srcs,
                                    dest=dest, kernel=kernel, funcs=funcs,
                                    updates=self.updates, integrates=True,
-                                   dnum=dnum, nbr_info=True)
+                                   dnum=dnum, nbr_info=True, id=id)
                 
                 calcs.append(calc)
 
@@ -215,12 +219,13 @@ class SPHSummation(SPHOperation):
                 srcs = calc_data[i]['sources']
                 funcs = calc_data[i]['funcs']
                 dnum = calc_data[i]['dnum']
+                id = calc_data[i]['id']
                 
                 calc = sph.SPHCalc(particles=particles, sources=srcs,
                                    dest=dest, kernel=kernel, 
                                    funcs=funcs, updates=self.updates, 
                                    integrates=False,
-                                   dnum=dnum, nbr_info=True)
+                                   dnum=dnum, nbr_info=True, id=id)
 
                 calcs.append(calc)
 
@@ -254,12 +259,13 @@ class SPHAssignment(SPHOperation):
                 srcs = calc_data[i]['sources']
                 funcs = calc_data[i]['funcs']
                 dnum = calc_data[i]['dnum']
+                id = calc_data[i]['id']
                 
                 calc = sph.SPHEquation(particles=particles, sources=srcs,
                                        dest=dest, kernel=kernel, 
                                        funcs=funcs, updates=self.updates, 
                                        integrates=False, dnum=dnum,
-                                       nbr_info=False)
+                                       nbr_info=False, id=id)
 
                 calcs.append(calc)
 

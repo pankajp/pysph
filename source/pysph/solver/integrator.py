@@ -352,7 +352,7 @@ class Integrator(object):
 
         particles.barrier()
 
-        #Reset the current arrays
+        #Reset the current arrays (Required for multi step integrators)
 
         self.reset_current_arrays()
     
@@ -388,6 +388,45 @@ class Integrator(object):
         #ensure that all processors have stepped the local particles
         
         particles.barrier()
+
+    def step(self, dt):
+        """ Perform stepping for the integrating calcs """
+
+        calling_sequence = self.calling_sequence
+        ncalcs = len(self.calcs)
+        particles = self.particles
+        
+        for i in range(ncalcs):
+            calc = self.calcs[i]
+            if calc.integrates:
+                
+                updates = calc.updates
+                nupdates = calc.nupdates
+
+                #get the destination particle array for this calc
+            
+                pa = self.arrays[calc.dnum]
+
+                for j in range(nupdates):
+                    update_prop = updates[j]
+
+                    current_arr = pa.get(update_prop)
+
+                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
+                    step_array = pa.get(k_name)
+
+                    updated_array = current_arr + step_array*dt
+                    pa.set(**{update_prop:updated_array})
+
+                pass
+            pass
+
+        self.step += 1
+
+        #ensure that all processors have stepped the local particles
+
+        particles.barrier()
+
 
     def integrate(self, dt, count):
         raise NotImplementedError
@@ -590,6 +629,83 @@ class RK4Integrator(Integrator):
                     updated_array = initial_arr + (dt/6.0) *\
                         (k1_arr + 2*k2_arr + 2*k3_arr + k4_arr)
                     
+                    pa.set(**{update_prop:updated_array})
+                    pa.set(**{initial_prop:updated_array})
+
+        self.step = 1
+        self.particles.update()
+        
+############################################################################## 
+
+
+##############################################################################
+#`RK4Integrator` class 
+##############################################################################
+class PredictorCorrectorIntegrator(Integrator):
+    """ RK4 Integration of a system X' = F(X) using the scheme
+    
+    the prediction step:
+    
+    X(t + h/2) = X + h/2 * F(X)
+
+    the correction step
+    
+    X(t + h/2) = X + h/2 * F(X(t + h/2))
+
+    the final step:
+    
+    X(t + h) = 2*X(t + h/2) - X
+
+    where, `h` is the time step 
+
+    """
+
+    def __init__(self, particles, calcs):
+        Integrator.__init__(self, particles, calcs)
+
+    def integrate(self, dt):
+
+        #set the initial arrays
+
+        self.set_initial_arrays()
+
+        #predict
+            
+        self.do_step(0.5*dt)
+
+        #correct
+        
+        self.step = 1
+        self.do_step(0.5*dt)
+
+        #step
+
+        ncalcs = len(self.calcs)
+        for i in range(ncalcs):
+            calc = self.calcs[i]
+            
+            if calc.integrates:
+                updates = calc.updates
+                nupdates = calc.nupdates
+
+                #get the destination particle array for this calc
+            
+                pa = self.arrays[calc.dnum]
+
+                for j in range(nupdates):
+                    update_prop = updates[j]
+                        
+                    initial_prop = update_prop+'_0'
+                    initial_arr = pa.get(initial_prop)
+                        
+                    k1 = 'k1_'+update_prop+str(i)+str(j)
+                    
+                    k1_arr = pa.get(k1)
+
+                    current_arr = pa.get(update_prop)
+                    
+                    updated_array = 2*current_arr - initial_arr
+
                     pa.set(**{update_prop:updated_array})
                     pa.set(**{initial_prop:updated_array})
 

@@ -14,7 +14,9 @@ def elliptical_drop(tf=0.00076, dt=1e-5):
 
     #set the kernel
 
-    kernel = base.CubicSplineKernel(dim=2)
+    #kernel = base.CubicSplineKernel(dim=2)
+    #kernel = base.QuinticSplineKernel(dim=2)
+    kernel = base.WendlandQuinticSplineKernel(dim=2)
 
     #create the particle neighbor locator
 
@@ -22,6 +24,7 @@ def elliptical_drop(tf=0.00076, dt=1e-5):
 
     #set the solver
 
+    #s = solver.FluidSolver(kernel, solver.PredictorCorrectorIntegrator)
     s = solver.FluidSolver(kernel, solver.EulerIntegrator)
 
     s.set_final_time(tf)
@@ -31,7 +34,7 @@ def elliptical_drop(tf=0.00076, dt=1e-5):
     s.solve()
 
     pa = s.particles.get_named_particle_array("fluid")
-    solver.savez("drop_euler" + str(tf)+'.npz', x=pa.x, y=pa.y, p=pa.p)
+    solver.savez("drop_pc" + str(tf)+'.npz', x=pa.x, y=pa.y, p=pa.p)
 
     return s
 

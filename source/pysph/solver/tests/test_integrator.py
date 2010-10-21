@@ -1,18 +1,12 @@
 """ Tests for the integrator """
 import numpy
 
-#base imports
-from pysph.base.point import Point
-from pysph.base.particles import get_particle_array, Particles
-from pysph.base.kernels import CubicSplineKernel
-
-#solver imports
-from pysph.solver.sph_equation import SPHSimpleODE 
-from pysph.solver.integrator import Integrator, EulerIntegrator,\
-    RK2Integrator, RK4Integrator
-
-#sph imports
+#pysph imports 
+import pysph.base.api as base
+import pysph.solver.api as solver
 import pysph.sph.api as sph
+
+from pysph.solver.integrator import Integrator
 
 import unittest
 
@@ -59,32 +53,28 @@ class IntegratorTestCase(unittest.TestCase):
         p = numpy.zeros_like(x)
         e = numpy.zeros_like(x)
 
-        self.pa = pa = get_particle_array(x=x,y=y,p=p,e=e)
+        self.pa = pa = base.get_particle_array(x=x,y=y,p=p,e=e)
 
-        self.particles = particles = Particles([pa],2,False)
-        self.kernel = CubicSplineKernel(dim=2)
+        self.particles = particles = base.Particles(arrays=[pa])
+        self.kernel = base.CubicSplineKernel(dim=2)
         
-        circlex = SPHSimpleODE(sph.MoveCircleX(), 
-                               from_types=[0], on_types=[0],
-                               updates=['x','y'], id = 'circlex')
+        circlex = solver.SPHSimpleODE(sph.MoveCircleX(), 
+                                      from_types=[0], on_types=[0],
+                                      updates=['x','y'], id = 'circlex')
 
-        circley = SPHSimpleODE(sph.MoveCircleY(), 
-                               from_types=[0], on_types=[0],
-                               updates=['x','y'], id = 'circley')
+        circley = solver.SPHSimpleODE(sph.MoveCircleY(), 
+                                      from_types=[0], on_types=[0],
+                                      updates=['x','y'], id = 'circley')
         
-        circlex.particles = particles
-        circley.particles = particles
-        circlex.kernel = self.kernel
-        circley.kernel = self.kernel
-
-        self.calcx = circlex.get_calcs()
-        self.calcy = circley.get_calcs()
+        self.calcx = circlex.get_calcs(particles, self.kernel)
+        self.calcy = circley.get_calcs(particles, self.kernel)
 
         self.calcs = []
         self.calcs.extend(self.calcx)
         self.calcs.extend(self.calcy)
 
-        self.integrator = Integrator(particles=particles, calcs=self.calcs)
+        self.integrator = Integrator(particles=particles, 
+                                     calcs=self.calcs)
 
         self.setup()
 
@@ -164,8 +154,8 @@ class TestEulerIntegrator(IntegratorTestCase):
 
     """
     def setup(self):
-        self.integrator = EulerIntegrator(particles=self.particles, 
-                                          calcs = self.calcs)
+        self.integrator = solver.EulerIntegrator(particles=self.particles, 
+                                                 calcs = self.calcs)
 
         
     def test_motion(self):
@@ -220,8 +210,8 @@ class TestRK2Integrator(IntegratorTestCase):
 
     """
     def setup(self):
-        self.integrator = RK2Integrator(particles=self.particles, 
-                                        calcs = self.calcs)
+        self.integrator = solver.RK2Integrator(particles=self.particles, 
+                                               calcs = self.calcs)
 
     def test_constructor(self):
         """ Some constructor tests """
@@ -279,8 +269,8 @@ class TestRK4Integrator(IntegratorTestCase):
 
     """
     def setup(self):
-        self.integrator = RK4Integrator(particles=self.particles, 
-                                        calcs = self.calcs)
+        self.integrator = solver.RK4Integrator(particles=self.particles,
+                                               calcs = self.calcs)
 
     def test_constructor(self):
         """ Some constructor tests """
@@ -323,6 +313,59 @@ class TestRK4Integrator(IntegratorTestCase):
         for i in range(4):
             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 12)
             self.assertAlmostEqual(new_pos[i][1], exact[i][1], 12)
+
+##############################################################################
+
+class TestPredictorCorrectorIntegrator(IntegratorTestCase):
+    """ Test for the Euler Integrator
+
+    For the test, the particles (defined in the setUp of the base class)
+    are constrained to move on a circle of radius 2./pi. 
+
+    Four particles start the motion from the points ENWS and after one 
+    second, the positions should be NWSE respectively.
+
+    """
+    def setup(self):
+        self.integrator = solver.PredictorCorrectorIntegrator(
+            particles=self.particles, calcs = self.calcs)
+
+    def test_motion(self):
+        """ Perform the integration of the particle positons 
+
+        The scheme is the RK2 integrator which is first order accurate 
+        in time. The time step used for the integration is 1e-3 and thus
+        we expect the positions of the particles to be exact to within 
+        four decimal places.       
+
+        """
+
+        #setup the integrator
+
+        self.integrator.setup_integrator()
+
+        #set the time constants
+
+        t = 0; tf = 1.0; dt = 1e-3
+        
+        integrator = self.integrator
+        particles = integrator.particles
+        pa = particles.arrays[0]
+
+        original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+        exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
+
+        while t <= tf:
+            t += dt
+            particles.update()
+            integrator.integrate(dt)
+
+        new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+        self.print_pos('Predictor Corrector', original_pos, new_pos)
+
+        for i in range(4):
+            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
+            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
 
 ##############################################################################
 

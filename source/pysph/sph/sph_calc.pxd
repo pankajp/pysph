@@ -32,6 +32,7 @@ cdef class SPHBase:
     cdef public list from_types, on_types
     cdef public int nupdates
     cdef public int nsrcs
+    cdef public str id
 
     cdef NNPSManager nnps_manager
 

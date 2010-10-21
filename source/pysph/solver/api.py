@@ -1,4 +1,5 @@
-from integrator import EulerIntegrator, RK2Integrator, RK4Integrator
+from integrator import EulerIntegrator, RK2Integrator, RK4Integrator,\
+    PredictorCorrectorIntegrator
 
 from sph_equation import SPHSimpleODE, SPHSummationODE, SPHAssignment,\
     SPHSummation, SPHOperation

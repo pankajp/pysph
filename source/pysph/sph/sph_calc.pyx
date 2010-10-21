@@ -68,7 +68,8 @@ cdef class SPHBase:
 
     def __cinit__(self, particles, list sources, ParticleArray dest,
                   MultidimensionalKernel kernel, list funcs,
-                  list updates, integrates=False, dnum=0, nbr_info=True):
+                  list updates, integrates=False, dnum=0, nbr_info=True,
+                  str id = ""):
 
         """ Constructor """
 
@@ -93,6 +94,7 @@ cdef class SPHBase:
         self.setup_internals()
 
         self.dnum = dnum
+        self.id = id
 
     cpdef check_internals(self):
         """ Check for inconsistencies and set the neighbor locator. """
