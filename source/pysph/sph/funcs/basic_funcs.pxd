@@ -48,3 +48,6 @@ cdef class SPHLaplacian(SPHFunctionParticle):
 cdef class CountNeighbors(SPHFunctionParticle):
     """ Count Neighbors.  """
 
+
+cdef class KernelGradientCorrerctionTerms(SPHFunctionParticle):
+    """ Kernel Gradient Correction terms """

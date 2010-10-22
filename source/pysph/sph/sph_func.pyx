@@ -78,6 +78,8 @@ cdef class SPHFunctionParticle:
         self._src = Point()
         self._dst = Point()
 
+        self.kernel_gradient_correction = False
+
         if setup_arrays:
             self.setup_arrays()
 

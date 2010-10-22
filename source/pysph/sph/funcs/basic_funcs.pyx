@@ -348,3 +348,53 @@ cdef class CountNeighbors(SPHFunctionParticle):
         nr[0] += 1
 ###########################################################################
 
+################################################################################
+# `KernelGradientCorrerctionTerms` class.
+################################################################################
+cdef class KernelGradientCorrerctionTerms(SPHFunctionParticle):
+    """ Count Neighbors.  """
+
+    #Defined in the .pxd file
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 *args, **kwargs):
+        """ Constructor """
+
+        self.id = 'kgc'
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+
+    cdef void eval(self, int source_pid, int dest_pid, 
+                   MultidimensionalKernel kernel, double *nr, double *dnr):
+
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
+        cdef double tmp = mb/rhob
+        
+        cdef Point grad = Point()
+        cdef Point rab
+
+        self._src.x = self.s_x.data[source_pid]
+        self._src.y = self.s_y.data[source_pid]
+        self._src.z = self.s_z.data[source_pid]
+        
+        self._dst.x = self.d_x.data[dest_pid]
+        self._dst.y = self.d_y.data[dest_pid]
+        self._dst.z = self.d_z.data[dest_pid]
+
+        rab = self._dst - self._src
+
+        kernel.gradient(self._dst, self._src, h, grad)
+
+        h = 0.5*(self.s_h.data[source_pid] +
+                 self.d_h.data[dest_pid])
+
+        grad *= tmp
+        
+        nr[0] -= grad.x * rab.x * rab.x
+        nr[1] -= grad.y * rab.x * rab.y
+        nr[2] -= grad.z * rab.y * rab.y
+
+##########################################################################
+
+
+
+

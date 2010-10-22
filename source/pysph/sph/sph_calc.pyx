@@ -22,6 +22,8 @@ from pysph.base.nnps cimport NbrParticleLocatorBase
 
 from pysph.base.particle_tags cimport LocalReal, Dummy
 from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.sph.funcs.basic_funcs cimport KernelGradientCorrerctionTerms
+
 from pysph.base.carray cimport IntArray, DoubleArray
 
 ###############################################################################
@@ -69,7 +71,7 @@ cdef class SPHBase:
     def __cinit__(self, particles, list sources, ParticleArray dest,
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
-                  str id = ""):
+                  str id = "", bint kernel_gradient_correction=False):
 
         """ Constructor """
 
@@ -95,6 +97,8 @@ cdef class SPHBase:
 
         self.dnum = dnum
         self.id = id
+
+        self.kernel_gradient_correction = kernel_gradient_correction
 
     cpdef check_internals(self):
         """ Check for inconsistencies and set the neighbor locator. """
@@ -242,11 +246,20 @@ cdef class SPHCalc(SPHBase):
         cdef size_t k, s_idx
         cdef LongArray nbrs = self.nbrs
         cdef int j
+        cdef ParticleArray src
 
+        #variables for kernel gradient correction
+
+        cdef SPHFunctionParticle kgc
+        cdef double m[3], l[3]
+        cdef double a, b, d, fac
+        cdef DoubleArray l11, l12, l22
+        
         for j in range(self.nsrcs):
             
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
+            src = self.sources[j]
 
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
@@ -254,6 +267,61 @@ cdef class SPHCalc(SPHBase):
             msg = """Number of neighbors for particle %d of dest %d, from
                   source %d are %d """ %(i, self.dnum, j, nbrs.length)
 
+            #evaluate the kernel gradient correction for the particle i
+
+            if self.kernel_gradient_correction:
+                
+                #tell the function to use kernel correction
+
+                func.kernel_gradient_correction = True
+
+                #Add the matrix arrays to the dest if it does not exist
+
+                if not self.dest.properties.has_key("l1l"):
+                    self.dest.add_property({"name":"l11"})
+
+                if not self.dest.properties.has_key("l12"):
+                    self.dest.add_property({"name":"l12"})
+
+                if not self.dest.properties.has_key("l22"):
+                    self.dest.add_property({"name":"l22"})
+                
+                #Get the matrix arrays
+
+                l11 = self.dest.get_carray("l11")
+                l12 = self.dest.get_carray("l12")
+                l22 = self.dest.get_carray("l22")
+
+                #set the kernel gradient correction function
+                
+                kgc = KernelGradientCorrerctionTerms(source=src, dest=self.dest)
+                
+                #evaluate the kernel gradient correction for the particle i
+
+                for k from 0 <= k < self.nbrs.length:
+                    s_idx = self.nbrs.get(k)
+                    kgc.eval(s_idx, i, self.kernel, &m[0], &l[0])
+                    
+                #get the coefficients of the matrix
+                    
+                a = m[0]; b = m[1]; d = m[2]
+                fac = a*d - b*b
+
+                #prevent a divide by zero if the source is the dest
+
+                if not fac < 1e-16:
+                    fac = 1./fac 
+                else:
+                    func.kernel_gradient_correction = False
+                
+                #set the coefficients of the inverted matrix
+
+                l11.data[i] = fac * d
+                l12.data[i] = -fac * b
+                l22.data[i] = fac * a
+                
+            #now do the intended neighbor interaction
+                
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)
                 func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])

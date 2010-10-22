@@ -15,6 +15,7 @@ from pysph.sph.sph_func cimport SPHFunctionParticle
 cdef class SPHBase:
     """ A general purpose class for SPH calculations. """
     cdef public ParticleArray dest
+    cdef public bint kernel_gradient_correction
 
     cdef public int dnum
     cdef public bint nbr_info

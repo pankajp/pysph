@@ -27,6 +27,8 @@ cdef class SPHFunctionParticle:
     
     cdef public str name, id
 
+    cdef public bint kernel_gradient_correction	
+
     cpdef setup_arrays(self)
 
     cpdef int output_fields(self) except -1

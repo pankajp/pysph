@@ -56,7 +56,6 @@ class NeighborCount(Function):
     def get_func(self, source, dest):
         return basic.CountNeighbors(source=source, dest=dest)
 
-
 #boundary functions
 
 class MonaghanBoundaryForce(Function):
