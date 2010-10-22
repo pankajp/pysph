@@ -1,6 +1,9 @@
 # Standard imports.
 import logging
 from optparse import OptionParser
+from os.path import basename, splitext
+import sys
+
 # PySPH imports.
 from pysph.base.particles import Particles, get_particle_array
 
@@ -21,20 +24,20 @@ class Application(object):
     """Class used by any SPH application.
     """
 
-    def __init__(self, solver=None, load_balance=True):
+    def __init__(self, load_balance=True, process_cmd_line=True):
         """
         Constructor.
 
         **Parameters**
 
-         - solver - An instance of a `Solver`.  This can also be set
-                    later using the `set_solver` method.
-
          - load_balance - A boolean which determines if automatic load
                           balancing is to be performed or not.
 
+         - process_cmd_line - Do we process command line args on
+                              construction?
+
         """
-        self._solver = solver
+        self._solver = None 
         self.load_balance = load_balance
 
         # MPI related vars.
@@ -45,8 +48,18 @@ class Application(object):
             self.comm = comm = MPI.COMM_WORLD
             self.num_procs = comm.Get_size()
             self.rank = comm.Get_rank()
+        
+        self._log_levels = {'debug': logging.DEBUG,
+                           'info': logging.INFO,
+                           'warning': logging.WARNING,
+                           'error': logging.ERROR,
+                           'critical': logging.CRITICAL,
+                           'none': None}
 
         self._setup_optparse()
+        # Process command line args first, this also sets up the logging.
+        if process_cmd_line:
+            self._process_command_line()
         
     def _setup_optparse(self):
         usage = """
@@ -61,9 +74,46 @@ class Application(object):
         Below are the options you may pass.
         """
         parser = OptionParser(usage)
-        self.opt_parse = parser   
+        self.opt_parse = parser
 
-    def setup_logging(self, filename='application.log', 
+        # Add some default options.
+        parser.add_option("-b", "--no-load-balance", action="store_true",
+                         dest="no_load_balance", default=False,
+                         help="Do not perform automatic load balancing "\
+                              "for parallel runs.")
+        # -v
+        valid_vals = "Valid values: %s"%self._log_levels.keys()
+        parser.add_option("-v", "--loglevel", action="store",
+                          type="string",
+                          dest="loglevel",
+                          default='warning',
+                          help="Log-level to use for log messages. " +
+                               valid_vals)
+        # --logfile
+        parser.add_option("--logfile", action="store",
+                          type="string",
+                          dest="logfile",
+                          default=None,
+                          help="Log file to use for logging, set to "+
+                               "empty ('') for no file logging.")
+        # -l 
+        parser.add_option("-l", "--print-log", action="store_true",
+                          dest="print_log", default=False,
+                          help="Print log messages to stderr.")
+        # --final-time
+        parser.add_option("--final-time", action="store",
+                          type="float",
+                          dest="final_time",
+                          default=None,
+                          help="Total time for the simulation.")
+        # --time-step
+        parser.add_option("--time_step", action="store",
+                          type="float",
+                          dest="time_step",
+                          default=None,
+                          help="Time-step to use for the simulation.")
+
+    def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
         """Setup logging for the application.
@@ -71,7 +121,8 @@ class Application(object):
         **Parameters**
 
          - filename - The filename to log messages to.  If this is None
-                      or an empty string, no file is used.
+                      a filename is automatically chosen and if it is an
+                      empty string, no file is used.
 
          - loglevel - The logging level.
 
@@ -82,7 +133,9 @@ class Application(object):
         logger = logging.getLogger()
         logger.setLevel(loglevel)
         # Setup the log file.
-        if filename is not None and len(filename) > 0:
+        if filename is None:
+            filename = splitext(basename(sys.argv[0]))[0] + '.log'
+        if len(filename) > 0:
             lfn = filename
             if self.num_procs > 1:
                 lfn = filename + '.%d'%self.rank
@@ -91,13 +144,24 @@ class Application(object):
         if stream:
             logger.addHandler(logging.StreamHandler())
 
-    def process_command_line(self):
+    def _process_command_line(self):
         """Parse any command line arguments.  Add any new options before
-        this is called."""
+        this is called.  This also sets up the logging automatically.
+        """
         (options, args) = self.opt_parse.parse_args()
         self.options = options
         self.args = args
+        
+        # Setup logging based on command line options.
+        level = self._log_levels[options.loglevel]
 
+        if level is not None:
+            self._setup_logging(options.logfile, level,
+                                options.print_log)
+
+    ######################################################################
+    # Public interface.
+    ###################################################################### 
     def create_particles(self, callable, *args, **kw):
         """ Create particles given a callable and any arguments to it.
         This will also automatically distribute the particles among
@@ -132,6 +196,13 @@ class Application(object):
         """Set the application's solver.  This will call the solver's
         `setup_integrator` method."""
         self._solver = solver
+        dt = self.options.time_step
+        if dt is not None:
+            solver.set_time_step(dt)
+        tf = self.options.final_time
+        if tf is not None:
+            solver.set_final_time(tf)
+
         solver.setup_integrator(self.particles)
 
     def run(self):
