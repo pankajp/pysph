@@ -17,6 +17,8 @@ from pysph.base.kernels import CubicSplineKernel
 # Create the application, do this first so the application sets up the
 # logging and also gets all command line arguments.
 app = solver.Application()
+# Process command line args first, this also sets up the logging.
+app.process_command_line()
 
 # Create the particles automatically, the application calls a supplied
 # function which generates the particles.

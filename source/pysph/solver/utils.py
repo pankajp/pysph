@@ -3,9 +3,17 @@ Module contains some common functions.
 """
 
 # standard imports
-import numpy, sys, os, format
-import zipfile
-import tempfile
+import numpy
+import sys
+import os 
+import format
+
+HAS_PBAR = True
+try:
+    import progressbar
+except ImportError:
+    HAS_PBAR = False 
+
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -174,31 +182,53 @@ def _savez(file, args, kwds, compress):
 
 
 def get_distributed_particles(pa, comm, cell_size):
-    
+    # FIXME: this can be removed once the examples all use Application. 
     from pysph.parallel.load_balancer import LoadBalancer
-    num_procs=comm.Get_size()
     rank = comm.Get_rank()
-
-    n = len(pa.properties)
+    num_procs = comm.Get_size()
 
     if rank == 0:
         lb = LoadBalancer.distribute_particles(pa, num_procs=num_procs, 
-                                               cell_size=0.025)
-
-        for dest in range(1, len(lb)):
-            parr = lb[dest]
-            comm.send(parr, dest=dest)
-            for key, arr in parr.properties.iteritems():
-                comm.send((key, arr), dest=dest)
-
-        pa = lb[0]
-
+                                               cell_size=cell_size)
     else:
-        pa = comm.recv(source=0)
-        data = {}
-        for i in range(n):
-            key, arr = comm.recv(source=0)
-            data[key] = arr
-            pa.set(**data)
+        lb = None
 
-    return pa
+    particles = comm.scatter(lb, root=0)
+
+    return particles
+
+
+################################################################################
+# `PBar` class.
+################################################################################ 
+class PBar(object):
+    """A simple wrapper around the progressbar so it works if a user has
+    it installed or not.
+    """
+    def __init__(self, maxval, show=True):
+        bar = None
+        self.count = 0
+        self.maxval = maxval
+        self.show = show 
+        if HAS_PBAR and show:
+            widgets = progressbar.default_widgets + \
+                      [progressbar.ETA()]
+            bar = progressbar.ProgressBar(widgets=widgets,
+                                          maxval=maxval).start()
+        self.bar = bar
+
+    def update(self):
+        self.count += 1
+        if self.bar is not None:
+            self.bar.update(self.count)
+        elif self.show:
+            sys.stderr.write('\r%d%%'%int(self.count*100/self.maxval))
+            sys.stderr.flush()
+
+    def finish(self):
+        if self.bar is not None:
+            self.bar.finish()
+        elif self.show:
+            sys.stderr.write('\r100%\n')
+            sys.stderr.flush()
+

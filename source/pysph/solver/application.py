@@ -24,7 +24,7 @@ class Application(object):
     """Class used by any SPH application.
     """
 
-    def __init__(self, load_balance=True, process_cmd_line=True):
+    def __init__(self, load_balance=True):
         """
         Constructor.
 
@@ -32,9 +32,6 @@ class Application(object):
 
          - load_balance - A boolean which determines if automatic load
                           balancing is to be performed or not.
-
-         - process_cmd_line - Do we process command line args on
-                              construction?
 
         """
         self._solver = None 
@@ -57,10 +54,7 @@ class Application(object):
                            'none': None}
 
         self._setup_optparse()
-        # Process command line args first, this also sets up the logging.
-        if process_cmd_line:
-            self._process_command_line()
-        
+    
     def _setup_optparse(self):
         usage = """
         %prog [options] 
@@ -112,6 +106,10 @@ class Application(object):
                           dest="time_step",
                           default=None,
                           help="Time-step to use for the simulation.")
+        # -q/--quiet.
+        parser.add_option("-q", "--quiet", action="store_true",
+                         dest="quiet", default=False,
+                         help="Do not print any progress information.")
 
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
@@ -144,7 +142,10 @@ class Application(object):
         if stream:
             logger.addHandler(logging.StreamHandler())
 
-    def _process_command_line(self):
+    ######################################################################
+    # Public interface.
+    ###################################################################### 
+    def process_command_line(self):
         """Parse any command line arguments.  Add any new options before
         this is called.  This also sets up the logging automatically.
         """
@@ -159,9 +160,6 @@ class Application(object):
             self._setup_logging(options.logfile, level,
                                 options.print_log)
 
-    ######################################################################
-    # Public interface.
-    ###################################################################### 
     def create_particles(self, callable, *args, **kw):
         """ Create particles given a callable and any arguments to it.
         This will also automatically distribute the particles among
@@ -207,5 +205,5 @@ class Application(object):
 
     def run(self):
         """Run the application."""
-        self._solver.solve()
+        self._solver.solve(not self.options.quiet)
 

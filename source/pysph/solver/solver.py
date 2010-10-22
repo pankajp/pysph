@@ -1,7 +1,9 @@
 """ An implementation of a general solver base class """
 
 import logging
+from utils import PBar
 logger = logging.getLogger()
+
 
 class Solver(object):
     """ Intended as the base class for all solvers """
@@ -163,13 +165,16 @@ class Solver(object):
     def set_print_freq(self, n):
         self.pfreq = n
         
-    def solve(self):
+    def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
         tf = self.tf
         dt = self.dt
 
         t = 0
         count = 0
+        maxval = int((tf - t)/dt +1)
+        bar = PBar(maxval, show=show_progress)
+
         while t < tf:
             t += dt
             count += 1
@@ -193,8 +198,10 @@ class Solver(object):
                 func.eval(self.particles, count)
 
             logger.info("Time %f, time step %f "%(t, dt))
+            bar.update()
 
         self.t += t
+        bar.finish()
 
     def setup_solver(self):
         """ Implement the basic solvers here """
