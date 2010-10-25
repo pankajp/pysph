@@ -121,7 +121,7 @@ class Application(object):
 
         # --freq.
         parser.add_option("--freq", action="store",
-                          dest="freq", default=20,
+                          dest="freq", default=20, type="int",
                           help="Printing frequency for the output")
         
         # -d/ --detailed-output.

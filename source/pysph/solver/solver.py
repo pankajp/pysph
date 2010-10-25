@@ -208,6 +208,7 @@ class Solver(object):
             for func in self.post_step_functions:
                 func.eval(self.particles, count)
 
+
             #dump output
             if count % self.pfreq == 0:
                 self.dump_output(t)
@@ -233,10 +234,10 @@ class Solver(object):
 
         for pa in self.particles.arrays:
             name = pa.name
-            fname += name + '_' + str(t) + '.npz'
+            _fname = fname + name + '_' + str(t) + '.npz'
             
             if self.detailed_output:
-                savez(fname, dt=self.dt, **pa.properties)
+                savez(_fname, dt=self.dt, **pa.properties)
 
             else:
                 #set the default properties
@@ -256,7 +257,7 @@ class Solver(object):
                         props['z'] = pa.get('z')
                         props['w'] = pa.get('w')
 
-                savez(fname, dt=self.dt, **props)                        
+                savez(_fname, dt=self.dt, **props)                        
 
     def setup_solver(self):
         """ Implement the basic solvers here """
