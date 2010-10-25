@@ -1,9 +1,8 @@
 """ An implementation of a general solver base class """
 
-import logging
-from utils import PBar
+import logging, os
+from utils import PBar, savez_compressed, savez
 logger = logging.getLogger()
-
 
 class Solver(object):
     """ Intended as the base class for all solvers """
@@ -19,6 +18,8 @@ class Solver(object):
         self.pre_step_functions = []
         self.post_step_functions = []
         self.pfreq = 100
+
+        self.dim = kernel.dim
 
         self.pid = None
         self.setup_solver()
@@ -164,6 +165,16 @@ class Solver(object):
 
     def set_print_freq(self, n):
         self.pfreq = n
+
+    def set_output_fname(self, fname):
+        self.fname = fname    
+
+    def set_output_printing_level(self, detailed_output):
+        self.detailed_output = detailed_output
+
+    def set_output_directory(self, dir):
+        self.dir = dir
+        os.chdir(dir)
         
     def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
@@ -197,14 +208,59 @@ class Solver(object):
             for func in self.post_step_functions:
                 func.eval(self.particles, count)
 
+            #dump output
+            if count % self.pfreq == 0:
+                self.dump_output(t)
+
             logger.info("Time %f, time step %f "%(t, dt))
             bar.update()
 
         self.t += t
         bar.finish()
 
+    def dump_output(self, t):
+        """ Print output based on level of detail required
+        
+        The default detail level (low) is the integrator's calc's update 
+        property for each named particle array.
+        
+        The higher detail level dumps all partice array properties.
+        
+        """
+
+        fname = self.fname + '_' 
+        props = {}
+
+        for pa in self.particles.arrays:
+            name = pa.name
+            fname += name + '_' + str(t) + '.npz'
+            
+            if self.detailed_output:
+                savez(fname, dt=self.dt, **pa.properties)
+
+            else:
+                #set the default properties
+                props['x'] = pa.get('x')
+                props['u'] = pa.get('u')
+                props['h'] = pa.get('h')
+                props['m'] = pa.get('m')
+                props['e'] = pa.get('e')
+                props['p'] = pa.get('p')
+                props['rho'] = pa.get('rho')                
+
+                if self.dim > 1:
+                    props['y'] = pa.get('y')
+                    props['v'] = pa.get('v')                
+
+                    if self.dim > 2:
+                        props['z'] = pa.get('z')
+                        props['w'] = pa.get('w')
+
+                savez(fname, dt=self.dt, **props)                        
+
     def setup_solver(self):
         """ Implement the basic solvers here """
         pass
+
 
 ############################################################################

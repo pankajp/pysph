@@ -6,6 +6,7 @@ Module contains some common functions.
 import numpy
 import sys
 import os 
+import commands
 import format
 
 HAS_PBAR = True
@@ -200,7 +201,7 @@ def get_distributed_particles(pa, comm, cell_size):
 
 ################################################################################
 # `PBar` class.
-################################################################################ 
+############################################################################### 
 class PBar(object):
     """A simple wrapper around the progressbar so it works if a user has
     it installed or not.
@@ -230,5 +231,38 @@ class PBar(object):
             self.bar.finish()
         elif self.show:
             sys.stderr.write('\r100%\n')
+
             sys.stderr.flush()
+
+##############################################################################
+# friendly mkdir  from http://code.activestate.com/recipes/82465/.
+############################################################################## 
+def _mkdir(newdir):
+    """works the way a good mkdir should :)
+        - already exists, silently complete
+        - regular file in the way, raise an exception
+        - parent directory(ies) does not exist, make them as well
+    """
+    if os.path.isdir(newdir):
+        status, op = commands.getstatusoutput("rm -r %s"%(newdir))
+
+        if status != 0:
+            raise OSError("Could not delete contents of directory %s"%(newdir))
+
+        status, op = commands.getstatusoutput("mkdir  %s"%(newdir))
+
+        if status != 0:
+            raise OSError("Could not create directory %s"%(newdir))
+
+    elif os.path.isfile(newdir):
+        raise OSError("a file with the same name as the desired " \
+                      "dir, '%s', already exists." % newdir)
+    else:
+        status, op = commands.getstatusoutput("mkdir  %s"%(newdir))
+
+        if status != 0:
+            raise OSError("Could not create directory %s"%(newdir))
+
+
+
 

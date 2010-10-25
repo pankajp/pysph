@@ -1,8 +1,10 @@
 # Standard imports.
-import logging
+import logging, os
 from optparse import OptionParser
 from os.path import basename, splitext
 import sys
+
+from utils import _mkdir as mkdir
 
 # PySPH imports.
 from pysph.base.particles import Particles, get_particle_array
@@ -24,7 +26,7 @@ class Application(object):
     """Class used by any SPH application.
     """
 
-    def __init__(self, load_balance=True):
+    def __init__(self, load_balance=True, fname=""):
         """
         Constructor.
 
@@ -36,6 +38,7 @@ class Application(object):
         """
         self._solver = None 
         self.load_balance = load_balance
+        self.fname = fname
 
         # MPI related vars.
         self.comm = None
@@ -111,6 +114,26 @@ class Application(object):
                          dest="quiet", default=False,
                          help="Do not print any progress information.")
 
+        # -o/ --output
+        parser.add_option("-o", "--output", action="store",
+                          dest="output", default=self.fname[:-3],
+                          help="File name to use for output")
+
+        # --freq.
+        parser.add_option("--freq", action="store",
+                          dest="freq", default=20,
+                          help="Printing frequency for the output")
+        
+        # -d/ --detailed-output.
+        parser.add_option("-d", "--detailed-output", action="store_true",
+                         dest="detailed_output", default=False,
+                         help="Dump detailed output.")
+
+        # --directory
+        parser.add_option("--directory", action="store",
+                         dest="dir", default=".",
+                         help="Dump output in the specified directory.")
+
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
@@ -137,6 +160,8 @@ class Application(object):
             lfn = filename
             if self.num_procs > 1:
                 lfn = filename + '.%d'%self.rank
+            mkdir(self.options.dir)
+            os.chdir(self.options.dir)
             logging.basicConfig(level=loglevel, filename=lfn,
                                 filemode='w')
         if stream:
@@ -200,6 +225,21 @@ class Application(object):
         tf = self.options.final_time
         if tf is not None:
             solver.set_final_time(tf)
+
+        #setup the solver output file name
+        fname = self.options.output
+
+        if HAS_MPI:
+            comm = self.comm 
+            rank = self.rank
+            
+            if not self.num_procs == 0:
+                fname += '_' + str(rank)
+
+        solver.set_output_fname(fname)
+        solver.set_print_freq(self.options.freq)
+        solver.set_output_printing_level(self.options.detailed_output)
+        solver.set_output_directory(self.options.dir)
 
         solver.setup_integrator(self.particles)
 

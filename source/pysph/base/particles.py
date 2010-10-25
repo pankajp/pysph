@@ -6,7 +6,14 @@ from particle_types import ParticleType
 Fluid = ParticleType.Fluid
 Solid = ParticleType.Solid
 
-from pysph.parallel.parallel_cell import ParallelCellManager
+# MPI conditional imports
+HAS_MPI = True
+try:
+    from mpi4py import MPI
+except ImportError:
+    HAS_MPI = False
+else:
+    from pysph.parallel.parallel_cell import ParallelCellManager
 
 import numpy
 

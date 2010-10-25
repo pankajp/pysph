@@ -270,6 +270,10 @@ cdef class SPHCalc(SPHBase):
             #evaluate the kernel gradient correction for the particle i
 
             if self.kernel_gradient_correction:
+
+                #initialize the arrays
+                m[0] = m[1] = m[2] = 0.0
+                l[0] = l[1] = l[2] = 0.0
                 
                 #tell the function to use kernel correction
 

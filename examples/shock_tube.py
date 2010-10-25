@@ -10,20 +10,22 @@ rhol = 1.0, rhor = 0.25, el = 2.5, er = 1.795, pl = 1.0, pr = 0.1795
 These are obtained from the solver.shock_tube_solver.standard_shock_tube_data
 """
 import logging
+import inspect
 
 import pysph.solver.api as solver
 from pysph.base.kernels import CubicSplineKernel
 
 # Create the application, do this first so the application sets up the
 # logging and also gets all command line arguments.
-app = solver.Application()
+app = solver.Application(fname=inspect.getfile(inspect.currentframe()))
 # Process command line args first, this also sets up the logging.
 app.process_command_line()
 
 # Create the particles automatically, the application calls a supplied
 # function which generates the particles.
-particles = app.create_particles(solver.shock_tube_solver.standard_shock_tube_data,
-                                 name='fluid', type=0)
+particles = app.create_particles(
+    solver.shock_tube_solver.standard_shock_tube_data,
+    name='fluid', type=0)
 
 # Set the solver up.
 s = solver.ShockTubeSolver(CubicSplineKernel(dim=1), solver.EulerIntegrator)
@@ -41,6 +43,4 @@ app.run()
 
 # Once application has run, save the output.  This could use a lot more work.
 pa = particles.arrays[0]
-solver.savez_compressed('shock_tube_'+str(app.rank)+'.npz', 
-                         x=pa.x, p=pa.p, rho=pa.rho, u=pa.u, e=pa.e)
 
