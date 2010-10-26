@@ -57,6 +57,10 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
         
         kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+
         dot = grad.dot(vab)
         tmp = 0.5*mb*(pa/(rhoa*rhoa) + pb/(rhob*rhob))
 
@@ -121,6 +125,8 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         rab = self._dst - self._src
         test = vab.dot(rab)
+
+        grad = Point()
         
         if test < 0.0:
             gamma = self.gamma 
@@ -145,6 +151,10 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
             rhoab = 0.5 * (rhoa + rhob)
             mu = (h * test) / (rab.norm() + eta*eta*h*h)
             kernel.gradient(self._dst, self._src, h, grad)
+
+            if self.first_order_kernel_correction:
+                grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+
             prod  = (-alpha*cab*mu + beta*mu*mu)/(rhoab)
             nr[0] += 0.5 * mb * prod * vab.dot(grad)
         else:
@@ -230,8 +240,14 @@ cdef class EnergyEquation(SPHFunctionParticle):
             
             piab = -alpha*cab*mu + beta*mu*mu
             piab /= rhoab
+
+        grad = Point()
             
         kernel.gradient(self._dst, self._src, hab, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+
         tmp += piab
         
         tmp1 = vab * tmp

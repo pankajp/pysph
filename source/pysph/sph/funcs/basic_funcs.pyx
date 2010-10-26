@@ -79,6 +79,9 @@ cdef class SPH(SPHFunctionParticle):
         
         w = kernel.function(self._dst, self._src, h)
         
+        if self.first_order_kernel_correction:
+            w *= (1+self.first_order_kernel_correction_term(dest_pid))
+        
         nr[0] += w*mb*fb/rhob
 
 ###########################################################################
@@ -152,6 +155,9 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         
         temp = self.s_prop[source_pid]
         temp *= self.s_m.data[source_pid]/self.s_rho.data[source_pid]
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
             
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
@@ -224,6 +230,9 @@ cdef class SPHGrad(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
             
         kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
             
         temp = (self.s_prop[source_pid] -  self.d_prop[dest_pid])
         
@@ -319,6 +328,9 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         rab = self._dst - self._src
             
         kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
         
         dot = rab.dot(grad)            
 
@@ -392,6 +404,125 @@ cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
         nr[0] -= grad.x * rab.x * rab.x
         nr[1] -= grad.y * rab.x * rab.y
         nr[2] -= grad.z * rab.y * rab.y
+
+##########################################################################
+
+
+################################################################################
+# `FirstOrderKernelCorrectionTermsForBeta` class.
+################################################################################
+cdef class FirstOrderKernelCorrectionTermsForBeta(SPHFunctionParticle):
+    """ Kernel correction terms (Eq 14) in "Correction and
+    Stabilization of smooth particle hydrodynamics methods with
+    applications in metal forming simulations" by Javier Bonnet and
+    S. Kulasegaram
+
+    """
+
+    #Defined in the .pxd file
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 *args, **kwargs):
+        """ Constructor """
+
+        self.id = 'liu-correction'
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+
+    cdef void eval(self, int source_pid, int dest_pid, 
+                   MultidimensionalKernel kernel, double *nr, double *dnr):
+
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
+        cdef double tmp = mb/rhob
+        cdef double w
+        
+        cdef Point rab
+
+        self._src.x = self.s_x.data[source_pid]
+        self._src.y = self.s_y.data[source_pid]
+        self._src.z = self.s_z.data[source_pid]
+        
+        self._dst.x = self.d_x.data[dest_pid]
+        self._dst.y = self.d_y.data[dest_pid]
+        self._dst.z = self.d_z.data[dest_pid]
+
+        rab = self._dst - self._src
+
+        h = 0.5*(self.s_h.data[source_pid] +
+                 self.d_h.data[dest_pid])
+
+        w = kernel.function(self._dst, self._src, h)
+        tmp *= w
+
+        nr[0] += tmp * rab.x * rab.x 
+        nr[1] += tmp * rab.x * rab.y 
+        nr[2] += tmp * rab.y * rab.y 
+
+        dnr[0] -= tmp * rab.x
+        dnr[1] -= tmp * rab.y
+        dnr[2] -= tmp * rab.z
+
+##########################################################################
+
+################################################################################
+# `FirstOrderKernelCorrectionTermsForAlpha` class.
+################################################################################
+cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
+    """ Kernel correction terms (Eq 15) in "Correction and
+    Stabilization of smooth particle hydrodynamics methods with
+    applications in metal forming simulations" by Javier Bonnet and
+    S. Kulasegaram
+
+    """
+
+    #Defined in the .pxd file
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 *args, **kwargs):
+        """ Constructor """
+
+        self.id = 'liu-correction'
+        self.beta1 = "beta1"
+        self.beta2 = "beta2"
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+
+    cpdef setup_arrays(self):
+        """ Setup the arrays required to read data from source and dest. """
+
+        #Setup the basic properties like m, x rho etc.
+        SPHFunctionParticle.setup_arrays(self)
+
+        self.d_beta1 = self.dest.get_carray(self.beta1)
+        self.d_beta2 = self.dest.get_carray(self.beta2)
+
+    cdef void eval(self, int source_pid, int dest_pid, 
+                   MultidimensionalKernel kernel, double *nr, double *dnr):
+
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
+        cdef double tmp = mb/rhob
+        cdef double w, beta
+        
+        cdef Point rab
+
+        self._src.x = self.s_x.data[source_pid]
+        self._src.y = self.s_y.data[source_pid]
+        self._src.z = self.s_z.data[source_pid]
+        
+        self._dst.x = self.d_x.data[dest_pid]
+        self._dst.y = self.d_y.data[dest_pid]
+        self._dst.z = self.d_z.data[dest_pid]
+
+        beta1 = self.d_beta1.data[dest_pid]
+        beta2 = self.d_beta2.data[dest_pid]
+
+        rab = self._dst - self._src
+
+        h = 0.5*(self.s_h.data[source_pid] +
+                 self.d_h.data[dest_pid])
+
+        w = kernel.function(self._dst, self._src, h)
+        tmp *= w
+
+        nr[0] += tmp * (beta1*rab.x + beta2*rab.y)
 
 ##########################################################################
 

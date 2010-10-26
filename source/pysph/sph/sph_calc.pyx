@@ -22,7 +22,9 @@ from pysph.base.nnps cimport NbrParticleLocatorBase
 
 from pysph.base.particle_tags cimport LocalReal, Dummy
 from pysph.sph.sph_func cimport SPHFunctionParticle
-from pysph.sph.funcs.basic_funcs cimport KernelGradientCorrectionTerms
+from pysph.sph.funcs.basic_funcs cimport KernelGradientCorrectionTerms,\
+    FirstOrderKernelCorrectionTermsForBeta, \
+    FirstOrderKernelCorrectionTermsForAlpha
 
 from pysph.base.carray cimport IntArray, DoubleArray
 
@@ -71,7 +73,8 @@ cdef class SPHBase:
     def __cinit__(self, particles, list sources, ParticleArray dest,
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
-                  str id = "", bint kernel_gradient_correction=False):
+                  str id = "", bint kernel_gradient_correction=False,
+                  bint first_order_kernel_correction=False):
 
         """ Constructor """
 
@@ -99,6 +102,7 @@ cdef class SPHBase:
         self.id = id
 
         self.kernel_gradient_correction = kernel_gradient_correction
+        self.first_order_kernel_correction=first_order_kernel_correction
 
     cpdef check_internals(self):
         """ Check for inconsistencies and set the neighbor locator. """
@@ -230,9 +234,160 @@ cdef class SPHBase:
             else:
                 output3.data[i] = nr[2]/dnr[2]
 
-    cdef eval(self, size_t i, double* nr, double* dnr, 
+    cdef eval(self, size_t i, double* nr, double* dnr,
               bint exclude_self):
-        raise NotImplementedError, 'SPHBase::eval'    
+        raise NotImplementedError, 'SPHBase::eval'
+
+    cdef evaluate_kgc_terms(self, size_t i, int j):
+        """ Evaluate the kernel gradient correction terms """
+        
+        cdef SPHFunctionParticle kgc
+        cdef double m[3], l[3]
+        cdef double a, b, d, fac
+        cdef DoubleArray l11, l12, l22
+
+        cdef ParticleArray src = self.sources[j]
+        cdef SPHFunctionParticle func = self.sph_funcs[j]
+
+        #initialize the arrays
+        m[0] = m[1] = m[2] = 0.0
+        l[0] = l[1] = l[2] = 0.0
+
+        #Add the matrix arrays to the dest if it does not exist
+        
+        if not self.dest.properties.has_key("l1l"):
+            self.dest.add_property({"name":"l11"})
+            
+        if not self.dest.properties.has_key("l12"):
+            self.dest.add_property({"name":"l12"})
+
+        if not self.dest.properties.has_key("l22"):
+            self.dest.add_property({"name":"l22"})
+                
+        #Get the matrix arrays
+
+        l11 = self.dest.get_carray("l11")
+        l12 = self.dest.get_carray("l12")
+        l22 = self.dest.get_carray("l22")
+
+        #set the kernel gradient correction function
+                
+        kgc = KernelGradientCorrectionTerms(source=src, dest=self.dest)
+                
+        #evaluate the kernel gradient correction for the particle i
+
+        for k from 0 <= k < self.nbrs.length:
+            s_idx = self.nbrs.get(k)
+            kgc.eval(s_idx, i, self.kernel, &m[0], &l[0])
+                    
+        #get the coefficients of the matrix
+                    
+        a = m[0]; b = m[1]; d = m[2]
+        fac = a*d - b*b
+
+        #prevent a divide by zero if the source is the dest
+
+        if not fac < 1e-16:
+            fac = 1./fac 
+        else:
+            func.kernel_gradient_correction = False
+                    
+        #set the coefficients of the inverted matrix
+                
+        l11.data[i] = fac * d
+        l12.data[i] = -fac * b
+        l22.data[i] = fac * a
+
+    cdef evaluate_first_order_kernel_correction_terms(self, size_t i, int j):
+        """ Evaluate the kernel correction terms """
+        
+        cdef SPHFunctionParticle fbeta, falpha
+        cdef double m[3], l[3], aj, bj
+        cdef double a, b, d, det, l11, l12, l22, b1, b2, b3
+
+        cdef ParticleArray src = self.sources[j]
+        cdef SPHFunctionParticle func = self.funcs[j]
+
+        cdef DoubleArray beta1, beta2, beta3, alpha
+
+        #Add the vector arrays to the dest if it does not exist
+        
+        if not self.dest.properties.has_key("beta1"):
+            self.dest.add_property({"name":"beta1"})
+            func.d_beta1 = self.dest.get_carray("beta1")
+            
+        if not self.dest.properties.has_key("beta2"):
+            self.dest.add_property({"name":"beta2"})
+            func.d_beta2 = self.dest.get_carray("beta2")
+
+        if not self.dest.properties.has_key("beta3"):
+            self.dest.add_property({"name":"beta3"})
+            func.d_beta3 = self.dest.get_carray("beta3")
+
+        if not self.dest.properties.has_key("alpha"):
+            self.dest.add_property({"name":"alpha"})
+            func.d_alpha = self.dest.get_carray("alpha")
+                
+        #Get the vector arrays
+
+        beta1 = self.dest.get_carray("beta1")
+        beta2 = self.dest.get_carray("beta2")
+        beta3 = self.dest.get_carray("beta3")
+        alpha = self.dest.get_carray("alpha")
+
+        #set the kernel gradient correction function
+                
+        fbeta = FirstOrderKernelCorrectionTermsForBeta(source=src,
+                                                       dest=self.dest)
+
+        falpha = FirstOrderKernelCorrectionTermsForAlpha(source=src, 
+                                                         dest=self.dest)
+                
+        #evaluate the beta term for particle i
+
+        m[0] = m[1] = m[2] = 0.0
+        l[0] = l[1] = l[2] = 0.0
+        aj = 0.0; bj = 0.0
+
+        for k from 0 <= k < self.nbrs.length:
+            s_idx = self.nbrs.get(k)
+            fbeta.eval(s_idx, i, self.kernel, &m[0], &l[0])
+                    
+        #get the coefficients of the matrix
+                    
+        a = m[0]; b = m[1]; d = m[2]
+        b1 = l[0]; b2 = l[1]; b3 = l[2]
+
+        det = a*d - b*b
+
+        #prevent a divide by zero if the source is the dest
+
+        if not (-1e-15 < det < 1e-15):
+            det = 1./det 
+        else:
+            func.first_order_kernel_correction = False
+                    
+        #set the coefficients of the inverted matrix
+            
+        l11 = det*d; l12 = det * -b; l22 = det * a
+
+        #set the beta vector for particle i
+            
+        beta1.data[i] = l11*b1 + l12*b2
+        beta2.data[i] = l12*b1 + l22*b2
+
+        #evaluate the alpha term for particle i
+
+        for k from 0 <= k < self.nbrs.length:
+            s_idx = self.nbrs.get(k)
+            falpha.eval(s_idx, i, self.kernel, &aj, &bj)
+                    
+        #prevent a divide by zero if the source is the dest
+            
+        if -1e-15 < aj < 1e-15:
+            alpha.data[i] = 1.0
+        else:
+            alpha.data[i] = 1./(aj)
 
 #############################################################################
 
@@ -246,20 +401,11 @@ cdef class SPHCalc(SPHBase):
         cdef size_t k, s_idx
         cdef LongArray nbrs = self.nbrs
         cdef int j
-        cdef ParticleArray src
-
-        #variables for kernel gradient correction
-
-        cdef SPHFunctionParticle kgc
-        cdef double m[3], l[3]
-        cdef double a, b, d, fac
-        cdef DoubleArray l11, l12, l22
-        
+       
         for j in range(self.nsrcs):
             
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
-            src = self.sources[j]
 
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
@@ -268,64 +414,17 @@ cdef class SPHCalc(SPHBase):
                   source %d are %d """ %(i, self.dnum, j, nbrs.length)
 
             #evaluate the kernel gradient correction for the particle i
-
             if self.kernel_gradient_correction:
-
-                #initialize the arrays
-                m[0] = m[1] = m[2] = 0.0
-                l[0] = l[1] = l[2] = 0.0
-                
-                #tell the function to use kernel correction
-
                 func.kernel_gradient_correction = True
+                self.evaluate_kgc_terms(i, j)
 
-                #Add the matrix arrays to the dest if it does not exist
-
-                if not self.dest.properties.has_key("l1l"):
-                    self.dest.add_property({"name":"l11"})
-
-                if not self.dest.properties.has_key("l12"):
-                    self.dest.add_property({"name":"l12"})
-
-                if not self.dest.properties.has_key("l22"):
-                    self.dest.add_property({"name":"l22"})
-                
-                #Get the matrix arrays
-
-                l11 = self.dest.get_carray("l11")
-                l12 = self.dest.get_carray("l12")
-                l22 = self.dest.get_carray("l22")
-
-                #set the kernel gradient correction function
-                
-                kgc = KernelGradientCorrectionTerms(source=src, dest=self.dest)
-                
-                #evaluate the kernel gradient correction for the particle i
-
-                for k from 0 <= k < self.nbrs.length:
-                    s_idx = self.nbrs.get(k)
-                    kgc.eval(s_idx, i, self.kernel, &m[0], &l[0])
-                    
-                #get the coefficients of the matrix
-                    
-                a = m[0]; b = m[1]; d = m[2]
-                fac = a*d - b*b
-
-                #prevent a divide by zero if the source is the dest
-
-                if not fac < 1e-16:
-                    fac = 1./fac 
-                else:
-                    func.kernel_gradient_correction = False
-                
-                #set the coefficients of the inverted matrix
-
-                l11.data[i] = fac * d
-                l12.data[i] = -fac * b
-                l22.data[i] = fac * a
+            #evaluate the first order kernel correction terms if requested
+            if self.first_order_kernel_correction:
+                func.first_order_kernel_correction = True
+                self.evaluate_first_order_kernel_correction_terms(i,j)
                 
             #now do the intended neighbor interaction
-                
+
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)
                 func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])

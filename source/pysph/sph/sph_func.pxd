@@ -20,7 +20,8 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_h, s_m, s_rho, d_h, d_m, d_rho
     cdef public DoubleArray s_x, s_y, s_z, d_x, d_y, d_z
     cdef public DoubleArray s_u, s_v, s_w, d_u, d_v, d_w
-    cdef public DoubleArray s_p, s_e, d_p, d_e
+    cdef public DoubleArray s_p, s_e, d_p, d_e	
+    cdef public DoubleArray d_beta1, d_beta2, d_beta3, d_alpha
 
     cdef public Point _src
     cdef public Point _dst
@@ -28,6 +29,7 @@ cdef class SPHFunctionParticle:
     cdef public str name, id
 
     cdef public bint kernel_gradient_correction	
+    cdef public bint first_order_kernel_correction
 
     cpdef setup_arrays(self)
 
@@ -35,6 +37,8 @@ cdef class SPHFunctionParticle:
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    MultidimensionalKernel kernel, double *nr, double *dnr)
+
+    cdef double first_order_kernel_correction_term(self, int dest_pid)
 
 ################################################################################
 # `SPHFunctionPoint` class.

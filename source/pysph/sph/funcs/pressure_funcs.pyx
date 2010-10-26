@@ -45,6 +45,9 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         temp *= mb
         
         kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
         
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
@@ -141,7 +144,12 @@ cdef class MomentumEquation(SPHFunctionParticle):
         tmp += piab
         tmp *= -mb
 
+        grad = Point()
+
         kernel.gradient(self._dst, self._src, hab, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
 
         nr[0] += tmp*grad.x
         nr[1] += tmp*grad.y

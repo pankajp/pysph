@@ -47,11 +47,13 @@ class SPHOperation(object):
 
     """
     
-    def __init__(self, function, on_types, updates, id, from_types=[]):
+    def __init__(self, function, on_types, updates, id, from_types=[],
+                 first_order_correction=False):
         self.from_types = from_types
         self.on_types = on_types
         self.function = function
         self.updates = updates
+        self.first_order_correction=first_order_correction
         self.id = id
 
     def get_calc_data(self, particles):
@@ -60,7 +62,7 @@ class SPHOperation(object):
         arrays = particles.arrays
         narrays = len(arrays)
         calc_data = {}
-        
+
         for i in range(narrays):
 
             #get the destination array
@@ -76,6 +78,7 @@ class SPHOperation(object):
                 if self.from_types == []:
                     func = self.function.get_func(dst, dst)
                     func.id = self.id
+                    func.first_order_kernel_correction=self.first_order_correction
                     calc_data[i]['funcs'] = [func]
                     calc_data[i]['id'] = self.id
 
@@ -94,7 +97,8 @@ class SPHOperation(object):
 
                             func = self.function.get_func(source=src, dest=dst)
                             func.id = self.id
-                     
+                            func.first_order_kernel_correction=self.first_order_correction
+
                         #make an entry in the dict for this destination
 
                             calc_data[i]['sources'].append(src)
@@ -142,11 +146,12 @@ class SPHSimpleODE(SPHOperation):
                 dnum = calc_data[i]['dnum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHEquation(particles=particles, sources=srcs,
-                                       dest=dest, kernel=kernel, 
-                                       funcs=funcs, updates=self.updates,
-                                       integrates=True, dnum=dnum,
-                                       nbr_info=False, id=id)
+                calc = sph.SPHEquation(
+                    particles=particles, sources=srcs, dest=dest, 
+                    kernel=kernel, funcs=funcs, updates=self.updates,
+                    integrates=True, dnum=dnum, nbr_info=False, id=id,
+                    first_order_kernel_correction=self.first_order_correction)
+
                 calcs.append(calc)
 
         return calcs
@@ -182,10 +187,12 @@ class SPHSummationODE(SPHOperation):
                 dnum = calc_data[i]['dnum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHCalc(particles=particles, sources=srcs,
-                                   dest=dest, kernel=kernel, funcs=funcs,
-                                   updates=self.updates, integrates=True,
-                                   dnum=dnum, nbr_info=True, id=id)
+                calc = sph.SPHCalc(
+                    particles=particles, sources=srcs,
+                    dest=dest, kernel=kernel, funcs=funcs,
+                    updates=self.updates, integrates=True,
+                    dnum=dnum, nbr_info=True, id=id,
+                    first_order_kernel_correction=self.first_order_correction)
                 
                 calcs.append(calc)
 
@@ -209,7 +216,7 @@ class SPHSummation(SPHOperation):
     def get_calcs(self, particles, kernel):
         calcs = []
         calc_data = self.get_calc_data(particles)
-        
+
         arrays = particles.arrays
         narrays = len(arrays)
 
@@ -221,11 +228,13 @@ class SPHSummation(SPHOperation):
                 dnum = calc_data[i]['dnum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHCalc(particles=particles, sources=srcs,
-                                   dest=dest, kernel=kernel, 
-                                   funcs=funcs, updates=self.updates, 
-                                   integrates=False,
-                                   dnum=dnum, nbr_info=True, id=id)
+                calc = sph.SPHCalc(
+                    particles=particles, sources=srcs,
+                    dest=dest, kernel=kernel, 
+                    funcs=funcs, updates=self.updates, 
+                    integrates=False,
+                    dnum=dnum, nbr_info=True, id=id,
+                    first_order_kernel_correction=self.first_order_correction)
 
                 calcs.append(calc)
 
@@ -261,11 +270,13 @@ class SPHAssignment(SPHOperation):
                 dnum = calc_data[i]['dnum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHEquation(particles=particles, sources=srcs,
-                                       dest=dest, kernel=kernel, 
-                                       funcs=funcs, updates=self.updates, 
-                                       integrates=False, dnum=dnum,
-                                       nbr_info=False, id=id)
+                calc = sph.SPHEquation(
+                    particles=particles, sources=srcs,
+                    dest=dest, kernel=kernel, 
+                    funcs=funcs, updates=self.updates, 
+                    integrates=False, dnum=dnum,
+                    nbr_info=False, id=id,
+                    first_order_kernel_correction=self.first_order_correction)
 
                 calcs.append(calc)
 

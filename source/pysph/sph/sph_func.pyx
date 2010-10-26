@@ -79,6 +79,7 @@ cdef class SPHFunctionParticle:
         self._dst = Point()
 
         self.kernel_gradient_correction = False
+        self.first_order_kernel_correction = False
 
         if setup_arrays:
             self.setup_arrays()
@@ -120,6 +121,17 @@ cdef class SPHFunctionParticle:
 
     cpdef int output_fields(self) except -1:
         raise NotImplementedError, 'SPHFunctionParticle::output_fields'
+
+    cdef double first_order_kernel_correction_term(self, int dest_pid):
+        """ Return the first order correction term for an interaction """
+
+        cdef double beta1, beta2
+        cdef Point rab = self._dst - self._src
+        
+        beta1 = self.d_beta1.data[dest_pid]
+        beta2 = self.d_beta2.data[dest_pid]        
+
+        return beta1*rab.x + beta2*rab.y
 
     def py_eval(self, int source_pid, int dest_pid,
                 MultidimensionalKernel kernel):

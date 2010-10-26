@@ -137,6 +137,11 @@ class Application(object):
                          dest="output_dir", default=".",
                          help="Dump output in the specified directory.")
 
+        # --kernel-correction
+        parser.add_option("--kernel-correction", action="store_true",
+                          dest="kernel_correction", default=False,
+                          help="Use first order kernel correction.")
+
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
@@ -245,6 +250,7 @@ class Application(object):
         solver.set_print_freq(self.options.freq)
         solver.set_output_printing_level(self.options.detailed_output)
         solver.set_output_directory(self.options.output_dir)
+        solver.set_kernel_correction(self.options.kernel_correction)
 
         solver.setup_integrator(self.particles)
 

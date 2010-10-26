@@ -49,6 +49,10 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
 
         w = kernel.function(self._dst, self._src, h)
+
+        if self.first_order_kernel_correction:
+            w *= (1 + self.first_order_kernel_correction_term(dest_pid))
+
         temp = mb * w/rhoab
 
         nr[0] += temp*Vba.x*self.eps
@@ -89,7 +93,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         The expression used is:
 
         """
-        cdef Point grad
+        cdef Point grad = Point()
         cdef double h=0.5*(self.s_h.data[source_pid] + \
                                self.d_h.data[dest_pid])
 
@@ -124,6 +128,10 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
 
         kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.first_order_kernel_correction:
+            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+        
         temp = Vab.dot(grad)
         
         nr[0] += temp*mb

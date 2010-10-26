@@ -176,6 +176,12 @@ class Solver(object):
     def set_output_directory(self, dir):
         self.dir = dir
         os.chdir(os.curdir+dir)
+
+    def set_kernel_correction(self, flag):
+        self.kernel_correction = flag
+        
+        for id in self.operation_dict:
+            self.operation_dict[id].first_order_correction=flag
         
     def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
