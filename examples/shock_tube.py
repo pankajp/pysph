@@ -10,14 +10,13 @@ rhol = 1.0, rhor = 0.25, el = 2.5, er = 1.795, pl = 1.0, pr = 0.1795
 These are obtained from the solver.shock_tube_solver.standard_shock_tube_data
 """
 import logging
-import inspect
 
 import pysph.solver.api as solver
 from pysph.base.kernels import CubicSplineKernel
 
 # Create the application, do this first so the application sets up the
 # logging and also gets all command line arguments.
-app = solver.Application(fname=inspect.getfile(inspect.currentframe()))
+app = solver.Application()
 # Process command line args first, this also sets up the logging.
 app.process_command_line()
 

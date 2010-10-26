@@ -1,6 +1,7 @@
 """ An implementation of a general solver base class """
 
-import logging, os
+import logging
+import os
 from utils import PBar, savez_compressed, savez
 logger = logging.getLogger()
 
@@ -174,7 +175,7 @@ class Solver(object):
 
     def set_output_directory(self, dir):
         self.dir = dir
-        os.chdir(dir)
+        os.chdir(os.curdir+dir)
         
     def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
@@ -225,7 +226,7 @@ class Solver(object):
         The default detail level (low) is the integrator's calc's update 
         property for each named particle array.
         
-        The higher detail level dumps all partice array properties.
+        The higher detail level dumps all particle array properties.
         
         """
 

@@ -349,9 +349,9 @@ cdef class CountNeighbors(SPHFunctionParticle):
 ###########################################################################
 
 ################################################################################
-# `KernelGradientCorrerctionTerms` class.
+# `KernelGradientCorrectionTerms` class.
 ################################################################################
-cdef class KernelGradientCorrerctionTerms(SPHFunctionParticle):
+cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
     """ Count Neighbors.  """
 
     #Defined in the .pxd file

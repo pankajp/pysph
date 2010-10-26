@@ -15,7 +15,6 @@ from basic_generators import LineGenerator, CuboidGenerator, RectangleGenerator
 from particle_generator import DensityComputationMode, MassComputationMode, \
     ParticleGenerator
 
-from utils import savez, savez_compressed, get_distributed_particles
-from utils import _mkdir as mkdir
+from utils import savez, savez_compressed, get_distributed_particles, mkdir
 
 from application import Application

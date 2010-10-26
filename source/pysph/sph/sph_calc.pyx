@@ -22,7 +22,7 @@ from pysph.base.nnps cimport NbrParticleLocatorBase
 
 from pysph.base.particle_tags cimport LocalReal, Dummy
 from pysph.sph.sph_func cimport SPHFunctionParticle
-from pysph.sph.funcs.basic_funcs cimport KernelGradientCorrerctionTerms
+from pysph.sph.funcs.basic_funcs cimport KernelGradientCorrectionTerms
 
 from pysph.base.carray cimport IntArray, DoubleArray
 
@@ -298,7 +298,7 @@ cdef class SPHCalc(SPHBase):
 
                 #set the kernel gradient correction function
                 
-                kgc = KernelGradientCorrerctionTerms(source=src, dest=self.dest)
+                kgc = KernelGradientCorrectionTerms(source=src, dest=self.dest)
                 
                 #evaluate the kernel gradient correction for the particle i
 

@@ -237,7 +237,7 @@ class PBar(object):
 ##############################################################################
 # friendly mkdir  from http://code.activestate.com/recipes/82465/.
 ############################################################################## 
-def _mkdir(newdir):
+def mkdir(newdir):
     """works the way a good mkdir should :)
         - already exists, silently complete
         - regular file in the way, raise an exception

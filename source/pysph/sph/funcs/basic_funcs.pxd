@@ -49,5 +49,5 @@ cdef class CountNeighbors(SPHFunctionParticle):
     """ Count Neighbors.  """
 
 
-cdef class KernelGradientCorrerctionTerms(SPHFunctionParticle):
+cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """

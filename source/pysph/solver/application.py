@@ -4,7 +4,7 @@ from optparse import OptionParser
 from os.path import basename, splitext
 import sys
 
-from utils import _mkdir as mkdir
+from utils import mkdir
 
 # PySPH imports.
 from pysph.base.particles import Particles, get_particle_array
@@ -18,7 +18,6 @@ except ImportError:
 else:
     from pysph.parallel.load_balancer import LoadBalancer
 
-
 ##############################################################################
 # `Application` class.
 ############################################################################## 
@@ -26,7 +25,7 @@ class Application(object):
     """Class used by any SPH application.
     """
 
-    def __init__(self, load_balance=True, fname=""):
+    def __init__(self, load_balance=True, fname=None):
         """
         Constructor.
 
@@ -38,6 +37,10 @@ class Application(object):
         """
         self._solver = None 
         self.load_balance = load_balance
+
+        if fname == None:
+            fname = sys.argv[0].split('.')[0]
+
         self.fname = fname
 
         # MPI related vars.
@@ -116,10 +119,10 @@ class Application(object):
 
         # -o/ --output
         parser.add_option("-o", "--output", action="store",
-                          dest="output", default=self.fname[:-3],
+                          dest="output", default=self.fname,
                           help="File name to use for output")
 
-        # --freq.
+        # --output-freq.
         parser.add_option("--freq", action="store",
                           dest="freq", default=20, type="int",
                           help="Printing frequency for the output")
@@ -131,7 +134,7 @@ class Application(object):
 
         # --directory
         parser.add_option("--directory", action="store",
-                         dest="dir", default=".",
+                         dest="output_dir", default=".",
                          help="Dump output in the specified directory.")
 
     def _setup_logging(self, filename=None, 
@@ -160,8 +163,6 @@ class Application(object):
             lfn = filename
             if self.num_procs > 1:
                 lfn = filename + '.%d'%self.rank
-            mkdir(self.options.dir)
-            os.chdir(self.options.dir)
             logging.basicConfig(level=loglevel, filename=lfn,
                                 filemode='w')
         if stream:
@@ -180,6 +181,10 @@ class Application(object):
         
         # Setup logging based on command line options.
         level = self._log_levels[options.loglevel]
+
+        #create and move to the output directory specified
+        mkdir(options.output_dir)
+        os.chdir(options.output_dir)
 
         if level is not None:
             self._setup_logging(options.logfile, level,
@@ -239,7 +244,7 @@ class Application(object):
         solver.set_output_fname(fname)
         solver.set_print_freq(self.options.freq)
         solver.set_output_printing_level(self.options.detailed_output)
-        solver.set_output_directory(self.options.dir)
+        solver.set_output_directory(self.options.output_dir)
 
         solver.setup_integrator(self.particles)
 
