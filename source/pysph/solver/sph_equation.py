@@ -150,7 +150,8 @@ class SPHSimpleODE(SPHOperation):
                     particles=particles, sources=srcs, dest=dest, 
                     kernel=kernel, funcs=funcs, updates=self.updates,
                     integrates=True, dnum=dnum, nbr_info=False, id=id,
-                    first_order_kernel_correction=self.first_order_correction)
+                    first_order_kernel_correction=self.first_order_correction,
+                    dim=kernel.dim)
 
                 calcs.append(calc)
 
@@ -192,7 +193,8 @@ class SPHSummationODE(SPHOperation):
                     dest=dest, kernel=kernel, funcs=funcs,
                     updates=self.updates, integrates=True,
                     dnum=dnum, nbr_info=True, id=id,
-                    first_order_kernel_correction=self.first_order_correction)
+                    first_order_kernel_correction=self.first_order_correction,
+                    dim=kernel.dim)
                 
                 calcs.append(calc)
 
@@ -234,7 +236,8 @@ class SPHSummation(SPHOperation):
                     funcs=funcs, updates=self.updates, 
                     integrates=False,
                     dnum=dnum, nbr_info=True, id=id,
-                    first_order_kernel_correction=self.first_order_correction)
+                    first_order_kernel_correction=self.first_order_correction,
+                    dim=kernel.dim)
 
                 calcs.append(calc)
 
@@ -276,7 +279,8 @@ class SPHAssignment(SPHOperation):
                     funcs=funcs, updates=self.updates, 
                     integrates=False, dnum=dnum,
                     nbr_info=False, id=id,
-                    first_order_kernel_correction=self.first_order_correction)
+                    first_order_kernel_correction=self.first_order_correction,
+                    dim=kernel.dim)
 
                 calcs.append(calc)
 

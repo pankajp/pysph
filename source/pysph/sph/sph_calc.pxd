@@ -37,6 +37,8 @@ cdef class SPHBase:
     cdef public int nsrcs
     cdef public str id
 
+    cdef public int dim
+
     cdef NNPSManager nnps_manager
 
     cpdef sph(self, str output_array1=*, str output_array2=*, 
@@ -48,7 +50,7 @@ cdef class SPHBase:
     cdef eval(self, size_t i, double* nr, double* dnr, bint exclude_self)
     cdef setup_internals(self)
     cdef evaluate_kgc_terms(self, size_t i, int j)
-    cdef evaluate_first_order_kernel_correction_terms(self, size_t i, int j)
+    cdef evaluate_first_order_kernel_correction_terms(self, bint exclude_self=*)
     cpdef check_internals(self)
     
 cdef class SPHCalc(SPHBase):

@@ -74,7 +74,8 @@ cdef class SPHBase:
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
-                  bint first_order_kernel_correction=False):
+                  bint first_order_kernel_correction=False,
+                  int dim = 1):
 
         """ Constructor """
 
@@ -95,14 +96,16 @@ cdef class SPHBase:
         self.updates = updates
         self.nupdates = len(updates)
 
-        self.check_internals()
-        self.setup_internals()
-
         self.dnum = dnum
         self.id = id
 
         self.kernel_gradient_correction = kernel_gradient_correction
         self.first_order_kernel_correction=first_order_kernel_correction
+
+        self.dim = dim
+
+        self.check_internals()
+        self.setup_internals()
 
     cpdef check_internals(self):
         """ Check for inconsistencies and set the neighbor locator. """
@@ -152,6 +155,7 @@ cdef class SPHBase:
         """ Set the update update arrays and neighbor locators """
 
         cdef FixedDestNbrParticleLocator loc
+        cdef SPHFunctionParticle func
         cdef int nsrcs = self.nsrcs
         cdef ParticleArray src
         cdef int i
@@ -167,6 +171,30 @@ cdef class SPHBase:
             logger.info('Using locator : %s, %s, %s'%(src.name, 
                                                      self.dest.name, loc))
             self.nbr_locators.append(loc)
+
+
+        #set the kernel correction arrays if reqired
+
+        if self.first_order_kernel_correction:
+
+            if not self.dest.properties.has_key('beta1'):
+                self.dest.add_property({'name':"beta1"})
+            
+            if not self.dest.properties.has_key('beta2'):
+                self.dest.add_property({'name':"beta2"})
+
+            if not self.dest.properties.has_key('beta3'):
+                self.dest.add_property({'name':"beta3"})
+            
+            if not self.dest.properties.has_key('alpha'):
+                self.dest.add_property({'name':"alpha"})
+
+            for i in range(nsrcs):
+                func = self.funcs[i]
+                func.d_beta1 = self.dest.get_carray("beta1")
+                func.d_beta2 = self.dest.get_carray("beta2")
+                func.d_beta3 = self.dest.get_carray("beta3")
+                func.d_alpha = self.dest.get_carray("alpha")
             
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 
@@ -207,6 +235,10 @@ cdef class SPHBase:
 
         cdef LongArray tag_arr = self.dest.get_carray('tag')
         cdef long* tag = tag_arr.get_data_ptr()
+
+        #evaluate kernel correction terms if requested
+        if self.first_order_kernel_correction and self.nbr_info:
+            self.evaluate_first_order_kernel_correction_terms(exclude_self)
 
         #loop over all particles
 
@@ -283,6 +315,7 @@ cdef class SPHBase:
         #get the coefficients of the matrix
                     
         a = m[0]; b = m[1]; d = m[2]
+        
         fac = a*d - b*b
 
         #prevent a divide by zero if the source is the dest
@@ -298,96 +331,111 @@ cdef class SPHBase:
         l12.data[i] = -fac * b
         l22.data[i] = fac * a
 
-    cdef evaluate_first_order_kernel_correction_terms(self, size_t i, int j):
+    cdef evaluate_first_order_kernel_correction_terms(self, 
+                                                      bint exclude_self=False):
         """ Evaluate the kernel correction terms """
         
-        cdef SPHFunctionParticle fbeta, falpha
+        cdef SPHFunctionParticle fbeta, falpha, func
         cdef double m[3], l[3], aj, bj
         cdef double a, b, d, det, l11, l12, l22, b1, b2, b3
 
-        cdef ParticleArray src = self.sources[j]
-        cdef SPHFunctionParticle func = self.funcs[j]
+        cdef size_t np = self.dest.get_number_of_particles()
+        cdef long dest_pid, source_pid
+        cdef size_t i, k, s_idx
+        cdef int j
+
+        cdef ParticleArray src
+        cdef FixedDestNbrParticleLocator loc
 
         cdef DoubleArray beta1, beta2, beta3, alpha
 
-        #Add the vector arrays to the dest if it does not exist
-        
-        if not self.dest.properties.has_key("beta1"):
-            self.dest.add_property({"name":"beta1"})
-            func.d_beta1 = self.dest.get_carray("beta1")
-            
-        if not self.dest.properties.has_key("beta2"):
-            self.dest.add_property({"name":"beta2"})
-            func.d_beta2 = self.dest.get_carray("beta2")
+        cdef LongArray nbrs = self.nbrs
 
-        if not self.dest.properties.has_key("beta3"):
-            self.dest.add_property({"name":"beta3"})
-            func.d_beta3 = self.dest.get_carray("beta3")
-
-        if not self.dest.properties.has_key("alpha"):
-            self.dest.add_property({"name":"alpha"})
-            func.d_alpha = self.dest.get_carray("alpha")
-                
-        #Get the vector arrays
+        cdef LongArray tag_arr = self.dest.get_carray('tag')
+        cdef long* tag = tag_arr.get_data_ptr()
 
         beta1 = self.dest.get_carray("beta1")
         beta2 = self.dest.get_carray("beta2")
         beta3 = self.dest.get_carray("beta3")
         alpha = self.dest.get_carray("alpha")
 
-        #set the kernel gradient correction function
+        for i from 0 <= i < np:
+
+            if tag[i] == LocalReal:
+
+                m[0] = m[1] = m[2] = 0.0
+                l[0] = l[1] = l[2] = 0.0
+
+                #evaluate the beta terms for particle i
+                for j in range(self.nsrcs):
+            
+                    func = self.funcs[j]
+                    loc  = self.nbr_locators[j]
+                    src = self.sources[j]
+
+                    nbrs.reset()
+                    loc.get_nearest_particles(i, nbrs, exclude_self)
+  
+                    #set the kernel gradient correction function
+                    
+                    fbeta=FirstOrderKernelCorrectionTermsForBeta(
+                        source=src, dest=self.dest)
+
+                    for k from 0 <= k < self.nbrs.length:
+                        s_idx = self.nbrs.get(k)
+                        fbeta.eval(s_idx, i, self.kernel, &m[0], &l[0])
+
+                #get the coefficients of the matrix
                 
-        fbeta = FirstOrderKernelCorrectionTermsForBeta(source=src,
-                                                       dest=self.dest)
+                a = m[0]; b = m[1]; d = m[2]
+                b1 = l[0]; b2 = l[1]; b3 = l[2]
 
-        falpha = FirstOrderKernelCorrectionTermsForAlpha(source=src, 
-                                                         dest=self.dest)
+                if self.dim == 1:
+                    d = 1.0
                 
-        #evaluate the beta term for particle i
+                det = a*d - b*b
 
-        m[0] = m[1] = m[2] = 0.0
-        l[0] = l[1] = l[2] = 0.0
-        aj = 0.0; bj = 0.0
+                #prevent a divide by zero if the source is the dest
 
-        for k from 0 <= k < self.nbrs.length:
-            s_idx = self.nbrs.get(k)
-            fbeta.eval(s_idx, i, self.kernel, &m[0], &l[0])
-                    
-        #get the coefficients of the matrix
-                    
-        a = m[0]; b = m[1]; d = m[2]
-        b1 = l[0]; b2 = l[1]; b3 = l[2]
-
-        det = a*d - b*b
-
-        #prevent a divide by zero if the source is the dest
-
-        if not (-1e-15 < det < 1e-15):
-            det = 1./det 
-        else:
-            func.first_order_kernel_correction = False
-                    
-        #set the coefficients of the inverted matrix
+                if not (-1e-15 < det < 1e-15):
+                    det = 1./det 
+                else:
+                    func.first_order_kernel_correction = False
+                        
+                #set the coefficients of the inverted matrix
             
-        l11 = det*d; l12 = det * -b; l22 = det * a
+                l11 = det*d; l12 = det * -b; l22 = det * a
 
-        #set the beta vector for particle i
+                #set the beta vector for particle i
+
+                beta1.data[i] = l11*b1 + l12*b2
+                beta2.data[i] = l12*b1 + l22*b2
+        
+                aj = 0.0; bj = 0.0
+                #evaluate the alpha terms for particle i
+                for j in range(self.nsrcs):
             
-        beta1.data[i] = l11*b1 + l12*b2
-        beta2.data[i] = l12*b1 + l22*b2
+                    func = self.funcs[j]
+                    loc  = self.nbr_locators[j]
+                    src = self.sources[j]
+                
+                    nbrs.reset()
+                    loc.get_nearest_particles(i, nbrs, exclude_self)
+  
+                    #set the alpha correction function
 
-        #evaluate the alpha term for particle i
-
-        for k from 0 <= k < self.nbrs.length:
-            s_idx = self.nbrs.get(k)
-            falpha.eval(s_idx, i, self.kernel, &aj, &bj)
-                    
-        #prevent a divide by zero if the source is the dest
-            
-        if -1e-15 < aj < 1e-15:
-            alpha.data[i] = 1.0
-        else:
-            alpha.data[i] = 1./(aj)
+                    falpha=FirstOrderKernelCorrectionTermsForAlpha(
+                        source=src, dest=self.dest)
+                
+                    for k from 0 <= k < nbrs.length:
+                        s_idx = self.nbrs.get(k)
+                        falpha.eval(s_idx, i, self.kernel, &aj, &bj)
+    
+                #prevent a divide by zero if the source is the dest
+                if -1e-15 < aj < 1e-15:
+                    alpha.data[i] = 1.0
+                else:
+                    alpha.data[i] = 1./(aj)
 
 #############################################################################
 
@@ -417,13 +465,6 @@ cdef class SPHCalc(SPHBase):
             if self.kernel_gradient_correction:
                 func.kernel_gradient_correction = True
                 self.evaluate_kgc_terms(i, j)
-
-            #evaluate the first order kernel correction terms if requested
-            if self.first_order_kernel_correction:
-                func.first_order_kernel_correction = True
-                self.evaluate_first_order_kernel_correction_terms(i,j)
-                
-            #now do the intended neighbor interaction
 
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)

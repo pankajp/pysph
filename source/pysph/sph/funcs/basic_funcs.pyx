@@ -521,8 +521,8 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
 
         w = kernel.function(self._dst, self._src, h)
         tmp *= w
-
-        nr[0] += tmp * (beta1*rab.x + beta2*rab.y)
+        
+        nr[0] += tmp * (1 + (beta1*rab.x + beta2*rab.y))
 
 ##########################################################################
 
