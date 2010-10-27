@@ -7,7 +7,7 @@ import numpy
 import sys
 import os 
 import commands
-import format
+from numpy.lib import format
 
 HAS_PBAR = True
 try:

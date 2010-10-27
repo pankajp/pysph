@@ -7,7 +7,7 @@ import unittest
 import numpy
 
 # local imports
-from pysph.sph.density_funcs import SPHRho3D
+from pysph.sph.funcs.density_funcs import SPHRho, SPHDensityRate
 from pysph.base.particle_array import ParticleArray
 from pysph.base.kernels import Poly6Kernel, CubicSplineKernel
 

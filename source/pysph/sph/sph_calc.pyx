@@ -36,9 +36,9 @@ cdef class SPHBase:
     
     Members:
     --------
-    source -- the source particlel array
+    source -- the source particle array
     dest -- the destination particles array
-    func -- the function to use betwenn the source and destination
+    func -- the function to use between the source and destination
     nbr_loc -- a list of neighbor locator for each (source, dest)
     kernel -- the multi-dimensional kernel to use
     nnps_manager -- the NNPSManager for the neighbor locator
@@ -51,7 +51,7 @@ cdef class SPHBase:
     
     The particle array should define a flag `bflag` to indicate if a particle
     is a solid of fluid particle. The function can in turn distinguish 
-    between these particles and deciide wehter to include the influence 
+    between these particles and decide whether to include the influence 
     or not.
 
     The base class and the subclass `SPHFluidSolid` assume that the 

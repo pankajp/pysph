@@ -44,7 +44,7 @@ cdef class SPHFunctionParticle:
 # `SPHFunctionPoint` class.
 ################################################################################
 cdef class SPHFunctionPoint:
-    cdef public ParticleArray array
+    cdef public ParticleArray source
     cdef public str h, m, rho, p, e, x, y, z, u, v, w
     cdef public str tmpx, tmpy, tmpz
         

@@ -1,6 +1,5 @@
-# cython: profile=True
 #include for malloc
-include "libc/stdlib.pxd"
+from stdlib cimport *
 
 cimport numpy
 
@@ -25,7 +24,7 @@ cdef class SPHFunctionParticle:
 
     All source arrays are prefixed with a "s_". All destination arrays are
     prefixed by a "d_". For example the mass property of the source will be in
-    the s_mass array.
+    the s_m array.
 
     """
     def __init__(self, ParticleArray source, ParticleArray dest,
@@ -163,8 +162,10 @@ cdef class SPHFunctionPoint:
     def __init__(self, ParticleArray array, bint setup_arrays=True, 
                  *args, **kwargs):
 
+        self.source = array
+        
         #Default properties
-        self.mass = 'm'
+        self.m = 'm'
         self.rho = 'rho'
         self.h = 'h'
         self.p = 'p'
@@ -216,22 +217,10 @@ cdef class SPHFunctionPoint:
         self.s_v = self.source.get_carray(self.v)
         self.s_w = self.source.get_carray(self.w)
         self.s_h = self.source.get_carray(self.h)
-        self.s_m = self.source.get_carray(self.mass)
+        self.s_m = self.source.get_carray(self.m)
         self.s_rho = self.source.get_carray(self.rho)
         self.s_p = self.source.get_carray(self.p)
         self.s_e = self.source.get_carray(self.e)
-
-        self.d_x = self.dest.get_carray(self.x)
-        self.d_y = self.dest.get_carray(self.y)
-        self.d_z = self.dest.get_carray(self.z)
-        self.d_u = self.dest.get_carray(self.u)
-        self.d_v = self.dest.get_carray(self.v)
-        self.d_w = self.dest.get_carray(self.w)
-        self.d_h = self.dest.get_carray(self.h)
-        self.d_m = self.dest.get_carray(self.mass)
-        self.d_rho = self.dest.get_carray(self.rho)
-        self.d_p = self.dest.get_carray(self.p)
-        self.d_e = self.dest.get_carray(self.e)
 
 
     cdef void eval(self, Point pnt, int dest_pid, 
@@ -265,7 +254,7 @@ cdef class SPHFunctionPoint:
 
         self.eval(pnt, dest_pid, kernel, _nr, _dnr)
 
-        for i from 0 <= i <  self.output_fields():
+        for i in range(self.output_fields()):
             nr[i] += _nr[i]
             dnr[i] += _dnr[i]
 
