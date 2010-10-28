@@ -121,7 +121,19 @@ cdef class SPHFunctionParticle:
     cpdef int output_fields(self) except -1:
         raise NotImplementedError, 'SPHFunctionParticle::output_fields'
 
-    cdef double first_order_kernel_correction_term(self, int dest_pid):
+    cdef double rkpm_first_order_kernel_correction(self, int dest_pid):
+        """ Return the first order correction term for an interaction """
+
+        cdef double beta1, beta2, alpha
+        cdef Point rab = self._dst - self._src
+        
+        beta1 = self.d_beta1.data[dest_pid]
+        beta2 = self.d_beta2.data[dest_pid]
+        alpha = self.d_alpha.data[dest_pid]
+
+        return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
+
+    cdef double rkpm_first_order_gradient_correction(self, int dest_pid):
         """ Return the first order correction term for an interaction """
 
         cdef double beta1, beta2, alpha

@@ -75,7 +75,7 @@ cdef class SPHBase:
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
-                  bint first_order_kernel_correction=False,
+                  bint rkpm_first_order_correction=False,
                   int dim = 1):
 
         """ Constructor """
@@ -101,7 +101,7 @@ cdef class SPHBase:
         self.id = id
 
         self.kernel_gradient_correction = kernel_gradient_correction
-        self.first_order_kernel_correction=first_order_kernel_correction
+        self.rkpm_first_order_correction = rkpm_first_order_correction
 
         self.dim = dim
 
@@ -173,10 +173,9 @@ cdef class SPHBase:
                                                      self.dest.name, loc))
             self.nbr_locators.append(loc)
 
-
         #set the kernel correction arrays if reqired
 
-        if self.first_order_kernel_correction:
+        if self.rkpm_first_order_correction:
 
             if not self.dest.properties.has_key('rkpm_beta1'):
                 self.dest.add_property({'name':"rkpm_beta1"})
@@ -210,6 +209,7 @@ cdef class SPHBase:
 
             for i in range(nsrcs):
                 func = self.funcs[i]
+                func.rkpm_first_order_correction = True
                 func.d_rkpm_beta1 = self.dest.get_carray("rkpm_beta1")
                 func.d_rkpm_beta2 = self.dest.get_carray("rkpm_beta2")
                 func.d_rkpm_beta3 = self.dest.get_carray("rkpm_beta3")
@@ -262,8 +262,9 @@ cdef class SPHBase:
         cdef long* tag = tag_arr.get_data_ptr()
 
         #evaluate kernel correction terms if requested
-        if self.first_order_kernel_correction and self.nbr_info:
-            self.evaluate_first_order_kernel_correction_terms(exclude_self)
+        if self.rkpm_first_order_correction and self.nbr_info:
+            self.evaluate_evaluate_rkpm_first_order_correction_terms(
+                exclude_self)
 
         #loop over all particles
 
@@ -356,8 +357,9 @@ cdef class SPHBase:
         l12.data[i] = -fac * b
         l22.data[i] = fac * a
 
-    cdef evaluate_first_order_kernel_correction_terms(self, 
-                                                      bint exclude_self=False):
+    cdef evaluate_rkpm_first_order_correction_terms(
+        self,  bint exclude_self=False):
+
         """ Evaluate the kernel correction terms """
         
         cdef SPHFunctionParticle fbeta, falpha, fmatgrad, fvecgrad, func
@@ -477,8 +479,8 @@ cdef class SPHBase:
 
                     #set the beta vector for particle i
 
-                    #beta1.data[i] = l11*b1 + l12*b2
-                    #beta2.data[i] = l12*b1 + l22*b2
+                    beta1.data[i] = l11*b1 + l12*b2
+                    beta2.data[i] = l12*b1 + l22*b2
                     
                     dadx = matg1[0]; dady = matg1[1]; dbdx = matg1[2]
                     dbdy = matg2[0]; dddx = matg2[1]; dddy = matg2[2]
@@ -544,7 +546,7 @@ cdef class SPHBase:
                         dalphady.data[i] = aj[2]/(aj[0]*aj[0])
 
                 else:
-                    func.first_order_kernel_correction = False
+                    func.rkpm_first_order_correction = False
                         
 
 #############################################################################

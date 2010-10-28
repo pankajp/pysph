@@ -37,6 +37,7 @@ cdef class SPHFunctionParticle:
 
     cdef public bint kernel_gradient_correction	
     cdef public bint first_order_kernel_correction
+    cdef public bint rkpm_first_order_correction
 
     cpdef setup_arrays(self)
 
@@ -45,7 +46,9 @@ cdef class SPHFunctionParticle:
     cdef void eval(self, int source_pid, int dest_pid, 
                    MultidimensionalKernel kernel, double *nr, double *dnr)
 
-    cdef double first_order_kernel_correction_term(self, int dest_pid)
+    cdef double rkpm_first_order_kernel_correction(self, int dest_pid)
+
+    cdef double rkpm_first_order_gradient_correction(self, int dest_pid)
 
 ################################################################################
 # `SPHFunctionPoint` class.

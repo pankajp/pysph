@@ -181,7 +181,7 @@ class Solver(object):
         self.kernel_correction = flag
         
         for id in self.operation_dict:
-            self.operation_dict[id].first_order_correction=flag
+            self.operation_dict[id].rkpm_first_order_correction=flag
         
     def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
