@@ -52,9 +52,16 @@ cdef class CountNeighbors(SPHFunctionParticle):
 cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """
 
-cdef class FirstOrderKernelCorrectionTermsForBeta(SPHFunctionParticle):
+cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """
 
-cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
+cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """		
     cdef public str beta1, beta2
+
+cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
+    """ Kernel Gradient Correction terms """		
+    
+cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
+    """ Kernel Gradient Correction terms """		
+

@@ -215,7 +215,6 @@ class Solver(object):
             for func in self.post_step_functions:
                 func.eval(self.particles, count)
 
-
             #dump output
             if count % self.pfreq == 0:
                 self.dump_output(t)

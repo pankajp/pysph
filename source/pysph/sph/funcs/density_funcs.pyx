@@ -24,7 +24,7 @@ cdef class SPHRho(SPHFunctionParticle):
         w = kernel.function(self._dst, self._src, h)
 
         if self.first_order_kernel_correction:
-            w *= (1 + self.first_order_kernel_correction_term(dest_pid))
+            w *= (self.first_order_kernel_correction_term(dest_pid))
 
         nr[0] += w*self.s_m.data[source_pid]
 ###############################################################################

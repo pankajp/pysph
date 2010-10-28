@@ -137,8 +137,8 @@ class Application(object):
                          dest="output_dir", default=".",
                          help="Dump output in the specified directory.")
 
-        # --kernel-correction
-        parser.add_option("--kernel-correction", action="store_true",
+        # -k/--kernel-correction
+        parser.add_option("-k", "--kernel-correction", action="store_true",
                           dest="kernel_correction", default=False,
                           help="Use first order kernel correction.")
 

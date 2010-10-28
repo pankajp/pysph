@@ -80,7 +80,7 @@ cdef class SPH(SPHFunctionParticle):
         w = kernel.function(self._dst, self._src, h)
         
         if self.first_order_kernel_correction:
-            w *= (1+self.first_order_kernel_correction_term(dest_pid))
+            w *= self.first_order_kernel_correction_term(dest_pid)
         
         nr[0] += w*mb*fb/rhob
 
@@ -409,9 +409,9 @@ cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
 
 
 ################################################################################
-# `FirstOrderKernelCorrectionTermsForBeta` class.
+# `FirstOrderCorrectionMatrix` class.
 ################################################################################
-cdef class FirstOrderKernelCorrectionTermsForBeta(SPHFunctionParticle):
+cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
     """ Kernel correction terms (Eq 14) in "Correction and
     Stabilization of smooth particle hydrodynamics methods with
     applications in metal forming simulations" by Javier Bonnet and
@@ -466,7 +466,7 @@ cdef class FirstOrderKernelCorrectionTermsForBeta(SPHFunctionParticle):
 ################################################################################
 # `FirstOrderKernelCorrectionTermsForAlpha` class.
 ################################################################################
-cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
+cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
     """ Kernel correction terms (Eq 15) in "Correction and
     Stabilization of smooth particle hydrodynamics methods with
     applications in metal forming simulations" by Javier Bonnet and
@@ -480,8 +480,14 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
         """ Constructor """
 
         self.id = 'liu-correction'
-        self.beta1 = "beta1"
-        self.beta2 = "beta2"
+        self.beta1 = "rkpm_beta1"
+        self.beta2 = "rkpm_beta2"
+        self.alpha = "rkpm_alpha"
+        self.dbeta1dx = "rkpm_dbeta1dx"
+        self.dbeta1dy = "rkpm_dbeta1dy"
+        self.dbeta2dx = "rkpm_dbeta2dx"
+        self.dbeta2dy = "rkpm_dbeta2dy"
+
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cpdef setup_arrays(self):
@@ -490,8 +496,13 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
         #Setup the basic properties like m, x rho etc.
         SPHFunctionParticle.setup_arrays(self)
 
-        self.d_beta1 = self.dest.get_carray(self.beta1)
-        self.d_beta2 = self.dest.get_carray(self.beta2)
+        self.rkpm_d_beta1 = self.dest.get_carray(self.beta1)
+        self.rkpm_d_beta2 = self.dest.get_carray(self.beta2)
+        self.rkpm_d_alpha = self.dest.get_carray(self.alpha)
+        self.rkpm_d_dbeta1dx = self.dest.get_carray(self.dbeta1dx)
+        self.rkpm_d_dbeta1dy = self.dest.get_carray(self.dbeta1dy)
+        self.rkpm_d_dbeta2dx = self.dest.get_carray(self.dbeta2dx)
+        self.rkpm_d_dbeta2dy = self.dest.get_carray(self.dbeta2dy)
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    MultidimensionalKernel kernel, double *nr, double *dnr):
@@ -501,7 +512,7 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
         cdef double tmp = mb/rhob
         cdef double w, beta
         
-        cdef Point rab
+        cdef Point rab, grad
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -511,8 +522,16 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        beta1 = self.d_beta1.data[dest_pid]
-        beta2 = self.d_beta2.data[dest_pid]
+        beta1 = self.rkpm_d_beta1.data[dest_pid]
+        beta2 = self.rkpm_d_beta2.data[dest_pid]
+
+        dbeta1dx = self.rkpm_d_dbeta1dx[dest_pid]
+        dbeta1dy = self.rkpm_d_dbeta2dy[dest_pid]
+
+        dbeta2dx = self.rkpm_d_dbeta2dx[dest_pid]
+        dbeta2dy = self.rkpm_d_dbeta2dy[dest_pid]
+
+        alpha = self.rkpm_d_alpha[dest_pid]
 
         rab = self._dst - self._src
 
@@ -520,12 +539,118 @@ cdef class FirstOrderKernelCorrectionTermsForAlpha(SPHFunctionParticle):
                  self.d_h.data[dest_pid])
 
         w = kernel.function(self._dst, self._src, h)
-        tmp *= w
+        w *= tmp
         
-        nr[0] += tmp * (1 + (beta1*rab.x + beta2*rab.y))
+        grad = Point()
+        kernel.gradient(self._dst, self._src, h, grad)
+        
+        nr[0] += w * (1 + (beta1*rab.x + beta2*rab.y))
+
+        dnr[0] += -tmp*grad.x
+        dnr[1] += -tmp*grad.y
+        dnr[2] += -tmp*grad.z
+
+################################################################################
+# `FirstOrderCorrectionMatrixGradient` class.
+################################################################################
+cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
+    """ Kernel correction terms (Eq 15) in "Correction and
+    Stabilization of smooth particle hydrodynamics methods with
+    applications in metal forming simulations" by Javier Bonnet and
+    S. Kulasegaram
+
+    """
+
+    cdef void eval(self, int source_pid, int dest_pid, 
+                   MultidimensionalKernel kernel, double *nr, double *dnr):
+
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
+        cdef double tmp = mb/rhob
+        cdef double w, beta, Vb
+        
+        cdef Point rab, grad
+
+        self._src.x = self.s_x.data[source_pid]
+        self._src.y = self.s_y.data[source_pid]
+        self._src.z = self.s_z.data[source_pid]
+        
+        self._dst.x = self.d_x.data[dest_pid]
+        self._dst.y = self.d_y.data[dest_pid]
+        self._dst.z = self.d_z.data[dest_pid]
+
+        rab = self._dst - self._src
+
+        h = 0.5*(self.s_h.data[source_pid] +
+                 self.d_h.data[dest_pid])
+
+        w = kernel.function(self._dst, self._src, h)
+        Vb = mb/rhob
+
+        grad = Point()
+        kernel.gradient(self._dst, self._src, h, grad)
+        
+        nr[0] += 2*Vb*w*rab.x + Vb*rab.x*rab.x*grad.x
+
+        nr[1] += Vb*rab.x*rab.x*grad.y
+
+        nr[2] += Vb*w*rab.y + Vb*rab.y*rab.x*grad.x
+
+        dnr[0] += Vb*rab.x*(rab.y*grad.y + w)
+
+        dnr[1] += Vb*rab.y*rab.y*grad.x
+
+        dnr[2] += 2*Vb*rab.y*w + Vb*rab.y*rab.y*grad.y
 
 ##########################################################################
 
+################################################################################
+# `FirstOrderCorrectionVectorGradient` class.
+################################################################################
+cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
+    """ Kernel correction terms (Eq 15) in "Correction and
+    Stabilization of smooth particle hydrodynamics methods with
+    applications in metal forming simulations" by Javier Bonnet and
+    S. Kulasegaram
 
+    """
 
+    #Defined in the .pxd file
+    cdef void eval(self, int source_pid, int dest_pid, 
+                   MultidimensionalKernel kernel, double *nr, double *dnr):
 
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
+        cdef double tmp = mb/rhob
+        cdef double w, Vb
+        
+        cdef Point rab, grad
+
+        self._src.x = self.s_x.data[source_pid]
+        self._src.y = self.s_y.data[source_pid]
+        self._src.z = self.s_z.data[source_pid]
+        
+        self._dst.x = self.d_x.data[dest_pid]
+        self._dst.y = self.d_y.data[dest_pid]
+        self._dst.z = self.d_z.data[dest_pid]
+
+        rab = self._dst - self._src
+
+        h = 0.5*(self.s_h.data[source_pid] +
+                 self.d_h.data[dest_pid])
+
+        w = kernel.function(self._dst, self._src, h)
+        Vb = mb/rhob        
+        
+        grad = Point()
+        kernel.gradient(self._dst, self._src, h, grad)
+        
+        nr[0] += -Vb*rab.x*grad.x - Vb*w
+
+        nr[1] += -Vb*rab.x*grad.y
+
+        nr[2] += -Vb*rab.y*grad.x
+
+        dnr[0] += -Vb*rab.y*grad.y - Vb*w
+
+##########################################################################

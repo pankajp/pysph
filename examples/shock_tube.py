@@ -25,6 +25,8 @@ app.process_command_line()
 particles = app.create_particles(
     solver.shock_tube_solver.standard_shock_tube_data,
     name='fluid', type=0)
+pa = particles.arrays[0]
+print pa.rho
 
 # Set the solver up.
 s = solver.ShockTubeSolver(CubicSplineKernel(dim=1), solver.EulerIntegrator)
@@ -43,3 +45,4 @@ app.run()
 # Once application has run, save the output.  This could use a lot more work.
 pa = particles.arrays[0]
 
+print pa.rho
