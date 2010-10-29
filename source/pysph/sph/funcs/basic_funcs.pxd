@@ -57,7 +57,8 @@ cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
 
 cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """		
-    cdef public str beta1, beta2
+    cdef public str beta1, beta2, alpha, dbeta1dx, dbeta1dy
+    cdef public str dbeta2dx, dbeta2dy	 
 
 cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """		

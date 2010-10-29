@@ -202,7 +202,7 @@ cdef class SPHBase:
                 self.dest.add_property({"name":"rkpm_dbeta1dy"})
 
             if not self.dest.properties.has_key("rkpm_beta2dx"):
-                self.dest.add_property({"name":"rkpm_dbeta2dy"})
+                self.dest.add_property({"name":"rkpm_dbeta2dx"})
 
             if not self.dest.properties.has_key("rkpm_dbeta2dy"):
                 self.dest.add_property({"name":"rkpm_dbeta2dy"})
@@ -210,16 +210,19 @@ cdef class SPHBase:
             for i in range(nsrcs):
                 func = self.funcs[i]
                 func.rkpm_first_order_correction = True
-                func.d_rkpm_beta1 = self.dest.get_carray("rkpm_beta1")
-                func.d_rkpm_beta2 = self.dest.get_carray("rkpm_beta2")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_beta3")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_alpha")
-                func.d_rkpm_beta1 = self.dest.get_carray("rkpm_dalphadx")
-                func.d_rkpm_beta2 = self.dest.get_carray("rkpm_dalphady")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_dbeta1dx")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_dbeta1dy")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_dbeta2dx")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_dbeta2dy")
+
+                func.rkpm_d_beta1 = self.dest.get_carray("rkpm_beta1")
+                func.rkpm_d_beta2 = self.dest.get_carray("rkpm_beta2")
+                func.rkpm_d_alpha = self.dest.get_carray("rkpm_alpha")
+
+                func.rkpm_d_dalphadx = self.dest.get_carray("rkpm_dalphadx")
+                func.rkpm_d_dalphady = self.dest.get_carray("rkpm_dalphady")
+
+                func.rkpm_d_dbeta1dx = self.dest.get_carray("rkpm_dbeta1dx")
+                func.rkpm_d_dbeta1dy = self.dest.get_carray("rkpm_dbeta1dy")
+
+                func.rkpm_d_dbeta2dx = self.dest.get_carray("rkpm_dbeta2dx")
+                func.rkpm_d_dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
             
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 
@@ -263,7 +266,7 @@ cdef class SPHBase:
 
         #evaluate kernel correction terms if requested
         if self.rkpm_first_order_correction and self.nbr_info:
-            self.evaluate_evaluate_rkpm_first_order_correction_terms(
+            self.evaluate_rkpm_first_order_correction_terms(
                 exclude_self)
 
         #loop over all particles
@@ -475,13 +478,14 @@ cdef class SPHBase:
                     
                     #set the coefficients of the inverted matrix
             
-                    l11 = det*d; l12 = det * -b; l22 = det * a
+                    l11 = one_by_det*d; l12 = one_by_det * -b
+                    l22 = one_by_det * a
 
                     #set the beta vector for particle i
 
-                    beta1.data[i] = l11*b1 + l12*b2
-                    beta2.data[i] = l12*b1 + l22*b2
-                    
+                    #beta1.data[i] = l11*b1 + l12*b2
+                    #beta2.data[i] = l12*b1 + l22*b2
+
                     dadx = matg1[0]; dady = matg1[1]; dbdx = matg1[2]
                     dbdy = matg2[0]; dddx = matg2[1]; dddy = matg2[2]
                     
@@ -502,7 +506,7 @@ cdef class SPHBase:
                     tmpdy = det*(d*db1dy + b1*dddy - b*db2dy - b2*dbdy) -\
                         ddetdy*(d*b1 - b*b2)
 
-                    tmpdy *= (one_by_det*one_by_det)                    
+                    tmpdy *= (one_by_det*one_by_det)
                     dbeta1dy.data[i] = tmpdy
 
                     #evaluate dbeta2dx
@@ -517,8 +521,8 @@ cdef class SPHBase:
                         ddetdx*(a*b2 - b*b1)
                     
                     tmpdy *= (one_by_det*one_by_det)
-                    dbeta2dy.data[i] = tmpdx                    
-                   
+                    dbeta2dy.data[i] = tmpdx
+
                     for j in range(self.nsrcs):
             
                         func = self.funcs[j]
@@ -536,7 +540,7 @@ cdef class SPHBase:
                         for k from 0 <= k < nbrs.length:
                             s_idx = self.nbrs.get(k)
                             falpha.eval(s_idx, i, self.kernel, &aj[0], &bj[0])
-                            
+                    
                     #prevent a divide by zero if the source is the dest
                     if -1e-15 < aj[0] < 1e-15:
                         alpha.data[i] = 1.0
@@ -544,6 +548,8 @@ cdef class SPHBase:
                         alpha.data[i] = 1./(aj[0])
                         dalphadx.data[i] = aj[1]/(aj[0]*aj[0])
                         dalphady.data[i] = aj[2]/(aj[0]*aj[0])
+
+                    print self.id, i, aj[0]
 
                 else:
                     func.rkpm_first_order_correction = False

@@ -23,9 +23,9 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_p, s_e, d_p, d_e	
 
     cdef public DoubleArray rkpm_d_beta1, rkpm_d_beta2, rkpm_d_beta3
-    cdef public DoubleArray rkpm_d_alpha, rkpm_d_alphadx, rkpm_d_alphady
-    cdef public DoubleArray rkpm_d_beta1dx, rkpm_dbeta1dy
-    cdef public DoubleArray rkpm_d_beta2dx, rkpm_dbeta2dy
+    cdef public DoubleArray rkpm_d_alpha, rkpm_d_dalphadx, rkpm_d_dalphady
+    cdef public DoubleArray rkpm_d_dbeta1dx, rkpm_d_dbeta1dy
+    cdef public DoubleArray rkpm_d_dbeta2dx, rkpm_d_dbeta2dy
     
     cdef public DoubleArray d_beta1, d_beta2, d_beta3, d_alpha
     cdef public DoubleArray d_alpha_grad1, d_alpha_grad2, d_alpha_grad3
