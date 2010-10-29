@@ -54,7 +54,7 @@ cdef class XSPHCorrection(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            dnr[0] += w*mb/self.s_rho.data[source_pid]
 
         temp = mb * w/rhoab
 
@@ -136,7 +136,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
         temp = Vab.dot(grad)
         

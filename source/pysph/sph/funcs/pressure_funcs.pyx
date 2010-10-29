@@ -50,8 +50,8 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
-        
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
         nr[2] += temp*grad.z
@@ -155,7 +155,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
         nr[0] += tmp*grad.x
         nr[1] += tmp*grad.y

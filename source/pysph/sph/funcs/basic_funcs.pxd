@@ -49,7 +49,7 @@ cdef class CountNeighbors(SPHFunctionParticle):
     """ Count Neighbors.  """
 
 
-cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
+cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """
 
 cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):

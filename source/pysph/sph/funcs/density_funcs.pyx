@@ -11,6 +11,9 @@ cdef class SPHRho(SPHFunctionParticle):
 
         cdef double h = 0.5*(self.s_h.data[source_pid] + \
                                  self.d_h.data[dest_pid])
+
+        cdef double mb = self.s_m.data[source_pid]
+        cdef double rhob = self.s_rho.data[source_pid]
         cdef double w
 
         self._src.x = self.s_x.data[source_pid]
@@ -27,7 +30,7 @@ cdef class SPHRho(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            dnr[0] += w*mb/rhob
 
         nr[0] += w*self.s_m.data[source_pid]
 ###############################################################################
@@ -70,7 +73,7 @@ cdef class SPHDensityRate(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
         nr[0] += vel.dot(grad)*self.s_m.data[source_pid]
 

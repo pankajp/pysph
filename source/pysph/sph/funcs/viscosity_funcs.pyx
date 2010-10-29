@@ -79,7 +79,7 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
                 pass
             
             if self.bonnet_and_lok_correction:
-                pass
+                self.bonnet_and_lok_gradient_correction(dest_pid, grad)        
 
             muab = h*vab.dot(rab)/(rab.norm() + 0.01*h*h) 
 
@@ -165,7 +165,7 @@ cdef class MorrisViscosity(SPHFunctionParticle):
             pass
             
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
         dot = rab.dot(grad)
             

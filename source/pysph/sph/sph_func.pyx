@@ -148,17 +148,38 @@ cdef class SPHFunctionParticle:
 
         return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
 
-    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid):
-        """ Return the first order correction term for an interaction """
+    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
+                                                   Point grad):
+        """ Correct the gradient of the kernel """
 
-        cdef double beta1, beta2, alpha
-        cdef Point rab = self._dst - self._src
+        cdef double x, y, z
+
+        cdef double a33a22, a32a23, a33a12, a32a13, a23a12, a22a13
+
+        cdef double a33a21, a31a23, a33a11, a31a13, a23a11, a21a13
         
-        beta1 = self.d_beta1.data[dest_pid]
-        beta2 = self.d_beta2.data[dest_pid]
-        alpha = self.d_alpha.data[dest_pid]
+        cdef double a32a21, a31a22, a32a11, a31a12, a22a11, a21a12
 
-        return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
+        cdef double l11, l12, l13, l21, l22, l23, l31, l32, l33
+
+        l11 = self.bl_l11.data[dest_pid]
+        l12 = self.bl_l12.data[dest_pid]
+        l13 = self.bl_l13.data[dest_pid]
+        l22 = self.bl_l22.data[dest_pid]
+        l23 = self.bl_l23.data[dest_pid]
+        l33 = self.bl_l33.data[dest_pid]
+
+        l21 = self.bl_l12.data[dest_pid]
+        l31 = self.bl_l13.data[dest_pid]
+        l32 = self.bl_l23.data[dest_pid]
+
+        x = grad.x; y = grad.y; z = grad.z
+
+        grad.x = l11*x + l12*y + l13*z
+        
+        grad.y = l21*x + l22*y + l23*z
+
+        grad.z = l31*x + l32*y + l33*z        
 
     def py_eval(self, int source_pid, int dest_pid,
                 MultidimensionalKernel kernel):

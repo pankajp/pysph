@@ -29,8 +29,8 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray rkpm_dbeta1dx, rkpm_dbeta1dy
     cdef public DoubleArray rkpm_dbeta2dx, rkpm_dbeta2dy
 
-    #bonnet and lok correction terms
-    cdef public DoubleArray l11, l12, l22
+    #bonnet and lok correction terms ONLY FOR THE DESTINATION!!!
+    cdef public DoubleArray bl_l11, bl_l12, bl_l13, bl_l22, bl_l23, bl_l33
     
     cdef public Point _src
     cdef public Point _dst
@@ -51,7 +51,8 @@ cdef class SPHFunctionParticle:
 
     cdef double rkpm_first_order_gradient_correction(self, int dest_pid)
 
-    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid)
+    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
+                                                   Point grad)
 
 ################################################################################
 # `SPHFunctionPoint` class.

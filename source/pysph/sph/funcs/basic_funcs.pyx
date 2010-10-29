@@ -83,7 +83,7 @@ cdef class SPH(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            dnr[0] += w*mb/rhob
         
         nr[0] += w*mb*fb/rhob        
 
@@ -163,7 +163,7 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
             
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
@@ -241,7 +241,7 @@ cdef class SPHGrad(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
             
         temp = (self.s_prop[source_pid] -  self.d_prop[dest_pid])
         
@@ -342,7 +342,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            pass
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
         
         dot = rab.dot(grad)            
 
@@ -375,8 +375,17 @@ cdef class CountNeighbors(SPHFunctionParticle):
 ################################################################################
 # `KernelGradientCorrectionTerms` class.
 ################################################################################
-cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
-    """ Count Neighbors.  """
+cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
+    """ Evaluate the matrix terms eq(45) in "Variational and
+    momentum preservation aspects of Smooth Particle Hydrodynamic
+    formulations", Computer Methods in Applied Mechanical Engineering,
+    180, (1997), 97-115
+
+    Note:
+    -----
+    The matrix would need to be inverted to calculate the correction terms!
+
+    """
 
     #Defined in the .pxd file
     def __init__(self, ParticleArray source, ParticleArray dest,
@@ -391,7 +400,7 @@ cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
-        cdef double tmp = mb/rhob
+        cdef double Vb = mb/rhob
         
         cdef Point grad = Point()
         cdef Point rab
@@ -406,16 +415,28 @@ cdef class KernelGradientCorrectionTerms(SPHFunctionParticle):
 
         rab = self._dst - self._src
 
-        kernel.gradient(self._dst, self._src, h, grad)
-
         h = 0.5*(self.s_h.data[source_pid] +
                  self.d_h.data[dest_pid])
 
-        grad *= tmp
+        kernel.gradient(self._dst, self._src, h, grad)
+
+        #m11
+        nr[0] -= Vb * grad.x * rab.x
+
+        #m12 = m21
+        nr[1] -= Vb * grad.x * rab.y
+
+        #m13 = m31
+        nr[2] -= Vb * grad.x * rab.z
+
+        #m22
+        dnr[0] -= Vb * grad.y * rab.y
         
-        nr[0] -= grad.x * rab.x * rab.x
-        nr[1] -= grad.y * rab.x * rab.y
-        nr[2] -= grad.z * rab.y * rab.y
+        #m23 = m32
+        dnr[1] -= Vb * grad.y * rab.z
+        
+        #m33
+        dnr[2] -= Vb * grad.z * rab.z
 
 ##########################################################################
 
