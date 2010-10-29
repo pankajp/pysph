@@ -51,7 +51,10 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         w = kernel.function(self._dst, self._src, h)
 
         if self.rkpm_first_order_correction:
-            w *= (self.first_order_kernel_correction_term(dest_pid))
+            pass
+
+        if self.bonnet_and_lok_correction:
+            pass
 
         temp = mb * w/rhoab
 
@@ -130,8 +133,11 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
-            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
-        
+            pass
+
+        if self.bonnet_and_lok_correction:
+            pass
+
         temp = Vab.dot(grad)
         
         nr[0] += temp*mb

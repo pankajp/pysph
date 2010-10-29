@@ -173,15 +173,14 @@ class Solver(object):
     def set_output_printing_level(self, detailed_output):
         self.detailed_output = detailed_output
 
-    def set_output_directory(self, dir):
-        self.dir = dir
-        os.chdir(os.curdir+dir)
+    def set_output_directory(self, path):
+        self.path = path
 
-    def set_kernel_correction(self, flag):
-        self.kernel_correction = flag
+    def set_kernel_correction(self, kernel_correction):
+        self.kernel_correction = kernel_correction
         
         for id in self.operation_dict:
-            self.operation_dict[id].rkpm_first_order_correction=flag
+            self.operation_dict[id].kernel_correction=kernel_correction
         
     def solve(self, show_progress=False):
         """ Solve the system by repeatedly calling the integrator """
@@ -240,7 +239,7 @@ class Solver(object):
 
         for pa in self.particles.arrays:
             name = pa.name
-            _fname = fname + name + '_' + str(t) + '.npz'
+            _fname=os.path.join(self.path,fname + name + '_' + str(t) + '.npz')
             
             if self.detailed_output:
                 savez(_fname, dt=self.dt, **pa.properties)

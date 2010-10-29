@@ -22,21 +22,22 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_u, s_v, s_w, d_u, d_v, d_w
     cdef public DoubleArray s_p, s_e, d_p, d_e	
 
-    cdef public DoubleArray rkpm_d_beta1, rkpm_d_beta2, rkpm_d_beta3
-    cdef public DoubleArray rkpm_d_alpha, rkpm_d_alphadx, rkpm_d_alphady
-    cdef public DoubleArray rkpm_d_beta1dx, rkpm_dbeta1dy
-    cdef public DoubleArray rkpm_d_beta2dx, rkpm_dbeta2dy
+    #rkpm first order correction terms
     
-    cdef public DoubleArray d_beta1, d_beta2, d_beta3, d_alpha
-    cdef public DoubleArray d_alpha_grad1, d_alpha_grad2, d_alpha_grad3
+    cdef public DoubleArray rkpm_beta1, rkpm_beta2, rkpm_beta3
+    cdef public DoubleArray rkpm_alpha, rkpm_dalphadx, rkpm_dalphady
+    cdef public DoubleArray rkpm_dbeta1dx, rkpm_dbeta1dy
+    cdef public DoubleArray rkpm_dbeta2dx, rkpm_dbeta2dy
 
+    #bonnet and lok correction terms
+    cdef public DoubleArray l11, l12, l22
+    
     cdef public Point _src
     cdef public Point _dst
     
     cdef public str name, id
 
-    cdef public bint kernel_gradient_correction	
-    cdef public bint first_order_kernel_correction
+    cdef public bint bonnet_and_lok_correction
     cdef public bint rkpm_first_order_correction
 
     cpdef setup_arrays(self)
@@ -49,6 +50,8 @@ cdef class SPHFunctionParticle:
     cdef double rkpm_first_order_kernel_correction(self, int dest_pid)
 
     cdef double rkpm_first_order_gradient_correction(self, int dest_pid)
+
+    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid)
 
 ################################################################################
 # `SPHFunctionPoint` class.

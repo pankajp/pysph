@@ -244,27 +244,19 @@ def mkdir(newdir):
         - parent directory(ies) does not exist, make them as well
     """
     if os.path.isdir(newdir):
-        if not newdir == ".":
-            status, op = commands.getstatusoutput("rm -r %s"%(newdir))
-
-            if status != 0:
-                err = "Could not delete contents of directory %s"%(newdir)
-                raise OSError(msg)
-
-            status, op = commands.getstatusoutput("mkdir  %s"%(newdir))
-
-            if status != 0:
-                raise OSError("Could not create directory %s"%(newdir))
+        pass
 
     elif os.path.isfile(newdir):
         raise OSError("a file with the same name as the desired " \
                       "dir, '%s', already exists." % newdir)
+
     else:
-        status, op = commands.getstatusoutput("mkdir  %s"%(newdir))
+        head, tail = os.path.split(newdir)
 
-        if status != 0:
-            raise OSError("Could not create directory %s"%(newdir))
+        if head and not os.path.isdir(head):
+            mkdir(head)
 
+        #print "_mkdir %s" % repr(newdir)
 
-
-
+        if tail:
+            os.mkdir(newdir)

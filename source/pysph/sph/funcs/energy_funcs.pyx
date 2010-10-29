@@ -1,4 +1,3 @@
-
 cdef extern from "math.h":
     double sqrt(double)
 
@@ -59,7 +58,10 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
-            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+            pass
+
+        if self.bonnet_and_lok_correction:
+            pass
 
         dot = grad.dot(vab)
         tmp = 0.5*mb*(pa/(rhoa*rhoa) + pb/(rhob*rhob))
@@ -153,7 +155,10 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
             kernel.gradient(self._dst, self._src, h, grad)
 
             if self.rkpm_first_order_correction:
-                grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+                pass
+
+            if self.bonnet_and_lok_correction:
+                pass
 
             prod  = (-alpha*cab*mu + beta*mu*mu)/(rhoab)
             nr[0] += 0.5 * mb * prod * vab.dot(grad)
@@ -246,7 +251,10 @@ cdef class EnergyEquation(SPHFunctionParticle):
         kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
-            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+            pass
+
+        if self.bonnet_and_lok_correction:
+            pass
 
         tmp += piab
         

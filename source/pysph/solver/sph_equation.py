@@ -48,13 +48,19 @@ class SPHOperation(object):
     """
     
     def __init__(self, function, on_types, updates, id, from_types=[],
-                 rkpm_first_order_correction=False):
+                 kernel_correction=-1):
+
         self.from_types = from_types
         self.on_types = on_types
         self.function = function
-        self.updates = updates
-        self.rkpm_first_order_correction=rkpm_first_order_correction
+        self.updates = updates        
         self.id = id
+
+        self.has_kernel_correction = False
+        self.kernel_correction = kernel_correction
+
+        if kernel_correction != -1:
+            self.has_kernel_correction = True
 
     def get_calc_data(self, particles):
         """ Get the data for setting up the calcs """ 
@@ -78,7 +84,7 @@ class SPHOperation(object):
                 if self.from_types == []:
                     func = self.function.get_func(dst, dst)
                     func.id = self.id
-                    func.rkpm_first_order_correction=self.rkpm_first_order_correction
+
                     calc_data[i]['funcs'] = [func]
                     calc_data[i]['id'] = self.id
 
@@ -97,7 +103,6 @@ class SPHOperation(object):
 
                             func = self.function.get_func(source=src, dest=dst)
                             func.id = self.id
-                            func.rkpm_first_order_correction=self.rkpm_first_order_correction
 
                         #make an entry in the dict for this destination
 
@@ -150,7 +155,7 @@ class SPHSimpleODE(SPHOperation):
                     particles=particles, sources=srcs, dest=dest, 
                     kernel=kernel, funcs=funcs, updates=self.updates,
                     integrates=True, dnum=dnum, nbr_info=False, id=id,
-                    rkpm_first_order_correction=self.rkpm_first_order_correction,
+                    kernel_correction=self.kernel_correction,
                     dim=kernel.dim)
 
                 calcs.append(calc)
@@ -193,7 +198,7 @@ class SPHSummationODE(SPHOperation):
                     dest=dest, kernel=kernel, funcs=funcs,
                     updates=self.updates, integrates=True,
                     dnum=dnum, nbr_info=True, id=id,
-                    rkpm_first_order_correction=self.rkpm_first_order_correction,
+                    kernel_correction=self.kernel_correction,
                     dim=kernel.dim)
                 
                 calcs.append(calc)
@@ -236,7 +241,7 @@ class SPHSummation(SPHOperation):
                     funcs=funcs, updates=self.updates, 
                     integrates=False,
                     dnum=dnum, nbr_info=True, id=id,
-                    rkpm_first_order_correction=self.rkpm_first_order_correction,
+                    kernel_correction=self.kernel_correction,
                     dim=kernel.dim)
 
                 calcs.append(calc)
@@ -279,7 +284,7 @@ class SPHAssignment(SPHOperation):
                     funcs=funcs, updates=self.updates, 
                     integrates=False, dnum=dnum,
                     nbr_info=False, id=id,
-                    rkpm_first_order_correction=self.rkpm_first_order_correction,
+                    kernel_correction=self.kernel_correction,
                     dim=kernel.dim)
 
                 calcs.append(calc)

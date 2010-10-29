@@ -60,6 +60,8 @@ class Application(object):
                            'none': None}
 
         self._setup_optparse()
+
+        self.path = None
     
     def _setup_optparse(self):
         usage = """
@@ -138,9 +140,12 @@ class Application(object):
                          help="Dump output in the specified directory.")
 
         # -k/--kernel-correction
-        parser.add_option("-k", "--kernel-correction", action="store_true",
-                          dest="kernel_correction", default=False,
-                          help="Use first order kernel correction.")
+        parser.add_option("-k", "--kernel-correction", action="store",
+                          dest="kernel_correction", type="int",
+                          default=-1,
+                          help="""Use Kernel correction.
+                                  0 - Bonnet and Lok correction
+                                  1 - RKPM first order correction""")
 
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
@@ -165,11 +170,10 @@ class Application(object):
         if filename is None:
             filename = splitext(basename(sys.argv[0]))[0] + '.log'
         if len(filename) > 0:
-            lfn = filename
+            lfn = os.path.join(self.path,filename)
             if self.num_procs > 1:
-                lfn = filename + '.%d'%self.rank
-            logging.basicConfig(level=loglevel, filename=lfn,
-                                filemode='w')
+                logging.basicConfig(level=loglevel, filename=lfn,
+                                    filemode='w')
         if stream:
             logger.addHandler(logging.StreamHandler())
 
@@ -187,9 +191,9 @@ class Application(object):
         # Setup logging based on command line options.
         level = self._log_levels[options.loglevel]
 
-        #create and move to the output directory specified
-        mkdir(options.output_dir)
-        os.chdir(options.output_dir)
+        #save the path where we want to dump output
+        self.path = os.path.abspath(options.output_dir)
+        mkdir(self.path)
 
         if level is not None:
             self._setup_logging(options.logfile, level,

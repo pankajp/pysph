@@ -76,7 +76,10 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
             kernel.gradient(self._dst, self._src, h, grad)
 
             if self.rkpm_first_order_correction:
-                grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+                pass
+            
+            if self.bonnet_and_lok_correction:
+                pass
 
             muab = h*vab.dot(rab)/(rab.norm() + 0.01*h*h) 
 
@@ -159,7 +162,10 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
-            grad *= (1 + self.first_order_kernel_correction_term(dest_pid))
+            pass
+            
+        if self.bonnet_and_lok_correction:
+            pass
 
         dot = rab.dot(grad)
             

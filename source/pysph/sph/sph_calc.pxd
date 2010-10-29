@@ -16,7 +16,8 @@ cdef class SPHBase:
     """ A general purpose class for SPH calculations. """
     cdef public ParticleArray dest
 
-    cdef public bint kernel_gradient_correction
+    cdef public int kernel_correction
+    cdef public bint bonnet_and_lok_correction
     cdef public bint rkpm_first_order_correction
 
     cdef public int dnum

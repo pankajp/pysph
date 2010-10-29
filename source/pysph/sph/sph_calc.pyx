@@ -75,8 +75,7 @@ cdef class SPHBase:
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
-                  bint rkpm_first_order_correction=False,
-                  int dim = 1):
+                  kernel_correction=-1, int dim = 1):
 
         """ Constructor """
 
@@ -99,9 +98,6 @@ cdef class SPHBase:
 
         self.dnum = dnum
         self.id = id
-
-        self.kernel_gradient_correction = kernel_gradient_correction
-        self.rkpm_first_order_correction = rkpm_first_order_correction
 
         self.dim = dim
 
@@ -261,13 +257,12 @@ cdef class SPHBase:
         cdef LongArray tag_arr = self.dest.get_carray('tag')
         cdef long* tag = tag_arr.get_data_ptr()
 
-        #evaluate kernel correction terms if requested
-        if self.rkpm_first_order_correction and self.nbr_info:
-            self.evaluate_evaluate_rkpm_first_order_correction_terms(
-                exclude_self)
+        if self.kernel_correction != -1:
+            #self.correction_func.evaluate_correction_terms(
+            #self.kernel_correction)
+            pass
 
         #loop over all particles
-
         for i from 0 <= i < np:
 
             dnr[0] = dnr[1] = dnr[2] = 0.0
@@ -569,14 +564,6 @@ cdef class SPHCalc(SPHBase):
 
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
-
-            msg = """Number of neighbors for particle %d of dest %d, from
-                  source %d are %d """ %(i, self.dnum, j, nbrs.length)
-
-            #evaluate the kernel gradient correction for the particle i
-            if self.kernel_gradient_correction:
-                func.kernel_gradient_correction = True
-                self.evaluate_kgc_terms(i, j)
 
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)
