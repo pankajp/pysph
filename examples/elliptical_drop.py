@@ -31,10 +31,10 @@ def elliptical_drop(tf=0.00076, dt=1e-5):
     s.set_time_step(dt)
     s.setup_integrator(particles)
     
-    s.solve()
+    #s.solve()
 
     pa = s.particles.get_named_particle_array("fluid")
-    solver.savez("drop_pc" + str(tf)+'.npz', x=pa.x, y=pa.y, p=pa.p)
+    #solver.savez("drop_pc" + str(tf)+'.npz', x=pa.x, y=pa.y, p=pa.p)
 
     return s
 

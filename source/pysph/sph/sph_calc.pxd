@@ -20,7 +20,6 @@ cdef class SPHBase:
     cdef public bint bonnet_and_lok_correction
     cdef public bint rkpm_first_order_correction
 
-    cdef public int dnum
     cdef public bint nbr_info
 
     cdef public list funcs
@@ -39,6 +38,10 @@ cdef class SPHBase:
     cdef public str id
 
     cdef public int dim
+
+    #identifier for the calc's source and destination arrays
+    cdef public int dnum
+    cdef public str snum
 
     cdef NNPSManager nnps_manager
 

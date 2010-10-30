@@ -75,7 +75,7 @@ cdef class SPHBase:
                   MultidimensionalKernel kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
-                  kernel_correction=-1, int dim = 1):
+                  kernel_correction=-1, int dim = 1, str snum=""):
 
         """ Constructor """
 
@@ -100,6 +100,7 @@ cdef class SPHBase:
         self.id = id
 
         self.dim = dim
+        self.snum = snum
 
         self.check_internals()
         self.setup_internals()
@@ -258,8 +259,7 @@ cdef class SPHBase:
         cdef long* tag = tag_arr.get_data_ptr()
 
         if self.kernel_correction != -1:
-            #self.correction_func.evaluate_correction_terms(
-            #self.kernel_correction)
+            #self.correction_manager.evaluate_correction_terms()
             pass
 
         #loop over all particles
