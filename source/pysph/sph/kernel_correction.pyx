@@ -75,7 +75,19 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
         self.bl_l13 = DoubleArray(self.np)
         self.bl_l22 = DoubleArray(self.np)
         self.bl_l23 = DoubleArray(self.np)
-        self.bl_l33 = DoubleArray(self.np)        
+        self.bl_l33 = DoubleArray(self.np)
+
+    def resize_arrays(self):
+        """ Resize the arrays """
+        dest = self.calc.dest
+        self.np = dest.get_number_of_particles()
+
+        self.bl_l11.resize(self.np)
+        self.bl_l12.resize(self.np)
+        self.bl_l13.resize(self.np)
+        self.bl_l22.resize(self.np)
+        self.bl_l23.resize(self.np)
+        self.bl_l33.resize(self.np)
 
     cdef evaluate_correction_terms(self):
         """ Perform the kernel correction """
@@ -110,11 +122,11 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
         cdef long* tag = tag_arr.get_data_ptr()
 
         for i in range(np):
-            
-            if tag[i] == LocalReal:
 
-                dnr[0] = dnr[1] = dnr[2] = 0.0
-                nr[0] = nr[1] = nr[2] = 0.0
+            dnr[0] = dnr[1] = dnr[2] = 0.0
+            nr[0] = nr[1] = nr[2] = 0.0
+                
+            if tag[i] == LocalReal:                
 
                 for j in range(calc.nsrcs):
 
@@ -144,6 +156,11 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
 
                 m33m22 = m33*m22; m32m23 = m32*m23; m33m12 = m33*m12
                 m32m13 = m32*m13; m23m12 = m23*m12; m22m13 = m22*m13
+
+                #print 'Particle', i
+                #print m11, m12, m13
+                #print m21, m22, m23
+                #print m31, m32, m33
 
                 m33m21 = m33*m21; m31m23 = m31*m23; m33m11 = m33*m11
                 m31m13 = m31*m13; m23m11 = m23*m11; m21m13 = m21*m13
@@ -273,7 +290,8 @@ cdef class KernelCorrectionManager(object):
 
         if self.kernel_correction != -1:
             for id, kfunc in self.correction_functions.iteritems():
-                kfunc.evaluate_correction_terms()        
+                kfunc.resize_arrays()
+                kfunc.evaluate_correction_terms()
         
     def py_set_correction_terms(self, calc):
         self.set_correction_terms(calc)

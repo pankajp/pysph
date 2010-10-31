@@ -149,7 +149,7 @@ class Solver(object):
 
             #setup the kernel correction manager for each calc
             calcs = self.integrator.calcs
-            self.correction_manager = KernelCorrectionManager(
+            particles.correction_manager = KernelCorrectionManager(
                 calcs, self.kernel_correction)
             
     def append_particle_arrrays(self, arrays):

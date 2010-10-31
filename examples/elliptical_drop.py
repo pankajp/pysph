@@ -16,7 +16,8 @@ def elliptical_drop(tf=0.00076, dt=1e-5):
 
     #kernel = base.CubicSplineKernel(dim=2)
     #kernel = base.QuinticSplineKernel(dim=2)
-    kernel = base.WendlandQuinticSplineKernel(dim=2)
+    #kernel = base.WendlandQuinticSplineKernel(dim=2)
+    kernel = base.HarmonicKernel(dim=2, n=3)
 
     #create the particle neighbor locator
 

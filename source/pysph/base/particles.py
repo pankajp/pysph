@@ -81,6 +81,10 @@ class Particles(object):
 
         self.nnps_manager = NNPSManager(cell_manager=self.cell_manager,
                                         variable_h=False)
+
+        self.correction_manager = None
+
+        #call an update on the particles
         self.update()
 
     def update(self):
@@ -98,6 +102,9 @@ class Particles(object):
         """
         err = self.nnps_manager.py_update()
         assert err != -1, 'NNPSManager update failed! '
+
+        if self.correction_manager:
+            self.correction_manager.update()
 
         self.needs_update = False
 

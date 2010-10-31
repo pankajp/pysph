@@ -403,7 +403,7 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         cdef double Vb = mb/rhob
         
         cdef Point grad = Point()
-        cdef Point rab
+        cdef Point rba
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -413,7 +413,7 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        rab = self._dst - self._src
+        rba = self._src - self._dst
 
         h = 0.5*(self.s_h.data[source_pid] +
                  self.d_h.data[dest_pid])
@@ -421,22 +421,22 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         kernel.gradient(self._dst, self._src, h, grad)
 
         #m11
-        nr[0] -= Vb * grad.x * rab.x
+        nr[0] += Vb * grad.x * rba.x
 
         #m12 = m21
-        nr[1] -= Vb * grad.x * rab.y
+        nr[1] += Vb * grad.x * rba.y
 
         #m13 = m31
-        nr[2] -= Vb * grad.x * rab.z
+        nr[2] += Vb * grad.x * rba.z
 
         #m22
-        dnr[0] -= Vb * grad.y * rab.y
+        dnr[0] += Vb * grad.y * rba.y
         
         #m23 = m32
-        dnr[1] -= Vb * grad.y * rab.z
+        dnr[1] += Vb * grad.y * rba.z
         
         #m33
-        dnr[2] -= Vb * grad.z * rab.z
+        dnr[2] += Vb * grad.z * rba.z
 
 ##########################################################################
 

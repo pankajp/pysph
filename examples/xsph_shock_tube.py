@@ -34,11 +34,11 @@ def shock_tube_with_xsph(tf = 0.15, dt=3e-4, eps=0.5):
     s.set_final_time(tf)
     s.set_time_step(dt)
 
-    s.solve()
+    #s.solve()
 
     pa = s.particles.get_named_particle_array("fluid")
-    solver.savez("shock_tube.npz", x=pa.x, p=pa.p, rho=pa.rho, u=pa.u,
-                 e=pa.e)
+    #solver.savez("shock_tube.npz", x=pa.x, p=pa.p, rho=pa.rho, u=pa.u,
+    #             e=pa.e)
 
     return s
 
