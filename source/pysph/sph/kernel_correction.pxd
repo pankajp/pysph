@@ -3,7 +3,7 @@ from pysph.base.carray cimport DoubleArray
 cdef class KernelCorrection:
     cdef evaluate_correction_terms(self)
 
-    cdef set_correction_terms(self)
+    cdef set_correction_terms(self, calc)
 
 cdef class BonnetAndLokKernelCorrection(KernelCorrection):
     """ Bonnet and Lok corection """

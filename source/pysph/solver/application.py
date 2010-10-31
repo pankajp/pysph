@@ -255,7 +255,7 @@ class Application(object):
         solver.set_output_printing_level(self.options.detailed_output)
         solver.set_output_directory(self.options.output_dir)
         solver.set_kernel_correction(self.options.kernel_correction)
-
+        
         solver.setup_integrator(self.particles)
 
     def run(self):

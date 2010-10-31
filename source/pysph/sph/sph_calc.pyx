@@ -96,6 +96,8 @@ cdef class SPHBase:
         self.updates = updates
         self.nupdates = len(updates)
 
+        self.kernel_correction = kernel_correction
+
         self.dnum = dnum
         self.id = id
 
@@ -291,68 +293,6 @@ cdef class SPHBase:
     cdef eval(self, size_t i, double* nr, double* dnr,
               bint exclude_self):
         raise NotImplementedError, 'SPHBase::eval'
-
-    cdef evaluate_kgc_terms(self, size_t i, int j):
-        """ Evaluate the kernel gradient correction terms """
-        
-        cdef SPHFunctionParticle kgc
-        cdef double m[3], l[3]
-        cdef double a, b, d, fac
-        cdef DoubleArray l11, l12, l22
-
-        cdef ParticleArray src = self.sources[j]
-        cdef SPHFunctionParticle func = self.sph_funcs[j]
-
-        #initialize the arrays
-        m[0] = m[1] = m[2] = 0.0
-        l[0] = l[1] = l[2] = 0.0
-
-        #Add the matrix arrays to the dest if it does not exist
-        
-        if not self.dest.properties.has_key("l1l"):
-            self.dest.add_property({"name":"l11"})
-            
-        if not self.dest.properties.has_key("l12"):
-            self.dest.add_property({"name":"l12"})
-
-        if not self.dest.properties.has_key("l22"):
-            self.dest.add_property({"name":"l22"})
-                
-        #Get the matrix arrays
-
-        l11 = self.dest.get_carray("l11")
-        l12 = self.dest.get_carray("l12")
-        l22 = self.dest.get_carray("l22")
-
-        #set the kernel gradient correction function
-                
-        kgc = BonnetAndLokKernelGradientCorrectionTerms(source=src, 
-                                                        dest=self.dest)
-                
-        #evaluate the kernel gradient correction for the particle i
-
-        for k from 0 <= k < self.nbrs.length:
-            s_idx = self.nbrs.get(k)
-            kgc.eval(s_idx, i, self.kernel, &m[0], &l[0])
-                    
-        #get the coefficients of the matrix
-                    
-        a = m[0]; b = m[1]; d = m[2]
-        
-        fac = a*d - b*b
-
-        #prevent a divide by zero if the source is the dest
-
-        if not fac < 1e-16:
-            fac = 1./fac 
-        else:
-            func.kernel_gradient_correction = False
-                    
-        #set the coefficients of the inverted matrix
-                
-        l11.data[i] = fac * d
-        l12.data[i] = -fac * b
-        l22.data[i] = fac * a
 
     cdef evaluate_rkpm_first_order_correction_terms(
         self,  bint exclude_self=False):

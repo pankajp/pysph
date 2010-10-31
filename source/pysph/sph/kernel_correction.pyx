@@ -8,13 +8,17 @@ from pysph.base.nnps cimport FixedDestNbrParticleLocator
 
 from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTerms
 
+cdef extern from "math.h":
+    double sqrt(double)
+    double fabs(double)
+
 cdef class KernelCorrection:
     """ Base class for kernel correction """
 
     cdef evaluate_correction_terms(self):
         raise NotImplementedError
 
-    cdef set_correction_terms(self):
+    cdef set_correction_terms(self, calc):
         raise NotImplementedError
 
 cdef class BonnetAndLokKernelCorrection(KernelCorrection):
@@ -55,8 +59,6 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
 
         for i in range(calc.nsrcs):
             func = calc.funcs[i]
-
-            func.bonnet_and_lok_correction=True
 
             func.bl_l11 = dest.get_carray("bl_l11")
 
@@ -157,11 +159,6 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
                 m33m22 = m33*m22; m32m23 = m32*m23; m33m12 = m33*m12
                 m32m13 = m32*m13; m23m12 = m23*m12; m22m13 = m22*m13
 
-                #print 'Particle', i
-                #print m11, m12, m13
-                #print m21, m22, m23
-                #print m31, m32, m33
-
                 m33m21 = m33*m21; m31m23 = m31*m23; m33m11 = m33*m11
                 m31m13 = m31*m13; m23m11 = m23*m11; m21m13 = m21*m13
 
@@ -172,7 +169,9 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
                 det -= m21*(m33m12 - m32m13)
                 det += m31*(m23m12 - m22m13)
 
-                if not -1e-15 < det < 1e-15:
+                if fabs(det) > 0.01 and fabs(m11) > 0.25 and fabs(m22) > 0.25 \
+                        and fabs(m33) > 0.25:
+
                     self.bl_l11.data[i] = 1./det * (m33m22-m32m23)
                     self.bl_l12.data[i] = 1./det * -(m33m12-m32m13)
                     self.bl_l13.data[i] = 1./det * (m23m12-m22m13)
@@ -188,7 +187,7 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
                     self.bl_l23.data[i] = 0.0
                     self.bl_l33.data[i] = 1.0
 
-    cdef set_correction_terms(self):
+    cdef set_correction_terms(self, calc):
         """ Set the correction terms for the calc's func """
 
         cdef SPHFunctionParticle func
@@ -199,11 +198,9 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
 
         cdef int i, np, j
 
-        dest = self.calc.dest
-        np = self.np
+        dest = calc.dest
+        np = dest.get_number_of_particles()
 
-        calc = self.calc
-        
         for i in range(calc.nsrcs):
             func = calc.funcs[i]
 
@@ -229,8 +226,8 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
     def py_evaluate_correction_terms(self):
         self.evaluate_correction_terms()
 
-    def py_set_correction_terms(self):
-        self.set_correction_terms()                
+    def py_set_correction_terms(self, calc):
+        self.set_correction_terms(calc)
 
 cdef class KernelCorrectionManager(object):
     
@@ -261,7 +258,8 @@ cdef class KernelCorrectionManager(object):
 
         #cache the kernel correction functions
 
-        self.cache_kernel_correction_functions()
+        if self.kernel_correction != -1:
+            self.cache_kernel_correction_functions()
 
     cdef cache_kernel_correction_functions(self):
         """ Cache the kernel correction functions """
@@ -273,6 +271,25 @@ cdef class KernelCorrectionManager(object):
         for calc in calcs:
             if not self.correction_functions.has_key(calc.snum):
                 self.correction_functions[calc.snum] = cfunc(calc)
+
+            else:
+                dest = calc.dest
+                for i in range(calc.nsrcs):
+                    func = calc.funcs[i]
+
+                    func.bonnet_and_lok_correction=True
+
+                    func.bl_l11 = dest.get_carray("bl_l11")
+
+                    func.bl_l12 = dest.get_carray("bl_l12")
+                    
+                    func.bl_l13 = dest.get_carray("bl_l13")
+                    
+                    func.bl_l22 = dest.get_carray("bl_l22")
+                    
+                    func.bl_l23 = dest.get_carray("bl_l23")
+                    
+                    func.bl_l33 = dest.get_carray("bl_l33")
         
     cdef set_correction_terms(self, calc):
         """ Evaluate the correction terms """
@@ -280,18 +297,18 @@ cdef class KernelCorrectionManager(object):
         cdef KernelCorrection cfunc
         
         cfunc = self.correction_functions[calc.snum]
-        cfunc.set_correction_terms()
+        cfunc.set_correction_terms(calc)
 
     cpdef update(self):
         """ Evaluate the correction terms when particle config changes """
 
-        cdef KernelCorrection kfunc
+        cdef KernelCorrection cfunc
         cdef str id
 
         if self.kernel_correction != -1:
-            for id, kfunc in self.correction_functions.iteritems():
-                kfunc.resize_arrays()
-                kfunc.evaluate_correction_terms()
+            for id, cfunc in self.correction_functions.iteritems():
+                cfunc.resize_arrays()
+                cfunc.evaluate_correction_terms()
         
     def py_set_correction_terms(self, calc):
         self.set_correction_terms(calc)

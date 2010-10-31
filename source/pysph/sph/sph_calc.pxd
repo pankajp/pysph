@@ -58,7 +58,6 @@ cdef class SPHBase:
 
     cdef eval(self, size_t i, double* nr, double* dnr, bint exclude_self)
     cdef setup_internals(self)
-    cdef evaluate_kgc_terms(self, size_t i, int j)
     cdef evaluate_rkpm_first_order_correction_terms(self, bint exclude_self=*)
     cpdef check_internals(self)
     
