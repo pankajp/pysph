@@ -12,6 +12,8 @@ from pysph.base.carray cimport DoubleArray, LongArray, IntArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.sph.sph_func cimport SPHFunctionParticle
 
+from pysph.sph.kernel_correction cimport KernelCorrectionManager
+
 cdef class SPHBase:
     """ A general purpose class for SPH calculations. """
     cdef public ParticleArray dest
@@ -25,6 +27,9 @@ cdef class SPHBase:
     cdef public list funcs
     cdef public list nbr_locators
     cdef public list sources
+
+    #kernel correction
+    cdef public KernelCorrectionManager correction_manager
 
     cdef public MultidimensionalKernel kernel    
     cdef public LongArray nbrs 

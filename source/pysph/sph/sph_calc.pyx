@@ -102,6 +102,8 @@ cdef class SPHBase:
         self.dim = dim
         self.snum = snum
 
+        self.correction_manager = None
+
         self.check_internals()
         self.setup_internals()
 
@@ -258,9 +260,8 @@ cdef class SPHBase:
         cdef LongArray tag_arr = self.dest.get_carray('tag')
         cdef long* tag = tag_arr.get_data_ptr()
 
-        if self.kernel_correction != -1:
-            #self.correction_manager.evaluate_correction_terms()
-            pass
+        if self.kernel_correction != -1 and self.nbr_info:
+            self.correction_manager.set_correction_terms(self)
 
         #loop over all particles
         for i from 0 <= i < np:

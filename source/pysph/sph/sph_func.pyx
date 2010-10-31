@@ -154,12 +154,6 @@ cdef class SPHFunctionParticle:
 
         cdef double x, y, z
 
-        cdef double a33a22, a32a23, a33a12, a32a13, a23a12, a22a13
-
-        cdef double a33a21, a31a23, a33a11, a31a13, a23a11, a21a13
-        
-        cdef double a32a21, a31a22, a32a11, a31a12, a22a11, a21a12
-
         cdef double l11, l12, l13, l21, l22, l23, l31, l32, l33
 
         l11 = self.bl_l11.data[dest_pid]

@@ -66,6 +66,10 @@ sph = [
                   ["source/pysph/sph/sph_calc.pyx"], include_dirs=inc_dirs,
                   ),
 
+        Extension("pysph.sph.kernel_correction",
+                  ["source/pysph/sph/kernel_correction.pyx"], 
+                  include_dirs=inc_dirs),
+
         Extension("pysph.sph.funcs.basic_funcs",
                   ["source/pysph/sph/funcs/basic_funcs.pyx"], 
                   include_dirs=inc_dirs),
@@ -131,11 +135,11 @@ kernels = [Extension("pysph.base.kernels",
            ]
 
 solver = [
-     Extension("pysph.solver.particle_generator",
-               ["source/pysph/solver/particle_generator.pyx"], include_dirs=inc_dirs),
-     ]
-#     Extension("pysph.solver.viscosity_components",
-#               ["source/pysph/solver/viscosity_components.pyx"], include_dirs=inc_dirs),
+    Extension("pysph.solver.particle_generator",
+              ["source/pysph/solver/particle_generator.pyx"], 
+              include_dirs=inc_dirs),
+    ]
+    
 #     Extension("pysph.solver.time_step",
 #               ["source/pysph/solver/time_step.pyx"], include_dirs=inc_dirs),
 #     Extension("pysph.solver.geometry",

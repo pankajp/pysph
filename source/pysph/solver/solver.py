@@ -3,6 +3,9 @@
 import logging
 import os
 from utils import PBar, savez_compressed, savez
+
+from pysph.sph.kernel_correction import KernelCorrectionManager
+
 logger = logging.getLogger()
 
 class Solver(object):
@@ -21,6 +24,7 @@ class Solver(object):
         self.pfreq = 100
 
         self.dim = kernel.dim
+        self.kernel_correction = -1
 
         self.pid = None
         self.setup_solver()
@@ -143,6 +147,11 @@ class Solver(object):
 
             self.integrator.setup_integrator()
 
+            #setup the kernel correction manager for each calc
+            calcs = self.integrator.calcs
+            self.correction_manager = KernelCorrectionManager(
+                calcs, self.kernel_correction)
+            
     def append_particle_arrrays(self, arrays):
         """ Append the particle arrays to the existing particle arrays """
 
