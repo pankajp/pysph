@@ -139,53 +139,12 @@ solver = [
               ["source/pysph/solver/particle_generator.pyx"], 
               include_dirs=inc_dirs),
     ]
-    
-#     Extension("pysph.solver.time_step",
-#               ["source/pysph/solver/time_step.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.geometry",
-#               ["source/pysph/solver/geometry.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.entity_base",
-#               ["source/pysph/solver/entity_base.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.fluid",
-#               ["source/pysph/solver/fluid.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.solid",
-#               ["source/pysph/solver/solid.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.solver_base",
-#               ["source/pysph/solver/solver_base.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.integrator_base",
-#               ["source/pysph/solver/integrator_base.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.runge_kutta_integrator",
-#               ["source/pysph/solver/runge_kutta_integrator.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.speed_of_sound",
-#               ["source/pysph/solver/speed_of_sound.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.sph_component",
-#               ["source/pysph/solver/sph_component.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.pressure_components",
-#               ["source/pysph/solver/pressure_components.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.pressure_gradient_components",
-#               ["source/pysph/solver/pressure_gradient_components.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.xsph_component",
-#               ["source/pysph/solver/xsph_component.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.xsph_integrator",
-#               ["source/pysph/solver/xsph_integrator.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.iteration_skip_component",
-#               ["source/pysph/solver/iteration_skip_component.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.file_writer_component",
-#               ["source/pysph/solver/file_writer_component.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.boundary_force_components",
-#               ["source/pysph/solver/boundary_force_components.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.nnps_updater",
-#               ["source/pysph/solver/nnps_updater.pyx"], include_dirs=inc_dirs),
-#     Extension("pysph.solver.time_step_components",
-#               ["source/pysph/solver/time_step_components.pyx"], include_dirs=inc_dirs)
-          
 
 # all extension modules.
 ext_modules = base + kernels + sph + solver
 
 if HAS_MPI4PY:
     ext_modules += parallel
-    pass
 
 setup(name='PySPH',
       version = '0.9',

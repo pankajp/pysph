@@ -53,8 +53,13 @@ bench :
 	-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
 	cd $(PKG)/bench; python bench.py $(BENCH)
 
+coverage2 :
+	python `which nosetests` --exe --cover-erase --with-coverage --cover-html-dir=htmlcov/ --cover-html --cover-package=pysph source/pysph/
+
 coverage :
-	python `which nosetests` --exe --cover-erase --with-coverage --cover-html-dir=cover/ --cover-html --cover-package=pysph source/pysph/
+	python pyx_coverage.py erase
+	-python pyx_coverage.py run `which nosetests` --exe source/pysph/
+	python pyx_coverage.py html
 
 epydoc :
 	python cython-epydoc.py --config epydoc.cfg pysph
