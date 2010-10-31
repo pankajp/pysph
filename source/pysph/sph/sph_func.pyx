@@ -138,7 +138,7 @@ cdef class SPHFunctionParticle:
 
     cdef double rkpm_first_order_gradient_correction(self, int dest_pid):
         """ Return the first order correction term for an interaction """
-
+        
         cdef double beta1, beta2, alpha
         cdef Point rab = self._dst - self._src
         

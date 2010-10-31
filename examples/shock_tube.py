@@ -27,7 +27,6 @@ particles = app.create_particles(
     name='fluid', type=0)
 pa = particles.arrays[0]
 
-
 # Set the solver up.
 s = solver.ShockTubeSolver(CubicSplineKernel(dim=1), solver.EulerIntegrator)
 # set the default solver constants.

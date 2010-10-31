@@ -512,14 +512,7 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'liu-correction'
-        self.beta1 = "rkpm_beta1"
-        self.beta2 = "rkpm_beta2"
-        self.alpha = "rkpm_alpha"
-        self.dbeta1dx = "rkpm_dbeta1dx"
-        self.dbeta1dy = "rkpm_dbeta1dy"
-        self.dbeta2dx = "rkpm_dbeta2dx"
-        self.dbeta2dy = "rkpm_dbeta2dy"
+        self.id = 'alpha-correction'
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
@@ -529,13 +522,15 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
         #Setup the basic properties like m, x rho etc.
         SPHFunctionParticle.setup_arrays(self)
 
-        self.rkpm_d_beta1 = self.dest.get_carray(self.beta1)
-        self.rkpm_d_beta2 = self.dest.get_carray(self.beta2)
-        self.rkpm_d_alpha = self.dest.get_carray(self.alpha)
-        self.rkpm_d_dbeta1dx = self.dest.get_carray(self.dbeta1dx)
-        self.rkpm_d_dbeta1dy = self.dest.get_carray(self.dbeta1dy)
-        self.rkpm_d_dbeta2dx = self.dest.get_carray(self.dbeta2dx)
-        self.rkpm_d_dbeta2dy = self.dest.get_carray(self.dbeta2dy)
+        self.rkpm_d_beta1 = self.dest.get_carray("rkpm_beta1")
+        self.rkpm_d_beta2 = self.dest.get_carray("rkpm_beta2")
+        self.rkpm_d_alpha = self.dest.get_carray("rkpm_alpha")
+      
+        self.rkpm_d_dbeta1dx = self.dest.get_carray("rkpm_dbeta1dx")
+        self.rkpm_d_dbeta1dy = self.dest.get_carray("rkpm_dbeta1dy")
+
+        self.rkpm_d_dbeta2dx = self.dest.get_carray("rkpm_dbeta2dx")
+        self.rkpm_d_dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    MultidimensionalKernel kernel, double *nr, double *dnr):
@@ -559,7 +554,7 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
         beta2 = self.rkpm_d_beta2.data[dest_pid]
 
         dbeta1dx = self.rkpm_d_dbeta1dx[dest_pid]
-        dbeta1dy = self.rkpm_d_dbeta2dy[dest_pid]
+        dbeta1dy = self.rkpm_d_dbeta1dy[dest_pid]
 
         dbeta2dx = self.rkpm_d_dbeta2dx[dest_pid]
         dbeta2dy = self.rkpm_d_dbeta2dy[dest_pid]
