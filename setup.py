@@ -51,10 +51,6 @@ base = [Extension("pysph.base.carray",
 
         Extension("pysph.base.nnps",
                   ["source/pysph/base/nnps.pyx"], include_dirs=inc_dirs),
-
-        Extension("pysph.base.particle_tags",
-                  ["source/pysph/base/particle_tags.pyx"], 
-                  include_dirs=inc_dirs),
 	] 
 
 sph = [

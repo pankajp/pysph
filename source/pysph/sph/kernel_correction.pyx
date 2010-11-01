@@ -1,8 +1,7 @@
 """ Funcitons to handle the kernel correction """
 
-from pysph.base.particle_array cimport ParticleArray
+from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
 from pysph.sph.sph_func cimport SPHFunctionParticle
-from pysph.base.particle_tags cimport LocalReal, Dummy
 from pysph.base.carray cimport LongArray
 from pysph.base.nnps cimport FixedDestNbrParticleLocator
 

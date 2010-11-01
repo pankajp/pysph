@@ -19,12 +19,10 @@ cimport mpi4py.MPI as MPI
 # local imports
 from pysph.base.point import Point, IntPoint
 from pysph.base.point cimport Point, IntPoint
-from pysph.base.particle_tags cimport get_dummy_tag
-from pysph.base.particle_tags import *
 from pysph.base import cell
 from pysph.base.cell cimport construct_immediate_neighbor_list, find_cell_id
 from pysph.base.cell cimport CellManager, Cell
-from pysph.base.particle_array cimport ParticleArray
+from pysph.base.particle_array cimport ParticleArray, get_dummy_tag, LocalReal
 from pysph.base.carray cimport LongArray, DoubleArray
 
 from fast_utils cimport arange_long
