@@ -16,11 +16,13 @@ cdef class SPHFunctionParticle:
     cdef public ParticleArray source, dest
     cdef public str h, m, rho, p, e, x, y, z, u, v, w
     cdef public str tmpx, tmpy, tmpz, type
+    cdef public str cs
         
     cdef public DoubleArray s_h, s_m, s_rho, d_h, d_m, d_rho
     cdef public DoubleArray s_x, s_y, s_z, d_x, d_y, d_z
     cdef public DoubleArray s_u, s_v, s_w, d_u, d_v, d_w
     cdef public DoubleArray s_p, s_e, d_p, d_e	
+    cdef public DoubleArray s_cs, d_cs
 
     #rkpm first order correction terms
     

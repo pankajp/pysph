@@ -38,9 +38,11 @@ def standard_shock_tube_data(name="", type=0):
     e[320:] = 1.795
 
     p = 0.4*rho*e
+
+    cs = numpy.sqrt(1.4*p/rho)
     
     return base.get_particle_array(name=name,x=x,m=m,h=h,rho=rho,p=p,e=e,
-                                   type=type)
+                                   cs=cs,type=type)
 
 class ShockTubeSolver(Solver):
     
@@ -57,7 +59,7 @@ class ShockTubeSolver(Solver):
 
         self.add_operation(SPHAssignment(sph.IdealGasEquation(),
                                          on_types = [Fluids],
-                                         updates=['p'],
+                                         updates=['p', 'cs'],
                                          id='eos')
                            )
 

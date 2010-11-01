@@ -20,7 +20,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
     particle.
     """
 
-    cdef public double beta, alpha, cs, gamma, eta
+    cdef public double beta, alpha, gamma, eta
 
 cdef class EnergyEquationNoVisc(SPHFunctionParticle):
     """

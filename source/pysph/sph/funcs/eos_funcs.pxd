@@ -16,4 +16,6 @@ cdef class IdealGasEquation(SPHFunctionParticle):
 cdef class TaitEquation(SPHFunctionParticle):
     """ Tait's equation of state """
     
-    cdef public double gamma, ko, ro
+    cdef public double gamma, co, ro
+
+

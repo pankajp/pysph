@@ -49,6 +49,7 @@ cdef class SPHFunctionParticle:
         self.h = 'h'
         self.p = 'p'
         self.e = 'e'
+        self.cs = 'cs'
 
         self.s_x = None
         self.s_y = None
@@ -99,6 +100,7 @@ cdef class SPHFunctionParticle:
         self.s_rho = self.source.get_carray(self.rho)
         self.s_p = self.source.get_carray(self.p)
         self.s_e = self.source.get_carray(self.e)
+        self.s_cs = self.source.get_carray(self.cs)
 
         self.d_x = self.dest.get_carray(self.x)
         self.d_y = self.dest.get_carray(self.y)
@@ -111,6 +113,7 @@ cdef class SPHFunctionParticle:
         self.d_rho = self.dest.get_carray(self.rho)
         self.d_p = self.dest.get_carray(self.p)
         self.d_e = self.dest.get_carray(self.e)
+        self.d_cs = self.dest.get_carray(self.cs)
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    MultidimensionalKernel kernel, double *nr, double *dnr):

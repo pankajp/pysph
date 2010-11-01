@@ -16,11 +16,10 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
     #cdef public double gamma
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 bint setup_arrays=True, c=-1, alpha=1, beta=1, 
+                 bint setup_arrays=True, alpha=1, beta=1, 
                  gamma=1.4, eta=0.1):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
-        self.c = c
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
@@ -83,10 +82,7 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
 
             muab = h*vab.dot(rab)/(rab.norm() + 0.01*h*h) 
 
-            if self.c < 1e-14:
-                cab = 0.5 * (sqrt(1.4*pa/rhoa) + sqrt(1.4*pb/rhob))
-            else:
-                cab = self.c
+            cab = 0.5 * (self.s_cs.data[source_pid] + self.d_cs.data[dest_pid])
 
             piab = -muab*(alpha*cab - beta*muab)/rhoab
             piab *= mb

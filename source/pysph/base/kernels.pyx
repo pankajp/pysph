@@ -390,7 +390,7 @@ cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
                 val = 0
             else:
                 tmp *= (tmp * tmp)
-                val = -5*q*tmp            
+                val = tmp * -5*q
 
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
@@ -412,6 +412,7 @@ cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
         elif dim == 3:
             raise NotImplementedError
         else:
+            return (21.0/16.0*PI*h*h)
             raise ValueError
 
     cpdef double radius(self):

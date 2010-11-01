@@ -75,14 +75,13 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, alpha=1, beta=1, gamma=1.4, 
-                 eta=0.1, sound_speed=-1):
+                 eta=0.1):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.sound_speed = sound_speed
         self.id = 'momentumequation'
         
     cdef void eval(self, int source_pid, int dest_pid,
@@ -110,6 +109,9 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
         vb = Point(self.s_u.data[source_pid], self.s_v.data[source_pid],
                    self.s_w.data[source_pid])
+
+        ca = self.d_cs.data[dest_pid]
+        cb = self.s_cs.data[source_pid]
         
         rab = self._dst - self._src
         vab = va - vb
@@ -131,10 +133,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
             eta = self.eta
             gamma = self.gamma
 
-            if self.sound_speed > 0:
-                cab = self.sound_speed
-            else:
-                cab = 0.5*(sqrt(gamma*Pa/rhoa) + sqrt(gamma*Pb/rhob))
+            cab = 0.5 * (ca + cb)
 
             rhoab = 0.5 * (rhoa + rhob)
 

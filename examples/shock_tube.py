@@ -41,6 +41,3 @@ app.set_solver(s)
 # Run the application.
 app.run()
 
-# Once application has run, save the output.  This could use a lot more work.
-pa = particles.arrays[0]
-

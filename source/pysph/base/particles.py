@@ -165,7 +165,7 @@ def get_particle_array(**props):
     name = ""
     particle_type = Fluid
 
-    default_props = ['x','y','z','u','v','w','m','h','p','e','rho',
+    default_props = ['x','y','z','u','v','w','m','h','p','e','rho','cs',
                      'tmpx','tmpy','tmpz',]
     
     for prop in props.keys():

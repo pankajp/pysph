@@ -92,6 +92,8 @@ class LennardJonesForce(Function):
                                           D=self.D, ro=self.ro, 
                                           p1=self.p1, p2=self.p2)
 
+#density funcs
+
 class SPHRho(Function):
     def get_func(self, source, dest):
         return density.SPHRho(source=source, dest=dest)
@@ -101,6 +103,8 @@ class SPHDensityRate(Function):
         return density.SPHDensityRate(source=source, dest=dest)
 
 
+#energy equation
+
 class EnergyEquationNoVisc(Function):
     
     def get_func(self, source, dest):
@@ -108,10 +112,9 @@ class EnergyEquationNoVisc(Function):
 
 class EnergyEquationAVisc(Function):
     
-    def __init__(self, beta=1.0, alpha=1.0, cs=-1, gamma=1.4, eta=0.1):
+    def __init__(self, beta=1.0, alpha=1.0, gamma=1.4, eta=0.1):
         self.beta = beta
         self.alpha = alpha
-        self.cs = cs
         self.gamma = gamma
         self.eta = eta
 
@@ -119,7 +122,7 @@ class EnergyEquationAVisc(Function):
         return energy.EnergyEquationAVisc(source=source, dest=dest, 
                                           beta=self.beta,
                                           gamma=self.gamma, alpha=self.alpha, 
-                                          cs=self.cs, eta=self.eta)
+                                          eta=self.eta)
 
 
 class EnergyEquation(Function):
@@ -136,7 +139,7 @@ class EnergyEquation(Function):
                                      eta=self.eta)
 
 
-#state functions
+#state equation
 
 class IdealGasEquation(Function):
     def __init__(self, gamma=1.4):
@@ -146,15 +149,16 @@ class IdealGasEquation(Function):
         return eos.IdealGasEquation(source=source, dest=dest, gamma=self.gamma)
 
 class TaitEquation(Function):
-    def __init__(self, ko, ro, gamma=7):
-        self.ko = ko
+    def __init__(self, co, ro, gamma=7.0):
+        self.co = co
         self.ro = ro
         self.gamma = gamma
 
     def get_func(self, source, dest):
-        return eos.TaitEquation(source=source, dest=dest, ko=self.ko, 
+        return eos.TaitEquation(source=source, dest=dest, co=self.co, 
                                 ro=self.ro, gamma=self.gamma)
 
+#external forces
 
 class GravityForce(Function):
     def __init__(self, gx=0.0, gy=-9.81, gz=0.0):
@@ -194,34 +198,32 @@ class SPHPressureGradient(Function):
         return pressure.SPHPressureGradient(source=source, dest=dest)    
 
 class MomentumEquation(Function):
-    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1, 
-                 sound_speed=-1):
+    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
         self.alpha=alpha
         self.beta=beta
         self.gamma=gamma
         self.eta=eta
-        self.sound_speed=sound_speed
 
     def get_func(self, source, dest):
         return pressure.MomentumEquation(source=source, dest=dest,
                                          alpha=self.alpha,
                                          beta=self.beta, gamma=self.gamma, 
                                          eta=self.eta, 
-                                         sound_speed=self.sound_speed)
+                                         )
+
+#viscosity equations
 
 class MonaghanArtificialVsicosity(Function):
-    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1, c=-1):
+    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
         self.alpha=alpha
         self.beta=beta
         self.gamma=gamma
         self.eta=eta
-        self.c = c
 
     def get_func(self, source, dest):
         return viscosity.MonaghanArtificialVsicosity(source=source, dest=dest, 
                                            alpha=self.alpha, beta=self.beta,
-                                           gamma=self.gamma, eta=self.eta, 
-                                           c=self.c)
+                                           gamma=self.gamma, eta=self.eta)
 
 class MorrisViscosity(Function):
     def __init__(self, mu='mu'):
@@ -231,6 +233,8 @@ class MorrisViscosity(Function):
         return viscosity.MorrisViscosity(source=source, dest=dest,
                                          mu=self.mu)
 
+
+#xsph funcs
 
 class XSPHCorrection(Function):
     def __init__(self, eps=0.5):

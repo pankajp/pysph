@@ -26,6 +26,8 @@ def get_circular_patch(name="", type=0):
 
     p = 0.5*1.0*100*100*(1 - (x**2 + y**2))
 
+    cs = numpy.ones_like(x) * 100.0
+
     u = -100*x
     v = 100*y
 
@@ -36,7 +38,7 @@ def get_circular_patch(name="", type=0):
             indices.append(i)
             
     pa = base.get_particle_array(x=x, y=y, m=m, rho=rho, h=h, p=p, u=u, v=v,
-                                 name=name, type=type)
+                                 cs=cs,name=name, type=type)
 
     la = base.LongArray(len(indices))
     la.set_data(numpy.array(indices))
@@ -54,13 +56,11 @@ class FluidSolver(Solver):
         
         #create the sph operation objects
 
-        momentum = sph.MomentumEquation(alpha=0.01, beta=0.0, 
-                                        sound_speed=1400.0)
-        
+        momentum = sph.MomentumEquation(alpha=0.01, beta=0.0)        
 
-        self.add_operation(SPHAssignment(sph.TaitEquation(ko=1400, ro=1.0),
+        self.add_operation(SPHAssignment(sph.TaitEquation(co=100.0, ro=1.0),
                                          on_types=[Fluids],
-                                         updates=['p'],
+                                         updates=['p', 'cs'],
                                          id='eos')
                            )
 

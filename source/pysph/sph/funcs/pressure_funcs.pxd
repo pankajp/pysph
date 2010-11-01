@@ -26,4 +26,3 @@ cdef class MomentumEquation(SPHFunctionParticle):
     cdef public double beta 
     cdef public double eta
     cdef public double gamma
-    cdef public double sound_speed

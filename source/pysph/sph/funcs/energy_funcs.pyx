@@ -81,14 +81,13 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True,  beta=1.0, alpha=1.0, 
-                 cs=0, gamma=1.4, eta=0.1):
+                 gamma=1.4, eta=0.1):
 
         SPHFunctionParticle.__init__(source, dest, setup_arrays)
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
         self.eta = eta
-        self.cs = 0
         self.id = 'energyavisc'
     
     cdef void eval(self, int source_pid, int dest_pid,
@@ -145,12 +144,10 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
             h = 0.5 * (self.d_h.data[dest_pid] + \
                            self.s_h.data[source_pid])
 
-            if self.cs < 1e-14:
-                cab = 0.5 * (sqrt(1.4*pa/rhoa) + sqrt(1.4*pb/rhob))
-            else:
-                cab = self.c
-                
+            cab = 0.5*(self.d_cs.data[dest_pid] + self.s_cs.data[source_pid])
+
             rhoab = 0.5 * (rhoa + rhob)
+
             mu = (h * test) / (rab.norm() + eta*eta*h*h)
             kernel.gradient(self._dst, self._src, h, grad)
 
@@ -182,7 +179,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
     #cdef public double eta
 
     def __init__(self, ParticleArray source, dest,  bint setup_arrays=True,
-                 alpha=1, beta=1, gamma=1.4, eta=0.1):
+                 alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
@@ -237,7 +234,8 @@ cdef class EnergyEquation(SPHFunctionParticle):
             eta = self.eta
             gamma = self.gamma
 
-            cab = 0.5*(sqrt(gamma*Pa/rhoa) + sqrt(gamma*Pb/rhob))
+            cab = 0.5 * (self.d_cs.data[dest_pid] + self.s_cs.data[source_pid])
+
             rhoab = 0.5 * (rhoa + rhob)
 
             mu = hab*dot
