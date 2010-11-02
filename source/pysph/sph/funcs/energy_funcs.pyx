@@ -14,7 +14,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         self.id = 'energyeqn'
     
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
@@ -91,7 +91,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
         self.id = 'energyavisc'
     
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
@@ -189,7 +189,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.id = 'energyequation'
         
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
     
     
         cdef Point va, vb, vab, rab, grad, tmp1

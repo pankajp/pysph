@@ -54,61 +54,49 @@ def get_sample_data2(mass=1.0, radius=1.0):
 
     return p1, p2
     
-class TestSPHRho3D(unittest.TestCase):
+class TestSPHRho(unittest.TestCase):
     """
-    Tests for the SPHRho3D class.
+    Tests for the SPHRho class.
     """
     def test_constructor(self):
         """
         Tests the constructor.
         """
         parr = get_sample_data1()
-        sph_rho3d = SPHRho3D(parr, parr)
+        sph_rho = SPHRho(parr, parr)
         
-        self.assertEqual(sph_rho3d.source, parr)
-        self.assertEqual(sph_rho3d.dest, parr)
-        self.assertEqual(sph_rho3d.output_fields(), 1)
+        self.assertEqual(sph_rho.source, parr)
+        self.assertEqual(sph_rho.dest, parr)
 
 
         parr1, parr2 = get_sample_data2()
-        sph_rho3d = SPHRho3D(parr1, parr2)
+        sph_rho = SPHRho(parr1, parr2)
 
-        self.assertEqual(sph_rho3d.source, parr1)
-        self.assertEqual(sph_rho3d.dest, parr2)
-        self.assertEqual(sph_rho3d.output_fields(), 1)
+        self.assertEqual(sph_rho.source, parr1)
+        self.assertEqual(sph_rho.dest, parr2)
 
     def test_eval_1(self):
         """
         Tests the eval function.
         """
         parr = get_sample_data1()
-        sph_rho3d = SPHRho3D(parr, parr)
-        
-        nr = numpy.array([0.])
-        dnr = numpy.array([0.])
+        sph_rho = SPHRho(parr, parr)
         
         k = Poly6Kernel()
         # get contribution of particle 1 on particle 0
-        sph_rho3d.py_eval(1, 0, k, nr, dnr)
-
+        nr, dnr = sph_rho.py_eval(1, 0, k)
         self.assertEqual(check_array(nr, [0]), True)
         self.assertEqual(check_array(nr, [0]), True)
 
-        sph_rho3d.py_eval(0, 1, k, nr, dnr)
-
+        nr, dnr = sph_rho.py_eval(0, 1, k)
         self.assertEqual(check_array(nr, [0]), True)
         self.assertEqual(check_array(dnr, [0]), True)
 
-        nr[0] = 0
-        dnr[0] = 0
-        sph_rho3d.py_eval(0, 0, k, nr, dnr)
+        nr, dnr = sph_rho.py_eval(0, 0, k)
         self.assertEqual(check_array(nr, [1.5666814710608448]), True)
         self.assertEqual(check_array(dnr, [0]), True)
 
-        nr[0] = 0
-        dnr[0] = 0
-        sph_rho3d.py_eval(1, 1, k, nr, dnr)
-        
+        nr, dnr = sph_rho.py_eval(1, 1, k)
         self.assertEqual(check_array(nr, [1.5666814710608448]), True)
         self.assertEqual(check_array(dnr, [0]), True)
 
@@ -118,17 +106,12 @@ class TestSPHRho3D(unittest.TestCase):
         """
         parr1, parr2 = get_sample_data2(mass=4.0, radius=2.0)
         
-        sph_rho3d = SPHRho3D(parr1, parr2)
-        
-        nr = numpy.array([0.])
-        dnr = numpy.array([0.])
+        sph_rho = SPHRho(parr1, parr2)
         
         k = Poly6Kernel()
         # get contribution of particle 1 on particle 0
-        nr[0] = 4.0
-        sph_rho3d.py_eval(0, 0, k, nr, dnr)
-
-        self.assertEqual(check_array(nr, [4.01223969899266285]), True)
+        nr, dnr = sph_rho.py_eval(0, 0, k)
+        self.assertEqual(check_array(nr, [0.01223969899266285]), True)
         self.assertEqual(check_array(dnr, [0]), True)
 
 if __name__ == '__main__':

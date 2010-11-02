@@ -116,7 +116,7 @@ cdef class SPHFunctionParticle:
         self.d_cs = self.dest.get_carray(self.cs)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         """ Computes the contribution of particle at source_pid on particle at
         dest_pid.
@@ -179,7 +179,7 @@ cdef class SPHFunctionParticle:
         grad.z = l31*x + l32*y + l33*z        
 
     def py_eval(self, int source_pid, int dest_pid,
-                MultidimensionalKernel kernel):
+                KernelBase kernel):
 
         cdef double nr[3], dnr[3]
 
@@ -269,7 +269,7 @@ cdef class SPHFunctionPoint:
 
 
     cdef void eval(self, Point pnt, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         Computes the contribution of particle at source_pid on point pnt.
 
@@ -285,7 +285,7 @@ cdef class SPHFunctionPoint:
         raise NotImplementedError, 'SPHFunctionPoint::eval'
 
     cpdef py_eval(self, Point pnt, int dest_pid, 
-                  MultidimensionalKernel kernel, numpy.ndarray
+                  KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr):
         """
         Python wrapper for the eval function, to be used in tests.

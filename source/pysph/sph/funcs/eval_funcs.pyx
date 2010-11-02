@@ -40,7 +40,7 @@ cdef class SPHEval(SPHFunctionPoint):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, Point pnt, int source_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
 
@@ -111,7 +111,7 @@ cdef class SPHSimpleDerivativeEval(SPHFunctionPoint):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, Point pnt, int source_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
 
@@ -186,7 +186,7 @@ cdef class CSPMEval(SPHFunctionPoint):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, Point pnt, int source_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an CSPM intterpolation of the property `prop_name` 
 
@@ -258,7 +258,7 @@ cdef class CSPMDerivativeEval(SPHFunctionPoint):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, Point pnt, int source_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an CSPM intterpolation of the property `prop_name` 
 

@@ -1,4 +1,3 @@
-# cython: profile=True
 """ 
 Module to implement various SPH kernels in multiple dimensions 
 """
@@ -21,15 +20,15 @@ cdef:
     double infty = numpy.inf
     
 ##############################################################################
-#`MultidimensionalKernel`
+#`KernelBase`
 ##############################################################################
-cdef class MultidimensionalKernel:
-    """ A base class that handles multiple dimensions. """
+cdef class KernelBase:
+    """ A base class that handles kernels in multiple dimensions. """
 
     #Defined in the .pxd file
-    #cdef public int dim
+    #cdef readonly int dim
 
-    def __init__(self, dim = 1):
+    def __init__(self, dim=1):
         """ Constructor interface for multidimensional kernels
 
         Parameters:
@@ -62,7 +61,7 @@ cdef class MultidimensionalKernel:
     cpdef int dimension(self):
         """
         """
-        return -1
+        return self.dim
 
     cdef double _fac(self, double h):
         raise NotImplementedError, 'KernelBase::_fac'
@@ -131,13 +130,13 @@ cdef class MultidimensionalKernel:
     
     def _gradient1D(self, x, grad):
         vec = self._gradient(x, None, None, grad)
-        return vec[0] 
+        return vec[0]
 
-    def _gradient2D(self, x, y, grad, i = 0):
+    def _gradient2D(self, x, y, grad, i=0):
         vec = self._gradient(x, y, None, grad)
         return vec[i]
     
-    def _gradient3D(self, x, y, z, grad, i = 0):
+    def _gradient3D(self, x, y, z, grad, i=0):
         vec = self._gradient(x, y, z, grad)
         return vec[i]
         
@@ -145,11 +144,61 @@ cdef class MultidimensionalKernel:
         return self._fac(h)
 ##############################################################################
 
+##############################################################################
+# `Poly6Kernel` class.
+##############################################################################
+cdef class Poly6Kernel(KernelBase):
+    """
+    This class represents a polynomial kernel with support 1.0
+    from mueller et. al 2003
+    """
+    cdef double function(self, Point pa, Point pb, double h):
+        """ Evaluate the strength of the kernel centered at `pa` at
+        the point `pb`.
+        """
+        cdef Point r = pb-pa
+        cdef double mag_sqr_r = r.norm()
+        cdef double ret = 0.0
+        if sqrt(mag_sqr_r) > h:
+            ret = 0.0
+        else:
+            ret = (h**2.0 - mag_sqr_r)**3.0
+            ret *= (315.0)/(64.0*PI*(h**9.0))
+        return ret
+
+    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+        """Evaluate the gradient of the kernel centered at `pa`, at the
+        point `pb`.
+        """
+        cdef Point r = pa-pb
+        cdef double part = 0.0
+        cdef double mag_square_r = r.norm()
+        cdef double const1 = 315.0/(64.0*PI*(h**9))
+        part = -6.0*const1*((h**2 - mag_square_r)**2)
+        grad.x = r.x * part
+        grad.y = r.y * part
+        grad.z = r.z * part
+
+    cdef double laplacian(self, Point pa, Point pb, double h):
+        """Evaluate the laplacian of the kernel centered at `pa`, at the
+        point `pb`.
+        """
+        cdef Point r = pb-pa
+        cdef double mag_square_r = r.norm()
+        cdef double h_sqr = h*h
+        cdef double const1 = 315.0/(64.0*PI*(h**9))
+        cdef double ret = (-6.0)*const1*(h_sqr-mag_square_r)
+        ret = ret * (3.0*h_sqr - 7.0*mag_square_r)
+        return ret
+            
+    cpdef double radius(self):
+        return 1.0
+##############################################################################
 
 ##############################################################################
 #`CubicSplineKernel`
 ##############################################################################
-cdef class CubicSplineKernel(MultidimensionalKernel):
+cdef class CubicSplineKernel(KernelBase):
     """ Cubic Spline Kernel as described in the paper: "Smoothed
     Particle Hydrodynamics ", J.J. Monaghan, Annual Review of
     Astronomy and Astrophysics, 1992, Vol 30, pp 543-574.
@@ -157,7 +206,7 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
     """
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
-        the point `pb`.         
+        the point `pb`.
         
         """
         cdef double fac = self._fac(h)
@@ -196,28 +245,6 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
     
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double val
-        
-        if q > 1e-12:
-            if q > 2.0:
-                val = 0.0
-            elif 1.0 <= q <= 2.0:
-                val = -3*(q-2)*(q-1) / (h**2*q)
-            else:
-                val = 9*(q-1)/h**2
-        else:
-            val = 1.0
-        
-        return val * fac
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -234,7 +261,7 @@ cdef class CubicSplineKernel(MultidimensionalKernel):
 ##############################################################################
 #`QuinticSplineKernel`
 ##############################################################################
-cdef class QuinticSplineKernel(MultidimensionalKernel):
+cdef class QuinticSplineKernel(KernelBase):
     """ The Quintic spline kernel defined in 
 
     "Modelling Low Reynolds Number Incompressible Flows Using SPH",
@@ -338,7 +365,7 @@ cdef class QuinticSplineKernel(MultidimensionalKernel):
 ##############################################################################
 #`WendlandQuinticSplineKernel`
 ##############################################################################
-cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
+cdef class WendlandQuinticSplineKernel(KernelBase):
     """ The Quintic spline kernel defined in 
 
     "Modelling Low Reynolds Number Incompressible Flows Using SPH",
@@ -421,13 +448,13 @@ cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
 ##############################################################################
 #`HarmonicKernel`
 ##############################################################################
-cdef class HarmonicKernel(MultidimensionalKernel):
+cdef class HarmonicKernel(KernelBase):
     """ The one parameter family of kernel defined in the paper:
     "A one parameter family of interpolating kernels for smoothed 
     particle hydrodynamics studies. ", R.M. Cabezon et al., JCP (2008).
 
     """
-    def __init__(self, dim = 1, n = 3):
+    def __init__(self, dim=1, n=3):
         """ Initialize the kernel with dimension and index `n` """
         self.dim = dim
         self.n = n
@@ -447,7 +474,7 @@ cdef class HarmonicKernel(MultidimensionalKernel):
 
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
-        the point `pb`.         
+        the point `pb`.
         
         """
         cdef double fac = self._fac(h)
@@ -503,30 +530,6 @@ cdef class HarmonicKernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
     
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double val, tmp
-        cdef double n = self.n
-        cdef double k = PI*q/2.0
-        cdef double sk = sin(k)
-        cdef double skk = sk / k
-        
-        if q > 2.0:
-            val = 0.0
-        elif q > 1e-12:
-            tmp = (skk**(n-2)*n)/(h*q)**2
-            val = (cos(k)-skk)**2*(n-1) - sk**2
-            val *= tmp
-        else:
-            val = -PI**2/(4*h**2)
-        return val * fac
-
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -541,14 +544,16 @@ cdef class HarmonicKernel(MultidimensionalKernel):
 ##############################################################################
 #`M6 Spline Kernel`
 ##############################################################################
-
-cdef class M6SplineKernel(MultidimensionalKernel):
-    """
-    
+cdef class M6SplineKernel(KernelBase):
+    """Quintic M6 polynomial spline kernel with a support radius of 2.
+    Cabezón, Rubén M., Domingo García-Senz, and Antonio Relaño.
+    “A one-parameter family of interpolating kernels for smoothed particle
+    hydrodynamics studies.” Journal of Computational Physics 227, no. 19
+    (October 1, 2008): 8523-8540
     """
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
-        the point `pb`.         
+        the point `pb`.
         
         """
         cdef double fac = self._fac(h)
@@ -598,27 +603,6 @@ cdef class M6SplineKernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double val
-        
-        if 0 <= q <= 2.0/3:
-            val = -(900*q**3-1200*q**2+320)/(3*h**2)
-
-        elif 2.0/3 < q <= 4.0/3:
-            val = (10*(405*q**4-1620*q**3+2160*q**2-1008*q+80))/(27*h**2*q)
-
-        elif 4.0/3 < q <=2:
-            val = -(10*(q-2)**3*(3*q-2))/(h**2*q)
-        
-        return val * fac
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -635,13 +619,13 @@ cdef class M6SplineKernel(MultidimensionalKernel):
 ##############################################################################
 #`GaussianKernel`
 ##############################################################################
-cdef class GaussianKernel(MultidimensionalKernel):
+cdef class GaussianKernel(KernelBase):
     """ Gaussian  Kernel
 
     """
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
-        the point `pb`.         
+        the point `pb`.
         
         """
         cdef double fac = self._fac(h)
@@ -671,19 +655,6 @@ cdef class GaussianKernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
     
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double q2 = q*q
-        
-        return fac * (4*q2-6) * exp(-q2) / h**2
-            
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -701,14 +672,14 @@ cdef class GaussianKernel(MultidimensionalKernel):
 ##############################################################################
 #`W8Kernel`
 ##############################################################################
-cdef class W8Kernel(MultidimensionalKernel):
+cdef class W8Kernel(KernelBase):
     """ W8 Kernel as described in the International Journal for Numerical 
     Methods in Engineering: "Truncation error in mesh-free particle methods", 
     N. J. Quinlan, M. Basa and M. Lastiwka
     """
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
-        the point `pb`.         
+        the point `pb`.
         
         """
         cdef double fac = self._fac(h)
@@ -756,28 +727,6 @@ cdef class W8Kernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
     
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double val = 0.0
-        cdef double *a = [0.209206, -0.0334338, 0.002]
-        cdef int i
-        
-        if q < 2.0:
-            for i in range(3):
-                val += a[i] * (i+2)*(i+3) * q**(2*i)
-        else:
-            return 0.0
-        val /= h**2
-        
-        return val * fac
-        
-
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -799,7 +748,7 @@ cdef class W8Kernel(MultidimensionalKernel):
 ##############################################################################
 #`W10Kernel`
 ##############################################################################
-cdef class W10Kernel(MultidimensionalKernel):
+cdef class W10Kernel(KernelBase):
     """W10 Kernel
 
     """
@@ -852,27 +801,6 @@ cdef class W10Kernel(MultidimensionalKernel):
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
-        cdef double q = rab/h
-        cdef double val = 0.0
-        cdef int i
-        cdef double *a = [0.422974, -0.105743, 0.0132179, -0.000660896]
-        
-        if q < 2.0:
-            for i in range(4):
-                val += a[i] * (i+2)*(i+3) * q**(2*i)
-        else:
-            return 0.0
-        val /= h**2
-        
-        return val * fac
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -892,7 +820,7 @@ cdef class W10Kernel(MultidimensionalKernel):
 ################################################################################
 # `RepulsiveBoundaryKernel` class.
 ################################################################################
-cdef class RepulsiveBoundaryKernel(MultidimensionalKernel):
+cdef class RepulsiveBoundaryKernel(KernelBase):
     """
     Kernel class to be used for boundary SPH summations.
 

@@ -1,6 +1,6 @@
 #base imports 
 from pysph.base.particle_array cimport ParticleArray
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernels cimport KernelBase
 
 ###############################################################################
 # `PositionStepping' class.
@@ -15,7 +15,7 @@ cdef class PositionStepping(SPHFunctionParticle):
         self.id = 'positionstepper'
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         The expression used is:
 

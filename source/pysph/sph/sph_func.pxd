@@ -6,7 +6,7 @@ from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray, IntArray
 from pysph.base.point cimport Point
 
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernels cimport KernelBase
 
 
 ################################################################################
@@ -47,7 +47,7 @@ cdef class SPHFunctionParticle:
     cpdef int output_fields(self) except -1
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr)
+                   KernelBase kernel, double *nr, double *dnr)
 
     cdef double rkpm_first_order_kernel_correction(self, int dest_pid)
 
@@ -75,10 +75,10 @@ cdef class SPHFunctionPoint:
     cpdef int output_fields(self) except -1
 
     cdef void eval(self, Point pnt, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr)
+                   KernelBase kernel, double *nr, double *dnr)
 
     cpdef py_eval(self, Point pnt, int dest_pid, 
-                  MultidimensionalKernel kernel, numpy.ndarray
+                  KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr)
 
 ##############################################################################

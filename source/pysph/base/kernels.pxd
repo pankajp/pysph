@@ -7,10 +7,10 @@
 from pysph.base.point cimport Point, Point_sub
 
 ##############################################################################
-#`MultidimensionalKernel`
+#`KernelBase`
 ##############################################################################
-cdef class MultidimensionalKernel:
-    cdef public int dim
+cdef class KernelBase:
+    cdef readonly int dim
 
     cdef double function(self, Point pa, Point pb, double h)
     cdef void gradient(self, Point pa, Point pb, double h, Point result)
@@ -20,27 +20,33 @@ cdef class MultidimensionalKernel:
     cpdef int dimension(self)
 
 ##############################################################################
+# `Poly6Kernel` class.
+##############################################################################
+cdef class Poly6Kernel(KernelBase):
+    pass
+
+##############################################################################
 #`CubicSplineKernel`
 ##############################################################################
-cdef class CubicSplineKernel(MultidimensionalKernel):
+cdef class CubicSplineKernel(KernelBase):
     pass
 
 ##############################################################################
 #`QuinticSplineKernel`
 ##############################################################################
-cdef class QuinticSplineKernel(MultidimensionalKernel):
+cdef class QuinticSplineKernel(KernelBase):
     pass
 
 ##############################################################################
 #`WendlandQuinticSplineKernel`
 ##############################################################################
-cdef class WendlandQuinticSplineKernel(MultidimensionalKernel):
+cdef class WendlandQuinticSplineKernel(KernelBase):
     pass
 
 ##############################################################################
 #`HarmonicKernel`
 ##############################################################################
-cdef class HarmonicKernel(MultidimensionalKernel):
+cdef class HarmonicKernel(KernelBase):
     cdef public int n
     cdef public dict facs
 
@@ -48,28 +54,26 @@ cdef class HarmonicKernel(MultidimensionalKernel):
 ##############################################################################
 #'Gaussian Kernel'
 ##############################################################################
-cdef class GaussianKernel(MultidimensionalKernel):
+cdef class GaussianKernel(KernelBase):
     pass
 
 ##############################################################################
 #`M6SplineKernel`
 ##############################################################################
-cdef class M6SplineKernel(MultidimensionalKernel):
+cdef class M6SplineKernel(KernelBase):
     pass
 
 ##############################################################################
 #'W8 Kernel'
 ##############################################################################
-cdef class W8Kernel(MultidimensionalKernel):
+cdef class W8Kernel(KernelBase):
     pass
 
 ##############################################################################
 #`W10Kernel`
 ##############################################################################
-cdef class W10Kernel(MultidimensionalKernel):
+cdef class W10Kernel(KernelBase):
     pass
 
-cdef class RepulsiveBoundaryKernel(MultidimensionalKernel):
-    """
-    """
+cdef class RepulsiveBoundaryKernel(KernelBase):
     pass

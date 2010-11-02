@@ -14,7 +14,7 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         self.id = 'xsph'
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         The expression used is:
 
@@ -89,7 +89,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self.s_wbar = self.array.get_carray('wbar')
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         Perform an SPH intterpolation of the property `prop_name`
 

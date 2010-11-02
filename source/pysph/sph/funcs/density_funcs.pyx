@@ -6,7 +6,7 @@
 cdef class SPHRho(SPHFunctionParticle):
     """ SPH Summation Density """
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ Compute the contribution from source_pid on dest_pid. """
 
         cdef double h = 0.5*(self.s_h.data[source_pid] + \
@@ -42,7 +42,7 @@ cdef class SPHDensityRate(SPHFunctionParticle):
     """
     """
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid.

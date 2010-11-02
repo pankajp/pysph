@@ -1,6 +1,6 @@
 #base imports
 from pysph.base.particle_array cimport ParticleArray
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernels cimport KernelBase
 
 cdef extern from "math.h":
     double pow(double x, double y)
@@ -17,7 +17,7 @@ cdef class IdealGasEquation(SPHFunctionParticle):
         self.id = 'idealgas'
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         
         ::math::
@@ -66,7 +66,7 @@ cdef class TaitEquation(SPHFunctionParticle):
         self.id = 'tait'
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         
         ::math::

@@ -47,7 +47,7 @@ cdef class SPH(SPHFunctionParticle):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
@@ -131,7 +131,7 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
 
@@ -212,7 +212,7 @@ cdef class SPHGrad(SPHFunctionParticle):
         self.source_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
 
@@ -301,7 +301,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
 
@@ -367,7 +367,7 @@ cdef class CountNeighbors(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         nr[0] += 1
 ###########################################################################
@@ -396,7 +396,7 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -461,7 +461,7 @@ cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -533,7 +533,7 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
         self.rkpm_d_dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -599,7 +599,7 @@ cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
     """
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -654,7 +654,7 @@ cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
 
     #Defined in the .pxd file
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]

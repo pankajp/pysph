@@ -8,7 +8,7 @@ from pysph.sph.sph_func cimport SPHFunctionPoint
 #base imports 
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.point cimport Point
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernels cimport KernelBase
 from pysph.base.carray cimport DoubleArray
 
 

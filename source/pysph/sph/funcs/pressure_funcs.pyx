@@ -18,7 +18,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self.id = 'pgrad'
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         """
         cdef double mb = self.s_m.data[source_pid]
@@ -85,7 +85,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.id = 'momentumequation'
         
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
     
     
         cdef Point va, vb, vab, rab, grad

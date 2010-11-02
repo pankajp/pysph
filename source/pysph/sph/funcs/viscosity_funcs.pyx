@@ -26,7 +26,7 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         self.id = 'momavisc'
 
     cdef void eval(self, int source_pid, int dest_pid,
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         """
         cdef double piab, muab
@@ -119,7 +119,7 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         self.d_mu = self.source.get_carray(self.mu)
 
     cdef void eval(self, int source_pid, int dest_pid, 
-                   MultidimensionalKernel kernel, double *nr, double *dnr):
+                   KernelBase kernel, double *nr, double *dnr):
         """
         """
         cdef double h = 0.5*(self.s_h.data[source_pid] +

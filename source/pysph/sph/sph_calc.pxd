@@ -7,7 +7,7 @@ cimport numpy
 
 # standard imports
 from pysph.base.nnps cimport NNPSManager, NbrParticleLocatorBase
-from pysph.base.kernels cimport MultidimensionalKernel
+from pysph.base.kernels cimport KernelBase
 from pysph.base.carray cimport DoubleArray, LongArray, IntArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.sph.sph_func cimport SPHFunctionParticle
@@ -31,7 +31,7 @@ cdef class SPHBase:
     #kernel correction
     cdef public KernelCorrectionManager correction_manager
 
-    cdef public MultidimensionalKernel kernel    
+    cdef public KernelBase kernel    
     cdef public LongArray nbrs 
     cdef public object particles
     cdef public bint integrates

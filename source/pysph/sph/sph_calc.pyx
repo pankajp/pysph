@@ -66,12 +66,12 @@ cdef class SPHBase:
     #cdef public list funcs
     #cdef public list nbr_locators
     #cdef public NNPSManager nnps_manager
-    #cdef public MultidimensionalKernel kernel
+    #cdef public KernelBase kernel
     #cdef public Particles particles
     #cdef public LongArray nbrs
 
     def __cinit__(self, particles, list sources, ParticleArray dest,
-                  MultidimensionalKernel kernel, list funcs,
+                  KernelBase kernel, list funcs,
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
                   kernel_correction=-1, int dim = 1, str snum=""):
