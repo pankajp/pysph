@@ -9,8 +9,6 @@ from pysph.solver.basic_generators import *
 
 from pysph.parallel.parallel_cell import ParallelCellManager
 from pysph.parallel.load_balancer_mkmeans import LoadBalancer
-from pysph.parallel.dummy_solver import DummySolver
-from pysph.parallel.parallel_component import ParallelComponent
 
 def dict_from_kwargs(**kwargs):
     return kwargs
@@ -27,15 +25,12 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         self.dim = 1
         
     def create_solver(self):
-        pc = ParallelComponent(name='parallel_component', solver=None)
         self.cm = cm = ParallelCellManager(self.pas, self.cell_size, self.cell_size)
         #print 'num_cells:', len(cm.cells_dict)
         cm.load_balancing = False # balancing will be done manually
         cm.dimension = self.dim
         
-        # create a dummy solver - serves no purpose but for a place holder
-        pc.solver = cm.solver = self.solver = DummySolver(cell_manager=cm)
-        self.lb = lb = self.cm.load_balancer = LoadBalancer(parallel_solver=self.solver, parallel_cell_manager=self.cm)
+        self.lb = lb = self.cm.load_balancer = LoadBalancer(parallel_solver=None, parallel_cell_manager=self.cm)
         lb.skip_iteration = 1
         lb.threshold_ratio = 10.
         lb.lb_max_iteration = 20
@@ -51,8 +46,8 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
                 dict_from_kwargs(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
                 dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=False),
                 dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=True),
-                dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=False),
-                dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=True),
+                #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=False),
+                #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=True),
                ]
     
     def load_balance(self):
@@ -69,7 +64,6 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         for num_procs in range(1,12,3):
             for lbargs in self.get_lb_args():
                 self.create_solver()
-                #self.assertEqual(len(self.cm.cells_dict), 11
                 proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
                 nps = [sum([pa.get_number_of_particles() for pa in pas]) for pas in proc_pas]
                 self.assertTrue(sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas]))
@@ -106,5 +100,4 @@ class TestSerialLoadBalancer3D(TestSerialLoadBalancer1D):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'TestSerialLoadBalancer3D.test_distribute_particle_arrays']
     unittest.main()
