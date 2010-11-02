@@ -61,7 +61,7 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
             self.cm.exchange_neighbor_particles()
     
     def test_distribute_particle_arrays(self):
-        for num_procs in range(1,12,3):
+        for num_procs in [1,5,11]:
             for lbargs in self.get_lb_args():
                 self.create_solver()
                 proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
