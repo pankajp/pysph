@@ -6,6 +6,9 @@ import numpy
 
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.particles import get_particle_array
+from particle_types import ParticleType
+
+Solid = ParticleType.Solid
 
 cdef class MeshPoint:
     """ A point object to mesh the line """
@@ -342,7 +345,7 @@ cdef class Geometry:
             mpnt = MeshPoint(l.xa, -l.normal, -l.tangent)
             self.mpnts2.append(mpnt)
 
-    def get_particle_array(self, re_orient=False):
+    def get_particle_array(self, name="monaghan-edge", re_orient=False):
         """ Return a particle array with mesh point data """
         
         cdef MeshPoint mpnt
@@ -375,7 +378,8 @@ cdef class Geometry:
             tx[i] = tang.x; ty[i] = tang.y; tz[i] = tang.z
             
         geom = get_particle_array(x=x, y=y, z=z, tx=tx, ty=ty,
-                                  tz=tz, nx=nx, ny=ny, nz=nz, m=m)
+                                  tz=tz, nx=nx, ny=ny, nz=nz, m=m,
+                                  name=name, type=Solid)
 
         if re_orient:
             geom.tx *= -1
