@@ -33,7 +33,7 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         self.lb = lb = self.cm.load_balancer = LoadBalancer(parallel_solver=None, parallel_cell_manager=self.cm)
         lb.skip_iteration = 1
         lb.threshold_ratio = 10.
-        lb.lb_max_iteration = 20
+        lb.lb_max_iteration = 10
         lb.setup()
     
     def get_lb_args(self):
@@ -88,7 +88,7 @@ class TestSerialLoadBalancer2D(TestSerialLoadBalancer1D):
 class TestSerialLoadBalancer3D(TestSerialLoadBalancer1D):
     
     def setUp(self):
-        lg = CuboidGenerator(kernel=CubicSplineKernel(2))
+        lg = CuboidGenerator(kernel=CubicSplineKernel(3))
         self.pas = [lg.get_particles()]
         # to shift the origin
         self.pas[0].x += 0.1

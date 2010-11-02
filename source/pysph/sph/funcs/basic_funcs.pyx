@@ -1,5 +1,3 @@
-#cython: profile=True
-
 """ Implementations for the basic SPH functions """
 
 cdef extern from "math.h":

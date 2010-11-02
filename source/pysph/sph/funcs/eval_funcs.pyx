@@ -1,5 +1,3 @@
-# cython: profile=True
-
 """ Implementations for the various sph functions. """
 
 

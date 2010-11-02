@@ -1,4 +1,3 @@
-# cython: profile=True
 """
 Declaration file for cython parallel cell module.
 """

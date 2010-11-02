@@ -1,4 +1,3 @@
-# cython: profile=True
 """ Defines the geometry primitives used in pysph """
 
 cimport numpy

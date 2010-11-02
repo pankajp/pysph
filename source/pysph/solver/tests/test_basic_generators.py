@@ -79,7 +79,7 @@ class TestLineGenerator(unittest.TestCase):
         Tests the get_particles function.
         """
         lg = LineGenerator(particle_spacing=0.5,
-                           kernel=CubicSplineKernel())
+                           kernel=CubicSplineKernel(3))
         
         particle_array = lg.get_particles()
         self.assertEqual(particle_array.get_number_of_particles(), 3)
@@ -175,13 +175,13 @@ class TestRectangleGenerator(unittest.TestCase):
                                          1.0 ]), True)
         self.assertEqual(check_array(y, [0, 0, 0, 0, 0, 0, 0, 0, 0]), True)
         
-    def test_get_paricles(self):
+    def test_get_particles(self):
         """
-        Tests the get_partilces function.
+        Tests the get_particles function.
         """
         rg = RectangleGenerator(particle_spacing_x1=0.5,
                                 particle_spacing_x2=0.5,
-                                kernel=CubicSplineKernel())
+                                kernel=CubicSplineKernel(3))
         p = rg.get_particles()
         self.assertEqual(p.get_number_of_particles(), 9)
         self.assertEqual(check_array(p.x, [0, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0,
