@@ -1,3 +1,6 @@
+cdef extern from "math.h":
+    double fabs(double)
+
 #############################################################################
 # `MonaghanBoundaryForce` class.
 #############################################################################
@@ -5,18 +8,16 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
     """ Class to compute the boundary force for a fluid boundary pair """ 
 
     #Defined in the .pxd file
-    #cdef public double cs
     #cdef public double double delp
-    #cdef public DoubleArray arr_tx, arr_ty, arr_tz, arr_nx, arr_ny, arr_nz
+    #cdef public DoubleArray s_tx, s_ty, s_tz, s_nx, s_ny, s_nz
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=False, double cs = 0, double delp = 0):
+                 bint setup_arrays=False, double delp = 1.0):
 
         self.id = 'monaghanbforce'
-        self.cs = cs
         self.delp = delp
         SPHFunctionParticle.__init__(self, source, dest, 
-                                       setup_arrays = False)
+                                       setup_arrays = True)
 
     cpdef setup_arrays(self):
         """ Setup the arrays needed for the function """
@@ -24,19 +25,19 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         #Setup the basic properties like m, x rho etc.
         SPHFunctionParticle.setup_arrays(self)
         
-        self.s_tx = self.array.get_carray("tx")
-        self.s_ty = self.array.get_carray("ty")
-        self.s_tz = self.array.get_carray("tz")
-        self.s_nx = self.array.get_carray("nx")
-        self.s_ny = self.array.get_carray("ny")
-        self.s_nz = self.array.get_carray("nz")
+        self.s_tx = self.source.get_carray("tx")
+        self.s_ty = self.source.get_carray("ty")
+        self.s_tz = self.source.get_carray("tz")
+        self.s_nx = self.source.get_carray("nx")
+        self.s_ny = self.source.get_carray("ny")
+        self.s_nz = self.source.get_carray("nz")
 
     cdef void eval(self, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ Perform the boundary force computation """
 
         cdef double x, y, nforce, tforce, force
-        cdef double beta, q
+        cdef double beta, q, cs
         cdef Point tang, norm, rab
 
         cdef double h = self.d_h.data[dest_pid]
@@ -56,38 +57,35 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         
         tang = Point(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
                      self.s_tz.data[source_pid])
+
+        cs = self.d_cs.data[dest_pid]
         
         rab = self._dst - self._src
         x = rab.dot(tang)
         y = rab.dot(norm)
 
-        #Evaluate the tangential force
-        #if 0 < abs(x) < self.delp:
-        #tforce = 1 - abs(x)/self.delp
-        #else:
-        #tforce = 0.0
+        force = 0.0
 
-        #Evaluate the normal force
-        beta = 0.02 * self.cs * self.cs/y
         q = y/h
 
-        if abs(x) < self.delp:
-            if 0 < q < 2./3:
-                nforce =  2./3
-            elif 2./3 < q < 1.0:
-                nforce = (2*q - 1.5*q*q)
-            elif 1. < q < 2:
+        if 0 <= fabs(x) <= self.delp:
+            beta = 0.02 * cs * cs/y
+            tforce = 1.0 - fabs(x)/self.delp
+
+            if 0 < q < 2.0/3.0:
+                nforce =  2.0/3.0
+
+            elif 2.0/3.0 < q < 1.0:
+                nforce = 2*q*(1.0 - 0.75*q)
+
+            elif 1.0 < q < 2.0:
                 nforce = 0.5 * (2-q)*(2-q)
+
             else:
-                nforce = 0.0                
-                    
-            force = (mb/(ma+mb)) * nforce * beta
-        else:
-            force = 0.0
-        
-        assert abs(norm.y - 1) < 1e-14
-        assert abs(norm.x) < 1e-14
-        assert abs(norm.z) < 1e-14
+                nforce = 0.0
+                   
+            force = (mb/(ma+mb)) * nforce * tforce * beta
+            #print dest_pid, source_pid, q, nforce, tforce, force
         
         nr[0] += force*norm.x
         nr[1] += force*norm.y

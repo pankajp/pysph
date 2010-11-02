@@ -151,7 +151,7 @@ class Solver(object):
             calcs = self.integrator.calcs
             particles.correction_manager = KernelCorrectionManager(
                 calcs, self.kernel_correction)
-            
+
     def append_particle_arrrays(self, arrays):
         """ Append the particle arrays to the existing particle arrays """
 

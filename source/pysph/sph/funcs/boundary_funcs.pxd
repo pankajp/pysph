@@ -17,7 +17,6 @@ from pysph.base.carray cimport DoubleArray
 cdef class MonaghanBoundaryForce(SPHFunctionParticle):
     """ MonaghanBoundaryForce """
 
-    cdef public double sound_speed
     cdef public double delp
     
     cdef public DoubleArray s_tx, s_ty, s_tz, s_nx, s_ny, s_nz

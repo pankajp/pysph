@@ -17,3 +17,6 @@ from particles import Particles, get_particle_array
 from point import Point
 
 from particle_types import ParticleType
+import particle_tags
+
+from geometry import MeshPoint, Line, Geometry

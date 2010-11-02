@@ -60,13 +60,12 @@ class NeighborCount(Function):
 
 class MonaghanBoundaryForce(Function):
     
-    def __init__(self, cs = -1, delp = 0.0):
-        self.cs = cs
+    def __init__(self, delp = 1.0):
         self.delp = delp
         
     def get_func(self, source, dest):
         return boundary.MonaghanBoundaryForce(source=source, dest=dest,
-                                              cs = self.cs, delp = self.delp)
+                                              delp = self.delp)
 
 
 class BeckerBoundaryForce(Function):
