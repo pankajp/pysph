@@ -38,6 +38,7 @@ cdef class SPHFunctionParticle:
     cdef public Point _dst
     
     cdef public str name, id
+    cdef public str tag
 
     cdef public bint bonnet_and_lok_correction
     cdef public bint rkpm_first_order_correction

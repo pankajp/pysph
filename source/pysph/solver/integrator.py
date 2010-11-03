@@ -752,30 +752,29 @@ class LeapFrogIntegrator(Integrator):
     def add_correction_for_position(self, dt):
         ncalcs = len(self.calcs)
 
-        _updates = {1:['x'], 2:['x', 'y'], 3:['x','y','z']}
+        vel_updates = {1:['u'], 2:['u', 'v'], 3:['u','v','w']}
         
         for i in range(ncalcs):
             calc = self.calcs[i]
 
-            pa = self.particles.arrays[calc.dnum]
-            
-            updates = calc.updates
-            nupdates = len(updates)
-
-            check_updates = {1:['u'], 2:['u', 'v'], 3:['u','v','w']}
-            
-            if updates == check_updates[nupdates]:
+            if calc.tag == "position":
                 
+                pa = self.particles.arrays[calc.dnum]
+                
+                updates = calc.updates
+                nupdates = len(updates)
+
                 for j in range(nupdates):
-
-                    _update_prop = _updates[nupdates][j]
-
+                    
+                    vupdate_prop = vel_updates[nupdates][j]
+                    
                     update_prop = updates[j]
 
                     #the current position
+
                     current_arr = pa.get(_update_prop)
 
-                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
+                    k_name = 'k'+str(self.step)+'_'+vupdate_prop+str(i)+str(j)
                     step_array = pa.get(k_name)
 
                     updated_array = current_arr + 0.5*dt*dt*step_array

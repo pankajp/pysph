@@ -34,6 +34,7 @@ cdef class SPHFunctionParticle:
         """
         self.name = ""
         self.id = ""
+        self.tag = ""
         self.source = source
         self.dest = dest
 

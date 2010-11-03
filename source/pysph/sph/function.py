@@ -64,9 +64,10 @@ class MonaghanBoundaryForce(Function):
         self.delp = delp
         
     def get_func(self, source, dest):
-        return boundary.MonaghanBoundaryForce(source=source, dest=dest,
+        func = boundary.MonaghanBoundaryForce(source=source, dest=dest,
                                               delp = self.delp)
-
+        func.tag = 'velocity'
+        return func
 
 class BeckerBoundaryForce(Function):
     
@@ -74,9 +75,10 @@ class BeckerBoundaryForce(Function):
         self.sound_speed = sound_speed
 
     def get_func(source, dest):
-        return boundary.BeckerBoundaryForce(source=source, dest=dest,
+        func = boundary.BeckerBoundaryForce(source=source, dest=dest,
                                             sound_speed=self.sound_speed)
-
+        func.tag = 'velocity'
+        return func
 
 class LennardJonesForce(Function):
     
@@ -87,27 +89,34 @@ class LennardJonesForce(Function):
         self.p2 = p2
 
     def get_func(self, source, dest):
-        return boundary.LennardJonesForce(source=source, dest=dest,
+        func = boundary.LennardJonesForce(source=source, dest=dest,
                                           D=self.D, ro=self.ro, 
                                           p1=self.p1, p2=self.p2)
+        func.tag = "velocity"
+        return func
 
 #density funcs
 
 class SPHRho(Function):
     def get_func(self, source, dest):
-        return density.SPHRho(source=source, dest=dest)
+        func =  density.SPHRho(source=source, dest=dest)
+        func.tag = 'density'
+        return func
 
 class SPHDensityRate(Function):
     def get_func(self, source, dest):
-        return density.SPHDensityRate(source=source, dest=dest)
-
+        func =  density.SPHDensityRate(source=source, dest=dest)
+        func.tag = "density"
+        return func
 
 #energy equation
 
 class EnergyEquationNoVisc(Function):
     
     def get_func(self, source, dest):
-        return energy.EnergyEquation(source=source, dest=dest)
+        func = energy.EnergyEquation(source=source, dest=dest)
+        func.tag = "energy"
+        return func
 
 class EnergyEquationAVisc(Function):
     
@@ -118,10 +127,12 @@ class EnergyEquationAVisc(Function):
         self.eta = eta
 
     def get_func(self, source, dest):
-        return energy.EnergyEquationAVisc(source=source, dest=dest, 
-                                          beta=self.beta,
-                                          gamma=self.gamma, alpha=self.alpha, 
-                                          eta=self.eta)
+        func =  energy.EnergyEquationAVisc(source=source, dest=dest, 
+                                           beta=self.beta,
+                                           gamma=self.gamma, alpha=self.alpha, 
+                                           eta=self.eta)
+        func.tag = 'energy'
+        return func
 
 
 class EnergyEquation(Function):
@@ -133,9 +144,11 @@ class EnergyEquation(Function):
         self.eta = eta        
         
     def get_func(self, source, dest):
-        return energy.EnergyEquation(source=source, dest=dest, beta=self.beta,
-                                     gamma=self.gamma, alpha=self.alpha, 
-                                     eta=self.eta)
+        func =  energy.EnergyEquation(source=source, dest=dest, beta=self.beta,
+                                      gamma=self.gamma, alpha=self.alpha, 
+                                      eta=self.eta)
+        func.tag = "energy"
+        return func
 
 
 #state equation
@@ -145,7 +158,9 @@ class IdealGasEquation(Function):
         self.gamma = gamma
 
     def get_func(self, source, dest):
-        return eos.IdealGasEquation(source=source, dest=dest, gamma=self.gamma)
+        func =  eos.IdealGasEquation(source=source, dest=dest, gamma=self.gamma)
+        func.tag = "state"
+        return func
 
 class TaitEquation(Function):
     def __init__(self, co, ro, gamma=7.0):
@@ -154,8 +169,10 @@ class TaitEquation(Function):
         self.gamma = gamma
 
     def get_func(self, source, dest):
-        return eos.TaitEquation(source=source, dest=dest, co=self.co, 
-                                ro=self.ro, gamma=self.gamma)
+        func =  eos.TaitEquation(source=source, dest=dest, co=self.co, 
+                                 ro=self.ro, gamma=self.gamma)
+        func.tag = "state"
+        return func
 
 #external forces
 
@@ -166,8 +183,10 @@ class GravityForce(Function):
         self.gz=gz
 
     def get_func(self, source, dest):
-        return external.GravityForce(source=source, dest=dest, gx=self.gx,
-                                     gy=self.gy, gz=self.gz)
+        func =  external.GravityForce(source=source, dest=dest, gx=self.gx,
+                                      gy=self.gy, gz=self.gz)
+        func.tag = "velocity"
+        return func
 
 class VectorForce(Function):
     def __init__(self, force):
@@ -178,23 +197,29 @@ class VectorForce(Function):
 
 class MoveCircleX(Function):
     def get_func(self, source, dest):
-        return external.MoveCircleX(source=source, dest=dest)
+        func =  external.MoveCircleX(source=source, dest=dest)
+        func.tag = "velocity"
+        return func    
 
 class MoveCircleY(Function):
     def get_func(self, source, dest):
-        return external.MoveCircleY(source=source, dest=dest)
-
+        func =  external.MoveCircleY(source=source, dest=dest)
+        func.tag = "velocity"
+        return func
 
 #position funcs
 
 class PositionStepping(Function):
     def get_func(self, source, dest):
-        return position.PositionStepping(source=source, dest=dest)
-
+        func =  position.PositionStepping(source=source, dest=dest)
+        func.tag = "position"
+        return func
 
 class SPHPressureGradient(Function):
     def get_func(self, source, dest):
-        return pressure.SPHPressureGradient(source=source, dest=dest)    
+        func =  pressure.SPHPressureGradient(source=source, dest=dest)    
+        func.tag = "velocity"
+        return func
 
 class MomentumEquation(Function):
     def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
@@ -204,11 +229,13 @@ class MomentumEquation(Function):
         self.eta=eta
 
     def get_func(self, source, dest):
-        return pressure.MomentumEquation(source=source, dest=dest,
-                                         alpha=self.alpha,
-                                         beta=self.beta, gamma=self.gamma, 
-                                         eta=self.eta, 
-                                         )
+        func =  pressure.MomentumEquation(source=source, dest=dest,
+                                          alpha=self.alpha,
+                                          beta=self.beta, gamma=self.gamma, 
+                                          eta=self.eta, 
+                                          )
+        func.tag = "velocity"
+        return func
 
 #viscosity equations
 
@@ -220,18 +247,22 @@ class MonaghanArtificialVsicosity(Function):
         self.eta=eta
 
     def get_func(self, source, dest):
-        return viscosity.MonaghanArtificialVsicosity(source=source, dest=dest, 
-                                           alpha=self.alpha, beta=self.beta,
-                                           gamma=self.gamma, eta=self.eta)
+        func=viscosity.MonaghanArtificialVsicosity(
+            source=source, dest=dest, 
+            alpha=self.alpha, beta=self.beta,
+            gamma=self.gamma, eta=self.eta)
+        func.tag = "velocity"
+        return func
 
 class MorrisViscosity(Function):
     def __init__(self, mu='mu'):
         self.mu=mu
         
     def get_func(self, source, dest):
-        return viscosity.MorrisViscosity(source=source, dest=dest,
+        func = viscosity.MorrisViscosity(source=source, dest=dest,
                                          mu=self.mu)
-
+        func.tag = "velocity"
+        return func
 
 #xsph funcs
 
@@ -240,10 +271,13 @@ class XSPHCorrection(Function):
         self.eps = eps
         
     def get_func(self, source, dest):
-        return xsph.XSPHCorrection(source=source, dest=dest, eps=self.eps)
-
+        func =  xsph.XSPHCorrection(source=source, dest=dest, eps=self.eps)
+        func.tag = "velocity"
+        return func
 
 class XSPHDensityRate(Function):
     
     def get_func(self, source, dest):
-        return xsph.XSPHDensityRate(source=source, dest=dest)
+        func = xsph.XSPHDensityRate(source=source, dest=dest)
+        func.tag = "density"
+        return func

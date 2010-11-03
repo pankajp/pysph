@@ -41,6 +41,7 @@ cdef class SPHBase:
     cdef public int nupdates
     cdef public int nsrcs
     cdef public str id
+    cdef public str tag
 
     cdef public int dim
 

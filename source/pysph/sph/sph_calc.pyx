@@ -105,6 +105,8 @@ cdef class SPHBase:
 
         self.correction_manager = None
 
+        self.tag = ""
+
         self.check_internals()
         self.setup_internals()
 
@@ -131,14 +133,16 @@ cdef class SPHBase:
             msg = 'One sph function is needed per source'
             raise ValueError, msg
 
-        # ensure that all the funcs are of the same class
+        # ensure that all the funcs are of the same class and have same tag
 
         funcs = self.funcs
         for i in range(len(self.funcs)-1):
             if type(funcs[i]) != type(funcs[i+1]):
                 msg = 'All sph_funcs should be of same type'
                 raise ValueError, msg
-            
+            if funcs[i].tag != funcs[i+1].tag:
+                msg = "All functions should have the same tag"
+                raise ValueError, msg
         #check that the function src and dsts are the same as the calc's
 
         for i in range(len(self.funcs)):
@@ -162,6 +166,10 @@ cdef class SPHBase:
         cdef int i
 
         self.nbr_locators[:] = []
+
+        #set the calc's tag from the function tags. Check ensures all are same
+
+        self.tag = self.funcs[0].tag
 
         #set the neighbor locators
 
