@@ -11,11 +11,12 @@ from pysph.base.point cimport Point, Point_sub
 ##############################################################################
 cdef class KernelBase:
     cdef readonly int dim
+    cdef public double fac 
 
     cdef double function(self, Point pa, Point pb, double h)
     cdef void gradient(self, Point pa, Point pb, double h, Point result)
     cdef double laplacian(self, Point pa, Point pb, double h)
-    cdef double _fac(self, double h)
+    cdef _fac(self)
     cpdef double radius(self)
     cpdef int dimension(self)
 
@@ -75,5 +76,3 @@ cdef class W8Kernel(KernelBase):
 cdef class W10Kernel(KernelBase):
     pass
 
-cdef class RepulsiveBoundaryKernel(KernelBase):
-    pass
