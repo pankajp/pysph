@@ -369,5 +369,63 @@ class TestPredictorCorrectorIntegrator(IntegratorTestCase):
 
 ##############################################################################
 
+class TestLeapFrogIntegrator(IntegratorTestCase):
+    """ Test for the Euler Integrator
+
+    For the test, the particles (defined in the setUp of the base class)
+    are constrained to move on a circle of radius 2./pi. 
+
+    Four particles start the motion from the points ENWS and after one 
+    second, the positions should be NWSE respectively.
+
+    """
+    def setup(self):
+        self.integrator = solver.LeapFrogIntegrator(
+            particles=self.particles, calcs = self.calcs)
+
+    def test_constructor(self):
+        """ Some constructor tests """
+        self.assertEqual(self.integrator.nsteps, 2)
+        self.assertEqual(self.integrator.calling_sequence, [])
+
+    def test_motion(self):
+        """ Perform the integration of the particle positons 
+
+        The scheme is the RK2 integrator which is first order accurate 
+        in time. The time step used for the integration is 1e-3 and thus
+        we expect the positions of the particles to be exact to within 
+        four decimal places.       
+
+        """
+
+        #setup the integrator
+
+        self.integrator.setup_integrator()
+
+        #set the time constants
+
+        t = 0; tf = 1.0; dt = 1e-3
+        
+        integrator = self.integrator
+        particles = integrator.particles
+        pa = particles.arrays[0]
+
+        original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+        exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
+
+        while t <= tf:
+            t += dt
+            particles.update()
+            integrator.integrate(dt)
+
+        new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+        self.print_pos('Leap Frog', original_pos, new_pos)
+
+        for i in range(4):
+            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
+            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
+
+##############################################################################
+
 if __name__ == '__main__':
     unittest.main()

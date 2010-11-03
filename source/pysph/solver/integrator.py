@@ -110,6 +110,8 @@ class Integrator(object):
         self.step = 1
         self.setup_done = False
 
+        self.call_sequence = {}
+
     def setup_integrator(self):
         """ Setup the information required for the stepping
         
@@ -389,7 +391,7 @@ class Integrator(object):
         
         particles.barrier()
 
-    def step(self, dt):
+    def Step(self, dt):
         """ Perform stepping for the integrating calcs """
 
         calling_sequence = self.calling_sequence
@@ -427,6 +429,11 @@ class Integrator(object):
 
         particles.barrier()
 
+    def get_calc_step_properties(self, calc, step):
+        updates = calc.updates
+        nupdates = len(updates)
+
+        pa = self.particles.arrays[calc.dnum]
 
     def integrate(self, dt, count):
         raise NotImplementedError
@@ -708,6 +715,126 @@ class PredictorCorrectorIntegrator(Integrator):
 
                     pa.set(**{update_prop:updated_array})
                     pa.set(**{initial_prop:updated_array})
+
+        self.step = 1
+        self.particles.update()
+        
+############################################################################## 
+
+
+##############################################################################
+#`LeapFrogIntegrator` class 
+##############################################################################
+class LeapFrogIntegrator(Integrator):
+    """ Leap frog integration of a system :
+    
+    \frac{Dv}{Dt} = F
+    \frac{Dr}{Dt} = v
+    \frac{D\rho}{Dt} = D
+    
+    the prediction step:
+    
+    vbar = v_0 + h * F_0
+    r = r_0 + h*v_0 + 0.5 * h * h * F_0
+    rhobar = rho_0 + h * D_0
+
+    correction step:
+    v = vbar + 0.5*h*(F - F_0)
+    
+    rho = rhobar + 0.5*h*(F - F_0)
+
+    """
+
+    def __init__(self, particles, calcs):
+        Integrator.__init__(self, particles, calcs)
+        self.nsteps = 2
+
+    def add_correction_for_position(self, dt):
+        ncalcs = len(self.calcs)
+
+        _updates = {1:['x'], 2:['x', 'y'], 3:['x','y','z']}
+        
+        for i in range(ncalcs):
+            calc = self.calcs[i]
+
+            pa = self.particles.arrays[calc.dnum]
+            
+            updates = calc.updates
+            nupdates = len(updates)
+
+            check_updates = {1:['u'], 2:['u', 'v'], 3:['u','v','w']}
+            
+            if updates == check_updates[nupdates]:
+                
+                for j in range(nupdates):
+
+                    _update_prop = _updates[nupdates][j]
+
+                    update_prop = updates[j]
+
+                    #the current position
+                    current_arr = pa.get(_update_prop)
+
+                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
+                    step_array = pa.get(k_name)
+
+                    updated_array = current_arr + 0.5*dt*dt*step_array
+                    pa.set(**{update_prop:updated_array})            
+
+    def integrate(self, dt):
+
+        #set the current arrays
+        self.set_initial_arrays()
+        self.reset_current_arrays()
+
+        #evaluate the system at the current state
+
+        self.eval()
+
+        #perform the prediction step. The next eval will store in k2 arrays
+
+        self.Step(dt)
+        
+        #add the prediction step for the position
+        self.add_correction_for_position(dt)
+
+        self.particles.barrier()
+        self.particles.update()
+
+        self.eval()
+
+        #reset the step to 1
+
+        self.step = 1
+
+        #step but not for the position functions
+
+        ncalcs = len(self.calcs)
+        for i in range(ncalcs):
+            calc = self.calcs[i]
+            
+            if calc.integrates and not calc.id in ['step', 'xsph']:
+                updates = calc.updates
+                nupdates = calc.nupdates
+
+                #get the destination particle array for this calc
+            
+                pa = self.arrays[calc.dnum]
+
+                for j in range(nupdates):
+                    update_prop = updates[j]
+                        
+                    k1 = 'k1_'+update_prop+str(i)+str(j)                    
+                    k1_arr = pa.get(k1)
+
+                    k2 = 'k2_'+update_prop+str(i)+str(j)                    
+                    k2_arr = pa.get(k2)
+
+                    current_arr = pa.get(update_prop)
+                    
+                    updated_array = current_arr + 0.5*dt*(k2_arr - k1_arr)
+
+                    pa.set(**{update_prop:updated_array})
 
         self.step = 1
         self.particles.update()
