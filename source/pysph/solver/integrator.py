@@ -812,7 +812,7 @@ class LeapFrogIntegrator(Integrator):
         for i in range(ncalcs):
             calc = self.calcs[i]
             
-            if calc.integrates and not calc.id in ['step', 'xsph']:
+            if calc.integrates and not calc.tag == 'position':
                 updates = calc.updates
                 nupdates = calc.nupdates
 
