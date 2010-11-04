@@ -159,7 +159,7 @@ s.add_operation(solver.SPHSummationODE(
         
         sph.XSPHCorrection(eps=0.1), 
         on_types=[Fluid],
-        from_types=[Solid],
+        from_types=[Fluid],
         updates=['x','y'], id='xsph')
                 
                 )
