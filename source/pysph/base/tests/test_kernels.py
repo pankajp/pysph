@@ -116,7 +116,7 @@ class TestCubicSplineKernel1D(KernelTestCase1D):
         kernel = self.kernel
         
         self.assertEqual(kernel.dim, 1)
-        #self.assertAlmostEqual(kernel.py_fac(), fac, 6)  
+        self.assertAlmostEqual(kernel.py_fac(h), fac, 6)  
         
     def test_function(self):
         """ Test for normalization of the kernel """
@@ -226,7 +226,7 @@ class TestCubicSplineKernel2D(KernelTestCase2D):
         
         for i in range(3):
             self.assertEqual(self.kernel.dim, 2)
-            #self.assertAlmostEqual(self.kernel.py_fac(), fac, 6)            
+            self.assertAlmostEqual(self.kernel.py_fac(h), fac, 6)            
         
     def test_function2D(self):
         """ Test for the NOrmalization of the kernel in 2D """
@@ -312,6 +312,7 @@ class TestHarmonicKernel1D(KernelTestCase1D):
         val = 0.0
         for p in self.pnts:
             val += func(self.pnt, p, hs) * dx
+            
         self.assertAlmostEqual(val, value, places)
 
     def _testgrad(self, value, places):
@@ -401,7 +402,7 @@ class TestM6SplineKernel1D(KernelTestCase1D):
         kernel = self.kernel
         
         self.assertEqual(kernel.dim, 1)
-        #self.assertAlmostEqual(kernel.py_fac(), fac, 6)  
+        self.assertAlmostEqual(kernel.py_fac(h), fac, 6)  
         
     def test_function(self):
         """ Test for normalization of the kernel """
@@ -475,7 +476,7 @@ class TestM6plineKernel2D(KernelTestCase2D):
         
         for i in range(3):
             self.assertEqual(self.kernel.dim, 2)
-            #self.assertAlmostEqual(self.kernel.py_fac(), fac, 6)            
+            self.assertAlmostEqual(self.kernel.py_fac(h), fac, 6)            
         
     def test_function2D(self):
         """ Test for the Normalization of the kernel in 2D """
@@ -560,7 +561,7 @@ class TestGaussianKernel1D(KernelTestCase1D):
         kernel = self.kernel
         
         self.assertEqual(kernel.dim, 1)
-        #self.assertAlmostEqual(kernel.py_fac(), fac, 6)  
+        self.assertAlmostEqual(kernel.py_fac(h), fac, 6)  
         
     def test_function(self):
         """ Test for normalization of the kernel """
@@ -635,7 +636,7 @@ class TestGaussianKernel2D(KernelTestCase2D):
         
         for i in range(3):
             self.assertEqual(self.kernel.dim, 2)
-            #self.assertAlmostEqual(self.kernel.py_fac(), fac, 6)            
+            self.assertAlmostEqual(self.kernel.py_fac(h), fac, 6)            
         
     def test_function2D(self):
         """ Test for the Normalization of the kernel in 2D """
@@ -724,7 +725,7 @@ class TestW8Kernel1D(KernelTestCase1D):
         kernel = self.kernel
         
         self.assertEqual(kernel.dim, 1)
-        #self.assertAlmostEqual(kernel.py_fac(), fac, 6)  
+        self.assertAlmostEqual(kernel.py_fac(h), fac, 6)  
         
     def test_function(self):
         """ Test for normalization of the kernel """
@@ -801,7 +802,7 @@ class TestW8Kernel2D(KernelTestCase2D):
         
         for i in range(3):
             self.assertEqual(self.kernel.dim, 2)
-            #self.assertAlmostEqual(self.kernel.py_fac(), fac, 6)
+            self.assertAlmostEqual(self.kernel.py_fac(h), fac, 6)
         
     def test_function2D(self):
         """ Test for the NOrmalization of the kernel in 2D """
@@ -890,7 +891,7 @@ class TestW10Kernel1D(KernelTestCase1D):
         kernel = self.kernel
         
         self.assertEqual(kernel.dim, 1)
-        #self.assertAlmostEqual(kernel.py_fac(), fac, 6)  
+        self.assertAlmostEqual(kernel.py_fac(h), fac, 6)  
         
     def test_function(self):
         """ Test for normalization of the kernel """
@@ -966,7 +967,7 @@ class TestW10Kernel2D(KernelTestCase2D):
         
         for i in range(3):
             self.assertEqual(self.kernel.dim, 2)
-            #self.assertAlmostEqual(self.kernel.py_fac(), fac, 6)            
+            self.assertAlmostEqual(self.kernel.py_fac(h), fac, 6)            
         
     def test_function2D(self):
         """ Test for the NOrmalization of the kernel in 2D """

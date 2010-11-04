@@ -316,7 +316,7 @@ s.add_operation(solver.SPHSimpleODE(
                 )
 
 s.set_final_time(0.4)
-s.set_time_step(1e-4)
+s.set_time_step(1e-5)
 
 app.set_solver(s)
 
