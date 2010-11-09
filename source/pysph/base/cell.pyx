@@ -849,7 +849,7 @@ cdef class CellManager:
         if min_size < 0:
             min_h, max_h = self._compute_minmax_h()
             # arbitrarily set min_size as thrice the min_h
-            min_size = 2 * min_h
+            min_size = 3 * min_h
         if min_size < 0:
             # default min_size as set in the constructor
             min_size = 0.1

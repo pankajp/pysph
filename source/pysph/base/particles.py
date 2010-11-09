@@ -131,7 +131,7 @@ class Particles(object):
 
         """
         if self.in_parallel:
-            self.cell_manager.update_remote_particle_properties(props=[props])
+            self.cell_manager.update_remote_particle_properties(props=props)
 
     def barrier(self):
         if self.in_parallel:

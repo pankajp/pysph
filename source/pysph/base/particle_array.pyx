@@ -188,13 +188,14 @@ cdef class ParticleArray:
         d = {}
         # we want only the names of temporary arrays.
         d['name'] = self.name
+        d['particle_type'] = self.particle_type
         d['temporary_arrays'] = self.temporary_arrays.keys()
         props = {}
         default_values = {}
 
         for prop, arr in self.properties.iteritems():
             pinfo = {}
-            pinfo['name'] = prop
+            pinfo['name'] = prop            
             pinfo['type'] = arr.get_c_type()
             pinfo['data'] = arr.get_npy_array()
             pinfo['default'] = self.default_values[prop]
@@ -217,6 +218,7 @@ cdef class ParticleArray:
         self.num_real_particles = 0
 
         self.name = d['name']
+        self.particle_type = d['particle_type']
         props = d['properties']
         for prop in props:
             self.add_property(props[prop])
@@ -258,6 +260,9 @@ cdef class ParticleArray:
 
     cpdef set_name(self, str name):
         self.name = name
+
+    cpdef set_particle_type(self, int particle_type):
+        self.particle_type = particle_type
 
     def initialize(self, **props):
         """
@@ -1098,7 +1103,9 @@ cdef class ParticleArray:
             dst_prop_array = result_array.get_carray(prop)
             src_prop_array.copy_values(index_array, dst_prop_array)
         
-        result_array.align_particles()
+        result_array.align_particles() 
+        result_array.name = self.name
+        result_array.particle_type = self.particle_type
         return result_array
 
     cpdef set_flag(self, str flag_name, int flag_value, LongArray indices):

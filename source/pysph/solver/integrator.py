@@ -110,6 +110,8 @@ class Integrator(object):
         self.step = 1
         self.setup_done = False
 
+        self.rupdate_list = []
+
         self.call_sequence = {}
 
     def setup_integrator(self):
@@ -196,7 +198,12 @@ class Integrator(object):
 
         #indicate that the setup is complete
 
+        self.set_rupdate_list()
         self.setup_done = True
+
+    def set_rupdate_list(self):
+        for i in range(len(self.particles.arrays)):
+            self.rupdate_list.append([])
 
     def set_initial_arrays(self):
         """ Set the intitial arrays for the integrator
@@ -284,8 +291,12 @@ class Integrator(object):
                     particles.barrier()
 
                     #update the remote particle properties
+
+                    self.rupdate_list[calc.dnum] = [update_prop]
  
-                    particles.update_remote_particle_properties([update_prop])
+                    #particles.update_remote_particle_properties([update_prop])
+                    particles.update_remote_particle_properties(
+                        self.rupdate_list)
                     
                 else:
                     k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
@@ -342,7 +353,10 @@ class Integrator(object):
 
                     #update the remote particle properties
  
-                    particles.update_remote_particle_properties([update_prop])
+                    #particles.update_remote_particle_properties([update_prop])
+                    self.rupdate_list[calc.dnum] = [update_prop]
+                    particles.update_remote_particle_properties(
+                        self.rupdate_list)
                 else:
                     k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
                     pa.set(**{k_name:step_array.copy()})
@@ -772,7 +786,7 @@ class LeapFrogIntegrator(Integrator):
 
                     #the current position
 
-                    current_arr = pa.get(_update_prop)
+                    current_arr = pa.get(update_prop)
 
                     k_name = 'k'+str(self.step)+'_'+vupdate_prop+str(i)+str(j)
                     step_array = pa.get(k_name)

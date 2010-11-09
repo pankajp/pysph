@@ -1364,6 +1364,9 @@ class LoadBalancer:
             for i in range(na):
                 arr = particle_arrays_per_proc[proc][i]
                 arr.append_parray(a2b[i].extract_particles(pid_list[i]))
+
+                arr.set_name(a2b[i].name)
+                arr.set_particle_type(a2b[i].particle_type)
         
         return particle_arrays_per_proc
     

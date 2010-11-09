@@ -71,6 +71,7 @@ cdef class ParticleArray:
     cdef np.ndarray _get_real_particle_prop(self, str prop)
 
     cpdef set_name(self, str name)
+    cpdef set_particle_type(self, int particle_type)
     cpdef set_dirty(self, bint val)
     cpdef set_indices_invalid(self, bint val)
 
