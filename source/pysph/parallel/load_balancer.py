@@ -1371,7 +1371,15 @@ class LoadBalancer:
     def distribute_particles(cls, particle_array, num_procs, cell_size, max_iter=100, distr_func='auto', **args):
         """Same as distribute_particle_arrays but for a single particle array
         """
-        ret =  cls.distribute_particle_arrays([particle_array], num_procs, cell_size, max_iter, distr_func, **args)
-        ret = [i[0] for i in ret]
+        if isinstance(particle_array, (ParticleArray,)):
+            is_particle_array = True
+            pas = [particle_array]
+        else:
+            # assume particle_array is list of particle_arrays
+            is_particle_array = False
+            pas = particle_array
+        ret =  cls.distribute_particle_arrays(pas, num_procs, cell_size, max_iter, distr_func, **args)
+        if is_particle_array:
+            ret = [i[0] for i in ret]
         return ret
     

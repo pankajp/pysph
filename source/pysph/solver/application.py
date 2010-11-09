@@ -7,7 +7,7 @@ import sys
 from utils import mkdir
 
 # PySPH imports.
-from pysph.base.particles import Particles, get_particle_array
+from pysph.base.particles import Particles, get_particle_array, ParticleArray
 
 # MPI conditional imports
 HAS_MPI = True
@@ -225,7 +225,9 @@ class Application(object):
 
         self.particle_array = pa
         in_parallel = num_procs > 1
-        self.particles = Particles(arrays=[pa], in_parallel=in_parallel,
+        if isinstance(pa, (ParticleArray,)):
+            pa = [pa]
+        self.particles = Particles(arrays=pa, in_parallel=in_parallel,
                                    load_balancing=self.load_balance)
         return self.particles
 

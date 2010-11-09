@@ -97,6 +97,27 @@ class TestSerialLoadBalancer3D(TestSerialLoadBalancer1D):
         self.cell_size = 0.1
         self.dim = 3
 
+    def test_distribute_particles1(self):
+        """ test distribute_particles for a single particle_array """
+        pa = self.pas[0]
+        np = pa.get_number_of_particles()
+        pa1, pa2 = LoadBalancer.distribute_particles(pa, 2, -1)
+        self.assertEqual(pa1.get_number_of_particles() +
+                         pa2.get_number_of_particles(), np)
+
+    def test_distribute_particles2(self):
+        """ test distribute_particles with list of particle_array """
+        np = self.pas[0].get_number_of_particles()
+        pas = LoadBalancer.distribute_particles(self.pas, 2, -1)
+        pa1, pa2 = pas[0][0], pas[1][0]
+        self.assertEqual(pa1.get_number_of_particles() +
+                         pa2.get_number_of_particles(), np)
+
+        pas = LoadBalancer.distribute_particles([pa1, pa2], 2, -1)
+        np2 = 0
+        for pa in pas[0]+pas[1]:
+            np2 += pa.get_number_of_particles()
+        self.assertEqual(np2, np)
 
 
 if __name__ == "__main__":
