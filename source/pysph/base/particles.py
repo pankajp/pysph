@@ -166,16 +166,19 @@ def get_particle_array(**props):
     particle_type = Fluid
 
     default_props = ['x','y','z','u','v','w','m','h','p','e','rho','cs',
-                     'tmpx','tmpy','tmpz','id']
+                     'tmpx','tmpy','tmpz']
     
     #Add the properties requested
+    
+    np = 0
 
     for prop in props.keys():
         if prop in ['name','type']:
             pass
         else:
             assert type(props[prop]) == numpy.ndarray, 'Numpy array required!'
-            if prop == 'id':
+            np = len(props[prop])
+            if prop == 'idx':
                 prop_dict[prop] = {'data':props[prop], 'type':'int'}
             else:
                 prop_dict[prop] = {'data':props[prop]}
@@ -185,9 +188,12 @@ def get_particle_array(**props):
     for prop in default_props:
         if prop not in props.keys():
             prop_dict[prop] = {'name':prop}
-            if prop == 'id':
-                prop_dict[prop] = {'name':prop, 'type':'int'}
-                
+
+    # Add the property idx
+
+    if not prop_dict.has_key('idx') and np != 0:
+        prop_dict['idx'] = {'name':'idx', 'data':numpy.arange(np),
+                            'type':'int'}
             
     #handle the name and particle_type information separately
 

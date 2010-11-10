@@ -45,7 +45,7 @@ def get_circular_patch(name="", type=0):
 
     pa.remove_particles(la)
 
-    pa.set(id=numpy.arange(len(pa.x)))
+    pa.set(idx=numpy.arange(len(pa.x)))
  
     print 'Number of particles: ', len(pa.x)
     

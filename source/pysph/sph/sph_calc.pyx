@@ -9,6 +9,7 @@ This module provdies the SPHBase class, which does the actual SPH summation.
 from libc.stdlib cimport *
 
 cimport numpy
+import numpy
 
 # logging import
 import logging
@@ -508,7 +509,7 @@ cdef class SPHCalc(SPHBase):
     cdef eval(self, size_t i, double* nr, double* dnr, 
               bint exclude_self):
     
-        cdef ParticleArray src
+        cdef ParticleArray src, pae
         cdef SPHFunctionParticle func
         cdef FixedDestNbrParticleLocator loc
         cdef size_t k, s_idx
@@ -530,8 +531,9 @@ cdef class SPHCalc(SPHBase):
             logger.info("SPHCalc:eval Neighbor indices for particle %d %s"
                         %(i, nbrs.get_npy_array()))
 
+            pae = src.extract_particles(nbrs, ['idx'])
             logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
-                        %(i, src.extract_particles(nbrs, ['id']).get('id')))
+                        %(i, pae.get('idx')))
 
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)

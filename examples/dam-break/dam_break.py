@@ -81,8 +81,10 @@ import pysph.sph.api as sph
 Fluid = base.ParticleType.Fluid
 Solid = base.ParticleType.Solid
 
-dx = dy = 0.012
-h = 1.3*dx
+h = 0.0156
+#h = 0.0390
+#h = 0.01
+dx = dy = h/1.3
 ro = 1000.0
 co = 65.0
 gamma = 7.0
@@ -166,28 +168,28 @@ def get_boundary_particles():
 
     #bottom
 
-    xb2 = get_1D_grid(dx, container_width - dx, dx)
+    xb2 = get_1D_grid(dx, container_width, dx)
     yb2 = numpy.zeros_like(xb2)
     nb2 = len(xb2)
 
     #right wall
     
-    xb3 = xb1 + container_width
+    xb3 = xb1 + (int(container_width/dx) + 1)* dx
     yb3 = yb1.copy()
     nb3 = len(xb3)
 
     #staggered portion of the left wall
-    yb4 = get_1D_grid(-dy/2, container_height-dy/2, dy)
+    yb4 = get_1D_grid(-dy/2, container_height, dy)
     xb4 = numpy.ones_like(yb4) * -dx/2
     nb4 = len(xb4)
 
     # staggered portion for the bottom wall
-    xb5 = get_1D_grid(dx/2, container_width-dx/2, dx)
+    xb5 = get_1D_grid(dx/2, container_width+dx, dx)
     yb5 = numpy.ones_like(xb5) * -dy/2
     nb5 = len(xb5)
 
     #staggered portion for the right wall
-    xb6 = xb4 + (container_width + dx)
+    xb6 = xb3 + dx/2
     yb6 = yb4.copy()
     nb6 = len(xb6)
 
@@ -243,22 +245,31 @@ def get_fluid_particles():
     rhof = numpy.ones_like(x) * ro
     csf = numpy.ones_like(x) * co
     
-    fluid = base.get_particle_array(name="dam", type=Fluid,
+    fluid = base.get_particle_array(name="fluid", type=Fluid,
                                     x=x, y=y, h=hf, m=mf, rho=rhof, cs=csf)
 
     return fluid
 
+def get_particles():
+    fluid = get_fluid_particles()
+    boundary = get_boundary_particles()
+
+    return [fluid, boundary]
 
 app = solver.Application()
 app.process_command_line()
 
+particles = app.create_particles(get_particles)
 
-boundary = get_boundary_particles()
-fluid = get_fluid_particles()
+print "Load Distributed"
 
-particles = base.Particles(arrays=[fluid, boundary])
-app.particles = particles
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.EulerIntegrator)
+s = solver.Solver(base.HarmonicKernel(dim=2, n=3), 
+                  solver.RK2Integrator)
+
+for pa in particles.arrays:
+    print pa.get_number_of_particles(), pa.num_real_particles, pa.name,
+    print pa.particle_type
+    print pa.idx
 
 #Equation of state
 s.add_operation(solver.SPHAssignment(
@@ -314,9 +325,8 @@ s.add_operation(solver.SPHSimpleODE(
         updates=['x','y'], id='step')
                 
                 )
-
 s.set_final_time(0.4)
-s.set_time_step(1e-5)
+s.set_time_step(1e-4)
 
 app.set_solver(s)
 
