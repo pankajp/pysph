@@ -81,8 +81,8 @@ import pysph.sph.api as sph
 Fluid = base.ParticleType.Fluid
 Solid = base.ParticleType.Solid
 
-h = 0.0156
-#h = 0.0390
+#h = 0.0156
+h = 0.0390
 #h = 0.01
 dx = dy = h/1.3
 ro = 1000.0
@@ -126,8 +126,8 @@ def get_2D_grid(start_point, end_point, spacing):
 
     """
     
-    x, y =  numpy.mgrid[start_point.x:end_point.x+1e-10:spacing,
-                        start_point.y:end_point.y+1e-10:spacing]
+    x, y =  numpy.mgrid[start_point.x:end_point.x:spacing,
+                        start_point.y:end_point.y:spacing]
 
     x = x.ravel(); y = y.ravel()
 
@@ -159,39 +159,39 @@ def get_2D_staggered_grid(bias_point_1, bias_point_2, end_point, spacing):
 def get_boundary_particles():
     """ Get the particles corresponding to the dam and fluids """
     
-
-    #the left wall
-    
-    yb1 = get_1D_grid(0, container_height, dy)
-    xb1 = numpy.zeros_like(yb1)
-    nb1 = len(xb1)
+    #left wall
+    ylw = get_1D_grid(0, container_height, dy)
+    xlw = numpy.zeros_like(ylw)
+    nb1 = len(ylw)
 
     #bottom
+    xbs = get_1D_grid(dx, container_width+dx, dx)
+    ybs = numpy.zeros_like(xbs)
+    nb3 = len(xbs)
 
-    xb2 = get_1D_grid(dx, container_width, dx)
-    yb2 = numpy.zeros_like(xb2)
-    nb2 = len(xb2)
+    max_xb = numpy.max(xbs)
+    
+    #staggered left wall
+    yslw = get_1D_grid(-dx/2, container_height, dx)
+    xslw = numpy.ones_like(yslw) * -dx/2
+    nb4 = len(yslw)
+
+    #staggered bottom
+    xsb = get_1D_grid(dx/2, container_width+dx+dx, dx)
+    ysb = numpy.ones_like(xsb) * -dy/2
+    nb6 = len(xsb)
+
+    max_xsb = numpy.max(xsb)
 
     #right wall
-    
-    xb3 = xb1 + (int(container_width/dx) + 1)* dx
-    yb3 = yb1.copy()
-    nb3 = len(xb3)
+    yrw = numpy.arange(dx, container_height, dx)
+    xrw = numpy.ones_like(yrw) * max_xb
+    nb2 = len(yrw)
 
-    #staggered portion of the left wall
-    yb4 = get_1D_grid(-dy/2, container_height, dy)
-    xb4 = numpy.ones_like(yb4) * -dx/2
-    nb4 = len(xb4)
-
-    # staggered portion for the bottom wall
-    xb5 = get_1D_grid(dx/2, container_width+dx, dx)
-    yb5 = numpy.ones_like(xb5) * -dy/2
-    nb5 = len(xb5)
-
-    #staggered portion for the right wall
-    xb6 = xb3 + dx/2
-    yb6 = yb4.copy()
-    nb6 = len(xb6)
+    #staggered right wall
+    ysrw = numpy.arange(dy/2, container_height, dy)
+    xsrw = numpy.ones_like(ysrw) * max_xsb
+    nb5 = len(ysrw)
 
     nb = nb1 + nb2 + nb3 + nb4 + nb5 + nb6
 
@@ -202,24 +202,24 @@ def get_boundary_particles():
 
     idx = 0
 
-    xb[:nb1] = xb1; yb[:nb1] = yb1
+    xb[:nb1] = xlw; yb[:nb1] = ylw
 
     idx += nb1
 
-    xb[idx:idx+nb2] = xb2; yb[idx:idx+nb2] = yb2
+    xb[idx:idx+nb2] = xrw; yb[idx:idx+nb2] = yrw
 
     idx += nb2
 
-    xb[idx:idx+nb3] = xb3; yb[idx:idx+nb3] = yb3
+    xb[idx:idx+nb3] = xbs; yb[idx:idx+nb3] = ybs
     idx += nb3
 
-    xb[idx:idx+nb4] = xb4; yb[idx:idx+nb4] = yb4
+    xb[idx:idx+nb4] = xslw; yb[idx:idx+nb4] = yslw
     idx += nb4
 
-    xb[idx:idx+nb5] = xb5; yb[idx:idx+nb5] = yb5
+    xb[idx:idx+nb5] = xsrw; yb[idx:idx+nb5] = ysrw
     idx += nb5
 
-    xb[idx:] = xb6; yb[idx:] = yb6
+    xb[idx:] = xsb; yb[idx:] = ysb
 
     hb = numpy.ones_like(xb)*h
     mb = numpy.ones_like(xb)*dx*dy*ro
@@ -261,15 +261,8 @@ app.process_command_line()
 
 particles = app.create_particles(get_particles)
 
-print "Load Distributed"
-
 s = solver.Solver(base.HarmonicKernel(dim=2, n=3), 
                   solver.RK2Integrator)
-
-for pa in particles.arrays:
-    print pa.get_number_of_particles(), pa.num_real_particles, pa.name,
-    print pa.particle_type
-    print pa.idx
 
 #Equation of state
 s.add_operation(solver.SPHAssignment(
@@ -325,7 +318,7 @@ s.add_operation(solver.SPHSimpleODE(
         updates=['x','y'], id='step')
                 
                 )
-s.set_final_time(0.4)
+s.set_final_time(10)
 s.set_time_step(1e-4)
 
 app.set_solver(s)
