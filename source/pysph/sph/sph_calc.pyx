@@ -278,8 +278,8 @@ cdef class SPHBase:
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
 
-        logger.info("""SPHBase:sph: calc %s looping over all destination 
-                       particles """%(self.id))
+        #logger.info("""SPHBase:sph: calc %s looping over all destination 
+        #               particles """%(self.id))
 
         #loop over all particles
         for i from 0 <= i < np:
@@ -525,15 +525,17 @@ cdef class SPHCalc(SPHBase):
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
 
-            logger.info("""SPHCalc:eval: calc %s, dest %s, source %s"""
-                        %(self.id, self.dest.name, src.name))
+            if logger.level < 30:
 
-            logger.info("SPHCalc:eval Neighbor indices for particle %d %s"
-                        %(i, nbrs.get_npy_array()))
+                logger.info("""SPHCalc:eval: calc %s, dest %s, source %s"""
+                            %(self.id, self.dest.name, src.name))
 
-            pae = src.extract_particles(nbrs, ['idx'])
-            logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
-                        %(i, pae.get('idx')))
+                logger.info("SPHCalc:eval Neighbor indices for particle %d %s"
+                            %(i, nbrs.get_npy_array()))
+
+                pae = src.extract_particles(nbrs, ['idx'])
+                logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
+                            %(i, pae.get('idx')))
 
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)
