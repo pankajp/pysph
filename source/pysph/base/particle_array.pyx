@@ -554,7 +554,8 @@ cdef class ParticleArray:
             else:
                 # meaning this property is not there in self.
                 self.add_property({'name':prop_name,
-                                   'default':parray.default_values[prop_name]})
+                        'default':parray.default_values[prop_name],
+                        'type':parray.properties[prop_name].get_c_type()})
                 # now add the values to the end of the created array
                 dest = <BaseArray>PyDict_GetItem(self.properties, prop_name)
                 nparr_dest = dest.get_npy_array()
