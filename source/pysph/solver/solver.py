@@ -216,6 +216,8 @@ class Solver(object):
 
             #perform the integration 
 
+            logger.info("TIME %f"%(t))
+
             self.integrator.integrate(dt)
 
             #perform any post step functions

@@ -40,9 +40,11 @@ def standard_shock_tube_data(name="", type=0):
     p = 0.4*rho*e
 
     cs = numpy.sqrt(1.4*p/rho)
+
+    id = numpy.arange(400)
     
     return base.get_particle_array(name=name,x=x,m=m,h=h,rho=rho,p=p,e=e,
-                                   cs=cs,type=type)
+                                   cs=cs,type=type, id=id)
 
 class ShockTubeSolver(Solver):
     

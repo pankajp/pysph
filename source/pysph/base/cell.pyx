@@ -853,8 +853,17 @@ cdef class CellManager:
         if min_size < 0:
             # default min_size as set in the constructor
             min_size = 0.1
-        self.cell_size = min_size
-        logger.info('using cell size of %f'%(min_size))
+
+        min_h, max_h = self._compute_minmax_h()
+
+        self.cell_size = 3 * min_h
+
+        logger.info("CellManager:compute_cell_size: min/max h = %f, %f"
+                    %(min_h, max_h))
+
+        logger.info("CellManager:compute_cell_size: using cell size  %f"
+                    %(self.cell_size))
+
         return self.cell_size
     
     def _compute_minmax_h(self):
@@ -877,9 +886,9 @@ cdef class CellManager:
             min_h = min(numpy.min(h), min_h)
             max_h = max(numpy.max(h), max_h)
 
-        if size_computed == False:
-            logger.info('No particles found - using default cell sizes')
-            return -1, -1
+        #if size_computed == False:
+        #    logger.info('No particles found - using default cell sizes')
+        #    return -1, -1
         
         return min_h, max_h
     

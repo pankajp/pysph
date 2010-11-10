@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger()
+
 #############################################################################
 #`Integrator` class
 #############################################################################
@@ -148,6 +152,8 @@ class Integrator(object):
         [['rho_00'], ['p_10'], ['u_20'], ['e_30']]
         
         """
+        
+        logger.info("Setup Integrator called")
 
         self.arrays = self.particles.arrays
 
@@ -213,6 +219,8 @@ class Integrator(object):
         will not replicate the creation of the intial arrays. 
         
         """        
+        
+        logger.info("Integrator: Set initial arrays called")
         ncalcs = len(self.calcs)
         for i in range(ncalcs):            
             calc = self.calcs[i]
@@ -235,6 +243,8 @@ class Integrator(object):
 
     def reset_current_arrays(self):
         """ Reset the current arrays """
+        logger.info("Integrator: Setting current arrays")
+
         ncalcs = len(self.calcs)
         for i in range(ncalcs):
             calc = self.calcs[i]
@@ -258,6 +268,8 @@ class Integrator(object):
     def eval(self):
         """ Evaluate each calc and store in the k list if necessary """
 
+        logger.info("Integrator:eval")
+
         calling_sequence = self.calling_sequence
         ncalcs = len(self.calcs)
         particles = self.particles
@@ -265,7 +277,10 @@ class Integrator(object):
         #call each of the eval functions in order
         for i in range(ncalcs):
             calc = self.calcs[i]
-            
+
+            logger.info("Integrator:eval: operating on calc %d, %s"%(
+                    i, calc.id))
+
             calc.sph(*calling_sequence[i])
 
             updates = calc.updates
@@ -284,6 +299,9 @@ class Integrator(object):
 
                     #set the evaluated property
 
+                    logger.info("""Integrator:eval: setting the prop %s for calc
+                                    %d, %s"""%(update_prop,  i, calc.id))
+
                     pa.set(**{update_prop:step_array})
 
                     #ensure that all processes have reached this point
@@ -293,6 +311,8 @@ class Integrator(object):
                     #update the remote particle properties
 
                     self.rupdate_list[calc.dnum] = [update_prop]
+                    logger.info("""Integrator:eval: updating remote particle
+                                   properties %s"""%(self.rupdate_list))
  
                     #particles.update_remote_particle_properties([update_prop])
                     particles.update_remote_particle_properties(
@@ -319,6 +339,8 @@ class Integrator(object):
 
 
         """
+        logger.info("Integrator:do_step")
+
         calling_sequence = self.calling_sequence
         ncalcs = len(self.calcs)
         particles = self.particles
@@ -331,6 +353,9 @@ class Integrator(object):
 
             updates = calc.updates
             nupdates = calc.nupdates
+
+            logger.info("Integrator:do_step: operating on calc %d %s"
+                        %(i, calc.id))
 
             #get the destination particle array for this calc
             
@@ -345,6 +370,9 @@ class Integrator(object):
                 if not calc.integrates:
                     #set the evaluated property
 
+                    logger.info("""Integrator:eval: setting the prop %s for calc
+                                    %d, %s"""%(update_prop,  i, calc.id))
+
                     pa.set(**{update_prop:step_array})
 
                     #ensure that all processes have reached this point
@@ -353,7 +381,9 @@ class Integrator(object):
 
                     #update the remote particle properties
  
-                    #particles.update_remote_particle_properties([update_prop])
+                    logger.info("""Integrator:eval: updating remote particle
+                                   properties %s"""%(self.rupdate_list))
+
                     self.rupdate_list[calc.dnum] = [update_prop]
                     particles.update_remote_particle_properties(
                         self.rupdate_list)
@@ -381,6 +411,8 @@ class Integrator(object):
                 updates = calc.updates
                 nupdates = calc.nupdates
 
+                logger.info("""Steping phase for calc %d, %s """%(i, calc.id))
+
                 #get the destination particle array for this calc
             
                 pa = self.arrays[calc.dnum]
@@ -392,6 +424,9 @@ class Integrator(object):
 
                     k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
                     step_array = pa.get(k_name)
+
+                    logger.info("""Integrator:do_step: Updating the k array
+                                %s """%(k_name))
 
                     updated_array = current_arr + step_array*dt
                     pa.set(**{update_prop:updated_array})

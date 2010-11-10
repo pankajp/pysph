@@ -44,6 +44,8 @@ def get_circular_patch(name="", type=0):
     la.set_data(numpy.array(indices))
 
     pa.remove_particles(la)
+
+    pa.set(id=numpy.arange(len(pa.x)))
  
     print 'Number of particles: ', len(pa.x)
     

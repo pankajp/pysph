@@ -115,6 +115,8 @@ cdef class SPHBase:
 
         # check if the data is sane.
 
+        logger.info("SPHBase:check_internals: calc %s"%(self.id))
+
         if (len(self.sources) == 0 or self.nnps_manager is None
             or self.dest is None or self.kernel is None or len(self.funcs)
             == 0):
@@ -177,8 +179,11 @@ cdef class SPHBase:
             src = self.sources[i]
             loc = self.nnps_manager.get_neighbor_particle_locator(
                 src, self.dest, self.kernel.radius())
-            logger.info('Using locator : %s, %s, %s'%(src.name, 
-                                                     self.dest.name, loc))
+
+            logger.info("""SPHBase:setup_internals: calc %s using 
+                        locator (src: %s) (dst: %s) %s """
+                        %(self.id, src.name, self.dest.name, loc))
+            
             self.nbr_locators.append(loc)
 
         #set the kernel correction arrays if reqired
@@ -271,6 +276,9 @@ cdef class SPHBase:
 
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
+
+        logger.info("""SPHBase:sph: calc %s looping over all destination 
+                       particles """%(self.id))
 
         #loop over all particles
         for i from 0 <= i < np:
@@ -499,20 +507,31 @@ cdef class SPHCalc(SPHBase):
     
     cdef eval(self, size_t i, double* nr, double* dnr, 
               bint exclude_self):
-
+    
+        cdef ParticleArray src
         cdef SPHFunctionParticle func
         cdef FixedDestNbrParticleLocator loc
         cdef size_t k, s_idx
         cdef LongArray nbrs = self.nbrs
         cdef int j
-       
+
         for j in range(self.nsrcs):
             
+            src = self.sources[j]
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
 
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
+
+            logger.info("""SPHCalc:eval: calc %s, dest %s, source %s"""
+                        %(self.id, self.dest.name, src.name))
+
+            logger.info("SPHCalc:eval Neighbor indices for particle %d %s"
+                        %(i, nbrs.get_npy_array()))
+
+            logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
+                        %(i, src.extract_particles(nbrs, ['id']).get('id')))
 
             for k from 0 <= k < self.nbrs.length:
                 s_idx = self.nbrs.get(k)
@@ -526,6 +545,8 @@ cdef class SPHEquation(SPHBase):
         """ Check for inconsistencies and set the neighbor locator. """
 
         # check if the data is sane.
+
+        logger.info("SPHEquation:check_internals: calc %s"%(self.id))
 
         if (self.nnps_manager is None or self.dest is None \
                 or self.kernel is None or len(self.funcs)  == 0):
