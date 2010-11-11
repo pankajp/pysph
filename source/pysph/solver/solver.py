@@ -196,13 +196,12 @@ class Solver(object):
         tf = self.tf
         dt = self.dt
 
-        t = 0
         count = 0
-        maxval = int((tf - t)/dt +1)
+        maxval = int((tf - self.t)/dt +1)
         bar = PBar(maxval, show=show_progress)
 
-        while t < tf:
-            t += dt
+        while self.t < tf:
+            self.t += dt
             count += 1
             
             #update the particles explicitly
@@ -216,7 +215,7 @@ class Solver(object):
 
             #perform the integration 
 
-            logger.info("TIME %f"%(t))
+            logger.info("TIME %f"%(self.t))
 
             self.integrator.integrate(dt)
 
@@ -227,12 +226,11 @@ class Solver(object):
 
             #dump output
             if count % self.pfreq == 0:
-                self.dump_output(t)
+                self.dump_output(self.t)
 
-            logger.info("Time %f, time step %f "%(t, dt))
+            logger.info("Time %f, time step %f "%(self.t, dt))
             bar.update()
 
-        self.t += t
         bar.finish()
 
     def dump_output(self, t):
