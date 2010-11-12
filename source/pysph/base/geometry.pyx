@@ -359,6 +359,7 @@ cdef class Geometry:
         m = numpy.ones_like(x)
         y = numpy.zeros_like(x)
         z = numpy.zeros_like(x)
+        h = numpy.ones_like(x)
         tx = numpy.zeros_like(x)
         ty = numpy.zeros_like(x)
         tz = numpy.zeros_like(x)
@@ -376,7 +377,7 @@ cdef class Geometry:
             nx[i] = norm.x; ny[i] = norm.y; nz[i] = norm.z
             tx[i] = tang.x; ty[i] = tang.y; tz[i] = tang.z
             
-        geom = get_particle_array(x=x, y=y, z=z, tx=tx, ty=ty,
+        geom = get_particle_array(x=x, y=y, z=z, tx=tx, ty=ty,h=h,
                                   tz=tz, nx=nx, ny=ny, nz=nz, m=m,
                                   name=name, type=Solid)
 

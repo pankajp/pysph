@@ -856,7 +856,7 @@ cdef class CellManager:
 
         min_h, max_h = self._compute_minmax_h()
 
-        self.cell_size = 3 * min_h
+        self.cell_size = 2 * min_h
 
         logger.info("CellManager:compute_cell_size: min/max h = %f, %f"
                     %(min_h, max_h))

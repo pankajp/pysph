@@ -94,7 +94,7 @@ eps = 0.5
 fluid_collumn_height = 2.0
 fluid_collumn_width  = 1.0
 container_height = 3.0
-container_width  = 4.0
+container_width  = 6.0
 
 B = co*co*ro/gamma
 
@@ -231,9 +231,11 @@ def get_boundary_particles():
                                        x=xb, y=yb, h=hb, rho=rhob, cs=cb,
                                        m=mb)
 
-    return boundary
+    width = max_xb
 
-def get_fluid_particles():
+    return boundary, width
+
+def get_fluid_particles(name="fluid"):
     
     x, y = get_2D_staggered_grid(base.Point(dx, dx), base.Point(dx/2, dx/2), 
                                  base.Point(1.0,2.0), dx)
@@ -241,20 +243,24 @@ def get_fluid_particles():
     print 'Number of fluid particles: ', len(x)
 
     hf = numpy.ones_like(x) * h
-    mf = numpy.ones_like(x) * dx * dy * ro * 0.5
+    mf = numpy.ones_like(x) * dx * dy * ro
     rhof = numpy.ones_like(x) * ro
     csf = numpy.ones_like(x) * co
     
-    fluid = base.get_particle_array(name="fluid", type=Fluid,
+    fluid = base.get_particle_array(name=name, type=Fluid,
                                     x=x, y=y, h=hf, m=mf, rho=rhof, cs=csf)
 
     return fluid
 
 def get_particles():
-    fluid = get_fluid_particles()
-    boundary = get_boundary_particles()
+    boundary, width = get_boundary_particles()
 
-    return [fluid, boundary]
+    fluid1 = get_fluid_particles(name="fluid1")
+
+    fluid2 = get_fluid_particles(name="fluid2")
+    fluid2.x = width - fluid2.x    
+
+    return [fluid1, fluid2, boundary]
 
 app = solver.Application()
 app.process_command_line()
