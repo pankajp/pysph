@@ -16,7 +16,7 @@ from pysph.base.carray cimport DoubleArray
 cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
     """ MonaghanArtificialVsicosity """
     
-    cdef public double c
+    cdef public double gamma
     cdef public double alpha
     cdef public double beta
     cdef public double eta

@@ -11,6 +11,7 @@ from pysph.base.point cimport Point, Point_sub
 ##############################################################################
 cdef class KernelBase:
     cdef readonly int dim
+    cdef readonly double fac
 
     cdef double function(self, Point pa, Point pb, double h)
     cdef void gradient(self, Point pa, Point pb, double h, Point result)
@@ -49,6 +50,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
 cdef class HarmonicKernel(KernelBase):
     cdef public int n
     cdef public dict facs
+    #cdef public Point r_tmp
 
 
 ##############################################################################

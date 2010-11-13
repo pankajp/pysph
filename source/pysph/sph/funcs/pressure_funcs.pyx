@@ -1,3 +1,5 @@
+from pysph.base.point cimport Point_new, Point_sub
+
 cdef extern from "math.h":
     double sqrt(double)
 
@@ -31,7 +33,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
                              self.d_h.data[dest_pid])
 
         cdef double temp = 0.0
-        cdef Point grad = Point()
+        cdef Point grad = Point_new()
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -104,17 +106,17 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        va = Point(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
+        va = Point_new(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
                    self.d_w.data[dest_pid])
 
-        vb = Point(self.s_u.data[source_pid], self.s_v.data[source_pid],
+        vb = Point_new(self.s_u.data[source_pid], self.s_v.data[source_pid],
                    self.s_w.data[source_pid])
 
         ca = self.d_cs.data[dest_pid]
         cb = self.s_cs.data[source_pid]
         
-        rab = self._dst - self._src
-        vab = va - vb
+        rab = Point_sub(self._dst, self._src)
+        vab = Point_sub(va, vb)
         dot = vab.dot(rab)
     
         Pa = self.d_p.data[dest_pid]
@@ -146,7 +148,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
         tmp += piab
         tmp *= -mb
 
-        grad = Point()
+        grad = Point_new()
 
         kernel.gradient(self._dst, self._src, hab, grad)
 

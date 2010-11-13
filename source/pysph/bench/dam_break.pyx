@@ -208,7 +208,7 @@ def dam_break_run():
     ret['create_particles'] = t
     
     t = get_time()
-    s = solver.Solver(base.HarmonicKernel(dim=2, n=3), 
+    s = solver.Solver(base.CubicSplineKernel(dim=2), 
                       solver.RK2Integrator)
     t = get_time() - t
     ret['create Solver'] = t

@@ -1,4 +1,4 @@
-
+from pysph.base.point cimport Point_new, Point_sub
 
 ###############################################################################
 # `SPHRho` class.
@@ -60,8 +60,8 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
             
-        vel = Point()
-        grad = Point()
+        vel = Point_new()
+        grad = Point_new()
 
         vel.x = self.d_u.data[dest_pid] - self.s_u.data[source_pid]
         vel.y = self.d_v.data[dest_pid] - self.s_v.data[source_pid]

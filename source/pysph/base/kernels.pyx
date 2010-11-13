@@ -37,6 +37,7 @@ cdef class KernelBase:
         
         """
         self.dim = dim
+        self.fac = self._fac(1.0)
 
     cdef double function(self, Point pa, Point pb, double h):
         """        
@@ -209,11 +210,16 @@ cdef class CubicSplineKernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        #cdef double fac = self._fac(h)
+        #cdef Point r = Point_sub(pa, pb)
+        #cdef double rab = r.length()
+        cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
+                              (pa.y-pb.y)*(pa.y-pb.y) + 
+                              (pa.z-pb.z)*(pa.z-pb.z)                                
+                                )
         cdef double q = rab/h
         cdef double val
+        cdef double fac = pow(h, -self.dim) * self.fac
         
         if q > 2.0:
             val = 0.0
@@ -228,12 +234,21 @@ cdef class CubicSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        #cdef double one_over_h = 1./h
+        #cdef Point r = Point_sub(pa, pb)
+        #cdef double rab = r.length()
+        
+        cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
+                              (pa.y-pb.y)*(pa.y-pb.y) + 
+                              (pa.z-pb.z)*(pa.z-pb.z)                                
+                                )
+        cdef double rx, ry, rz
         cdef double q = rab/h
         cdef double val = 0.0
         
+        fac = pow(h, -self.dim)*self.fac
+        
+        rx = pa.x - pb.x; ry = pa.y - pb.y; rz = pa.z - pb.z
         if q > 2.0:
             pass
         elif q >= 1.0:
@@ -241,16 +256,16 @@ cdef class CubicSplineKernel(KernelBase):
         elif q > 1e-14:
             val = 3.0*(0.75*q - 1)/(h*h)
 
-        grad.x = r.x * (val * fac)
-        grad.y = r.y * (val * fac)
-        grad.z = r.z * (val * fac)
+        grad.x = rx * (val * fac)
+        grad.y = ry * (val * fac)
+        grad.z = rz * (val * fac)
     
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
-        if dim == 1: return (2./3.)/h
-        elif dim == 2: return 10/(7*PI * h*h)
-        elif dim == 3: return 1./(PI * h*h*h)
+        if dim == 1:  return  (2./3.)
+        elif dim == 2: return 10/(7*PI)
+        elif dim == 3: return 1./(PI)
         else: raise ValueError
 
     cpdef double radius(self):
@@ -478,8 +493,8 @@ cdef class HarmonicKernel(KernelBase):
         
         """
         cdef double fac = self._fac(h)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        #cdef Point r = Point_sub(pa, pb)
+        cdef double rab = sqrt((pa.x - pb.x)**2 + (pa.y - pb.y)**2 + (pa.z - pb.z)**2)
         cdef double q = rab/h
         cdef double val, tmp
         cdef double n = self.n
@@ -520,7 +535,7 @@ cdef class HarmonicKernel(KernelBase):
                 else:
                     power = tmp4 ** (n-1)
 
-                val = n/(h*q*rab) * power * (tmp3 - tmp2/tmp1)
+                val = n/(h*q*rab) * power * (tmp3 - tmp4)
             else:
                 val = 0.0
         else:

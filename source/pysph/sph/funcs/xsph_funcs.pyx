@@ -1,3 +1,5 @@
+from pysph.base.point cimport Point_new, Point_sub
+
 ###############################################################################
 # `XSPHCorrection' class.
 ###############################################################################
@@ -28,15 +30,15 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         cdef double rhoab = 0.5*(self.s_rho.data[source_pid] + \
                                      self.d_rho.data[dest_pid])
 
-        cdef Point Va = Point(self.d_u.data[dest_pid],
+        cdef Point Va = Point_new(self.d_u.data[dest_pid],
                               self.d_v.data[dest_pid],
                               self.d_w.data[dest_pid])
 
-        cdef Point Vb = Point(self.s_u.data[source_pid],
+        cdef Point Vb = Point_new(self.s_u.data[source_pid],
                               self.s_v.data[source_pid],
                               self.s_w.data[source_pid])
 
-        cdef Point Vba = Vb - Va
+        cdef Point Vba = Point_sub(Vb, Va)
 
         cdef double mb = self.s_m.data[source_pid]
 
