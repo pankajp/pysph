@@ -263,9 +263,9 @@ cdef class CubicSplineKernel(KernelBase):
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
-        if dim == 1:  return  (2./3.)
-        elif dim == 2: return 10/(7*PI)
-        elif dim == 3: return 1./(PI)
+        if dim == 1:  return  (2./3.)/h
+        elif dim == 2: return 10/(7*PI)/(h*h)
+        elif dim == 3: return 1./PI/(h*h*h)
         else: raise ValueError
 
     cpdef double radius(self):

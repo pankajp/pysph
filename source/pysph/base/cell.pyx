@@ -611,9 +611,9 @@ cdef class CellManager:
     #cdef public bint initialized    
     #cdef public str coord_x, coord_y, coord_z
 
-    def __init__(self, list arrays_to_bin=[], double min_cell_size=0.1,
+    def __init__(self, list arrays_to_bin=[], double min_cell_size=-1.0,
                   double max_cell_size=0.5, Point origin=Point(0,0,0),
-                  bint initialize=True):
+                  bint initialize=True, double max_radius_scale=2.0):
         
         self.origin = Point()
 
@@ -621,6 +621,7 @@ cdef class CellManager:
         self.origin.y = origin.y
         self.origin.z = origin.z
 
+        self.max_radius_scale = max_radius_scale
         self.min_cell_size = min_cell_size
         self.max_cell_size = max_cell_size
 
@@ -842,38 +843,29 @@ cdef class CellManager:
         max_size - largest cell size needed.
 
         Algorithm::
-        choose the minumum cell size as the cell size
+        if min_size <= 0: choose 2*max_radius_scale*min_h
+        else: choose min_size
         
+        This is very simplistic method to find the cell sizes, derived solvers
+        may want to use something more sophisticated or probably set the cell
+        sizes manually.
         """
         # TODO: implement
-        if min_size < 0:
+        if min_size <= 0:
             min_h, max_h = self._compute_minmax_h()
-            # arbitrarily set min_size as thrice the min_h
-            min_size = 5 * min_h
-        if min_size < 0:
-            # default min_size as set in the constructor
-            min_size = 0.1
-
-        min_h, max_h = self._compute_minmax_h()
-
-        self.cell_size = 2 * min_h
-
-        logger.info("CellManager:compute_cell_size: min/max h = %f, %f"
-                    %(min_h, max_h))
-
-        logger.info("CellManager:compute_cell_size: using cell size  %f"
-                    %(self.cell_size))
-
+            # arbitrarily set min_size as some multiple of min_h
+            min_size = 2 * self.max_radius_scale * min_h
+        if min_size <= 0:
+            # default min_size, this should *NOT* happen
+            min_size = 1.0
+        self.cell_size = min_size
+        logger.info('using cell size of %f'%(min_size))
         return self.cell_size
     
     def _compute_minmax_h(self):
         """
         Find the minimum 'h' value from all particle arrays of all entities.
-        Use twice the size as the cell size.
-
-        This is very simplistic method to find the cell sizes, derived solvers
-        may want to use something more sophisticated or probably set the cell
-        sizes manually.
+        returns -1, -1 if computation fails such as no particles
         """
         cdef double min_h = 1e100, max_h = -1.0
         cdef bint size_computed = False
@@ -885,10 +877,11 @@ cdef class CellManager:
                 continue
             min_h = min(numpy.min(h), min_h)
             max_h = max(numpy.max(h), max_h)
+            size_computed = True
 
-        #if size_computed == False:
-        #    logger.info('No particles found - using default cell sizes')
-        #    return -1, -1
+        if size_computed == False:
+            logger.info('No particles found - using default cell sizes')
+            return -1, -1
         
         return min_h, max_h
     

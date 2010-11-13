@@ -392,10 +392,8 @@ cdef class ParallelCellManager(CellManager):
     """
     def __init__(self, arrays_to_bin=[], min_cell_size=-1.0,
                  max_cell_size=0.5, origin=Point(0, 0, 0),
-                 initialize=True,
-                 parallel_controller=None,
-                 max_radius_scale=2.0, dimension=3,
-                 load_balancing=True,
+                 initialize=True, max_radius_scale=2.0,
+                 parallel_controller=None, dimension=3, load_balancing=True,
                  solver=None,
                  *args, **kwargs):
         """
@@ -405,7 +403,8 @@ cdef class ParallelCellManager(CellManager):
                                   min_cell_size=min_cell_size,
                                   max_cell_size=max_cell_size,
                                   origin=origin,
-                                  initialize=False)
+                                  initialize=False,
+                                  max_radius_scale=max_radius_scale)
 
         self.solver=solver
         self.dimension = dimension

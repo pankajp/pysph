@@ -61,6 +61,7 @@ cdef class CellManager:
     cdef public list arrays_to_bin
     cdef public dict cells_dict
     cdef public double min_cell_size, max_cell_size
+    cdef public double max_radius_scale
     cdef public int jump_tolerance
 
     cdef public bint initialized

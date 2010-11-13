@@ -11,6 +11,7 @@ from pysph.base.point import *
 from pysph.base.particle_array import ParticleArray
 from pysph.base.carray import DoubleArray, LongArray
 from pysph.base.tests.common_data import *
+import numpy
 
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
@@ -320,7 +321,7 @@ class TestCellManager(unittest.TestCase):
         self.assertEqual(cm.origin, Point(0, 0, 0))
         self.assertEqual(len(cm.array_indices), 0)
         self.assertEqual(len(cm.arrays_to_bin), 0)
-        self.assertEqual(cm.min_cell_size, 0.1)
+        self.assertEqual(cm.min_cell_size, -1.0)
         self.assertEqual(cm.max_cell_size, 0.5)
         self.assertEqual(cm.jump_tolerance, 1)
         self.assertEqual(cm.coord_x, 'x')
@@ -333,7 +334,26 @@ class TestCellManager(unittest.TestCase):
         
         # there should be no cells since there are no particles
         self.assertEqual(len(cm.cells_dict), 0)
-
+    
+    def test_cell_size(self):
+        """ Test that cell_size is set properly """
+        pas = generate_sample_dataset_1() # h==1
+        
+        # times of the h that cell_size is set to
+        fac = 2.0
+        cm = CellManager(arrays_to_bin=pas, initialize=False)
+        self.assertEqual(cm.cell_size, 0.0)
+        cm.initialize()
+        self.assertEqual(cm.cell_size, 2*fac)
+        
+        cm = CellManager(arrays_to_bin=pas, min_cell_size=3.0)
+        self.assertEqual(cm.cell_size, 3.0)
+        
+        pas[0].h = numpy.linspace(0.2, 2, len(pas[0].h))
+        cm = CellManager(arrays_to_bin=pas, min_cell_size=-0.1)
+        self.assertEqual(cm.cell_size, 2*fac*0.2)
+        
+    
     def test_rebuild_array_indices(self):
         """Tests the _rebuild_array_indices function."""
         p_arrs = self.generate_random_particle_data(3, 10)
@@ -353,10 +373,9 @@ class TestCellManager(unittest.TestCase):
         """Tests the compute_cell_sizes function."""
         cm = CellManager(initialize=False)
         
-        cm.py_compute_cell_size(cm.min_cell_size, cm.max_cell_size) 
+        cm.py_compute_cell_size(100, cm.max_cell_size) 
 
-        #self.assertEqual(cm.cell_sizes.length, 1)
-        self.assertEqual(cm.cell_size, cm.min_cell_size)
+        self.assertEqual(cm.cell_size, 100)
 
         # trying out some more calls to compute_cell_sizes
         arr = DoubleArray(10)
