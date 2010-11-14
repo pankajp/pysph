@@ -14,6 +14,9 @@ cdef extern from "math.h":
 
 cimport numpy 
 import numpy
+
+from pysph.base.point cimport Point_length, Point_distance, Point_distance2
+
 cdef:
     double PI = numpy.pi
     double SQRT_1_PI = 1.0/sqrt(PI)
@@ -157,8 +160,7 @@ cdef class Poly6Kernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         """
-        cdef Point r = pb-pa
-        cdef double mag_sqr_r = r.norm()
+        cdef double mag_sqr_r = Point_distance2(pa, pb)
         cdef double ret = 0.0
         if sqrt(mag_sqr_r) > h:
             ret = 0.0
@@ -171,7 +173,7 @@ cdef class Poly6Kernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef Point r = pa-pb
+        cdef Point r = Point_sub(pa, pb)
         cdef double part = 0.0
         cdef double mag_square_r = r.norm()
         cdef double const1 = 315.0/(64.0*PI*(h**9))
@@ -184,7 +186,7 @@ cdef class Poly6Kernel(KernelBase):
         """Evaluate the laplacian of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef Point r = pb-pa
+        cdef Point r = Point_sub(pb, pa)
         cdef double mag_square_r = r.norm()
         cdef double h_sqr = h*h
         cdef double const1 = 315.0/(64.0*PI*(h**9))
@@ -210,9 +212,6 @@ cdef class CubicSplineKernel(KernelBase):
         the point `pb`.
         
         """
-        #cdef double fac = self._fac(h)
-        #cdef Point r = Point_sub(pa, pb)
-        #cdef double rab = r.length()
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
                               (pa.z-pb.z)*(pa.z-pb.z)                                
@@ -234,10 +233,6 @@ cdef class CubicSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        #cdef double one_over_h = 1./h
-        #cdef Point r = Point_sub(pa, pb)
-        #cdef double rab = r.length()
-        
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
                               (pa.z-pb.z)*(pa.z-pb.z)                                
@@ -289,8 +284,7 @@ cdef class QuinticSplineKernel(KernelBase):
         the point `pb`.         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -393,8 +387,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         the point `pb`.         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -568,8 +561,7 @@ cdef class M6SplineKernel(KernelBase):
         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
         
@@ -640,8 +632,7 @@ cdef class GaussianKernel(KernelBase):
         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -694,8 +685,7 @@ cdef class W8Kernel(KernelBase):
         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
         cdef double *a = [0.603764, -0.580823, 0.209206, -0.0334338, 0.002]
@@ -768,8 +758,7 @@ cdef class W10Kernel(KernelBase):
         the point `pb`.         
         """
         cdef double fac = self.fac * pow(h, -self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val, power
         cdef int i

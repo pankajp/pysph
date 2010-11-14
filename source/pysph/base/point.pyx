@@ -6,13 +6,6 @@ from cpython cimport *
 cimport numpy
 import numpy
 
-cdef extern from "math.h":
-    double sqrt(double)
-    double ceil(double)
-
-cdef extern from 'limits.h':
-    cdef int INT_MAX
-
 # IntPoint's maximum absolute value must be less than `IntPoint_maxint`
 # this is due to the hash implementation
 cdef int IntPoint_maxint = 2**20
