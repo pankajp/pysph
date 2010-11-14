@@ -27,19 +27,19 @@ cpdef Point Point_new(double x=*, double y=*, double z=*)
 cpdef Point Point_sub(Point pa, Point pb)
 cpdef Point Point_add(Point pa, Point pb)
 
-cdef inline Point_length(Point p):
+cdef inline double Point_length(Point p):
     return sqrt(p.x*p.x + p.y*p.y + p.z*p.z)
 
-cdef inline Point_length2(Point p):
+cdef inline double Point_length2(Point p):
     return p.x*p.x + p.y*p.y + p.z*p.z
 
-cdef inline Point_distance(Point pa, Point pb):
+cdef inline double Point_distance(Point pa, Point pb):
     return sqrt((pa.x-pb.x)*(pa.x-pb.x) +
                 (pa.y-pb.y)*(pa.y-pb.y) + 
                 (pa.z-pb.z)*(pa.z-pb.z)
                 )
 
-cdef inline Point_distance2(Point pa, Point pb):
+cdef inline double Point_distance2(Point pa, Point pb):
     return ((pa.x-pb.x)*(pa.x-pb.x) + (pa.y-pb.y)*(pa.y-pb.y) + 
                     (pa.z-pb.z)*(pa.z-pb.z))
 

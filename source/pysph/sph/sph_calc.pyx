@@ -239,9 +239,9 @@ cdef class SPHBase:
               str output_array3=None, bint exclude_self=False): 
         """
         """
-        if not output_array1: output_array1 = 'tmpx'
-        if not output_array2: output_array2 = 'tmpy'
-        if not output_array3: output_array3 = 'tmpz'            
+        if output_array1 is None: output_array1 = 'tmpx'
+        if output_array2 is None: output_array2 = 'tmpy'
+        if output_array3 is None: output_array3 = 'tmpz'            
 
         cdef DoubleArray output1 = self.dest.get_carray(output_array1)
         cdef DoubleArray output2 = self.dest.get_carray(output_array2)
@@ -538,7 +538,7 @@ cdef class SPHCalc(SPHBase):
                             %(i, pae.get('idx')))
 
             for k from 0 <= k < self.nbrs.length:
-                s_idx = self.nbrs.get(k)
+                s_idx = self.nbrs.data[k]
                 func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])
 
 #############################################################################

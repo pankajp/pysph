@@ -162,7 +162,7 @@ cdef class Poly6Kernel(KernelBase):
         """
         cdef double mag_sqr_r = Point_distance2(pa, pb)
         cdef double ret = 0.0
-        if sqrt(mag_sqr_r) > h:
+        if mag_sqr_r > h*h:
             ret = 0.0
         else:
             ret = (h**2.0 - mag_sqr_r)**3.0
@@ -848,14 +848,9 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
     cdef double function(self, Point pa, Point pb, double h):
         """
         """
-        cdef Point dir = Point_sub(pa, pb)
-        cdef double dist = sqrt(dir.norm())
+        cdef double dist = Point_distance(pa, pb)
         cdef double q = dist/h
         cdef double temp = 0.0
-
-        dir.x = dir.x/dist
-        dir.y = dir.y/dist
-        dir.z = dir.z/dist
 
         if q > 0.0 and q <= 2.0/3.0:
             temp = 2.0/3.0
@@ -869,14 +864,9 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
     cdef void gradient(self, Point pa, Point pb, double h, Point grad):
         """
         """
-        cdef Point dir = Point_sub(pa, pb)
-        cdef double dist = sqrt(dir.norm())
+        cdef double dist = Point_distance(pa, pb)
         cdef double q = dist/h
         cdef double temp = 0.0
-
-        dir.x = dir.x/dist
-        dir.y = dir.y/dist
-        dir.z = dir.z/dist
         
         if q > 0.0 and q <= 2.0/3.0:
             temp = 2.0/3.0
@@ -886,11 +876,11 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
             temp = (0.5)*(2.0 - q)*(2.0 - q)
 
         temp *= 0.02
-        temp /= dist
+        temp /= dist*dist
 
-        grad.x = (temp*dir.x)
-        grad.y = (temp*dir.y)
-        grad.z = (temp*dir.z)
+        grad.x = temp*(pa.x-pb.x)
+        grad.y = temp*(pa.y-pb.y)
+        grad.z = temp*(pa.z-pb.z)
 
     cdef double laplacian(self, Point pa, Point pb, double h):
         """
