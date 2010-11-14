@@ -11,7 +11,7 @@ from pysph.base.point cimport Point_new, Point_add, Point_sub, IntPoint
 from time import time
 
 # the sizes of array to test, doesn't affect the result
-cdef list Ns = [1e4]
+cdef list Ns = [10000]
 
 cpdef dict construct_immediate_neighbor_list(Ns=Ns):
     """time construction of immediate neighbor list"""

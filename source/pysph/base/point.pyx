@@ -90,22 +90,22 @@ cdef class Point:
         return 'Point(%g, %g, %g)'%(self.x, self.y, self.z)
 
     def __add__(self, Point p):
-        return Point(self.x + p.x, self.y + p.y, self.z + p.z)
+        return Point_new(self.x + p.x, self.y + p.y, self.z + p.z)
 
     def __sub__(self, Point p):
-        return Point(self.x - p.x, self.y - p.y, self.z - p.z)
+        return Point_new(self.x - p.x, self.y - p.y, self.z - p.z)
 
     def __mul__(self, double m):
-        return Point(self.x*m, self.y*m, self.z*m)
+        return Point_new(self.x*m, self.y*m, self.z*m)
 
     def __div__(self, double m):
-        return Point(self.x/m, self.y/m, self.z/m)
+        return Point_new(self.x/m, self.y/m, self.z/m)
 
     def __abs__(self):
         return self.length()
 
     def __neg__(self):
-        return Point(-self.x, -self.y, -self.z)
+        return Point_new(-self.x, -self.y, -self.z)
 
     def __richcmp__(Point self, Point p, int oper):
         if oper == 2: # ==
@@ -176,7 +176,7 @@ cdef class Point:
     cpdef Point cross(self, Point p):
         """Return the cross product of this point with another, i.e.
         `self` cross `p`."""
-        return Point(self.y*p.z - self.z*p.y, 
+        return Point_new(self.y*p.z - self.z*p.y, 
                      self.z*p.x - self.x*p.z,
                      self.x*p.y - self.y*p.x)
 

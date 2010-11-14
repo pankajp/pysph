@@ -5,10 +5,18 @@ in the specified (current) directory into python extensions
 import sys
 import os
 
-from setuptools import setup, Extension
+from setuptools import setup
 from Cython.Distutils import build_ext
+from numpy.distutils.extension import Extension
+
 import numpy
 
+def get_spcl_extn(extn):
+    """ special-case extensions with specific requirements """
+    if extn.name == 'cpp_vs_pyx':
+        extn.language = 'c++'
+        extn.sources.append('cPoint.cpp')
+    return extn
 
 def compile_extns(extensions=None, dirname=None, inc_dirs=None):
     """compile cython extensions
@@ -36,11 +44,12 @@ def compile_extns(extensions=None, dirname=None, inc_dirs=None):
     cargs = []#'-O3']
     
     # extension modules
-    extns = [Extension(extnname,
-                      [extnname+".pyx"], include_dirs=inc_dirs,
-                      extra_compile_args=cargs)
-            for extnname in extensions
-            ]
+    extns = []
+    for extnname in extensions:
+        extn = Extension(extnname, [extnname+".pyx"], include_dirs=inc_dirs,
+                             extra_compile_args=cargs)
+        extn = get_spcl_extn(extn)
+        extns.append(extn)
     
     setup(name='PySPH-bench',
           ext_modules = extns,
