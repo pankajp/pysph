@@ -7,8 +7,9 @@ from pysph.base.kernels cimport KernelBase
 from time import time
 
 # the kernels to test defined in module pysph.base.kernels
-kernel_names = ['CubicSplineKernel', 'HarmonicKernel', 'GaussianKernel',
-        'M6SplineKernel', 'W8Kernel', 'W10Kernel']
+kernel_names = ['Poly6Kernel', 'CubicSplineKernel', 'QuinticSplineKernel',
+                'WendlandQuinticSplineKernel', 'HarmonicKernel',
+                'GaussianKernel', 'M6SplineKernel', 'W8Kernel', 'W10Kernel']
 
 
 cdef double r_lo = 0

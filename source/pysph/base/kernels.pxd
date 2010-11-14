@@ -49,9 +49,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
 ##############################################################################
 cdef class HarmonicKernel(KernelBase):
     cdef public int n
-    cdef public dict facs
-    #cdef public Point r_tmp
-
+    cdef double facs[10]
 
 ##############################################################################
 #'Gaussian Kernel'

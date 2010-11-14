@@ -288,7 +288,7 @@ cdef class QuinticSplineKernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -320,7 +320,7 @@ cdef class QuinticSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -356,7 +356,7 @@ cdef class QuinticSplineKernel(KernelBase):
         grad.z = r.z * (val * fac)
 
     cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
+        """Evaluate the laplacian of the kernel centered at `pa`, at the
         point `pb`
         """
         raise NotImplementedError
@@ -367,7 +367,7 @@ cdef class QuinticSplineKernel(KernelBase):
         if dim == 1:
             raise NotImplementedError
         elif dim == 2:
-            return 7./(478*PI)
+            return 7./(478*PI*h*h)
         elif dim == 3:
             raise NotImplementedError
         else:
@@ -392,7 +392,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -414,7 +414,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -439,7 +439,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         grad.z = r.z * (val * fac)
 
     cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacina of the kernel centered at `pa`, at the
+        """Evaluate the laplacian of the kernel centered at `pa`, at the
         point `pb`
         """
         raise NotImplementedError
@@ -473,26 +473,25 @@ cdef class HarmonicKernel(KernelBase):
         """ Initialize the kernel with dimension and index `n` """
         self.dim = dim
         self.n = n
-
-        self.facs = {1:[0.424095, 0.553818, 0.660203, 0.752215,
+        if dim == 1:
+            self.facs[:] = [0.424095, 0.553818, 0.660203, 0.752215,
                         0.834354, 0.909205, 0.978402, 1.043052,
-                        1.103944, 1.161662],
-                     
-                     2:[0.196350, 0.322194, 0.450733, 0.580312,
+                        1.103944, 1.161662]
+        elif dim == 2:
+            self.facs[:] = [0.196350, 0.322194, 0.450733, 0.580312,
                         0.710379, 0.840710, 0.971197, 1.101785,
-                        1.232440, 1.363143],
-                     
-                     3:[0.098175, 0.196350, 0.317878, 0.458918,
+                        1.232440, 1.363143]
+        elif dim == 3:
+            self.facs[:] = [0.098175, 0.196350, 0.317878, 0.458918,
                         0.617013, 0.790450, 0.977949, 1.178511,
                         1.391322, 1.615708]
-                     }
 
     cdef double function(self, Point pa, Point pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.facs[self.n -1]*(h**(-self.dim))
         #cdef Point r = Point_sub(pa, pb)
         cdef double rab = sqrt((pa.x - pb.x)**2 + (pa.y - pb.y)**2 + (pa.z - pb.z)**2)
         cdef double q = rab/h
@@ -515,7 +514,7 @@ cdef class HarmonicKernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.facs[self.n -1]*(h**(-self.dim))
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -547,10 +546,7 @@ cdef class HarmonicKernel(KernelBase):
     
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
-        cdef int dim = self.dim
-        cdef int n = self.n
-        
-        return self.facs[self.dim][self.n -1]/(h**dim)
+        return self.facs[self.n -1]/(h**self.dim)
 
     cpdef double radius(self):
         return 2
@@ -571,7 +567,7 @@ cdef class M6SplineKernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -596,7 +592,7 @@ cdef class M6SplineKernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -643,7 +639,7 @@ cdef class GaussianKernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -658,7 +654,7 @@ cdef class GaussianKernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -697,7 +693,7 @@ cdef class W8Kernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -722,7 +718,7 @@ cdef class W8Kernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -771,7 +767,7 @@ cdef class W10Kernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -794,7 +790,7 @@ cdef class W10Kernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self._fac(h)
+        cdef double fac = self.fac * pow(h, -self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
