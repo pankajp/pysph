@@ -21,7 +21,15 @@ cdef:
     double PI = numpy.pi
     double SQRT_1_PI = 1.0/sqrt(PI)
     double infty = numpy.inf
-    
+
+cdef inline double h_dim(double h, int dim):
+    if dim == 1:
+        return 1/h
+    elif dim == 2:
+        return 1/(h*h)
+    else:
+        return 1/(h*h*h)
+
 ##############################################################################
 #`KernelBase`
 ##############################################################################
@@ -163,11 +171,10 @@ cdef class Poly6Kernel(KernelBase):
         cdef double mag_sqr_r = Point_distance2(pa, pb)
         cdef double ret = 0.0
         if mag_sqr_r > h*h:
-            ret = 0.0
-        else:
-            ret = (h**2.0 - mag_sqr_r)**3.0
-            ret *= (315.0)/(64.0*PI*(h**9.0))
-        return ret
+            return 0.0
+        ret = (h*h - mag_sqr_r)**3
+        ret /= h**6
+        return ret * h_dim(h, self.dim) * self.fac
 
     cdef void gradient(self, Point pa, Point pb, double h, Point grad):
         """Evaluate the gradient of the kernel centered at `pa`, at the
@@ -176,8 +183,9 @@ cdef class Poly6Kernel(KernelBase):
         cdef Point r = Point_sub(pa, pb)
         cdef double part = 0.0
         cdef double mag_square_r = r.norm()
-        cdef double const1 = 315.0/(64.0*PI*(h**9))
-        part = -6.0*const1*((h**2 - mag_square_r)**2)
+        if mag_sqr_r <= h*h:
+        	cdef double fac = h_dim(h, self.dim) * self.fac
+        	part = -6.0*fac*((h**2 - mag_square_r)**2)/h**6
         grad.x = r.x * part
         grad.y = r.y * part
         grad.z = r.z * part
@@ -193,7 +201,13 @@ cdef class Poly6Kernel(KernelBase):
         cdef double ret = (-6.0)*const1*(h_sqr-mag_square_r)
         ret = ret * (3.0*h_sqr - 7.0*mag_square_r)
         return ret
-            
+    
+    cdef double _fac(self, double h):
+        if self.dim == 3:
+            return 315.0/(64.0*PI*h*h*h)
+        else:
+            raise NotImplementedError, 'Poly6Kernel in %d dim'%self.dim
+    
     cpdef double radius(self):
         return 1.0
 ##############################################################################
@@ -218,7 +232,7 @@ cdef class CubicSplineKernel(KernelBase):
                                 )
         cdef double q = rab/h
         cdef double val
-        cdef double fac = pow(h, -self.dim) * self.fac
+        cdef double fac = h_dim(h, self.dim) * self.fac
         
         if q > 2.0:
             val = 0.0
@@ -241,7 +255,7 @@ cdef class CubicSplineKernel(KernelBase):
         cdef double q = rab/h
         cdef double val = 0.0
         
-        fac = pow(h, -self.dim)*self.fac
+        fac = h_dim(h, self.dim)*self.fac
         
         rx = pa.x - pb.x; ry = pa.y - pb.y; rz = pa.z - pb.z
         if q > 2.0:
@@ -283,7 +297,7 @@ cdef class QuinticSplineKernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
@@ -314,7 +328,7 @@ cdef class QuinticSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -386,7 +400,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
@@ -407,7 +421,7 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -560,7 +574,7 @@ cdef class M6SplineKernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
@@ -584,7 +598,7 @@ cdef class M6SplineKernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -631,7 +645,7 @@ cdef class GaussianKernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
@@ -645,7 +659,7 @@ cdef class GaussianKernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -684,7 +698,7 @@ cdef class W8Kernel(KernelBase):
         the point `pb`.
         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
@@ -708,7 +722,7 @@ cdef class W8Kernel(KernelBase):
         point `pb`.
 
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h
@@ -757,7 +771,7 @@ cdef class W10Kernel(KernelBase):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef double rab = Point_distance(pa, pb)
         cdef double q = rab/h
         cdef double val, power
@@ -779,7 +793,7 @@ cdef class W10Kernel(KernelBase):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef double fac = self.fac * pow(h, -self.dim)
+        cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
         cdef double rab = r.length()
         cdef double q = rab/h

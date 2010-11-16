@@ -1,7 +1,7 @@
 """module to test the timings of various kernel evaluations"""
 
-from pysph.base.point cimport Point, Point_new, Point_add, Point_sub
-from pysph.base import kernels
+from pysph.base.point cimport Point, Point_new, Point_add, \
+            Point_sub, Point_length
 from pysph.base.kernels cimport KernelBase
 
 from time import time

@@ -1,3 +1,4 @@
+# cython: profile=True
 """module to test the timings for 1 iteration of dam_break problem """
 
 import time

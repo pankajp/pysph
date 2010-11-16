@@ -82,7 +82,7 @@ class TestSPHRho(unittest.TestCase):
         parr = get_sample_data1()
         sph_rho = SPHRho(parr, parr)
         
-        k = Poly6Kernel()
+        k = Poly6Kernel(3)
         # get contribution of particle 1 on particle 0
         nr, dnr = sph_rho.py_eval(1, 0, k)
         self.assertEqual(check_array(nr, [0]), True)
@@ -108,7 +108,7 @@ class TestSPHRho(unittest.TestCase):
         
         sph_rho = SPHRho(parr1, parr2)
         
-        k = Poly6Kernel()
+        k = Poly6Kernel(3)
         # get contribution of particle 1 on particle 0
         nr, dnr = sph_rho.py_eval(0, 0, k)
         self.assertEqual(check_array(nr, [0.01223969899266285]), True)
