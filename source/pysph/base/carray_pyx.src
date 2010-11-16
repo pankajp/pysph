@@ -150,7 +150,7 @@ cdef class BaseArray:
         raise NotImplementedError, 'BaseArray::copy_values'
 
     cpdef copy_subset(self, BaseArray source,
-    				  	long start_index=-1, long end_index=-1):
+                          long start_index=-1, long end_index=-1):
         """ Copy subset of values from source to self. """
         raise NotImplementedError, 'BaseArray::copy_subset'
 
@@ -232,7 +232,19 @@ cdef class CLASSNAME(BaseArray):
     def __setitem__(self, long idx, ARRAY_TYPE value):
         """ Set location idx to value. """
         self.data[idx] = value
-
+    
+    cpdef long index(self, ARRAY_TYPE value):
+        """ Returns the index at which value is in self, else -1. """
+        cdef long i
+        for i in range(self.length):
+            if self.data[i] == value:
+                return i
+        return -1
+    
+    def __contains__(self, ARRAY_TYPE value):
+        """ Returns True if value is in self. """
+        return (self.index(value) >= 0)
+    
     def __reduce__(self):
         """ Implemented to facilitate pickling. """
         d = {}
@@ -252,7 +264,7 @@ cdef class CLASSNAME(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
-        							NUMPY_TYPENAME, self.data)
+                                    NUMPY_TYPENAME, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """

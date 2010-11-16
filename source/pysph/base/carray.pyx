@@ -1,5 +1,5 @@
 # This file (carray.pxd) has been generated automatically on
-# Mon Aug 30 15:27:52 2010
+# Sun Nov 14 15:49:35 2010
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -28,8 +28,7 @@ The numpy array may however be copied and used in any manner.
 
 """
 # For malloc etc.
-#from stdlib cimport *
-from libc.stdlib cimport *
+from stdlib cimport *
 
 cimport numpy as np
 
@@ -138,7 +137,7 @@ cdef class BaseArray:
         raise NotImplementedError, 'BaseArray::copy_values'
 
     cpdef copy_subset(self, BaseArray source,
-    				  	long start_index=-1, long end_index=-1):
+                          long start_index=-1, long end_index=-1):
         """ Copy subset of values from source to self. """
         raise NotImplementedError, 'BaseArray::copy_subset'
 
@@ -215,7 +214,19 @@ cdef class IntArray(BaseArray):
     def __setitem__(self, long idx, int value):
         """ Set location idx to value. """
         self.data[idx] = value
-
+    
+    cpdef long index(self, int value):
+        """ Returns the index at which value is in self, else -1. """
+        cdef long i
+        for i in range(self.length):
+            if self.data[i] == value:
+                return i
+        return -1
+    
+    def __contains__(self, int value):
+        """ Returns True if value is in self. """
+        return (self.index(value) >= 0)
+    
     def __reduce__(self):
         """ Implemented to facilitate pickling. """
         d = {}
@@ -235,7 +246,7 @@ cdef class IntArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
-        							NPY_INT, self.data)
+                                    NPY_INT, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """
@@ -537,7 +548,19 @@ cdef class DoubleArray(BaseArray):
     def __setitem__(self, long idx, double value):
         """ Set location idx to value. """
         self.data[idx] = value
-
+    
+    cpdef long index(self, double value):
+        """ Returns the index at which value is in self, else -1. """
+        cdef long i
+        for i in range(self.length):
+            if self.data[i] == value:
+                return i
+        return -1
+    
+    def __contains__(self, double value):
+        """ Returns True if value is in self. """
+        return (self.index(value) >= 0)
+    
     def __reduce__(self):
         """ Implemented to facilitate pickling. """
         d = {}
@@ -557,7 +580,7 @@ cdef class DoubleArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
-        							NPY_DOUBLE, self.data)
+                                    NPY_DOUBLE, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """
@@ -859,7 +882,19 @@ cdef class FloatArray(BaseArray):
     def __setitem__(self, long idx, float value):
         """ Set location idx to value. """
         self.data[idx] = value
-
+    
+    cpdef long index(self, float value):
+        """ Returns the index at which value is in self, else -1. """
+        cdef long i
+        for i in range(self.length):
+            if self.data[i] == value:
+                return i
+        return -1
+    
+    def __contains__(self, float value):
+        """ Returns True if value is in self. """
+        return (self.index(value) >= 0)
+    
     def __reduce__(self):
         """ Implemented to facilitate pickling. """
         d = {}
@@ -879,7 +914,7 @@ cdef class FloatArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
-        							NPY_FLOAT, self.data)
+                                    NPY_FLOAT, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """
@@ -1181,7 +1216,19 @@ cdef class LongArray(BaseArray):
     def __setitem__(self, long idx, long value):
         """ Set location idx to value. """
         self.data[idx] = value
-
+    
+    cpdef long index(self, long value):
+        """ Returns the index at which value is in self, else -1. """
+        cdef long i
+        for i in range(self.length):
+            if self.data[i] == value:
+                return i
+        return -1
+    
+    def __contains__(self, long value):
+        """ Returns True if value is in self. """
+        return (self.index(value) >= 0)
+    
     def __reduce__(self):
         """ Implemented to facilitate pickling. """
         d = {}
@@ -1201,7 +1248,7 @@ cdef class LongArray(BaseArray):
         cdef np.npy_intp dims = self.length
 
         self._npy_array = PyArray_SimpleNewFromData(nd, &dims,
-        							NPY_LONG, self.data)
+                                    NPY_LONG, self.data)
 
     cpdef str get_c_type(self):
         """ Return the c data type for this array. """
