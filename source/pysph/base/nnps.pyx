@@ -49,8 +49,9 @@
 
 cdef extern from 'math.h':
     cdef double fabs(double)
+    cdef double sqrt(double)
 
-from pysph.base.point cimport Point_new, Point_distance2
+from pysph.base.point cimport Point_new, Point_distance2, Point_distance
 
 # logger imports
 import logging
@@ -235,7 +236,7 @@ cdef class NbrParticleLocatorBase:
         cdef str xc, yc, zc
         cdef double *x, *y, *z
         cdef LongArray src_indices
-        cdef Point pnt1 = Point_new()
+        cdef Point pnt1 = Point_new(0,0,0)
         cdef long idx
         
         # get the coordinate arrays.
@@ -247,22 +248,37 @@ cdef class NbrParticleLocatorBase:
         ya = self.source.get_carray(yc)
         za = self.source.get_carray(zc)
         
-        x = xa.get_data_ptr()
-        y = ya.get_data_ptr()
-        z = za.get_data_ptr()
-          
-        for cell in cell_list:
-            # find neighbors from the cell
-            src_indices = cell.index_lists[self.source_index]
-            
-            for i in range(src_indices.length):
-                idx = src_indices.data[i]
-                pnt1.x = x[idx]
-                pnt1.y = y[idx]
-                pnt1.z = z[idx]
-
-                if Point_distance2(pnt1, pnt) <= radius*radius:
-                    if idx != exclude_index:
+        x = xa.data
+        y = ya.data
+        z = za.data
+        
+        if exclude_index >= 0:
+            for cell in cell_list:
+                # find neighbors from the cell
+                src_indices = cell.index_lists[self.source_index]
+                
+                for i in range(src_indices.length):
+                    idx = src_indices.data[i]
+                    pnt1.x = x[idx]
+                    pnt1.y = y[idx]
+                    pnt1.z = z[idx]
+    
+                    if Point_distance2(pnt1, pnt) <= radius*radius:
+                        if idx != exclude_index:
+                            output_array.append(idx)
+        else:
+            # no exclude_index
+            for cell in cell_list:
+                # find neighbors from the cell
+                src_indices = cell.index_lists[self.source_index]
+                
+                for i in range(src_indices.length):
+                    idx = src_indices.data[i]
+                    pnt1.x = x[idx]
+                    pnt1.y = y[idx]
+                    pnt1.z = z[idx]
+    
+                    if Point_distance2(pnt1, pnt) <= radius*radius:
                         output_array.append(idx)
         return 0
     
@@ -317,7 +333,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         Parameters:
         -----------
         source -- the source particle array
-        dest -- the destination patrticle array
+        dest -- the destination particle array
         radius_scale -- the kernel radius support `kfac`
         
         Notes:
@@ -397,15 +413,9 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             if self.dest is self.source:
                 if exclude_self:
                     to_remove = LongArray()
-                    #to_remove.append(-1)
-                    #to_remove.set(0, -1)
-                    # remove dest_p_index if its present
-                    for i in range(output_array.length):
-                        if data[i] == dest_p_index:
-                            to_remove.append(i)
-                            break
-                    if to_remove.length > 0:
-                        output_array.remove(to_remove.get_npy_array())
+                    # cached array have self index as first value
+                    to_remove.append(0)
+                    output_array.remove(to_remove.get_npy_array())
         else:
             # dont use cache, get neighbors directly
             return self.get_nearest_particles_nocache(dest_p_index, 
@@ -420,7 +430,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         
         Algorithm:
         ----------
-        calculate the effective radus of search
+        calculate the effective radius of search
         call parent class to get the neighbors from source
 
         Notes:
@@ -433,7 +443,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         This is a convenience internal method and works only for constant h
 
         """
-        cdef Point pnt = Point_new()
+        cdef Point pnt = Point_new(0,0,0)
         cdef long exclude_index = -1
         pnt.x = self.d_x.data[dest_p_index]
         pnt.y = self.d_y.data[dest_p_index]
@@ -496,7 +506,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     cdef int _update_cache(self) except -1:
         """Update `particle_cache` by appending to each LongArray """
-        cdef long num_particles, i
+        cdef long num_particles, i, j
         cdef LongArray index_cache
 
         num_particles = self.dest.get_number_of_particles()
@@ -507,7 +517,16 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
             self.get_nearest_particles_nocache(
                 i, index_cache, False)
-
+            
+            # keep particle at the first index for possibly faster exclude_self
+            if self.source == self.dest:
+                for j in range(index_cache.length):
+                    if i == index_cache[j]:
+                        # swap first index with i
+                        index_cache[j] = index_cache[0]
+                        index_cache[0] = i
+                        break
+            
         return 0
 
     ######################################################################
@@ -597,11 +616,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         cdef int i
         cdef LongArray to_remove
         cdef long *data
-        cdef Point pnt
         cdef long exclude_index = -1
-        cdef double eff_radius
-
-        to_remove = LongArray(1)
 
         # update internal data.
         self.update()
@@ -611,18 +626,13 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
 
         output_array.resize(index_array.length)
         output_array.set_data(index_array.get_npy_array())
-        data = output_array.get_data_ptr()
-        
+        data = output_array.data
         if self.dest is self.source:
             if exclude_self:
-                to_remove.set(0, -1)
+                to_remove = LongArray()
                 # remove dest_p_index if its present
-                for i in range(output_array.length):
-                    if data[i] == dest_p_index:
-                        to_remove.set(0, i)
-                        break
-                if to_remove.get(0) != -1:
-                    output_array.remove(to_remove.get_npy_array())
+                to_remove.append(0)
+                output_array.remove(to_remove.get_npy_array())
         return 0
     
     cdef int update(self) except -1:
@@ -678,7 +688,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
                                             rev_cache, False)
             for k in range(rev_cache.length):
                 index_cache = self.particle_cache[rev_cache.data[k]]
-                if j not in index_cache:
+                if index_cache.index(j) < 0:
                     index_cache.append(j)
         return 0
 
