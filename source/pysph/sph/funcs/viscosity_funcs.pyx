@@ -44,7 +44,7 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         cdef double rhoab = 0.5*(rhoa + rhob)
 
         cdef double temp = 0.0
-        cdef Point grad = Point_new()
+        cdef Point grad = Point_new(0,0,0)
         cdef Point rab, va, vb, vab
         cdef double dot
 

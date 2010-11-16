@@ -25,7 +25,7 @@ $(DIRS) :
 	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
 
 %.c : %.pyx
-	python `which cython` --directive profile=True -I$(SRC) -I$(MPI4PY_INCL) -a $<
+	python `which cython` -I$(SRC) -I$(MPI4PY_INCL) -a $<
 
 cython : $(PYX:.pyx=.c)
 
@@ -50,7 +50,7 @@ bench :
 	#
 	#####################################################################
 	#
-	-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
+	#-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
 	cd $(PKG)/bench; python bench.py $(BENCH)
 
 coverage2 :

@@ -1,7 +1,7 @@
 """
 General purpose code for SPH computations.
 
-This module provdies the SPHBase class, which does the actual SPH summation.
+This module provides the SPHBase class, which does the actual SPH summation.
     
 """
 

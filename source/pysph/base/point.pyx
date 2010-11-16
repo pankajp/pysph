@@ -13,32 +13,6 @@ cdef int IntPoint_maxint = 2**20
 DTYPE = numpy.float
 ctypedef numpy.float_t DTYPE_t
 
-cpdef Point Point_new(double x=0, double y=0, double z=0):
-    cdef Point p = Point.__new__(Point)
-    p.x = x
-    p.y = y
-    p.z = z
-    return p
-
-cpdef Point Point_sub(Point pa, Point pb):
-    return Point_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
-
-cpdef Point Point_add(Point pa, Point pb):
-    return Point_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
-
-
-cpdef IntPoint IntPoint_new(int x=0, int y=0, int z=0):
-    cdef IntPoint p = IntPoint.__new__(IntPoint)
-    p.x = x
-    p.y = y
-    p.z = z
-    return p
-
-cpdef IntPoint IntPoint_sub(IntPoint pa, IntPoint pb):
-    return IntPoint_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
-
-cpdef IntPoint IntPoint_add(IntPoint pa, IntPoint pb):
-    return IntPoint_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
 
 ###############################################################################
 # `Point` class.

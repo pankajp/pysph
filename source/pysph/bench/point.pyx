@@ -30,7 +30,7 @@ cpdef dict init():
     
     t = time()
     for i in range(N):
-        p = Point_new()
+        p = Point_new(0,0,0)
     cdef double t3 = time()-t
     assert p == Point()
     
@@ -42,7 +42,7 @@ cpdef dict init():
     
     t = time()
     for i in range(N):
-        p = Point_new()
+        p = Point_new(0,0,0)
         p.x = 0
         p.y = 0
         p.z = 0
@@ -51,7 +51,7 @@ cpdef dict init():
     
     t = time()
     for i in range(N):
-        p = Point_new()
+        p = Point_new(0,0,0)
         p.set(0,0,0)
     cdef double t6 = time()-t
     assert p == Point()

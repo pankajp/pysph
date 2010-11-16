@@ -23,9 +23,43 @@ cdef class Point:
     cpdef Point cross(self, Point p)
     cpdef double distance(self, Point p)
 
-cpdef Point Point_new(double x=*, double y=*, double z=*)
-cpdef Point Point_sub(Point pa, Point pb)
-cpdef Point Point_add(Point pa, Point pb)
+cdef class IntPoint:
+    cdef readonly int x
+    cdef readonly int y
+    cdef readonly int z
+
+    cpdef numpy.ndarray asarray(self)
+    cdef bint is_equal(self, IntPoint)
+    cdef IntPoint diff(self, IntPoint)
+    cdef tuple to_tuple(self)
+    cdef IntPoint copy(self)
+
+cdef inline Point Point_new(double x, double y, double z):
+    cdef Point p = Point.__new__(Point)
+    p.x = x
+    p.y = y
+    p.z = z
+    return p
+
+cdef inline Point Point_sub(Point pa, Point pb):
+    return Point_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
+
+cdef inline Point Point_add(Point pa, Point pb):
+    return Point_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
+
+
+cdef inline IntPoint IntPoint_new(int x, int y, int z):
+    cdef IntPoint p = IntPoint.__new__(IntPoint)
+    p.x = x
+    p.y = y
+    p.z = z
+    return p
+
+cdef inline IntPoint IntPoint_sub(IntPoint pa, IntPoint pb):
+    return IntPoint_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
+
+cdef inline IntPoint IntPoint_add(IntPoint pa, IntPoint pb):
+    return IntPoint_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
 
 cdef inline double Point_length(Point p):
     return sqrt(p.x*p.x + p.y*p.y + p.z*p.z)
@@ -42,19 +76,3 @@ cdef inline double Point_distance(Point pa, Point pb):
 cdef inline double Point_distance2(Point pa, Point pb):
     return ((pa.x-pb.x)*(pa.x-pb.x) + (pa.y-pb.y)*(pa.y-pb.y) + 
                     (pa.z-pb.z)*(pa.z-pb.z))
-
-cdef class IntPoint:
-    cdef readonly int x
-    cdef readonly int y
-    cdef readonly int z
-
-    cpdef numpy.ndarray asarray(self)
-    cdef bint is_equal(self, IntPoint)
-    cdef IntPoint diff(self, IntPoint)
-    cdef tuple to_tuple(self)
-    cdef IntPoint copy(self)
-
-cpdef IntPoint IntPoint_new(int x=*, int y=*, int z=*)
-cpdef IntPoint IntPoint_sub(IntPoint pa, IntPoint pb)
-cpdef IntPoint IntPoint_add(IntPoint pa, IntPoint pb)
-

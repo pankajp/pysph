@@ -24,7 +24,7 @@ class Particles(object):
     NNPSManager. Use this to get neighbor locators for an SPH simulation
     involving with the one particle array only paradigm.
 
-    Using the ParticleType data structure, we can retreive tagged particles.
+    Using the ParticleType data structure, we can retrieve tagged particles.
         
     Example:
     --------
