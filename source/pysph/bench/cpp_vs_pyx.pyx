@@ -1,9 +1,7 @@
-"""module to test the timings of cell operations"""
+"""module to test the timings of operations on python and c++ stl containers"""
 
 cimport numpy
 
-cimport pysph.base.cell as cell
-from pysph.base.cell cimport Cell
 from pysph.base.point cimport IntPoint, IntPoint_new
 
 import time

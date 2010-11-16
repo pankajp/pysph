@@ -3,6 +3,7 @@
 from pysph.base.point cimport Point, Point_new, Point_add, \
             Point_sub, Point_length
 from pysph.base.kernels cimport KernelBase
+from pysph.base import kernels
 
 from time import time
 

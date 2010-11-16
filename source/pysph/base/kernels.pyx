@@ -183,9 +183,10 @@ cdef class Poly6Kernel(KernelBase):
         cdef Point r = Point_sub(pa, pb)
         cdef double part = 0.0
         cdef double mag_square_r = r.norm()
-        if mag_sqr_r <= h*h:
-        	cdef double fac = h_dim(h, self.dim) * self.fac
-        	part = -6.0*fac*((h**2 - mag_square_r)**2)/h**6
+        cdef double fac
+        if mag_square_r <= h*h:
+            fac = h_dim(h, self.dim) * self.fac
+            part = -6.0*fac*((h**2 - mag_square_r)**2)/h**6
         grad.x = r.x * part
         grad.y = r.y * part
         grad.z = r.z * part
