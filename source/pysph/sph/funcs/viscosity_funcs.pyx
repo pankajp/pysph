@@ -30,33 +30,13 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
         """
         """
-        cdef double piab, muab, cab, alpha, beta
+        cdef Point va, vb, vab, rab, grad
+        cdef double Pa, Pb, rhoa, rhob, rhoab, mb
+        cdef double dot, tmp
+        cdef double ca, cb, mu, piab, alpha, beta, eta
 
-        cdef double h = 0.5*(self.s_h.data[source_pid] +
-                             self.d_h.data[dest_pid])
-
-        cdef double mb = self.s_m.data[source_pid]
-        cdef double rhoa = self.d_rho.data[dest_pid]
-        cdef double rhob = self.s_rho.data[source_pid]
-        cdef double pa = self.d_p.data[dest_pid]
-        cdef double pb = self.s_p.data[source_pid]
-
-        cdef double rhoab = 0.5*(rhoa + rhob)
-
-        cdef double temp = 0.0
-        cdef Point grad = Point_new(0,0,0)
-        cdef Point rab, va, vb, vab
-        cdef double dot
-
-        va = Point_new(self.d_u.data[dest_pid],
-                   self.d_v.data[dest_pid],
-                   self.d_w.data[dest_pid])
-        
-        vb = Point_new(self.s_u.data[source_pid],
-                   self.s_v.data[source_pid],
-                   self.s_w.data[source_pid])
-            
-        vab = Point_sub(va,vb)        
+        cdef double hab = 0.5*(self.s_h.data[source_pid] + \
+                                   self.d_h.data[dest_pid])
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -65,36 +45,58 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-            
-        rab = Point_sub(self._dst,self._src)
+        
+        va = Point_new(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
+                   self.d_w.data[dest_pid])
 
-        if vab.dot(rab) < 0.0:
+        vb = Point_new(self.s_u.data[source_pid], self.s_v.data[source_pid],
+                   self.s_w.data[source_pid])
+
+        ca = self.d_cs.data[dest_pid]
+        cb = self.s_cs.data[source_pid]
+        
+        rab = Point_sub(self._dst, self._src)
+        vab = Point_sub(va, vb)
+        dot = vab.dot(rab)
+    
+        rhoa = self.d_rho.data[dest_pid]
+
+        rhob = self.s_rho.data[source_pid]
+        mb = self.s_m.data[source_pid]
+
+        piab = 0
+        if dot < 0:
             alpha = self.alpha
-            beta = self.beta        
+            beta = self.beta
+            eta = self.eta
+            gamma = self.gamma
+
+            cab = 0.5 * (ca + cb)
+
+            rhoab = 0.5 * (rhoa + rhob)
+
+            mu = hab*dot
+            mu /= (rab.norm() + eta*eta*hab*hab)
             
-            kernel.gradient(self._dst, self._src, h, grad)
+            piab = -alpha*cab*mu + beta*mu*mu
+            piab /= rhoab
+    
+        tmp = piab
+        tmp *= -mb
 
-            if self.rkpm_first_order_correction:
-                pass
-            
-            if self.bonnet_and_lok_correction:
-                self.bonnet_and_lok_gradient_correction(dest_pid, grad)        
+        grad = Point_new(0,0,0)
 
-            muab = h*vab.dot(rab)/(rab.norm() + 0.01*h*h) 
+        kernel.gradient(self._dst, self._src, hab, grad)
 
-            cab = 0.5 * (self.s_cs.data[source_pid] + self.d_cs.data[dest_pid])
+        if self.rkpm_first_order_correction:
+            pass
 
-            piab = -muab*(alpha*cab - beta*muab)/rhoab
-            piab *= mb
-            
-            grad.x = grad.x * piab
-            grad.y = grad.y * piab
-            grad.z = grad.z * piab
-                
-            nr[0] -= grad.x
-            nr[1] -= grad.y
-            nr[2] -= grad.z
-#############################################################################
+        if self.bonnet_and_lok_correction:
+            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+
+        nr[0] += tmp*grad.x
+        nr[1] += tmp*grad.y
+        nr[2] += tmp*grad.z
 
 
 ################################################################################
@@ -118,8 +120,10 @@ cdef class MorrisViscosity(SPHFunctionParticle):
     cpdef setup_arrays(self):
         """
         """
+        SPHFunctionParticle.setup_arrays(self)
+
         self.d_mu = self.dest.get_carray(self.mu)
-        self.d_mu = self.source.get_carray(self.mu)
+        self.s_mu = self.source.get_carray(self.mu)
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
@@ -131,23 +135,24 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
         cdef double rhob = self.s_rho.data[source_pid]
+
         cdef double mua = self.d_mu.data[dest_pid]
         cdef double mub = self.s_mu.data[source_pid]
 
         cdef double temp = 0.0
-        cdef Point grad = Point()
+        cdef Point grad = Point_new(0,0,0)
         cdef Point rab, va, vb, vab
         cdef double dot
 
-        va = Point(self.d_u.data[dest_pid], 
-                   self.d_v.data[dest_pid],
-                   self.d_w.data[dest_pid])
+        va = Point_new(self.d_u.data[dest_pid], 
+                       self.d_v.data[dest_pid],
+                       self.d_w.data[dest_pid])
         
-        vb = Point(self.s_u.data[source_pid],
-                   self.s_v.data[source_pid],
-                   self.s_w.data[source_pid])
+        vb = Point_new(self.s_u.data[source_pid],
+                       self.s_v.data[source_pid],
+                       self.s_w.data[source_pid])
         
-        vab = va - vb
+        vab = Point_sub(va,vb)
         
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -157,7 +162,8 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        rab = self._dst - self._src
+        rab = Point_sub(self._dst,self._src)
+
         kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:

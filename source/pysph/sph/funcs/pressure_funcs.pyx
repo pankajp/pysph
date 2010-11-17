@@ -44,7 +44,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
 
         temp = (pa/(rhoa*rhoa) + pb/(rhob*rhob))
-        temp *= mb
+        temp *= -mb
         
         kernel.gradient(self._dst, self._src, h, grad)
 

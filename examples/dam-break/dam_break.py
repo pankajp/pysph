@@ -261,8 +261,8 @@ app.process_command_line()
 
 particles = app.create_particles(get_particles)
 
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), 
-                  solver.RK2Integrator)
+s = solver.Solver(base.CubicSplineKernel(dim=2), 
+                  solver.PredictorCorrectorIntegrator)
 
 #Equation of state
 s.add_operation(solver.SPHAssignment(
@@ -318,8 +318,8 @@ s.add_operation(solver.SPHSimpleODE(
         updates=['x','y'], id='step')
                 
                 )
-s.set_final_time(10)
-s.set_time_step(1e-4)
+s.set_final_time(3.0)
+s.set_time_step(1.25e-4)
 
 app.set_solver(s)
 
