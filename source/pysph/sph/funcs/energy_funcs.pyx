@@ -83,7 +83,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
                  bint setup_arrays=True,  beta=1.0, alpha=1.0, 
                  gamma=1.4, eta=0.1):
 
-        SPHFunctionParticle.__init__(source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma

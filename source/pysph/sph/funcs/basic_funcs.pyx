@@ -131,7 +131,7 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
     cdef void eval(self, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an SPH intterpolation of the property `prop_name` 
+        Perform an SPH interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -206,8 +206,8 @@ cdef class SPHGrad(SPHFunctionParticle):
         #Setup the basic properties like m, x rho etc.
         SPHFunctionParticle.setup_arrays(self)
 
-        self.dest_prop = self.dest.get_carray(self.prop_name)
-        self.source_prop = self.source.get_carray(self.prop_name)
+        self.d_prop = self.dest.get_carray(self.prop_name)
+        self.s_prop = self.source.get_carray(self.prop_name)
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):

@@ -130,7 +130,7 @@ class Integrator(object):
         Algorithm:
         ----------
         intialize calling_sequence to []
-        intiialize k to []
+        initialize k to []
         for each step in the integrator
            append a dictionary to k
         for each calc in the calcs
@@ -212,11 +212,11 @@ class Integrator(object):
             self.rupdate_list.append([])
 
     def set_initial_arrays(self):
-        """ Set the intitial arrays for the integrator
+        """ Set the initial arrays for the integrator
 
-        The intial array is the update property of a calc appended with _0
+        The initial array is the update property of a calc appended with _0
         Note that multiple calcs can update the same property and this 
-        will not replicate the creation of the intial arrays. 
+        will not replicate the creation of the initial arrays. 
         
         """        
         if logger.level < 30:
@@ -336,7 +336,7 @@ class Integrator(object):
     def do_step(self, dt):
         """ Perform one step for the integration
         
-        This is an intermediate step in a multi step integrator wherin 
+        This is an intermediate step in a multi step integrator wherein 
         the step arrays are set in the `k` list. First, each eval is 
         called and the step arrays are stored in the `k` list and then
         for each integrating calc, the current state of the particles is

@@ -74,7 +74,7 @@ class BeckerBoundaryForce(Function):
     def __init__(self, sound_speed):
         self.sound_speed = sound_speed
 
-    def get_func(source, dest):
+    def get_func(self, source, dest):
         func = boundary.BeckerBoundaryForce(source=source, dest=dest,
                                             sound_speed=self.sound_speed)
         func.tag = 'velocity'

@@ -1,6 +1,8 @@
 cdef extern from "math.h":
     double fabs(double)
 
+from pysph.base.point cimport Point_new
+
 #############################################################################
 # `MonaghanBoundaryForce` class.
 #############################################################################
@@ -52,10 +54,10 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
             
-        norm = Point(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
+        norm = Point_new(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
                      self.s_nz.data[source_pid])
         
-        tang = Point(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
+        tang = Point_new(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
                      self.s_tz.data[source_pid])
 
         cs = self.d_cs.data[dest_pid]

@@ -86,9 +86,9 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         SPHFunctionParticle.setup_arrays(self)
 
         #Setup the XSPH correction terms
-        self.s_ubar = self.array.get_carray('ubar')
-        self.s_vbar = self.array.get_carray('vbar')
-        self.s_wbar = self.array.get_carray('wbar')
+        self.s_ubar = self.source.get_carray('ubar')
+        self.s_vbar = self.source.get_carray('vbar')
+        self.s_wbar = self.source.get_carray('wbar')
 
     cdef void eval(self, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):

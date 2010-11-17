@@ -29,6 +29,7 @@ Output from mpi runs is redirected to `mpirunner.log.<rank>'
 
 import os
 import sys
+import traceback
 
 # local relative import
 import setup
@@ -98,8 +99,8 @@ def run(extns=None, dirname=None, num_runs=1):
                 bench_mod = __import__(bench_name)
                 res = bench_mod.bench()
         except:
-            stderr_orig.write('Failure running bench %s: %s\n' %(bench_name,
-                                    str(sys.exc_info())))
+            stderr_orig.write('Failure running bench %s\n' %(bench_name))
+            traceback.print_exc(file=stderr_orig)
             continue
         # take minimum over `num_runs` runs
         for i in range(num_runs-1):

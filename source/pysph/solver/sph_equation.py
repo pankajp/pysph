@@ -133,7 +133,7 @@ class SPHSimpleODE(SPHOperation):
 
     Notes:
     ------
-    No neighbor information is not needed for evaluation for a partcular 
+    No neighbor information is not needed for evaluation for a particular 
     particle.
     Returns an integrating calc.
 
@@ -176,7 +176,7 @@ class SPHSummationODE(SPHOperation):
 
     Notes:
     ------
-    Neighbor information is needed for the evaluation for a partcular particle.
+    Neighbor information is needed for the evaluation for a particular particle.
     This returns an integrating calc.
 
     """    
@@ -220,7 +220,7 @@ class SPHSummation(SPHOperation):
 
     Notes:
     ------
-    Neighbor information is needed for the evaluation for a partcular particle.
+    Neighbor information is needed for the evaluation for a particular particle.
     This is a non integrating calc.
 
     """    

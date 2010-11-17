@@ -4,7 +4,7 @@ import numpy
 # `GravityForce` class.
 #############################################################################
 cdef class GravityForce(SPHFunctionParticle):
-    """ Class to compute the boundary force for a fluid boundary pair """ 
+    """ Class to compute the gravity force on a particle """ 
 
     #Defined in the .pxd file
     #cded double gx, gy, gz
@@ -22,7 +22,7 @@ cdef class GravityForce(SPHFunctionParticle):
 
     cdef void eval(self, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
-        """ Perform the boundary force computation """
+        """ Perform the gravity force computation """
 
         nr[0] = self.gx
         nr[1] = self.gy
@@ -35,7 +35,7 @@ cdef class GravityForce(SPHFunctionParticle):
 # `Vector` class.
 #############################################################################
 cdef class VectorForce(SPHFunctionParticle):
-    """ Class to compute the boundary force for a fluid boundary pair """ 
+    """ Class to compute the vector force on a particle """ 
 
     #Defined in the .pxd file
     #cded double fx, fy, fx
@@ -43,14 +43,14 @@ cdef class VectorForce(SPHFunctionParticle):
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, Point force=Point()):
 
-        self.id = 'gravityforce'
+        self.id = 'vectorforce'
         self.force = force
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
     cdef void eval(self, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
-        """ Perform the boundary force computation """
+        """ Perform the force computation """
 
         nr[0] = self.force.x
         nr[1] = self.force.y
@@ -97,7 +97,7 @@ cdef class MoveCircleX(SPHFunctionParticle):
 # `MoveCircleY` class.
 ################################################################################
 cdef class MoveCircleY(SPHFunctionParticle):
-    """ Force the x coordinate of a particle to move on a circle.  """
+    """ Force the y coordinate of a particle to move on a circle.  """
 
     #Defined in the .pxd file
     def __init__(self, ParticleArray source, ParticleArray dest, 

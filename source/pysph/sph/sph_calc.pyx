@@ -60,7 +60,7 @@ cdef class SPHBase:
     Use the `SPHFluid` and `SPHSolid` subclasses to perform interactions 
     with fluids and solids respectively.
     
-    """    
+    """
 
     #Defined in the .pxd file
     #cdef public ParticleArray dest, source
