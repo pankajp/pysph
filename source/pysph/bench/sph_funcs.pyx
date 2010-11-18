@@ -22,7 +22,7 @@ funcs_calc = [SPHInterpolation('rho'),
               EnergyEquationNoVisc(),
               EnergyEquationAVisc(beta=1.0, alpha=1.0, gamma=1.0, eta=1.0),
               EnergyEquation(beta=1.0, alpha=1.0, gamma=1.4, eta=0.1),
-              #MonaghanBoundaryForce(delp=1.0),
+              MonaghanBoundaryForce(delp=1.0),
               BeckerBoundaryForce(sound_speed=1.0),
               LennardJonesForce(D=1.0, ro=1.0, p1=1.0, p2=1.0),
               SPHRho(),
@@ -32,7 +32,7 @@ funcs_calc = [SPHInterpolation('rho'),
               MomentumEquation(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
               MorrisViscosity(mu='mu'),
               XSPHCorrection(eps=0.5),
-              #XSPHDensityRate(),
+              XSPHDensityRate(),
              ]
 
 
@@ -71,7 +71,9 @@ cpdef dict sph_func_calc(Ns=Ns):
         da2 = DoubleArray(N)
         da.set_data(z)
         da2.set_data(z)
-        pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z)
+        pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
+                                tx=z, ty=z, tz=z, nx=z, ny=z, nz=z, u=z, v=z, w=z,
+                                ubar=z, vbar=z, wbar=z)
         particles = Particles(arrays=[pa])
         for func_getter in funcs_calc:
             func = func_getter.get_func(pa, pa)
@@ -107,7 +109,7 @@ cpdef dict sph_func_eqn(Ns=Ns):
         da2.set_data(z)
         pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z)
         particles = Particles(arrays=[pa])
-        for func_getter in funcs_calc:
+        for func_getter in funcs_eqn:
             func = func_getter.get_func(pa, pa)
             calc = SPHEquation(particles, [pa], pa, kernel, [func], ['tmp'])
             t = get_time()

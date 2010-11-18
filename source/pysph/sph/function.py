@@ -193,7 +193,7 @@ class VectorForce(Function):
         self.force = force
 
     def get_func(self, source, dest):
-        return external.VectorForce(source=source, dest=dest, force=force)
+        return external.VectorForce(source=source, dest=dest, force=self.force)
 
 class MoveCircleX(Function):
     def get_func(self, source, dest):

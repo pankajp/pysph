@@ -89,11 +89,15 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self.s_ubar = self.source.get_carray('ubar')
         self.s_vbar = self.source.get_carray('vbar')
         self.s_wbar = self.source.get_carray('wbar')
+        
+        self.d_ubar = self.dest.get_carray('ubar')
+        self.d_vbar = self.dest.get_carray('vbar')
+        self.d_wbar = self.dest.get_carray('wbar')
 
     cdef void eval(self, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
-        Perform an SPH intterpolation of the property `prop_name`
+        Perform an SPH interpolation of the property `prop_name`
 
         The expression used is:
 
