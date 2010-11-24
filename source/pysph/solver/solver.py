@@ -5,11 +5,52 @@ import os
 from utils import PBar, savez_compressed, savez
 
 from pysph.sph.kernel_correction import KernelCorrectionManager
+from pysph.sph.function import XSPHCorrection, PositionStepping
+
+from sph_equation import SPHSummationODE, SPHSimpleODE
 
 logger = logging.getLogger()
 
 class Solver(object):
-    """ Intended as the base class for all solvers """
+    """ Base class for all PySPH Solvers
+
+    Attributes:
+    ------------
+    particles -- the particle arrays to operate on
+
+    integrator_type -- the class of the integrator. This may be one of any 
+                       defined in solver/integrator.py
+
+    kernel -- the kernel to be used throughout the calculations. This may 
+              need to be modified to handle several kernels.
+
+    operation_dict -- an internal structure indexing the operation id and 
+                      the corresponding operation as a dictionary
+
+    order -- a list of strings specifying the order of an SPH simulation.
+    
+    t -- the internal time step counter
+
+    pre_step_functions -- a list of functions to be performed before stepping
+
+    post_step_functions -- a list of functions to execute after stepping
+
+    pfreq -- the output print frequency
+
+    dim -- the dimension of the problem
+
+    kernel_correction -- flag to indicate type of kernel correction.
+                         Defaults to -1 for no correction
+
+    pid -- the procesor id if running in parallel
+
+    eps -- the epsilon value to use for XSPH stepping. 
+           Defaults to -1 for no XSPH
+
+    position_stepping_operations -- the dictionary of position stepping 
+                                    operations.
+    
+    """
     
     def __init__(self, kernel, integrator_type):
         self.particles = None
@@ -27,8 +68,36 @@ class Solver(object):
         self.kernel_correction = -1
 
         self.pid = None
+        self.eps = -1
+
+        self.position_stepping_operations = {}
+
         self.setup_solver()
 
+    def to_step(self, types):
+        """ Specify an acceptable list of types to step
+
+        Parameters:
+        -----------
+        
+        types -- a list of acceptable types eg Fluid, Solid
+
+        Notes:
+        ------
+        The types are defined in base/particle_types.py
+
+        """
+        updates = ['x']
+        if self.dim > 1:
+            updates.append('y')
+            if self.dim > 2:
+                updates.append('z')
+                
+        id = 'step'
+        
+        self.position_stepping_operations[id] = SPHSimpleODE(
+            PositionStepping(), on_types=types, updates=updates, id=id)
+        
     def add_operation(self, operation, before=False, id=None):
         """ Add an SPH operation to the solver.
 
@@ -40,7 +109,42 @@ class Solver(object):
 
         Notes:
         ------
-        By default, a call to add_operation appends the operation.
+        An SPH operation typically represents a single equation written
+        in SPH form. The different types of operations are:
+        
+        (i) SPHSimpleODE
+        (ii) SPHSummationODE
+        (iii) SPHSummation
+        (iv) SPHAssignment
+        
+        and are defined in solver/sph_equation.py
+
+        The id for the operation must be unique. An error is raised if an
+        operation with the same id exists.
+
+        Simillarly, an error is raised if an invalid 'id' is provided 
+        as an argument.
+
+        Usage Examples:
+        ---------------
+        (1)        
+
+        >>> solver.add_operation(operation)
+        
+        This appends an operation to the existing list. 
+
+        (2)
+        
+        >>> solver.add_operation(operation, before=False, id=someid)
+        
+        Add an operation after an existing operation with id 'someid'
+
+        (3)
+        
+        >>> solver.add_operation(operation, before=True, id=soleid)
+        
+        Add an operation befor the operation with id 'someid'
+        
 
         """
         err = 'Operation %s exists!'%(operation.id)
@@ -66,13 +170,15 @@ class Solver(object):
     def replace_operation(self, operation):
         """ Replace an operation.
 
-        Algorithm:
-        ----------
-        get the id of the operation to be replaced
-        assert the replacement is valid
-        set the particles and kernel for the operation
-        pop the existing operation from the calc_dict
-        add the new operation to the calc_dict        
+        Parameters:
+        -----------
+        operation -- The replacement operation
+
+        Notes:
+        ------
+        The id to replace is taken from the provided operation. 
+        
+        An error is raised if the provided operation does not exist.
 
         """
         id = operation.id
@@ -86,12 +192,17 @@ class Solver(object):
 
     def remove_operation(self, id_or_operation):
         """ Remove an operation with id
-        
-        Algorithm:
-        ----------
-        assert the id is valid
-        remove the id from the order list
-        pop the operation from the calc_dict
+
+        Parameters:
+        -----------
+        id_or_operation -- the operation to remove
+
+        Notes:
+        ------
+        Remove an operation with either the operation object or the 
+        operation id.
+
+        An error is raised if the operation is invalid.
         
         """
         if type(id_or_operation) == str:
@@ -110,7 +221,10 @@ class Solver(object):
 
         Notes:
         ------
-        The new order and existing order should match else an error is raised
+        The order determines the manner in which the operations are
+        executed by the integrator.
+
+        The new order and existing order should match else, an error is raised
 
         """
         for equation_id in order:
@@ -120,15 +234,24 @@ class Solver(object):
 
         self.order = order
 
+    def setup_position_step(self):
+        """ Setup the position stepping for the solver """
+        pass
+
     def setup_integrator(self, particles=None):
         """ Setup the integrator for the solver
 
         Notes:
         ------
-        The order for the calcs is provided by the order list and the calc
-        is maintained in the calc_dict.
+        The solver's processor id is set if the in_parallel flag is set 
+        to true.
 
-        Using this, the integrator's calcs can be setup in order
+        The order of the integrating calcs is determined by the solver's 
+        order attribute.
+
+        This is usually called at the start of a PySPH simulation.
+
+        By default, the kernel correction manager is set for all the calcs.
         
         """
         
@@ -147,7 +270,8 @@ class Solver(object):
 
             self.integrator.setup_integrator()
 
-            #setup the kernel correction manager for each calc
+            # Setup the kernel correction manager for each calc
+
             calcs = self.integrator.calcs
             particles.correction_manager = KernelCorrectionManager(
                 calcs, self.kernel_correction)
@@ -165,34 +289,82 @@ class Solver(object):
                 if array_name == arr.name:
                     array.append_parray(arr)
 
-        self.setup_integrator(self.particles)                
+        self.setup_integrator(self.particles)
+
+    def set_xsph(self, eps):
+        """ Set the XSPH operation if requested
+
+        Parameters:
+        -----------
+        eps -- the epsilon value to use for XSPH stepping
+        
+        Notes:
+        ------
+        The position stepping operation must be defined. This is because
+        the XSPH operation is setup for those arrays that need stepping.
+
+        """       
+        
+        assert eps > 0, 'Invalid value for XSPH epsilon: %f' %(eps)
+        self.eps = eps
+
+        # create the xsph stepping operation
+                
+        id = 'xsph'
+        err = "position stepping function does not exist!"
+        assert self.position_stepping_operations.has_key('step'), err
+
+        types = self.position_stepping_operations['step'].on_types
+        updates = self.position_stepping_operations['step'].updates
+
+        self.position_stepping_operations[id] = SPHSummationODE(
+
+            XSPHCorrection(eps=eps), from_types=types,
+            on_types=types,  updates=updates, id=id )        
 
     def set_final_time(self, tf):
+        """ Set the final time for the simulation """
         self.tf = tf
 
     def set_time_step(self, dt):
+        """ Set the time step to use """
         self.dt = dt
 
     def set_print_freq(self, n):
+        """ Set the output print frequency """
         self.pfreq = n
 
     def set_output_fname(self, fname):
+        """ Set the output file name """
         self.fname = fname    
 
     def set_output_printing_level(self, detailed_output):
+        """ Set the output printing level """
         self.detailed_output = detailed_output
 
     def set_output_directory(self, path):
+        """ Set the out put directory """
         self.path = path
 
     def set_kernel_correction(self, kernel_correction):
+        """ Set the kernel correction manager for each calc """
         self.kernel_correction = kernel_correction
         
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
         
     def solve(self, show_progress=False):
-        """ Solve the system by repeatedly calling the integrator """
+        """ Solve the system
+
+        Notes:
+        ------
+        Pre-stepping functions are those that need to be called before
+        the integrator is called. 
+
+        Similarlly, post step functions are those that are called after
+        the stepping within the integrator.
+
+        """
         tf = self.tf
         dt = self.dt
 
@@ -274,7 +446,16 @@ class Solver(object):
                 savez(_fname, dt=self.dt, **props)                        
 
     def setup_solver(self):
-        """ Implement the basic solvers here """
+        """ Implement the basic solvers here 
+
+        Notes:
+        ------
+        All subclasses of Solver may implement this function to add the 
+        necessary operations for the problem at hand.
+
+        Look at solver/fluid_solver.py for an example.
+
+        """
         pass
 
 
