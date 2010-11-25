@@ -1,15 +1,19 @@
 """ An implementation of a general solver base class """
 
-import logging
 import os
 from utils import PBar, savez_compressed, savez
+
+import pysph.base.api as base
 
 from pysph.sph.kernel_correction import KernelCorrectionManager
 from pysph.sph.function import XSPHCorrection, PositionStepping
 
 from sph_equation import SPHSummationODE, SPHSimpleODE
 
+import logging
 logger = logging.getLogger()
+
+Fluids = base.ParticleType.Fluid
 
 class Solver(object):
     """ Base class for all PySPH Solvers
@@ -167,11 +171,12 @@ class Solver(object):
         else:
             self.order.append(operation.id)
 
-    def replace_operation(self, operation):
+    def replace_operation(self, id, operation):
         """ Replace an operation.
 
         Parameters:
         -----------
+        id -- the operation with id to replace
         operation -- The replacement operation
 
         Notes:
@@ -181,14 +186,18 @@ class Solver(object):
         An error is raised if the provided operation does not exist.
 
         """
-        id = operation.id
 
         msg = 'The specified operation dosent exist'
         assert self.operation_dict.has_key(id), msg  + ' in the op dict!'
         assert id in self.order, msg + ' in the order list!'
 
         self.operation_dict.pop(id)
+
         self.operation_dict[operation.id] = operation
+
+        idx = self.order.index(id)
+        self.order.insert(idx, operation.id)
+        self.order.remove(id)
 
     def remove_operation(self, id_or_operation):
         """ Remove an operation with id
@@ -210,7 +219,7 @@ class Solver(object):
         else:
             id = id_or_operation.id
 
-        assert id in self.calc_dict.keys(), 'id dosent exist!'
+        assert id in self.operation_dict.keys(), 'id dosent exist!'
         assert id in self.order, 'id dosent exist!'
 
         self.order.remove(id)
@@ -263,10 +272,19 @@ class Solver(object):
 
             self.integrator = self.integrator_type(particles, calcs=[])
 
+            # set the calcs for the integrator
+
             for equation_id in self.order:
                 operation = self.operation_dict[equation_id]
                 calcs = operation.get_calcs(particles,self.kernel)
                 self.integrator.calcs.extend(calcs)
+
+            # set the pcalcs for the integrator
+
+            for equation_id in self.position_stepping_operations.keys():
+                operation = self.position_stepping_operations[equation_id]
+                calcs = operation.get_calcs(particles, self.kernel)
+                self.integrator.pcalcs.extend(calcs)
 
             self.integrator.setup_integrator()
 
@@ -319,7 +337,7 @@ class Solver(object):
 
         self.position_stepping_operations[id] = SPHSummationODE(
 
-            XSPHCorrection(eps=eps), from_types=types,
+            XSPHCorrection(eps=eps), from_types=[Fluids],
             on_types=types,  updates=updates, id=id )        
 
     def set_final_time(self, tf):
