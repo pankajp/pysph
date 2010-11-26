@@ -98,10 +98,11 @@ class Solver(object):
                 updates.append('z')
                 
         id = 'step'
-        
-        self.position_stepping_operations[id] = SPHSimpleODE(
-            PositionStepping(), on_types=types, updates=updates, id=id)
-        
+
+        self.add_operation(SPHSimpleODE(
+                PositionStepping(), on_types=types, updates=updates, id=id)
+                           )
+
     def add_operation(self, operation, before=False, id=None):
         """ Add an SPH operation to the solver.
 
@@ -279,14 +280,7 @@ class Solver(object):
                 calcs = operation.get_calcs(particles,self.kernel)
                 self.integrator.calcs.extend(calcs)
 
-            # set the pcalcs for the integrator
-
-            for equation_id in self.position_stepping_operations.keys():
-                operation = self.position_stepping_operations[equation_id]
-                calcs = operation.get_calcs(particles, self.kernel)
-                self.integrator.pcalcs.extend(calcs)
-
-            self.integrator.setup_integrator()
+            self.integrator._setup_integrator()
 
             # Setup the kernel correction manager for each calc
 
@@ -330,15 +324,18 @@ class Solver(object):
                 
         id = 'xsph'
         err = "position stepping function does not exist!"
-        assert self.position_stepping_operations.has_key('step'), err
+        assert self.operation_dict.has_key('step'), err
 
-        types = self.position_stepping_operations['step'].on_types
-        updates = self.position_stepping_operations['step'].updates
+        types = self.operation_dict['step'].on_types
+        updates = self.operation_dict['step'].updates
 
-        self.position_stepping_operations[id] = SPHSummationODE(
+                           
+        self.add_operation(SPHSummationODE(
 
             XSPHCorrection(eps=eps), from_types=[Fluids],
-            on_types=types,  updates=updates, id=id )        
+            on_types=types,  updates=updates, id=id )
+
+                           )
 
     def set_final_time(self, tf):
         """ Set the final time for the simulation """

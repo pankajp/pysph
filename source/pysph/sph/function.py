@@ -198,13 +198,13 @@ class VectorForce(Function):
 class MoveCircleX(Function):
     def get_func(self, source, dest):
         func =  external.MoveCircleX(source=source, dest=dest)
-        func.tag = "velocity"
+        func.tag = "position"
         return func    
 
 class MoveCircleY(Function):
     def get_func(self, source, dest):
         func =  external.MoveCircleY(source=source, dest=dest)
-        func.tag = "velocity"
+        func.tag = "position"
         return func
 
 #position funcs
@@ -272,7 +272,7 @@ class XSPHCorrection(Function):
         
     def get_func(self, source, dest):
         func =  xsph.XSPHCorrection(source=source, dest=dest, eps=self.eps)
-        func.tag = "velocity"
+        func.tag = "position"
         return func
 
 class XSPHDensityRate(Function):

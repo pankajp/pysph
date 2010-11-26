@@ -126,8 +126,6 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(s.eps, -1)
 
-        self.assertEqual(s.position_stepping_operations, {})
-
     def test_setup_solver(self):
         """ Test setting up of the solver """
         
@@ -219,11 +217,7 @@ class SolverTestCase(unittest.TestCase):
 
         s.to_step(types=[Fluids])
 
-        pos_operations = s.position_stepping_operations
-
-        self.assertEqual(len(pos_operations), 1)
-
-        op = s.position_stepping_operations['step']
+        op = s.operation_dict['step']
 
         self.assertEqual(op.updates, ['x','y'])
 
@@ -240,11 +234,7 @@ class SolverTestCase(unittest.TestCase):
 
         s.set_xsph(eps = 0.5)
 
-        pos_operations = s.position_stepping_operations
-
-        self.assertEqual(len(pos_operations), 2)
-
-        op = pos_operations['xsph']
+        op = s.operation_dict['xsph']
 
         self.assertEqual(op.on_types, [Fluids])
         
@@ -273,7 +263,9 @@ class SolverTestCase(unittest.TestCase):
 
         pcalcs = i.pcalcs
 
-        self.assertEqual(len(calcs), 4)
+        icalcs = i.icalcs
+
+        self.assertEqual(len(calcs), 6)
 
         self.assertEqual(len(pcalcs), 2)
 
