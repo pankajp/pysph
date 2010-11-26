@@ -106,6 +106,7 @@ class IntegratorBaseTestCase(unittest.TestCase):
             if calc.integrates:
                 self.assertEqual(k_props[calc.id][k_num], kprops)
 
+
 class IntegratorTestCase(unittest.TestCase):
     """ Tests for the Integrator base class 
 
@@ -155,11 +156,11 @@ class IntegratorTestCase(unittest.TestCase):
         self.kernel = base.CubicSplineKernel(dim=2)
         
         circlex = solver.SPHSimpleODE(sph.MoveCircleX(), 
-                                      from_types=[0], on_types=[0],
+                                      from_types=[Fluids], on_types=[Fluids],
                                       updates=['x','y'], id = 'circlex')
 
         circley = solver.SPHSimpleODE(sph.MoveCircleY(), 
-                                      from_types=[0], on_types=[0],
+                                      from_types=[Fluids], on_types=[Fluids],
                                       updates=['x','y'], id = 'circley')
         
         self.calcx = circlex.get_calcs(particles, self.kernel)
@@ -169,8 +170,7 @@ class IntegratorTestCase(unittest.TestCase):
         self.calcs.extend(self.calcx)
         self.calcs.extend(self.calcy)
 
-        self.integrator = Integrator(particles=particles, 
-                                     calcs=self.calcs)
+        self.integrator = Integrator(particles=particles, calcs=self.calcs)
 
         self.setup()
 
@@ -181,55 +181,6 @@ class IntegratorTestCase(unittest.TestCase):
         """ Some constructor tests """
         self.assertEqual(self.integrator.nsteps, 1)
         self.assertEqual(self.integrator.calling_sequence, [])
-
-    def _test_setup_integrator(self):
-        """ Test the setup of the integrator
-
-        Expected Behavior:
-        ------------------
-        The setup integrator function is the most important as it 
-        defines the calling sequence for the sph operations, sets the
-        initial arrays and the `k` arrays for multi step integrators.
-
-        Since this integrator has two calcs, each updating the same two
-        properties 'x', and 'y', the integrator should create the following:
-
-        calling sequence: [['x_00','y_01'], ['x_10','y_11']]
-        initial_arrays:   x_0 and y_0 in the particle array
-        step_properties: x_00, y_01, x_10, y_11 in the particle array
-        
-        the `k` arrays:
-        ---------------
-        for the default integrator, the nsteps is 1 thus the lenght of the 
-        `k` list should be 1.
-
-        This dictionary is indexed on the calc number and then by the update
-        array name. The value upon initialization should be None
-
-        """
-
-        integrator = self.integrator
-        
-        #Setup the integrator
-        
-        integrator.setup_integrator()
-
-        #Check for the calling sequence
-
-        calling_sequence = self.integrator.calling_sequence
-        self.assertEqual(calling_sequence, [['x_00','y_01'], ['x_10','y_11']])
-    
-        #Check fot the initial and step arrays
-
-        pa = integrator.pa
-        props = pa.properties.keys()
-
-        self.assertEqual('x_00' in props, True)
-        self.assertEqual('x_10' in props, True)
-        self.assertEqual('y_01' in props, True)
-        self.assertEqual('y_11' in props, True)
-        self.assertEqual('x_0' in props, True)
-        self.assertEqual('y_0' in props, True)
 
     def print_pos(self, scheme, old, new):
         """ Pretty printing of the positions """
@@ -252,7 +203,6 @@ class TestEulerIntegrator(IntegratorTestCase):
     def setup(self):
         self.integrator = solver.EulerIntegrator(particles=self.particles, 
                                                  calcs = self.calcs)
-
         
     def test_motion(self):
         """ Perform the integration of the particle positons 
@@ -266,7 +216,7 @@ class TestEulerIntegrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator.setup_integrator()
+        self.integrator._setup_integrator()
 
         #set the time constants
 
@@ -283,10 +233,11 @@ class TestEulerIntegrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator.integrate(dt)
+            integrator._integrate(dt)
             
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        self.print_pos('Euler Integration', original_pos, new_pos)
+        
+        #self.print_pos('Euler Integration', original_pos, new_pos)
 
         for i in range(4):
             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 2)
@@ -312,7 +263,6 @@ class TestRK2Integrator(IntegratorTestCase):
     def test_constructor(self):
         """ Some constructor tests """
         self.assertEqual(self.integrator.nsteps, 2)
-        self.assertEqual(self.integrator.calling_sequence, [])
         
     def test_motion(self):
         """ Perform the integration of the particle positons 
@@ -326,7 +276,7 @@ class TestRK2Integrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator.setup_integrator()
+        self.integrator._setup_integrator()
 
         #set the time constants
 
@@ -337,189 +287,191 @@ class TestRK2Integrator(IntegratorTestCase):
         pa = particles.arrays[0]
 
         original_pos = [(pa.x[i], pa.y[i]) for i in range(len(pa.x))]
+
         exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
 
         while t <= tf:
             t += dt
             particles.update()
-            integrator.integrate(dt)
+            integrator._integrate(dt)
 
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        self.print_pos('RK2 Integration', original_pos, new_pos)
+
+        #self.print_pos('RK2 Integration', original_pos, new_pos)
 
         for i in range(4):
             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
             self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)            
 
         
-##############################################################################
+# ##############################################################################
 
-class TestRK4Integrator(IntegratorTestCase):
-    """ Test for the Euler Integrator
+# class TestRK4Integrator(IntegratorTestCase):
+#     """ Test for the Euler Integrator
 
-    For the test, the particles (defined in the setUp of the base class)
-    are constrained to move on a circle of radius 2./pi. 
+#     For the test, the particles (defined in the setUp of the base class)
+#     are constrained to move on a circle of radius 2./pi. 
 
-    Four particles start the motion from the points ENWS and after one 
-    second, the positions should be NWSE respectively.
+#     Four particles start the motion from the points ENWS and after one 
+#     second, the positions should be NWSE respectively.
 
-    """
-    def setup(self):
-        self.integrator = solver.RK4Integrator(particles=self.particles,
-                                               calcs = self.calcs)
+#     """
+#     def setup(self):
+#         self.integrator = solver.RK4Integrator(particles=self.particles,
+#                                                calcs = self.calcs)
 
-    def test_constructor(self):
-        """ Some constructor tests """
-        self.assertEqual(self.integrator.nsteps, 4)
-        self.assertEqual(self.integrator.calling_sequence, [])
+#     def test_constructor(self):
+#         """ Some constructor tests """
+#         self.assertEqual(self.integrator.nsteps, 4)
+#         self.assertEqual(self.integrator.calling_sequence, [])
         
-    def test_motion(self):
-        """ Perform the integration of the particle positons 
+#     def test_motion(self):
+#         """ Perform the integration of the particle positons 
 
-        The scheme is the RK2 integrator which is first order accurate 
-        in time. The time step used for the integration is 1e-3 and thus
-        we expect the positions of the particles to be exact to within 
-        four decimal places.       
+#         The scheme is the RK2 integrator which is first order accurate 
+#         in time. The time step used for the integration is 1e-3 and thus
+#         we expect the positions of the particles to be exact to within 
+#         four decimal places.       
 
-        """
+#         """
 
-        #setup the integrator
+#         #setup the integrator
 
-        self.integrator.setup_integrator()
+#         self.integrator.setup_integrator()
 
-        #set the time constants
+#         #set the time constants
 
-        t = 0; tf = 1.0; dt = 1e-3
+#         t = 0; tf = 1.0; dt = 1e-3
         
-        integrator = self.integrator
-        particles = integrator.particles
-        pa = particles.arrays[0]
+#         integrator = self.integrator
+#         particles = integrator.particles
+#         pa = particles.arrays[0]
 
-        original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
+#         original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
 
-        while t <= tf:
-            t += dt
-            particles.update()
-            integrator.integrate(dt)
+#         while t <= tf:
+#             t += dt
+#             particles.update()
+#             integrator.integrate(dt)
 
-        new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        self.print_pos('RK4 Integration', original_pos, new_pos)
+#         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         self.print_pos('RK4 Integration', original_pos, new_pos)
 
-        for i in range(4):
-            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 12)
-            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 12)
+#         for i in range(4):
+#             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 12)
+#             self.assertAlmostEqual(new_pos[i][1], exact[i][1], 12)
 
-##############################################################################
+# ##############################################################################
 
-class TestPredictorCorrectorIntegrator(IntegratorTestCase):
-    """ Test for the Euler Integrator
+# class TestPredictorCorrectorIntegrator(IntegratorTestCase):
+#     """ Test for the Euler Integrator
 
-    For the test, the particles (defined in the setUp of the base class)
-    are constrained to move on a circle of radius 2./pi. 
+#     For the test, the particles (defined in the setUp of the base class)
+#     are constrained to move on a circle of radius 2./pi. 
 
-    Four particles start the motion from the points ENWS and after one 
-    second, the positions should be NWSE respectively.
+#     Four particles start the motion from the points ENWS and after one 
+#     second, the positions should be NWSE respectively.
 
-    """
-    def setup(self):
-        self.integrator = solver.PredictorCorrectorIntegrator(
-            particles=self.particles, calcs = self.calcs)
+#     """
+#     def setup(self):
+#         self.integrator = solver.PredictorCorrectorIntegrator(
+#             particles=self.particles, calcs = self.calcs)
 
-    def test_motion(self):
-        """ Perform the integration of the particle positons 
+#     def test_motion(self):
+#         """ Perform the integration of the particle positons 
 
-        The scheme is the RK2 integrator which is first order accurate 
-        in time. The time step used for the integration is 1e-3 and thus
-        we expect the positions of the particles to be exact to within 
-        four decimal places.       
+#         The scheme is the RK2 integrator which is first order accurate 
+#         in time. The time step used for the integration is 1e-3 and thus
+#         we expect the positions of the particles to be exact to within 
+#         four decimal places.       
 
-        """
+#         """
 
-        #setup the integrator
+#         #setup the integrator
 
-        self.integrator.setup_integrator()
+#         self.integrator.setup_integrator()
 
-        #set the time constants
+#         #set the time constants
 
-        t = 0; tf = 1.0; dt = 1e-3
+#         t = 0; tf = 1.0; dt = 1e-3
         
-        integrator = self.integrator
-        particles = integrator.particles
-        pa = particles.arrays[0]
+#         integrator = self.integrator
+#         particles = integrator.particles
+#         pa = particles.arrays[0]
 
-        original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
+#         original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
 
-        while t <= tf:
-            t += dt
-            particles.update()
-            integrator.integrate(dt)
+#         while t <= tf:
+#             t += dt
+#             particles.update()
+#             integrator.integrate(dt)
 
-        new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        self.print_pos('Predictor Corrector', original_pos, new_pos)
+#         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         self.print_pos('Predictor Corrector', original_pos, new_pos)
 
-        for i in range(4):
-            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
-            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
+#         for i in range(4):
+#             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
+#             self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
 
-##############################################################################
+# ##############################################################################
 
-class TestLeapFrogIntegrator(IntegratorTestCase):
-    """ Test for the Euler Integrator
+# class TestLeapFrogIntegrator(IntegratorTestCase):
+#     """ Test for the Euler Integrator
 
-    For the test, the particles (defined in the setUp of the base class)
-    are constrained to move on a circle of radius 2./pi. 
+#     For the test, the particles (defined in the setUp of the base class)
+#     are constrained to move on a circle of radius 2./pi. 
 
-    Four particles start the motion from the points ENWS and after one 
-    second, the positions should be NWSE respectively.
+#     Four particles start the motion from the points ENWS and after one 
+#     second, the positions should be NWSE respectively.
 
-    """
-    def setup(self):
-        self.integrator = solver.LeapFrogIntegrator(
-            particles=self.particles, calcs = self.calcs)
+#     """
+#     def setup(self):
+#         self.integrator = solver.LeapFrogIntegrator(
+#             particles=self.particles, calcs = self.calcs)
 
-    def test_constructor(self):
-        """ Some constructor tests """
-        self.assertEqual(self.integrator.nsteps, 2)
-        self.assertEqual(self.integrator.calling_sequence, [])
+#     def test_constructor(self):
+#         """ Some constructor tests """
+#         self.assertEqual(self.integrator.nsteps, 2)
+#         self.assertEqual(self.integrator.calling_sequence, [])
 
-    def test_motion(self):
-        """ Perform the integration of the particle positons 
+#     def test_motion(self):
+#         """ Perform the integration of the particle positons 
 
-        The scheme is the RK2 integrator which is first order accurate 
-        in time. The time step used for the integration is 1e-3 and thus
-        we expect the positions of the particles to be exact to within 
-        four decimal places.       
+#         The scheme is the RK2 integrator which is first order accurate 
+#         in time. The time step used for the integration is 1e-3 and thus
+#         we expect the positions of the particles to be exact to within 
+#         four decimal places.       
 
-        """
+#         """
 
-        #setup the integrator
+#         #setup the integrator
 
-        self.integrator.setup_integrator()
+#         self.integrator.setup_integrator()
 
-        #set the time constants
+#         #set the time constants
 
-        t = 0; tf = 1.0; dt = 1e-3
+#         t = 0; tf = 1.0; dt = 1e-3
         
-        integrator = self.integrator
-        particles = integrator.particles
-        pa = particles.arrays[0]
+#         integrator = self.integrator
+#         particles = integrator.particles
+#         pa = particles.arrays[0]
 
-        original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
+#         original_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         exact = (0.0, self.r), (-self.r, 0.0), (0.0, -self.r), (self.r, 0.0)
 
-        while t <= tf:
-            t += dt
-            particles.update()
-            integrator.integrate(dt)
+#         while t <= tf:
+#             t += dt
+#             particles.update()
+#             integrator.integrate(dt)
 
-        new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
-        self.print_pos('Leap Frog', original_pos, new_pos)
+#         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
+#         self.print_pos('Leap Frog', original_pos, new_pos)
 
-        for i in range(4):
-            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
-            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
+#         for i in range(4):
+#             self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
+#             self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)
 
 ##############################################################################
 

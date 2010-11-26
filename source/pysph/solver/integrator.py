@@ -1,5 +1,4 @@
 import logging
-
 logger = logging.getLogger()
 
 #############################################################################
@@ -792,12 +791,11 @@ class EulerIntegrator(Integrator):
 
         pa = self.arrays[calc.dnum]
 
-        k_num = 'k' + str(self.step)
         for i in range(nupdates):
             update_prop = updates[i]
             
             initial_prop = self.initial_props[calc.id][i]
-            k_prop = self.k_props[calc.id][k_num][i]
+            k_prop = self.k_props[calc.id]['k1'][i]
 
             initial_array = pa.get(initial_prop)
             k1_arr = pa.get(k_prop)
@@ -898,6 +896,65 @@ class RK2Integrator(Integrator):
     def __init__(self, particles, calcs):
         Integrator.__init__(self, particles, calcs)
         self.nsteps = 2
+
+    def final_step(self, calc, dt):
+        """ Perform the final step for the RK2 integration """
+        updates = calc.updates
+        pa = self.arrays[calc.dnum]
+
+        for j in range(len(updates)):
+            update_prop = updates[j]
+            
+            initial_prop = self.initial_props[calc.id][j]            
+            k1_props = self.k_props[calc.id]['k1']
+            k2_props = self.k_props[calc.id]['k2']
+            
+            initial_arr = pa.get(initial_prop)
+            k1_arr = pa.get(k1_props[j])
+            k2_arr = pa.get(k2_props[j])
+
+            updated_array = initial_arr + 0.5 * dt * (k1_arr + k2_arr)
+
+            pa.set(**{update_prop:updated_array})
+            pa.set(**{initial_prop:updated_array})
+
+    def _integrate(self, dt):
+        
+        # set the initial arrays
+
+        self._set_initial_arrays()
+
+        # evaluate the k arrays
+
+        while self.step != self.nsteps:
+
+            # step the non position calcs
+            self._do_step(self.calcs, dt)
+
+            self.step = 1
+
+            # step the position calcs
+            self._do_step(self.pcalcs, dt)
+            
+            # update the particle positions
+            self.particles.update()
+
+        # eval the k2 arrays for the non position calcs
+        self._eval(self.calcs)
+        
+        for calc in self.calcs:
+            if calc.integrates:
+                self.final_step(calc, dt)
+
+        # now step the position calcs
+        self._eval(self.pcalcs)
+        
+        for calc in self.pcalcs:
+            self.final_step(calc, dt)
+
+        # reset the step counter and update the particles
+        self.step = 1
+        self.particles.update()
 
     def integrate(self, dt):
         
