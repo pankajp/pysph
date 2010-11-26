@@ -301,23 +301,11 @@ s.add_operation(solver.SPHSimpleODE(
                 
                 )
 
-#XSPH correction
-s.add_operation(solver.SPHSummationODE(
-        
-        sph.XSPHCorrection(eps=eps), 
-        on_types=[Fluid], from_types=[Fluid],
-        updates=['x','y'], id='xsph')
-                
-                )
+# Position stepping and XSPH correction
 
-#Position stepping
-s.add_operation(solver.SPHSimpleODE(
-        
-        sph.PositionStepping(), 
-        on_types=[Fluid], 
-        updates=['x','y'], id='step')
-                
-                )
+self.to_step([Fluids])
+self.set_xsph(eps=eps)
+
 s.set_final_time(3.0)
 s.set_time_step(1.25e-4)
 

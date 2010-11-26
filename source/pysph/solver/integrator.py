@@ -110,7 +110,7 @@ class Integrator(object):
         self.calcs = calcs
         self.calling_sequence = []
         self.nsteps = 1
-        self.step = 1
+        self.cstep = 1
         self.setup_done = False
 
         self.rupdate_list = []
@@ -120,128 +120,9 @@ class Integrator(object):
         self.step_props = {}
         self.k_props = {}
 
-    def setup_integrator(self):
-        """ Setup the information required for the stepping
-        
-        Notes:
-        ------
-        A call to this function must be done before any integration begins.
-        This function sets up the properties required for storing the results
-        of the calc operation as well as setting the calling_sequence variable.
-
-        Algorithm:
-        ----------
-        intialize calling_sequence to []
-        initialize k to []
-        for each step in the integrator
-           append a dictionary to k
-        for each calc in the calcs
-            append an empty list to calling_sequence
-            append a dictionary to k corresponding to the calc number
-            for each prop in update of the calc
-                assign a unique prop name based on calc and update number
-                add the property to the particle array
-                append to the newly appended list this prop in calling_sequence
-                set the value for k[<nstep>][<ncalc>][update_prop] to None
-
-                
-        Example:
-        --------
-        For the shock tube problem with summation density, equation of state, 
-        momentum equation and energy equation updating 'rho', 'p', 'u', and 'e'
-        respectively, the calling sequence looks like:
-        
-        [['rho_00'], ['p_10'], ['u_20'], ['e_30']]
-        
-        """
-        
-        logger.info("Setup Integrator called")
-
-        self.arrays = self.particles.arrays
-
-        self.calling_sequence = []
-
-        ncalcs = len(self.calcs)       
-
-        for i in range(ncalcs):
-            
-            calc = self.calcs[i]
-
-            #get the destination particle array for this calc
-            
-            pa = self.arrays[calc.dnum]
-
-            updates = calc.updates
-            nupdates = len(updates)
-
-            #append an entry for the calling sequence for this calc
-
-            self.calling_sequence.append([])
-
-            for j in range(nupdates):
-                #get the calc's update property
-
-                prop = updates[j]
-
-                #define and add the step property name
-
-                prop_step = prop+'_'+str(i)+str(j)
-                pa.add_property({'name':prop_step})
-
-                #define and add the initial property name
-
-                prop_initial = prop+'_0'
-                pa.add_property({'name':prop_initial})
-
-                #set the calling sequence
-                self.calling_sequence[-1].append(prop_step)
-
-                for l in range(self.nsteps):
-                    if calc.integrates:
-
-                        #get and add the k array name for the property
-
-                        k_name = 'k'+str(l+1)+'_'+ prop+str(i)+str(j)
-                        pa.add_property({'name':k_name})
-
-        #indicate that the setup is complete
-
-        self.set_rupdate_list()
-        self.setup_done = True
-
     def set_rupdate_list(self):
         for i in range(len(self.particles.arrays)):
             self.rupdate_list.append([])
-
-    def set_initial_arrays(self):
-        """ Set the initial arrays for the integrator
-
-        The initial array is the update property of a calc appended with _0
-        Note that multiple calcs can update the same property and this 
-        will not replicate the creation of the initial arrays. 
-        
-        """        
-        if logger.level < 30:
-            logger.info("Integrator: Set initial arrays called")
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):            
-            calc = self.calcs[i]
-            updates = calc.updates
-
-            #get the dest particle array for this calc
-
-            pa = self.arrays[calc.dnum]
-
-            nupdates = len(updates)
-            for j in range(nupdates):
-                #get the calc's update property
-                
-                prop = updates[j]
-
-                #define the and set the initial property arrays
-
-                prop_initial = prop+'_0'
-                pa.set(**{prop_initial:pa.get(prop)})
 
     def reset_current_arrays(self):
         """ Reset the current arrays """
@@ -269,195 +150,7 @@ class Integrator(object):
                 prop_initial = prop+'_0'
                 pa.set(**{prop:pa.get(prop_initial)})
 
-    def eval(self):
-        """ Evaluate each calc and store in the k list if necessary """
-        if logger.level < 30:
-            logger.info("Integrator:eval")
-
-        calling_sequence = self.calling_sequence
-        ncalcs = len(self.calcs)
-        particles = self.particles
-        
-        #call each of the eval functions in order
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            
-            if logger.level < 30:
-                logger.info("Integrator:eval: operating on calc %d, %s"%(
-                        i, calc.id))
-
-            calc.sph(*calling_sequence[i])
-
-            updates = calc.updates
-            nupdates = calc.nupdates
-
-            #get the destination particle array for this calc
-            
-            pa = self.arrays[calc.dnum]
-
-            for j in range(nupdates):
-                update_prop = updates[j]
-                step_prop = calling_sequence[i][j]
-                              
-                step_array = pa.get(step_prop)
-                if not calc.integrates:
-
-                    #set the evaluated property
-                    if logger.level < 30:
-                        logger.info("""Integrator:eval: setting the prop 
-                                    %s for calc %d, %s"""
-                                    %(update_prop,  i, calc.id))
-
-                    pa.set(**{update_prop:step_array.copy()})
-
-                    #ensure that all processes have reached this point
-
-                    particles.barrier()
-
-                    #update the remote particle properties
-
-                    self.rupdate_list[calc.dnum] = [update_prop]
-
-                    if logger.level < 30:
-                        logger.info("""Integrator:eval: updating remote particle
-                                     properties %s"""%(self.rupdate_list))
- 
-                    #particles.update_remote_particle_properties([update_prop])
-                    particles.update_remote_particle_properties(
-                        self.rupdate_list)
-                    
-                else:
-                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
-                    pa.set(**{k_name:step_array.copy()})
-
-                pass
-
-        #ensure that the eval phase is completed for all processes
-        particles.barrier()
-
-    def do_step(self, dt):
-        """ Perform one step for the integration
-        
-        This is an intermediate step in a multi step integrator wherein 
-        the step arrays are set in the `k` list. First, each eval is 
-        called and the step arrays are stored in the `k` list and then
-        for each integrating calc, the current state of the particles is
-        advanced with respect to the initial position and the `k` value 
-        from a previous step.
-
-
-        """
-
-        if logger.level < 30:
-            logger.info("Integrator:do_step")
-
-        calling_sequence = self.calling_sequence
-        ncalcs = len(self.calcs)
-        particles = self.particles
-        
-        #call each of the eval functions in order
-
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            calc.sph(*calling_sequence[i])
-
-            updates = calc.updates
-            nupdates = calc.nupdates
-
-            if logger.level < 30:
-                logger.info("Integrator:do_step: operating on calc %d %s"
-                            %(i, calc.id))
-
-            #get the destination particle array for this calc
-            
-            pa = self.arrays[calc.dnum]
-            
-            for j in range(nupdates):
-                update_prop = updates[j]
-                step_prop = calling_sequence[i][j]
-
-                step_array = pa.get(step_prop)
-                
-                if not calc.integrates:
-                    #set the evaluated property
-
-                    if logger.level < 30:
-
-                        logger.info("""Integrator:eval: setting the 
-                                    prop %s for calc %d, %s"""
-                                    %(update_prop,  i, calc.id))
-
-                    pa.set(**{update_prop:step_array})
-
-                    #ensure that all processes have reached this point
-
-                    particles.barrier()
-
-                    #update the remote particle properties
- 
-                    if logger.level < 30:
-                        logger.info("""Integrator:eval: updating remote particle
-                                   properties %s"""%(self.rupdate_list))
-
-                    self.rupdate_list[calc.dnum] = [update_prop]
-                    particles.update_remote_particle_properties(
-                        self.rupdate_list)
-                else:
-                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
-                    pa.set(**{k_name:step_array.copy()})
-
-                pass
-            pass
-
-        #ensure that the eval phase is completed for all processes
-
-        particles.barrier()
-
-        #Reset the current arrays (Required for multi step integrators)
-
-        self.reset_current_arrays()
-    
-        #step the variables
-
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            if calc.integrates:
-                
-                updates = calc.updates
-                nupdates = calc.nupdates
-                
-                if logger.level < 30:
-                    logger.info("""Steping phase for calc %d, %s"""%(i,calc.id))
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-
-                    current_arr = pa.get(update_prop)
-
-                    k_name = 'k'+str(self.step)+'_'+update_prop+str(i)+str(j)
-                    step_array = pa.get(k_name)
-
-                    if logger.level < 30:
-                        logger.info("""Integrator:do_step: Updating the k array
-                                    %s """%(k_name))
-
-                    updated_array = current_arr + step_array*dt
-                    pa.set(**{update_prop:updated_array})
-
-                pass
-            pass
-
-        self.step += 1
-
-        #ensure that all processors have stepped the local particles
-        
-        particles.barrier()
-
-    def _setup_integrator(self):
+    def setup_integrator(self):
         """ Setup the information required for the stepping
         
         Notes:
@@ -562,7 +255,7 @@ class Integrator(object):
         self.set_rupdate_list()
         self.setup_done = True
 
-    def _set_initial_arrays(self):
+    def set_initial_arrays(self):
         """ Set the initial arrays for each calc
 
         The initial array is the update property of a calc appended with _0
@@ -590,7 +283,7 @@ class Integrator(object):
 
                 pa.set(**{prop_initial:pa.get(prop)})
 
-    def _reset_current_arrays(self, calcs):
+    def reset_current_arrays(self, calcs):
         """ Reset the current arrays """
         
         if logger.level < 30:
@@ -613,7 +306,7 @@ class Integrator(object):
                 initial_prop = self.initial_props[calc.id][j]
                 pa.set(**{prop:pa.get(initial_prop)})
 
-    def _do_step(self, calcs, dt):
+    def do_step(self, calcs, dt):
         """ Perform one step for the integration
         
         This is an intermediate step in a multi step integrator wherein 
@@ -635,7 +328,7 @@ class Integrator(object):
         
         # Evaluate the RHS
 
-        self._eval(calcs)
+        self.eval(calcs)
 
         # ensure that the eval phase is completed for all processes
 
@@ -643,17 +336,17 @@ class Integrator(object):
 
         # Reset the current arrays (Required for multi step integrators)
 
-        self._reset_current_arrays(calcs)
+        self.reset_current_arrays(calcs)
     
         # Step the LHS
 
-        self._step(calcs, dt)
+        self.step(calcs, dt)
 
         # ensure that all processors have stepped the local particles
 
         particles.barrier()
 
-    def _eval(self, calcs):
+    def eval(self, calcs):
         """ Evaluate each calc and store in the k list if necessary """
 
         if logger.level < 30:
@@ -662,7 +355,7 @@ class Integrator(object):
         ncalcs = len(calcs)
         particles = self.particles
         
-        k_num = 'k' + str(self.step)
+        k_num = 'k' + str(self.cstep)
         for i in range(ncalcs):
             calc = calcs[i]
 
@@ -724,13 +417,13 @@ class Integrator(object):
 
         particles.barrier()
 
-    def _step(self, calcs, dt):
+    def step(self, calcs, dt):
         """ Perform stepping for the integrating calcs """
 
         particles = self.particles
         ncalcs = len(calcs)
 
-        k_num = 'k' + str(self.step)
+        k_num = 'k' + str(self.cstep)
         for i in range(ncalcs):
             calc = calcs[i]
 
@@ -764,7 +457,7 @@ class Integrator(object):
 
         # Increment the step by 1
 
-        self.step += 1
+        self.cstep += 1
 
     def integrate(self, dt, count):
         raise NotImplementedError
@@ -806,15 +499,15 @@ class EulerIntegrator(Integrator):
             pa.set(**{update_prop:updated_array})
             pa.set(**{initial_prop:updated_array})
 
-    def _integrate(self, dt):
+    def integrate(self, dt):
 
         # set the intitial arrays for all calcs
         
-        self._set_initial_arrays()
+        self.set_initial_arrays()
         
         # evaluate the k1 arrays for non position calcs
 
-        self._eval(self.ncalcs)
+        self.eval(self.ncalcs)
         
         # perform the final step for each integrating non position calc
         
@@ -823,53 +516,10 @@ class EulerIntegrator(Integrator):
 
         # Now step the position calcs
 
-        self._eval(self.pcalcs)
+        self.eval(self.pcalcs)
 
         for calc in self.pcalcs:
             self.final_step(calc, dt)
-
-        #update the particles to get the new neighbors
-
-        self.particles.update()
-
-    def integrate(self, dt):
-        
-        #set the intitial arrays
-        
-        self.set_initial_arrays()
-        
-        #evaluate the k1 arrays
-
-        self.eval()
-        
-        #step the update arrays for each integrating calc
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            if calc.integrates:
-                
-                updates = calc.updates
-                nupdates = calc.nupdates
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-
-                    initial_prop = update_prop+'_0'
-                    initial_arr = pa.get(initial_prop)
-
-                    k_name = 'k1_' + update_prop+str(i)+str(j)
-                    step_array = pa.get(k_name)
-                    
-                    updated_array = initial_arr + step_array*dt
-                    pa.set(**{update_prop:updated_array})
-                    pa.set(**{initial_prop:updated_array})
-                pass
-            pass
 
         #update the particles to get the new neighbors
 
@@ -918,86 +568,44 @@ class RK2Integrator(Integrator):
             pa.set(**{update_prop:updated_array})
             pa.set(**{initial_prop:updated_array})
 
-    def _integrate(self, dt):
+    def integrate(self, dt):
         
         # set the initial arrays
 
-        self._set_initial_arrays()
+        self.set_initial_arrays()
 
         # evaluate the k arrays
 
-        while self.step != self.nsteps:
+        while self.cstep != self.nsteps:
 
             # eval and step the non position calcs
-            self._do_step(self.ncalcs, dt)
+            self.do_step(self.ncalcs, dt)
 
-            self.step = 1
+            self.cstep = 1
 
             # eavl and step the position calcs
-            self._do_step(self.pcalcs, dt)
+            self.do_step(self.pcalcs, dt)
             
             # update the particle positions
             self.particles.update()
 
         # eval the k2 arrays for the non position calcs
-        self._eval(self.ncalcs)
+        self.eval(self.ncalcs)
         
         for calc in self.icalcs:
             self.final_step(calc, dt)
 
         # now eval and step the position calcs
-        self._eval(self.pcalcs)
+        self.eval(self.pcalcs)
         
         for calc in self.pcalcs:
             self.final_step(calc, dt)
 
         # reset the step counter and update the particles
-        self.step = 1
+
+        self.cstep = 1
         self.particles.update()
 
-    def integrate(self, dt):
-        
-        #set the initial arrays
-        self.set_initial_arrays()
-
-        while self.step != self.nsteps:
-            self.do_step(dt)
-            self.particles.update()
-            
-        self.eval()
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-                
-            if calc.integrates:
-                updates = calc.updates
-                nupdates = calc.nupdates
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-                    
-                    initial_prop = update_prop+'_0'
-                    initial_arr = pa.get(initial_prop)
-                        
-                    k1 = 'k1_'+update_prop+str(i)+str(j)
-                    k2 = 'k2_'+update_prop+str(i)+str(j)
-                    
-                    k1_arr = pa.get(k1)
-                    k2_arr = pa.get(k2)
-
-                    updated_array = initial_arr + 0.5*dt*(k1_arr + k2_arr)
-                    
-                    pa.set(**{update_prop:updated_array})
-                    pa.set(**{initial_prop:updated_array})
-
-        self.step = 1            
-        self.particles.update()        
-############################################################################## 
 
 ##############################################################################
 #`RK4Integrator` class 
@@ -1046,27 +654,27 @@ class RK4Integrator(Integrator):
             pa.set(**{update_prop:updated_array})
             pa.set(**{initial_prop:updated_array})
 
-    def _integrate(self, dt):
+    def integrate(self, dt):
 
         # set the initial arrays
 
-        self._set_initial_arrays()
+        self.set_initial_arrays()
 
         # evaluate the k arrays
 
-        while self.step != self.nsteps:
+        while self.cstep != self.nsteps:
         
             ################ K1 #################################w
             
             # Eval and step the k1 arrays for non position calcs
 
-            self._do_step(self.ncalcs, 0.5*dt)
+            self.do_step(self.ncalcs, 0.5*dt)
 
-            self.step = 1
+            self.cstep = 1
             
             # Eval and step the position calcs
 
-            self._do_step(self.pcalcs, 0.5*dt)
+            self.do_step(self.pcalcs, 0.5*dt)
 
             # update the particles
 
@@ -1074,103 +682,42 @@ class RK4Integrator(Integrator):
 
             ################ K2 #################################
             
-            self._do_step(self.ncalcs, 0.5*dt)
+            self.do_step(self.ncalcs, 0.5*dt)
             
-            self.step = 2
+            self.cstep = 2
 
-            self._do_step(self.pcalcs, 0.5*dt)
+            self.do_step(self.pcalcs, 0.5*dt)
 
             self.particles.update()
 
             ################ K3 #################################
             
-            self._do_step(self.ncalcs, dt)
+            self.do_step(self.ncalcs, dt)
             
-            self.step = 3
+            self.cstep = 3
 
-            self._do_step(self.pcalcs, dt)
+            self.do_step(self.pcalcs, dt)
 
             self.particles.update()
 
         # eval the k4 arrays for the non position calcs
 
-        self._eval(self.ncalcs)
+        self.eval(self.ncalcs)
         
         for calc in self.icalcs:
             self.final_step(calc, dt)
 
         # now eval and step the position calcs
 
-        self._eval(self.pcalcs)
+        self.eval(self.pcalcs)
         
         for calc in self.pcalcs:
             self.final_step(calc, dt)
 
         # reset the step counter and update the particles
 
-        self.step = 1
+        self.cstep = 1
         self.particles.update()            
-
-    def integrate(self, dt):
-
-        #set the initial arrays
-        self.set_initial_arrays()
-
-        while self.step != self.nsteps:
-
-            if self.step == 1:
-                self.do_step(0.5*dt)
-                self.particles.update()
-                
-            elif self.step == 2:
-                self.do_step(0.5*dt)
-                self.particles.update()
-                
-            elif self.step == 3:
-                self.do_step(dt)
-                self.particles.update()
-            
-        self.eval()
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            
-            if calc.integrates:
-                updates = calc.updates
-                nupdates = calc.nupdates
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-                        
-                    initial_prop = update_prop+'_0'
-                    initial_arr = pa.get(initial_prop)
-                        
-                    k1 = 'k1_'+update_prop+str(i)+str(j)
-                    k2 = 'k2_'+update_prop+str(i)+str(j)
-                    k3 = 'k3_'+update_prop+str(i)+str(j)
-                    k4 = 'k4_'+update_prop+str(i)+str(j)
-                    
-                    k1_arr = pa.get(k1)
-                    k2_arr = pa.get(k2)
-                    k3_arr = pa.get(k3)
-                    k4_arr = pa.get(k4)
-
-                    updated_array = initial_arr + (dt/6.0) *\
-                        (k1_arr + 2*k2_arr + 2*k3_arr + k4_arr)
-                    
-                    pa.set(**{update_prop:updated_array})
-                    pa.set(**{initial_prop:updated_array})
-
-        self.step = 1
-        self.particles.update()
-        
-############################################################################## 
-
 
 ##############################################################################
 #`RK4Integrator` class 
@@ -1214,31 +761,31 @@ class PredictorCorrectorIntegrator(Integrator):
             pa.set(**{update_prop:updated_array})
             pa.set(**{initial_prop:updated_array})
 
-    def _integrate(self, dt):
+    def integrate(self, dt):
         
         # set the initial arrays
 
-        self._set_initial_arrays()
+        self.set_initial_arrays()
 
         ################### Predict #################################
         
-        self._do_step(self.ncalcs,0.5*dt)
+        self.do_step(self.ncalcs,0.5*dt)
 
-        self.step = 1
+        self.cstep = 1
 
-        self._do_step(self.pcalcs, 0.5*dt)
+        self.do_step(self.pcalcs, 0.5*dt)
 
         self.particles.update()
 
-        self.step = 1
+        self.cstep = 1
 
         ################### Correct #################################
         
-        self._do_step(self.ncalcs, 0.5*dt)
+        self.do_step(self.ncalcs, 0.5*dt)
 
-        self.step = 1
+        self.cstep = 1
 
-        self._do_step(self.pcalcs, 0.5*dt)
+        self.do_step(self.pcalcs, 0.5*dt)
 
         self.particles.update()
 
@@ -1256,55 +803,8 @@ class PredictorCorrectorIntegrator(Integrator):
 
         # Reset the step counter and update the particles
 
-        self.step = 1
+        self.cstep = 1
         self.particles.update()
-
-    def integrate(self, dt):
-
-        #set the initial arrays
-
-        self.set_initial_arrays()
-
-        #predict
-            
-        self.do_step(0.5*dt)
-
-        #correct
-        
-        self.step = 1
-        self.do_step(0.5*dt)
-
-        #step
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            
-            if calc.integrates:
-                updates = calc.updates
-                nupdates = calc.nupdates
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-                        
-                    initial_prop = update_prop+'_0'
-                    initial_arr = pa.get(initial_prop)
-                        
-                    current_arr = pa.get(update_prop)
-                    
-                    updated_array = 2*current_arr - initial_arr
-
-                    pa.set(**{update_prop:updated_array})
-                    pa.set(**{initial_prop:updated_array})
-
-        self.step = 1
-        self.particles.update()
-        
-############################################################################## 
 
 
 ##############################################################################
@@ -1383,21 +883,21 @@ class LeapFrogIntegrator(Integrator):
             
             pa.set(**{update_prop:updated_array})
 
-    def _integrate(self, dt):
+    def integrate(self, dt):
         
         # set the initial arrays
         
-        self._set_initial_arrays()
+        self.set_initial_arrays()
 
         # eval and step the non position calcs at the current state
         
-        self._do_step(self.ncalcs, dt)
+        self.do_step(self.ncalcs, dt)
 
-        self.step = 1
+        self.cstep = 1
 
         # eval and step the position calcs
         
-        self._do_step(self.pcalcs, dt)
+        self.do_step(self.pcalcs, dt)
 
         # add correction for the positions
 
@@ -1410,67 +910,11 @@ class LeapFrogIntegrator(Integrator):
 
         # eval and step the non position calcs
 
-        self._eval(self.ncalcs)
+        self.eval(self.ncalcs)
 
         for calc in self.icalcs:
             self.final_step(calc, dt)
 
-    def integrate(self, dt):
-
-        #set the current arrays
-        self.set_initial_arrays()
-        self.reset_current_arrays()
-
-        #evaluate the system at the current state
-
-        self.eval()
-
-        #perform the prediction step. The next eval will store in k2 arrays
-
-        self.Step(dt)
-        
-        #add the prediction step for the position
-        self.add_correction_for_position(dt)
-
-        self.particles.barrier()
-        self.particles.update()
-
-        self.eval()
-
-        #reset the step to 1
-
-        self.step = 1
-
-        #step but not for the position functions
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            
-            if calc.integrates and not calc.tag == 'position':
-                updates = calc.updates
-                nupdates = calc.nupdates
-
-                #get the destination particle array for this calc
-            
-                pa = self.arrays[calc.dnum]
-
-                for j in range(nupdates):
-                    update_prop = updates[j]
-                        
-                    k1 = 'k1_'+update_prop+str(i)+str(j)                    
-                    k1_arr = pa.get(k1)
-
-                    k2 = 'k2_'+update_prop+str(i)+str(j)                    
-                    k2_arr = pa.get(k2)
-
-                    current_arr = pa.get(update_prop)
-                    
-                    updated_array = current_arr + 0.5*dt*(k2_arr - k1_arr)
-
-                    pa.set(**{update_prop:updated_array})
-
-        self.step = 1
-        self.particles.update()
+        self.cstep = 1
         
 ############################################################################## 

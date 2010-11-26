@@ -147,6 +147,11 @@ class Application(object):
                                   0 - Bonnet and Lok correction
                                   1 - RKPM first order correction""")
 
+        # --xsph
+        parser.add_option("--xsph", action="store", dest="eps", type="float",
+                          default=None, 
+                          help="Use XSPH correction with epsilon value")
+
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
@@ -257,6 +262,9 @@ class Application(object):
         solver.set_output_printing_level(self.options.detailed_output)
         solver.set_output_directory(self.options.output_dir)
         solver.set_kernel_correction(self.options.kernel_correction)
+
+        if self.options.eps:
+            solver.set_xsph(self.options.eps)
         
         solver.setup_integrator(self.particles)
 

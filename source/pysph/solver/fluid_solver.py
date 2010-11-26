@@ -51,7 +51,6 @@ def get_circular_patch(name="", type=0):
     
     return pa
 
-
 class FluidSolver(Solver):
 
     def setup_solver(self):
@@ -81,17 +80,7 @@ class FluidSolver(Solver):
                                            id='mom')
                            )
 
-        self.add_operation(SPHSummationODE(sph.XSPHCorrection(eps=0.1),
-                                           from_types=[Fluids],
-                                           on_types=[Fluids],
-                                           updates=['x','y'],
-                                           id='xsph')
-                           )
-
-
-        self.add_operation(SPHSimpleODE(sph.PositionStepping(),
-                                        on_types=[Fluids], 
-                                        updates=['x','y'], id='step')
-                           )
+        self.to_step([Fluids])
+        self.set_xsph(eps=0.1)
 
 #############################################################################

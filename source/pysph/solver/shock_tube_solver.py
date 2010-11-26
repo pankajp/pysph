@@ -71,17 +71,17 @@ class ShockTubeSolver(Solver):
                                            updates=['u'], 
                                            id='mom')
                            )
-
+        
         self.add_operation(SPHSummationODE(sph.EnergyEquation(),
                                            from_types=[Fluids],
                                            on_types=[Fluids], 
                                            updates=['e'], id='enr')
                            )
 
-        self.add_operation(SPHSimpleODE(sph.PositionStepping(),
-                                        on_types=[Fluids], 
-                                        updates=['x'], id='step')
-                           )
+        # Indicate that stepping is only needed for Fluids
+
+        self.to_step([Fluids])
+
 
 #############################################################################
     

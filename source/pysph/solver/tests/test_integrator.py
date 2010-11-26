@@ -68,7 +68,7 @@ class IntegratorBaseTestCase(unittest.TestCase):
 
         integrator = self.integrator
 
-        integrator._setup_integrator()
+        integrator.setup_integrator()
 
         calcs = integrator.calcs
 
@@ -214,7 +214,7 @@ class TestEulerIntegrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator._setup_integrator()
+        self.integrator.setup_integrator()
 
         #set the time constants
 
@@ -231,7 +231,7 @@ class TestEulerIntegrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator._integrate(dt)
+            integrator.integrate(dt)
             
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
         
@@ -274,7 +274,7 @@ class TestRK2Integrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator._setup_integrator()
+        self.integrator.setup_integrator()
 
         #set the time constants
 
@@ -291,7 +291,7 @@ class TestRK2Integrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator._integrate(dt)
+            integrator.integrate(dt)
 
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
 
@@ -334,7 +334,7 @@ class TestRK4Integrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator._setup_integrator()
+        self.integrator.setup_integrator()
 
         #set the time constants
 
@@ -350,7 +350,7 @@ class TestRK4Integrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator._integrate(dt)
+            integrator.integrate(dt)
 
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
 
@@ -388,7 +388,7 @@ class TestPredictorCorrectorIntegrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator._setup_integrator()
+        self.integrator.setup_integrator()
 
         #set the time constants
 
@@ -404,7 +404,7 @@ class TestPredictorCorrectorIntegrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator._integrate(dt)
+            integrator.integrate(dt)
 
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
 
@@ -446,7 +446,7 @@ class TestLeapFrogIntegrator(IntegratorTestCase):
 
         #setup the integrator
 
-        self.integrator._setup_integrator()
+        self.integrator.setup_integrator()
 
         #set the time constants
 
@@ -462,7 +462,7 @@ class TestLeapFrogIntegrator(IntegratorTestCase):
         while t <= tf:
             t += dt
             particles.update()
-            integrator._integrate(dt)
+            integrator.integrate(dt)
 
         new_pos = [(pa.x[i] ,pa.y[i]) for i in range(len(pa.x))]
 

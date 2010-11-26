@@ -280,7 +280,7 @@ class Solver(object):
                 calcs = operation.get_calcs(particles,self.kernel)
                 self.integrator.calcs.extend(calcs)
 
-            self.integrator._setup_integrator()
+            self.integrator.setup_integrator()
 
             # Setup the kernel correction manager for each calc
 
