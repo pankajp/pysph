@@ -5,10 +5,100 @@ logger = logging.getLogger()
 #`Integrator` class
 #############################################################################
 class Integrator(object):
-    """ Encapsulate the Euler integration step with the calcs 
+    """ The base class for all integraotrs. Currently, the following 
+    integrators are supported:
+    
+    (a) Forward Euler Integrator
+    (b) RK2 Integrator
+    (c) RK4 Integrator
+    (d) Predictor Corrector Integrator
+    (e) Leap Frog Integrator
 
-    calling_sequence:
-    =================
+    The integraotr operates on a list of SPHBase objects which define the 
+    interaction between a single destination particle array and a list of 
+    source particle arrays.
+
+    An instance of SPHBase is called a `calc` and thus, the integrator
+    operates on a list of calcs.
+
+    A calc can be integrating or non integrating depending on the
+    operation it represents. For example, the summation density and
+    density rate operations result in calcs that are non integrating
+    and integrating respectively. Note that both of them operate on
+    the same LHS variable, namely the density.
+
+    In addition, the integrator differentiates between a calc that
+    steps position and calcs that step other physical variables. This
+    is because in an SPH operation, the position of the particles is
+    updated after the primitive variables (rho, p, v) are stepped.
+
+    Each of the integrators thus step the primitive variables prior to
+    stepping of the position.
+
+    Data Attributes:
+    ================
+
+    particles:
+    ----------
+    The manager for the particle arrays used in the simulation.
+
+    calcs:
+    ------
+    The list of SPHBase operations (calcs) that is used for stepping.
+
+    icalcs:
+    -------
+    An internal list of integrating and non position calcs. 
+
+    pcalcs:
+    -------
+    An internal list of position calcs. Used for stepping particle positions.
+
+    nsteps:
+    -------
+    The number of steps for the integrator. Eg: RK2 has nsteps=2
+
+    cstep:
+    ------
+    Current step. Used for storing intermediate step values.
+
+    
+    The following example is applicable to the description of
+    'initial_props', 'step_props' and 'k_props' to follow:
+
+    Consider a dam break simulation using an RK2 integratoe. The
+    operations are
+
+    (a) Tait equation (updates=['p','cs'])
+    (b) Density Rate (updates=['rho'])
+    (c) Momentum equation with avisc  (updates = ['u','v'])
+    (d) Gravity force (updates = ['u','v'])
+    (e) Position Stepping (updates=['x','y'])
+    (f) XSPH Correction (updates=['x','y'])    
+
+    initial_props:
+    --------------
+    The initial property names for the LHS in the systemm of equations.
+
+    The structure is a dictionary indexed by the calc id (which must
+    be unique) with the value being a list of strings, one for each
+    update property of the calc. 
+
+    For the example simulation the intitial_props would look like:
+
+    {'eos':['p_0','cs_0'], 'density_rate':['rho_0'], 
+
+    'mom':['u_0','v_0'], 'gravity':['u_0','v_0'], 
+
+    'step':['x_0','y_0'], 'xsph':['x_0','y_0']}
+
+    For each calc, these subscripted variables are added to the
+    particle arrays.
+
+    step_props:
+    -----------
+    The property names for the result of an RHS evaluation.
+   
     The order of the calcs define the integration sequence. Any calc that
     does not integrate is evaluated and the value set immediately. 
     The stepping for the properties, that is, the integrating phase 
@@ -107,18 +197,21 @@ class Integrator(object):
 
     def __init__(self, particles=None, calcs=[], pcalcs = []):
         self.particles = particles
+
         self.calcs = calcs
-        self.calling_sequence = []
+        self.icalcs = []
+        self.pcalcs = []
+
         self.nsteps = 1
         self.cstep = 1
-        self.setup_done = False
 
-        self.rupdate_list = []
-
-        self.pcalcs = []
         self.initial_props = {}
         self.step_props = {}
         self.k_props = {}
+
+        self.setup_done = False
+
+        self.rupdate_list = []
 
     def set_rupdate_list(self):
         for i in range(len(self.particles.arrays)):
@@ -316,9 +409,7 @@ class Integrator(object):
         advanced with respect to the initial position and the `k` value 
         from a previous step.
 
-
         """
-
         particles = self.particles
 
         if logger.level < 30:
