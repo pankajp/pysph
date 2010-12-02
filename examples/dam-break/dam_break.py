@@ -303,8 +303,8 @@ s.add_operation(solver.SPHSimpleODE(
 
 # Position stepping and XSPH correction
 
-self.to_step([Fluids])
-self.set_xsph(eps=eps)
+s.to_step([Fluid])
+s.set_xsph(eps=eps)
 
 s.set_final_time(3.0)
 s.set_time_step(1.25e-4)

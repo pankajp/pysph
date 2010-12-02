@@ -229,8 +229,8 @@ cdef class CubicSplineKernel(KernelBase):
         """
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
-                              (pa.z-pb.z)*(pa.z-pb.z)                                
-                                )
+                              (pa.z-pb.z)*(pa.z-pb.z))
+
         cdef double q = rab/h
         cdef double val
         cdef double fac = h_dim(h, self.dim) * self.fac

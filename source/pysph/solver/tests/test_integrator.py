@@ -104,7 +104,6 @@ class IntegratorBaseTestCase(unittest.TestCase):
             if calc.integrates:
                 self.assertEqual(k_props[calc.id][k_num], kprops)
 
-
 class IntegratorTestCase(unittest.TestCase):
     """ Tests for the Integrator base class 
 
@@ -178,7 +177,6 @@ class IntegratorTestCase(unittest.TestCase):
     def test_constructor(self):
         """ Some constructor tests """
         self.assertEqual(self.integrator.nsteps, 1)
-        self.assertEqual(self.integrator.calling_sequence, [])
 
     def print_pos(self, scheme, old, new):
         """ Pretty printing of the positions """

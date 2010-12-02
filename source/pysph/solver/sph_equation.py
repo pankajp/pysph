@@ -87,7 +87,7 @@ class SPHOperation(object):
                     func.id = self.id
 
                     calc_data[i]['funcs'] = [func]
-                    calc_data[i]['id'] = self.id
+                    calc_data[i]['id'] = self.id + '_' + dst.name
 
                 else:
                     #check for the sources for this destination
@@ -110,7 +110,7 @@ class SPHOperation(object):
                             calc_data[i]['sources'].append(src)
                             calc_data[i]['funcs'].append(func)
                             calc_data[i]['snum'] = calc_data[i]['snum']+str(j)
-                            calc_data[i]['id'] = self.id
+                            calc_data[i]['id'] = self.id + '_' + dst.name
                      
         return calc_data
 
