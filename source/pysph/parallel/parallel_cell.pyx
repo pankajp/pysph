@@ -119,10 +119,10 @@ cdef class ProcessorMap:
     #cdef public dict p_map
     #cdef public list nbr_procs
     #cdef public int pid
-    #cdef public double bin_size
+    #cdef public double block_size
 
     def __init__(self, ParallelCellManager cell_manager=None, int pid=0,
-                 Point origin=Point(0, 0, 0), double bin_size=0.3, 
+                 Point origin=Point(0, 0, 0), double block_size=0.3, 
                  *args, **kwargs):
         """
         Contructor.
@@ -130,8 +130,8 @@ cdef class ProcessorMap:
         """
         self.cell_manager = cell_manager
         self.origin = Point()
-        self.local_p_map = {}
-        self.p_map = {}
+        self.local_block_map = {}
+        self.block_map = {}
         self.nbr_procs = []
         self.pid = pid
 
@@ -144,7 +144,7 @@ cdef class ProcessorMap:
         # the cell manager may not have been initialized by this time.
         # we just set the bin size of the proc_map to the value given
         # the cell manager may later on setup the cell size.
-        self.bin_size = bin_size
+        self.block_size = block_size
     
     def __reduce__(self):
         """
@@ -152,10 +152,10 @@ cdef class ProcessorMap:
         """
         d = {}
         d['origin'] = self.origin
-        d['local_p_map'] = self.local_p_map
-        d['p_map'] = self.p_map
+        d['local_block_map'] = self.local_block_map
+        d['block_map'] = self.block_map
         d['pid'] = self.pid
-        d['bin_size'] = self.bin_size
+        d['block_size'] = self.block_size
 
         return (ProcessorMap, (), d)
 
@@ -167,12 +167,12 @@ cdef class ProcessorMap:
         self.origin.x = org.x
         self.origin.y = org.y
         self.origin.z = org.z
-        self.local_p_map = {}
-        self.local_p_map.update(d['local_p_map'])
-        self.p_map = {}
-        self.p_map.update(d['p_map'])
+        self.local_block_map = {}
+        self.local_block_map.update(d['local_block_map'])
+        self.block_map = {}
+        self.block_map.update(d['block_map'])
         self.pid = d['pid']
-        self.bin_size = d['bin_size']
+        self.block_size = d['block_size']
     
     # def __getstate__(self):
 #         d = self.__dict__.copy()
@@ -199,20 +199,20 @@ cdef class ProcessorMap:
         """
         cdef ParallelCellManager cm = self.cell_manager
         cdef int pid = self.pid
-        cdef dict pm = {}
-        cdef dict cells = self.cell_manager.cells_dict
+        cdef dict block_map = {}
+        cdef dict cells = cm.cells_dict
         cdef Point centroid = Point()
         cdef IntPoint id = IntPoint()
-        cdef Cell cel
+        cdef Cell cell
         cdef IntPoint cid
         
-        for cid, cel in cells.iteritems():
-            cel.get_centroid(centroid)
-            id = find_cell_id(self.origin, centroid, self.bin_size)
-            pm.setdefault(id, set([pid]))
+        for cid, cell in cells.iteritems():
+            cell.get_centroid(centroid)
+            id = find_cell_id(self.origin, centroid, self.block_size)
+            block_map.setdefault(id, pid)
         
-        self.p_map = pm
-        self.local_p_map = copy.deepcopy(pm)
+        self.block_map = block_map
+        self.local_block_map = copy.deepcopy(block_map)
 
     cpdef merge(self, ProcessorMap proc_map):
         """
@@ -235,25 +235,20 @@ cdef class ProcessorMap:
                 add an entry in m_pm for this bin index and this pid
 
         """
-        cdef dict m_pm = self.p_map
-        cdef dict o_pm = proc_map.p_map
-        cdef IntPoint o_id
-        cdef set procs, o_procs
-        cdef list bin_list
-        cdef int i, num_bins
+        cdef dict merged_block_map = self.block_map
+        cdef dict other_block_map = proc_map.block_map
+        cdef IntPoint other_id
+        cdef list block_list
+        cdef int i, num_blocks, other_proc
 
-        bin_list = o_pm.keys()
-        num_bins = len(bin_list)
+        block_list = other_block_map.keys()
+        num_blocks = len(block_list)
 
-        for i in range(num_bins):
-            o_id = bin_list[i]
-            o_procs = <set>PyDict_GetItem(o_pm, o_id)
+        for i in range(num_blocks):
+            other_id = block_list[i]
+            other_proc = <int>PyDict_GetItem(other_block_map, other_id)
                             
-            if PyDict_Contains(m_pm, o_id):
-                procs = <set>PyDict_GetItem(m_pm, o_id)
-                procs.update(o_procs)
-            else:
-                m_pm[o_id] = o_procs
+            merged_block_map[other_id] = other_proc
         
     cpdef find_region_neighbors(self):
         """
@@ -264,8 +259,8 @@ cdef class ProcessorMap:
         """
         cdef int pid = self.pid
         cdef set nb = set([pid])
-        cdef dict l_pm = self.local_p_map
-        cdef dict pm = self.p_map
+        cdef dict local_block_map = self.local_block_map
+        cdef dict block_map = self.block_map
         cdef list nids = []
         cdef list empty_list = []
         cdef int num_local_bins, i, len_nids, j
@@ -273,7 +268,7 @@ cdef class ProcessorMap:
         cdef set n_pids
 
         # for each cell in local_pm
-        for id in l_pm:
+        for id in local_block_map:
             nids[:] = empty_list
             
             # constructor list of neighbor cell ids in the proc_map.
@@ -284,7 +279,7 @@ cdef class ProcessorMap:
 
                 # if cell exists, collect all occupying processor ids
                 # into the nb set.
-                n_pids = pm.get(nid)
+                n_pids = block_map.get(nid)
                 if n_pids is not None:
                     nb.update(n_pids)
         
@@ -293,7 +288,7 @@ cdef class ProcessorMap:
     def __str__(self):
         rep = '\nProcessor Map At proc : %d\n'%(self.pid)
         rep += 'Origin : %s\n'%(self.origin)
-        rep += 'Bin size : %s\n'%(self.bin_size)
+        rep += 'Bin size : %s\n'%(self.block_size)
         rep += 'Region neighbors : %s'%(self.nbr_procs)
         return rep
 
@@ -390,16 +385,8 @@ cdef class ParallelCellInfo:
                 self.num_local_neighbors += 1
             else:
                 self.num_remote_neighbors += 1
-                self.remote_pid_cell_count[pid] = self.remote_pid_cell_count.get(pid,0)+1
-  
-    def is_boundary_cell(self):
-        """ Returns true if this cell is a boundary cell, false otherwise. """
-        cdef int dim = self.cell.cell_manager.dimension
-        cdef int num_neighbors = len(self.neighbor_cell_pids.keys())
-        if num_neighbors < 3**dim - 1:
-            return True
-        else:
-            return False
+                self.remote_pid_cell_count[pid] = self.remote_pid_cell_count.get(pid,0)+1  
+    
         
 ###############################################################################
 # `ParallelCell` class.
@@ -719,7 +706,7 @@ cdef class ParallelCellManager(CellManager):
         # FIXME: use a bin size of thrice the largest cell size
         cell_size = self.cell_size
         max_size = cell_size
-        proc_map.bin_size = max_size*3.0
+        proc_map.block_size = max_size*3.0
 
     cpdef glb_update_proc_map(self):
         """
@@ -730,7 +717,7 @@ cdef class ParallelCellManager(CellManager):
 
         **Algorithm**:
         
-            - bring local data up to data.
+            - bring local data up to date.
             - receive proc_map from children if any.
             - merge with current p_map.
             - send to parent if not root.
@@ -1000,7 +987,7 @@ cdef class ParallelCellManager(CellManager):
 
         # at this point each processor has all the real particles it is supposed
         # to handle. We can now exchange neighbors particle data with the
-        # neighbors.
+        # neighbors.adjacent_remote_cells
         self.exchange_neighbor_particles()
 
         logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
@@ -1045,14 +1032,18 @@ cdef class ParallelCellManager(CellManager):
         already occupied by some other processor.
         
         """
-        cdef dict new_cells = {}
-        cdef dict remote_cells = {}
+        cdef dict new_block_cells = {}
+        cdef dict remote_block_cells = {}
         cdef dict collected_data = {}
         cdef IntPoint cid
+        cdef Cell cell
+        cdef ProcessorMap pmap = self.proc_map
+        
+        self.nbr_cell_info = {}        
 
-        for cid, smaller_cell in self.cells_dict.iteritems():
-            if smaller_cell.pid == self.pid:
-                (<Cell>smaller_cell).update(collected_data)
+        for cid, cell in self.cells_dict.iteritems():
+            if cell.pid == self.pid:
+                (<Cell>cell).update(collected_data)
 
         # if the cell from the base hierarchy creation exists and initial
         # re-distribution is yet to be done, add that to the list of new cells.
@@ -1069,42 +1060,67 @@ cdef class ParallelCellManager(CellManager):
             self.cells_dict.clear()
             self.initial_redistribution_done = True
             
-        # we have a list of all new cells created by the smaller cells.
-        for cid, smaller_cell in collected_data.iteritems():
-            # check if this cell is already there in the list of children cells.
-            smaller_cell_1 = self.cells_dict.get(cid)
-            if smaller_cell_1 is not None:
-                # check if this is a remote cell
-                if smaller_cell_1.pid != self.pid:
-                    # add it to the remote cells.
-                    r_cell = remote_cells.get(cid)
-                    if r_cell is None:
-                        smaller_cell.pid = smaller_cell_1.pid
-                        remote_cells[cid] = smaller_cell
-                    else:
-                        (<Cell>r_cell).add_particles(smaller_cell)
+        # we have a list of all new cells created by the cell manager.
+        for cid, cell in collected_data.iteritems():
+            #find the block id to which the newly created cell belongs
+            
+            block_id = find_cell_id(cell.centroid, pmap.origin, pmap.block_size)
+                        
+            #get the pid corresponding to the block_id
+            
+            pid = pmap.block_map.get(block_id)
+            if pid is None: #the block does not exist
+                #add to new block particles
+                
+                if new_block_cells.has_key(block_id):
+                    new_block_cells[block_id].append(cell)
                 else:
-                    # add it to the current cells.
-                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
+                    new_block_cells[block_id] = [cell]
             else:
-                # check if this cell is in new cells
-                smaller_cell_1 = new_cells.get(cid)
-                if smaller_cell_1 is None:
-                    new_cells[cid] = smaller_cell
-                else:
-                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
+                #find to which remote processor the block belongs and add
+                
+                if not pid == self.pid:
+                    if new_block_cells.has_key(block_id):
+                        remote_block_cells[block_id].append(cell)
+                    else:
+                        remote_block_cells[block_id] = [cell]                    
 
-        logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
-        for cid in new_cells:
-            logger.debug('new cell (%s)'%(cid))
-        logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
+        return new_block_cells, remote_block_cells
+                       
+            # check if this cell is already there in the list of children cells.
+#            smaller_cell_1 = self.cells_dict.get(cid)
+#            if smaller_cell_1 is not None:
+#                # check if this is a remote cell
+#                if smaller_cell_1.pid != self.pid:
+#                    # add it to the remote cells.
+#                    r_cell = remote_cells.get(cid)
+#                    if r_cell is None:
+#                        smaller_cell.pid = smaller_cell_1.pid
+#                        remote_cells[cid] = smaller_cell
+#                    else:
+#                        (<Cell>r_cell).add_particles(smaller_cell)
+#                else:
+#                    # add it to the current cells.
+#                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
+#            else:
+#                # check if this cell is in new cells
+#                smaller_cell_1 = new_cells.get(cid)
+#                if smaller_cell_1 is None:
+#                    new_cells[cid] = smaller_cell
+#                else:
+#                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
 
-        logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
-        for cid in remote_cells:
-            logger.debug('remote cell (%s) for proc %d'%(cid, remote_cells[cid].pid))
-        logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
+        #logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
+        #for cid in new_cells:
+        #    logger.debug('new cell (%s)'%(cid))
+        #logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
 
-        return new_cells, remote_cells
+        #logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
+        #for cid in remote_cells:
+        #    logger.debug('remote cell (%s) for proc %d'%(cid, remote_cells[cid].pid))
+        #logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
+
+        #return new_cells, remote_cells
     
     cpdef Cell get_new_cell(self, IntPoint id):
         """get a new parallel cell"""

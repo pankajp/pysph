@@ -676,6 +676,20 @@ cdef class CellManager:
 
         if initialize == True:
             self.initialize()
+            
+    def is_boundary_cell(self, cid):
+        """ Returns true if this cell is a boundary cell, false otherwise. """
+        cdef int dim = self.dimension
+        cdef list nbr_list = []
+        construct_immediate_neighbor_list(cid, nbr_list)
+        
+        for id in nbr_list:
+            if not self.cells_dict.has_key(id):
+                nbr_list.pop(id)
+        if len(nbr_list) < 3**dim - 1:
+            return True
+        else:
+            return False
 
     cpdef set_jump_tolerance(self, int jump_tolerance):
         """Sets the jump tolerance value of the cells."""
@@ -732,7 +746,7 @@ cdef class CellManager:
         For all new cells returned, if some already exist, the data is
         merged with them.
         
-        If a newly created cell does not exists, it is added.
+        If a newly created cell does not exist, it is added to the cell list.
         
         Notes:
         ------
@@ -785,7 +799,7 @@ cdef class CellManager:
                     logger.warn('particle array (%s) name not set'%(parr))
         
     cpdef int update_status(self):
-        """Updates the is_dirty flag to indicate is an update is required.
+        """Updates the is_dirty flag to indicate that an update is required.
 
         Algorithm:
         ----------
@@ -981,7 +995,7 @@ cdef class CellManager:
     cdef int get_potential_cells(self, Point pnt, double radius,
                                  list cell_list) except -1:
         """
-        Gets cell that will potentially contain neighbors the the given point.
+        Gets cell that will potentially contain neighbors for the given point.
     
     	Parameters:
         -----------

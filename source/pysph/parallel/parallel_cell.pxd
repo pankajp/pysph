@@ -15,15 +15,14 @@ cdef class ParallelCellManager(CellManager)
 cdef class ProcessorMap:
      cdef public ParallelCellManager cell_manager
      cdef public Point origin
-     cdef public dict local_p_map
-     cdef public dict p_map
+     cdef public local_block_map
+     cdef public dict block_map
      cdef public list nbr_procs
      cdef public int pid
-     cdef public double bin_size
+     cdef public double block_size
 
      cpdef merge(self, ProcessorMap proc_map)
      cpdef find_region_neighbors(self)
-
 
 ###############################################################################
 # `ParallelCellManager` class.
