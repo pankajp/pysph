@@ -96,12 +96,37 @@ cdef dict share_data(int mypid, list sorted_procs, object data, MPI.Comm comm,
 cdef class ProcessorMap:
     """
     Class to maintain the assignment of processors to geometric regions.
+
+    Notes:
+    ------
+    
+    The processor map bins the cells contained in the cell manager
+    based on the bin size provided. This means that a large number of
+    cells are aggregated into one box (if the bin size is large).
+
+    The processor map identifies neighboring processors by checking
+    the bin ids just created. For example, if a bin on one prcocessor
+    has, as a neighbor (as returned by
+    construct_immediate_neighbor_list) a bin on another processor, the
+    two processors are considered neighbors.
+    
     """
+
+    #Defined in the .pxd file
+    #cdef public ParallelCellManager cell_manager
+    #cdef public Point origin
+    #cdef public dict local_p_map
+    #cdef public dict p_map
+    #cdef public list nbr_procs
+    #cdef public int pid
+    #cdef public double bin_size
+
     def __init__(self, ParallelCellManager cell_manager=None, int pid=0,
                  Point origin=Point(0, 0, 0), double bin_size=0.3, 
                  *args, **kwargs):
         """
         Contructor.
+
         """
         self.cell_manager = cell_manager
         self.origin = Point()
@@ -156,8 +181,21 @@ cdef class ProcessorMap:
 #         return d
 
     def update(self):
-        """
-        Update the processor map with current cells in the cell manager.
+        """ Update the processor map with local cells maintained by cell manager
+        
+        Notes:
+        ------
+      
+        The p_map data attribute is a dictionary keyed on cell/bin
+        index with value being a set of processor ids owning this cell.
+
+        Algorithm:
+        ----------
+
+        for all cells in cell managers cell_dict
+            find the index of the cell centroid based on binning with bin size
+            add this to the p_map attribute
+        
         """
         cdef ParallelCellManager cm = self.cell_manager
         cdef int pid = self.pid
@@ -178,10 +216,24 @@ cdef class ProcessorMap:
 
     cpdef merge(self, ProcessorMap proc_map):
         """
-        Merge data from other processors proc map into ours.
+        Merge data from other processors proc map into this processor map.
 
-        **Parameters**
-            - proc_map - processor map from another processor.
+        Parameters:
+        -----------
+
+        proc_map -- processor map from another processor.
+
+        Algorithm:
+        ----------
+
+        for all bins in the other processor maps bin list
+            get the pid of the processor containing that bin
+            
+            if this cell contains the bin index
+                update the set of processors that have this bin index in m_pm
+            else 
+                add an entry in m_pm for this bin index and this pid
+
         """
         cdef dict m_pm = self.p_map
         cdef dict o_pm = proc_map.p_map
@@ -205,9 +257,9 @@ cdef class ProcessorMap:
         
     cpdef find_region_neighbors(self):
         """
-        Find the processors that are occupying regions in the processor occupied
-        by the current pid. These neighbors need not be adjacent i.e sharing
-        cells.
+        Find the processors that are occupying regions in the
+        processor occupied by the current pid. These neighbors need
+        not be adjacent i.e sharing cells.
         
         """
         cdef int pid = self.pid
@@ -256,6 +308,15 @@ cdef class ParallelCellInfo:
     parallel level. Any cell under this cell behaves just like a serial cell.
 
     """
+
+    #Defined in the .pxd file
+    #cdef ParallelCellManager cell_manager
+    #cdef public Cell cell
+    #cdef public dict neighbor_cell_pids
+    #cdef public dict remote_pid_cell_count
+    #cdef public int num_remote_neighbors
+    #cdef public int num_local_neighbors
+
     def __init__(self, cell=None):
         self.cell = cell
         self.cell_manager = self.cell.cell_manager
@@ -269,6 +330,20 @@ cdef class ParallelCellInfo:
         Updates the remote neighbor information from the glb_nbr_cell_pids.
 
         glb_nbr_cell_pids also contains cell ids from the same processor.
+
+        Notes:
+        -------
+
+        The neighbor_cell_pids attribute is a dict keyed on cell ids
+        and with a value of the processor id that owns this cell.
+
+        A call to this function finds all neighbors for this cell (27)
+        and stores the processor id associated with this cell if it
+        exists in the glb_nbr_cell_pids dict passed.
+
+        At the end of this call, the self.neighbor_cell_pids dict has
+        all neighbors and their processor ids if any.
+
         """
         cdef IntPoint id = self.cell.id
         cdef IntPoint nbr_id
@@ -277,35 +352,20 @@ cdef class ParallelCellInfo:
         construct_immediate_neighbor_list(id, nbr_ids, False)
 
         # clear previous information.
+
         self.neighbor_cell_pids.clear()
         
         for nbr_id in nbr_ids:
             if glb_nbr_cell_pids.has_key(nbr_id):
                 nbr_pid = glb_nbr_cell_pids.get(nbr_id)
                 self.neighbor_cell_pids[nbr_id] = nbr_pid
-        
-    def compute_neighbor_counts(self):
-        """
-        Find the number of local and remote neighbors of this cell.
-        """
-        self.remote_pid_cell_count.clear()
-        self.num_remote_neighbors = 0
-        self.num_local_neighbors = 0
-        cdef int mypid = self.cell.pid
-        cdef int pid
-        cdef IntPoint cid
-        for cid, pid in self.neighbor_cell_pids.iteritems():
-            if pid == mypid:
-                self.num_local_neighbors += 1
-            else:
-                self.num_remote_neighbors += 1
-                self.remote_pid_cell_count[pid] = self.remote_pid_cell_count.get(pid,0)+1
 
     def update_neighbor_information_local(self):
         """
         Updates neighbor information using just local data.
 
         This uses the cell_manager's cells_dict to search for neighbors.
+
         """
         cdef IntPoint cid
         cdef dict nbr_cell_pids = {}
@@ -315,11 +375,25 @@ cdef class ParallelCellInfo:
             c = self.cell_manager.cells_dict.get(cid)
             if c is not None:
                 self.neighbor_cell_pids[cid] = c.pid
-    
+        
+    def compute_neighbor_counts(self):
+        """ Find the number of local and remote neighbors of this cell. """
+        self.remote_pid_cell_count.clear()
+        self.num_remote_neighbors = 0
+        self.num_local_neighbors = 0
+        cdef int mypid = self.cell.pid
+        cdef int pid
+        cdef IntPoint cid
+
+        for cid, pid in self.neighbor_cell_pids.iteritems():
+            if pid == mypid:
+                self.num_local_neighbors += 1
+            else:
+                self.num_remote_neighbors += 1
+                self.remote_pid_cell_count[pid] = self.remote_pid_cell_count.get(pid,0)+1
+  
     def is_boundary_cell(self):
-        """
-        Returns true if this cell is a boundary cell, false otherwise.
-        """
+        """ Returns true if this cell is a boundary cell, false otherwise. """
         cdef int dim = self.cell.cell_manager.dimension
         cdef int num_neighbors = len(self.neighbor_cell_pids.keys())
         if num_neighbors < 3**dim - 1:
@@ -362,9 +436,7 @@ cdef class ParallelCell(Cell):
 # `ParallelCellRemoteCopy` class.
 ###############################################################################
 cdef class ParallelCellRemoteCopy(ParallelCell):
-    """
-    Cells holding information from another processor.
-    """
+    """ Cells holding information from another processor."""
     def __init__(self, id, cell_manager=None,
                  cell_size=0.1, jump_tolerance=1, pid=-1):
         ParallelCell.__init__(self, id=id, cell_manager=cell_manager,

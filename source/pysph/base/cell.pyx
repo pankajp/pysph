@@ -34,7 +34,12 @@ def py_find_cell_id(origin, pnt, cell_size):
     return find_cell_id(origin, pnt, cell_size)
 
 cdef inline int real_to_int(double real_val, double step):
-    """ return an int corresponding to the position suitable as cell index
+    """ Return the bin index to which the given position belongs.
+
+    Parameters:
+    -----------
+    val -- The coordinate location to bin
+    step -- the bin size    
 
     Example:
     --------
@@ -57,7 +62,7 @@ cdef inline IntPoint find_cell_id(Point origin, Point pnt, double cell_size):
     Parameters:
     -----------
     origin -- a cell's origin
-    pnt -- the point for which the index is soughted
+    pnt -- the point for which the index is sought
     cell_size -- the cell size to use
     id -- output parameter holding the cell index 
 
@@ -103,8 +108,10 @@ def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
 cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
                                          bint include_self=True, int
                                          dimension=3):
-    """ Construct a list of nearest 27 nearest neighbors """
+    """ Construct a list of cell ids, which share a face(3d) or 
+    edge(2d) with the given cell_id.
 
+    """
     if include_self:
         neighbor_list.append(cell_id)
     
@@ -265,13 +272,26 @@ cdef class Cell:
             self._init_index_lists()
                          
     cpdef get_centroid(self, Point centroid):
-        """Returns the centroid of this cell in 'centroid'."""
+        """Returns the centroid of this cell in 'centroid'.
+
+        Notes:
+        ------
+        The centroid in any coordinate direction is defined to be the
+        origin plus half the cell size in that direction
+
+        """
         centroid.x = self.origin.x + (<double>self.id.x + 0.5)*self.cell_size
         centroid.y = self.origin.y + (<double>self.id.y + 0.5)*self.cell_size
         centroid.z = self.origin.z + (<double>self.id.z + 0.5)*self.cell_size
 
     cpdef Cell get_new_sibling(self, IntPoint id):
-        """Create a new cell and return."""
+        """Return a new cell with the given id
+
+        Notes:
+        ------
+        The new cell size is taken to be the same as this cell's size
+
+        """
         cdef Cell cell = Cell(id=id, cell_manager=self.cell_manager,
                               cell_size=self.cell_size,
                               jump_tolerance=self.jump_tolerance)
@@ -284,14 +304,14 @@ cdef class Cell:
         Parameters
         ----------
          
-        data -- output parameter, to store cell ids and particles that have
-                escaped this cell
+        data -- output parameter. A dictionary to store cell ids and
+                particles that have escaped this cell
         
         Algorithm::
         -----------
         
         for pa in arrays_to_bin
-            if pa is dirty
+            if pa is dirty # particles have moved
                 for those particles that are in this Cell
                     if particle has escaped 
                         mark this particle for removal from this Cell
@@ -299,7 +319,7 @@ cdef class Cell:
                         create a new entry for that cell if required
                         add this particle's index to the newly created cell
                         
-                remove markied particles 
+                remove marked particles 
 
         """
         cdef int i,j
@@ -351,6 +371,7 @@ cdef class Cell:
                     pnt.z = z[indices[j]]
 
                     # find the cell containing this point
+
                     id = find_cell_id(self.origin, pnt, self.cell_size)
                     
                     if id.is_equal(self.id):
@@ -358,12 +379,13 @@ cdef class Cell:
 
                     to_remove.append(j)
                     
-                    pdiff = self.id.diff(id)
-
                     # has the particle moved too far??
+
+                    pdiff = self.id.diff(id)
                     self.check_jump_tolerance(id)
 
                     #create new cell if id doesn't exist and add particles
+
                     cell = data.get(id)
                     if cell is None:
                         cell = self.get_new_sibling(id)
@@ -373,6 +395,7 @@ cdef class Cell:
                     cell_index_array.append(indices[j])
 
             # now remove all escaped and invalid particles.
+
             index_array.remove(to_remove.get_npy_array())
 
         return 0
@@ -414,9 +437,11 @@ cdef class Cell:
         Notes:
         ------
         The input cell is assumed to have the same set of particle arrays. 
+        This is why the check_particle_id is called which would raise an 
+        error if the particle id is negative or more than the number of 
+        particles in the particle array.
 
         """
-
         cdef int i, j, id
         cdef int num_arrays, num_particles
         cdef LongArray dest_array
@@ -446,6 +471,13 @@ cdef class Cell:
         """
         Insert particle indices of the parray given by "parray_id" from the
         array "indices" into the cell. 
+
+        Parameters:
+        -----------
+
+        parray_id -- id of the particle array in `arrays_to_bin`
+        indices -- particle ids to extend the array
+
         """
         cdef LongArray index_array = self.index_lists[parray_id]
         index_array.extend(indices.get_npy_array())
@@ -612,8 +644,8 @@ cdef class CellManager:
     #cdef public str coord_x, coord_y, coord_z
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=-1.0,
-                  double max_cell_size=0.5, Point origin=Point(0,0,0),
-                  bint initialize=True, double max_radius_scale=2.0):
+                 double max_cell_size=0.5, Point origin=Point(0,0,0),
+                 bint initialize=True, double max_radius_scale=2.0):
         
         self.origin = Point()
 
@@ -670,14 +702,16 @@ cdef class CellManager:
         if self.is_dirty:
 
             # update the cells.
+
             self.cells_update()
         
             # delete empty cells if any.
+
             self.delete_empty_cells()
 
             # reset the dirty bit of all particle arrays.
+
             num_arrays = len(self.arrays_to_bin)
-        
             for i in range(num_arrays):
                 parray = self.arrays_to_bin[i]
                 parray.set_dirty(False)
@@ -800,21 +834,27 @@ cdef class CellManager:
             return
 
         # clear current data.
+
         self.clear()
 
         # setup some data structures.
+
         self._rebuild_array_indices()
 
         # setup the cells dict
+
         self._setup_cells_dict()
         
         # recompute cell sizes.
+
         self.compute_cell_size(self.min_cell_size, self.max_cell_size)
         
         # build cell.
+
         self._build_cell()
 
         # update
+
         self.update()
 
         # now reset the jump tolerance back to 1
@@ -903,12 +943,14 @@ cdef class CellManager:
         cdef Cell cell
  
         # create a leaf cell with all particles.
+
         cell = Cell(id=IntPoint(0, 0, 0), cell_manager=self,
                              cell_size=self.cell_size,
                              jump_tolerance=INT_MAX)
         
-        num_arrays = len(cell.arrays_to_bin)
         # now add all particles of all arrays to this cell.
+
+        num_arrays = len(cell.arrays_to_bin)
         for i in range(num_arrays):
             parray = cell.arrays_to_bin[i]
             num_particles = parray.get_number_of_particles()
@@ -919,6 +961,7 @@ cdef class CellManager:
             index_arr.set_data(index_arr_source)
         
         # now add a cell at the origin (contains all the particles)
+
         self.cells_dict.clear()
         self.cells_dict[IntPoint(0, 0, 0)] = cell
         
