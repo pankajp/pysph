@@ -141,9 +141,6 @@ cdef class ProcessorMap:
             self.origin.y = cell_manager.origin.y
             self.origin.z = cell_manager.origin.z
             
-        # the cell manager may not have been initialized by this time.
-        # we just set the bin size of the proc_map to the value given
-        # the cell manager may later on setup the cell size.
         self.block_size = block_size
     
     def __reduce__(self):
@@ -174,12 +171,6 @@ cdef class ProcessorMap:
         self.pid = d['pid']
         self.block_size = d['block_size']
     
-    # def __getstate__(self):
-#         d = self.__dict__.copy()
-#         for key in ['cell_manager', 'nbr_procs']:
-#             d.pop(key, None)
-#         return d
-
     def update(self):
         """ Update the processor map with local cells maintained by cell manager
         
@@ -475,6 +466,7 @@ cdef class ParallelCellManager(CellManager):
         self.pid = 0
 
         # set the parallel controller.
+
         if parallel_controller is None:
             self.parallel_controller = ParallelController(cell_manager=self)
         else:
@@ -515,8 +507,7 @@ cdef class ParallelCellManager(CellManager):
         self.new_region_particles = {}
 
         # list of new cells that were added in a iteration.
-        self.new_cells_added = {}
-        
+        self.new_cells_added = {}        
         
         if initialize is True:
             self.initialize()
@@ -543,26 +534,34 @@ cdef class ParallelCellManager(CellManager):
             return
 
         pc = self.parallel_controller
-        # exchange bounds and interaction radii information.
+
+        # exchange bounds and interaction radii (h) information.
+
         self.initial_info_exchange()
 
         # now setup the origin and cell size to use.
+
         self.setup_origin()
+
         if self.min_cell_size > 0.0:
             self.cell_size = self.min_cell_size
         else:
             self.compute_cell_size(self.min_cell_size, self.max_cell_size)
 
         # setup array indices.
+
         self.py_rebuild_array_indices()
 
         # setup the cells_dict
+
         self.py_setup_cells_dict()
         
         # setup information for the processor map.
+
         self.setup_processor_map()
 
         # build a single cell with all the particles
+
         self._build_cell()
         
         pc = self.parallel_controller
@@ -575,62 +574,20 @@ cdef class ParallelCellManager(CellManager):
         self.initialized = True
 
         # update the processor maps now.
+
         self.glb_update_proc_map()
 
-    cpdef int update_status(self) except -1:
-        """
-        Sets the is_dirty to to true, We cannot decide the dirtyness of this
-        cell manager based on just the particle arrays here, as cell managers on
-        other processors could have become dirty at the same time.
-
-        We also force an update at this point. Reason being, the delayed updates
-        can cause stale neighbor information to be used before the actual update
-        happens. 
-        """
-        self.set_dirty(True)
-
-        self.cells_update()
-
-        return 0
-
-    def _build_cell(self):
-        """
-        Build a cell containing all the particles.
-        
-        This function is similar to the function in the CellManager, except that
-        the cells used are the Parallel variants.
-        """
-        cell_size = self.cell_size
-
-        # create a cell with all the particles.
-        cell = ParallelCell(id=IntPoint(0, 0, 0), cell_manager=self,
-                                     cell_size=cell_size,
-                                     jump_tolerance=INT_INF(),
-                                     pid=self.pid)
-
-        num_arrays = len(cell.arrays_to_bin)
-        # now add all particles of all arrays to this cell.
-        for i in range(num_arrays):
-            parray = cell.arrays_to_bin[i]
-            num_particles = parray.get_number_of_particles()
-            index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
-            index_arr = cell.index_lists[i]
-            index_arr.resize(num_particles)
-            index_arr.set_data(index_arr_source)
-
-        self.cells_dict.clear()
-        self.cells_dict[IntPoint(0, 0, 0)] = cell
-
-        # build the cells_dict also
-        #self.update_cell_hierarchy_list()        
-        
     def initial_info_exchange(self):
-        """
-        Initial information exchange among processors.
+        """ Exchange bound and smoothing length information among all
+        processors.
 
-        The bounds and h values are exchanged amoung all the processors.
+        Notes:
+        ------
+        
+        At the end of this call, the global min and max values for the 
+        coordinates and smoothing lengths are stored in the attributes
+        glb_bounds_min/max, glb_min/max_h 
 
-        Based on the bounds and h values, the origin an cell sizes are computed.
         """
         data_min = {'x':0, 'y':0, 'z':0, 'h':0}
         data_max = {'x':0, 'y':0, 'z':0, 'h':0}
@@ -657,12 +614,14 @@ cdef class ParallelCellManager(CellManager):
                                            self.glb_bounds_max))
         logger.info('(%d) min_h : %f, max_h : %f'%(pc.rank, self.glb_min_h,
                                                    self.glb_max_h))
-    def setup_origin(self):
-        """
-        Sets up the origin from the global bounds.
 
-        Find the max bound range from x, y and z.
-        Use bounds_min - max_range as the origin.
+    def setup_origin(self):
+        """ Setup the origin from the global bounds.
+
+        Notes:
+        ------
+        
+        The origin is set as: bounds_min - max_range
 
         """
         bounds_range = [0, 0, 0]
@@ -680,19 +639,36 @@ cdef class ParallelCellManager(CellManager):
         logger.info('(%d) Origin : %s'%(pc.rank,
                                         str(self.origin)))
 
-    cpdef double compute_cell_size(self, double min_cell_size, double max_cell_size):
-        """
-        Sets up the cell size to use from the 'h' values.
+    cpdef double compute_cell_size(self, double min_cell_size, 
+                                   double max_cell_size):
+        """ Setup the cell size to use from the 'h' values.
         
+        Parameters:
+        -----------
+        
+        min_cell_size -- the minimum cell size to use
+        max_cell_size -- the maximum cell size to use
+
+        Notes:
+        ------
+
         The cell size is set to 2*self.max_radius_scale*self.glb_min_h
+
         """
         self.cell_size = 2*self.max_radius_scale*self.glb_min_h
         logger.info('(R=%d) cell_size=%g'%(self.pc.rank, self.cell_size))
         return self.cell_size
 
     def setup_processor_map(self):
-        """
-        Setup information for the processor map.
+        """ Setup the processor map 
+
+        Notes:
+        ------
+        
+        The block size for the processor map is set to thrice the cell
+        size. This could be incorrect as if different processors have
+        diffirent cell sizes, the blocks would be different.
+        
         """
         proc_map = self.proc_map
         proc_map.cell_manager = self
@@ -703,26 +679,77 @@ cdef class ParallelCellManager(CellManager):
 
         proc_map.pid = self.parallel_controller.rank
         
-        # FIXME: use a bin size of thrice the largest cell size
         cell_size = self.cell_size
-        max_size = cell_size
-        proc_map.block_size = max_size*3.0
+        proc_map.block_size = cell_size*3.0
+
+    def _build_cell(self):
+        """ Build a cell containing all the particles.
+        
+        Notes:
+        ------
+        
+        This function is similar to the function in the CellManager,
+        except that the cells used are the Parallel variants.
+
+        """
+        cell_size = self.cell_size
+
+        # create a cell and add to it all the particles.
+
+        cell = ParallelCell(id=IntPoint(0, 0, 0), cell_manager=self,
+                                     cell_size=cell_size,
+                                     jump_tolerance=INT_INF(),
+                                     pid=self.pid)
+
+        # now add all particles of all arrays to this cell.
+
+        num_arrays = len(cell.arrays_to_bin)
+        for i in range(num_arrays):
+            parray = cell.arrays_to_bin[i]
+            num_particles = parray.get_number_of_particles()
+            index_arr_source = numpy.arange(num_particles, dtype=numpy.long)
+            index_arr = cell.index_lists[i]
+            index_arr.resize(num_particles)
+            index_arr.set_data(index_arr_source)
+
+        self.cells_dict.clear()
+        self.cells_dict[IntPoint(0, 0, 0)] = cell
+
+    cpdef int update_status(self) except -1:
+        """
+        Sets the is_dirty to to true, We cannot decide the dirtyness of this
+        cell manager based on just the particle arrays here, as cell managers on
+        other processors could have become dirty at the same time.
+
+        We also force an update at this point. Reason being, the delayed updates
+        can cause stale neighbor information to be used before the actual update
+        happens. 
+
+        """
+        self.set_dirty(True)
+
+        self.cells_update()
+
+        return 0
 
     cpdef glb_update_proc_map(self):
-        """
-        Brings the processor map up-to-date globally.
+        """ Update the global processor map.
+
+        Notes:
+        ------
         
         After a call to this function, all processors, should have identical
         processor maps.
 
-        **Algorithm**:
+        Algorithm:
+        ----------
         
-            - bring local data up to date.
-            - receive proc_map from children if any.
-            - merge with current p_map.
-            - send to parent if not root.
-            - receive updated proc_map from root.
-            - send updated proc_map to children.
+        - bring local data up to date.
+        - receive proc_map from children if any.
+        - merge with current p_map.
+        - send to parent if not root.
+        - receive updated proc_map from root.
+        - send updated proc_map to children.
 
         """
         cdef ParallelController pc = self.pc
@@ -733,84 +760,52 @@ cdef class ParallelCellManager(CellManager):
         self.proc_map.update()
 
         # merge data from all children proc maps.
+
         for c_rank in pc.children_proc_ranks:
             c_proc_map = comm.recv(source=c_rank, 
                                    tag=TAG_PROC_MAP_UPDATE)
             self.proc_map.merge(c_proc_map)
 
         # we now have partially merged data, send it to parent is not root.
+
         if pc.parent_rank > -1:
             comm.send(self.proc_map, dest=pc.parent_rank,
                       tag=TAG_PROC_MAP_UPDATE)
+
             # receive updated proc map from parent
+
             updated_proc_map = comm.recv(source=pc.parent_rank,
                                          tag=TAG_PROC_MAP_UPDATE)
+
             # set our proc data with the updated data.
-            PyDict_Clear(self.proc_map.p_map)
-            PyDict_Update(self.proc_map.p_map, updated_proc_map.p_map)
+
+            PyDict_Clear(self.proc_map.block_map)
+            PyDict_Update(self.proc_map.block_map, updated_proc_map.block_map)
 
         # send updated data to children.
+
         for c_rank in pc.children_proc_ranks:
             comm.send(self.proc_map, dest=c_rank, 
                       tag=TAG_PROC_MAP_UPDATE)
 
         # setup the region neighbors.
+
         self.proc_map.find_region_neighbors()
 
     cpdef remove_remote_particles(self):
-        """
-        Remove all remote particles from the particle arrays.
-        These particles are those that have their 'local' flag set to 0.
+        """ Remove all remote particles from the particle arrays.
+        
+        Notes:
+        -------
+
+        Remote particles have the 'local' flag set to 0.
         
         """
         cdef ParticleArray parray
         
         for parray in self.arrays_to_bin:
             parray.remove_flagged_particles('local', 0)
-
-    def _find_min_max_of_property(self, prop_name):
-        """
-        Find the min and max values of the property prop_name among all arrays
-        that have been binned.
-        """
-        min = 1e20
-        max = -1e20
-
-        num_particles = 0
-        
-        for arr in self.arrays_to_bin:
-            num_particles += arr.get_number_of_particles()
-            
-            if arr.get_number_of_particles() == 0:
-                continue
-
-            min_prop = numpy.min(arr.get(prop_name))
-            max_prop = numpy.max(arr.get(prop_name))
-
-            if min > min_prop:
-                min = min_prop
-            if max < max_prop:
-                max = max_prop
-
-        if num_particles == 0:
-            return 1e20, -1e20
-
-        return min, max
-
-    def update_property_bounds(self):
-        """
-        Updates the min and max values of all properties in all particle arrays
-        that are being binned by this cell manager.
-
-        Not sure if this is the correct place for such a function.
-
-        """
-        pass
-        
-    
-    
-    # carried from ParallelRootCell
-    
+  
     cpdef find_adjacent_remote_cells(self):
         """
         Finds all cells from other processors that are adjacent to cells handled
@@ -883,7 +878,9 @@ cdef class ParallelCellManager(CellManager):
               cell dict.
 
         **Note**
-            - The processor map should be up-to-date before this function is called.
+
+            - The processor map should be up-to-date before this
+              function is called.
             
         """
         cdef MPI.Comm comm = self.parallel_controller.comm
@@ -929,25 +926,30 @@ cdef class ParallelCellManager(CellManager):
         self.find_adjacent_remote_cells()
 
     cpdef int cells_update(self) except -1:
-        """
-        Update particle information.
-        """
+        """ Update particle information """
+
         cdef ParallelCellManager cell_manager = <ParallelCellManager>self
+
         # wait till all processors have reached this point.
+
         self.parallel_controller.comm.Barrier()
 
         logger.debug('++++++++++++++++ UPDATE BEGIN +++++++++++++++++++++')
 
         # bin the particles and find the new_cells and remote_cells.
-        new_cells, remote_cells = self.bin_particles()
+
+        new_block_cells, remote_block_cells = self.bin_particles()
 
         # clear the list of new cells added.
+
         self.new_cells_added.clear()
 
         # create a copy of the particles in the new cells and mark those
         # particles as remote.
+
         self.new_particles_for_neighbors = self.create_new_particle_copies(
             remote_cells)
+
         self.new_region_particles = self.create_new_particle_copies(
             new_cells)
 
@@ -1026,11 +1028,37 @@ cdef class ParallelCellManager(CellManager):
         self.delete_empty_cells()
 
     cpdef bin_particles(self):
-        """
-        Find the cell configurations caused by the particles moving. Returns the
-        list of cell created in unassigned regions and those created in regions
-        already occupied by some other processor.
-        
+        """ Find the cell configuration caused by the particles moving.
+
+        Notes:
+        ------
+
+        This function is callled just after the base cell is built
+        with all the particles added to it.
+
+        When new cells are created by particles moving into new
+        regions, the corresponding block id's from the processor map
+        is checked. We distinguish three cases.
+
+        (i)   If the block id exists in the local block map, it implies
+              that the cell is created in a region that is assigned to our
+              processor. Hence this cell need not be communicated.
+
+        (ii)  If the block id exists in the global processor map and  not in 
+              the local block map, it implies that the cell belongs to a 
+              region assigned to some other processor (remote block). 
+              This cell therefore needs to be communicated to that processor.
+            
+        (iii) If the block id does not exist in the global processor
+              map, it it implies that the cell belongs to an
+              unassigned region (new block). We need to determine an 
+              appropriate processor to assign this cell to.             
+
+        The function returns two dictionaries corresponding to remote
+        block cells and new block cells as discussed above. The
+        dictionaries are keyed on processor id and have as value, the
+        cell.
+
         """
         cdef dict new_block_cells = {}
         cdef dict remote_block_cells = {}
@@ -1041,22 +1069,28 @@ cdef class ParallelCellManager(CellManager):
         
         self.nbr_cell_info = {}        
 
+        #find the new configuration of the cells
+        
         for cid, cell in self.cells_dict.iteritems():
             if cell.pid == self.pid:
                 (<Cell>cell).update(collected_data)
 
-        # if the cell from the base hierarchy creation exists and initial
-        # re-distribution is yet to be done, add that to the list of new cells.
+        # if the base cell exists and the initial re-distribution is False,
+        # add that to the list of new cells.
+
         if self.initial_redistribution_done is False:
 
             # update the processor map once - no neighbor information is
             # available at this point.
+
             self.glb_update_proc_map()
 
             c = self.cells_dict.values()[0]
             if (<Cell>c).get_number_of_particles() > 0:
                 collected_data[(<Cell>c).id] = c
+
             # remove it from the cell_dict
+
             self.cells_dict.clear()
             self.initial_redistribution_done = True
             
@@ -1064,12 +1098,12 @@ cdef class ParallelCellManager(CellManager):
         for cid, cell in collected_data.iteritems():
             #find the block id to which the newly created cell belongs
             
-            block_id = find_cell_id(cell.centroid, pmap.origin, pmap.block_size)
+            block_id = find_cell_id(pmap.origin, cell.centroid, pmap.block_size)
                         
             #get the pid corresponding to the block_id
             
             pid = pmap.block_map.get(block_id)
-            if pid is None: #the block does not exist
+            if pid is None:
                 #add to new block particles
                 
                 if new_block_cells.has_key(block_id):
@@ -1080,10 +1114,10 @@ cdef class ParallelCellManager(CellManager):
                 #find to which remote processor the block belongs and add
                 
                 if not pid == self.pid:
-                    if new_block_cells.has_key(block_id):
+                    if remote_block_cells.has_key(block_id):
                         remote_block_cells[block_id].append(cell)
                     else:
-                        remote_block_cells[block_id] = [cell]                    
+                        remote_block_cells[block_id] = [cell]
 
         return new_block_cells, remote_block_cells
                        
@@ -1626,7 +1660,8 @@ cdef class ParallelCellManager(CellManager):
                 self.cells_dict[cid] = c
                 i += 1
 
-    cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=None):
+    cpdef dict _get_cell_data_for_neighbor(self, list cell_list, 
+                                           list props=None):
         """
         Return new particle arrays created for particles contained in each of
         the requested cells.
@@ -1736,11 +1771,50 @@ cdef class ParallelCellManager(CellManager):
             c.parallel_cell_info.compute_neighbor_counts()
 
     def update_neighbor_information_local(self):
-        """
-        Update the neighbor information locally.
-        """
+        """ Update neighbor information locally. """
         for c in self.cells_dict.values():
             c.parallel_cell_info.update_neighbor_information_local()
             c.parallel_cell_info.compute_neighbor_counts()            
 
+    def _find_min_max_of_property(self, prop_name):
+        """ Find the minimum and maximum of the property among all arrays 
         
+        Parameters:
+        -----------
+
+        prop_name -- the property name to find the bounds for
+
+        """
+        min = 1e20
+        max = -1e20
+
+        num_particles = 0
+        
+        for arr in self.arrays_to_bin:
+            
+            if arr.get_number_of_particles() == 0:
+                continue
+            else:
+                num_particles += arr.get_number_of_particles()                
+
+                min_prop = numpy.min(arr.get(prop_name))
+                max_prop = numpy.max(arr.get(prop_name))
+
+                if min > min_prop:
+                    min = min_prop
+                if max < max_prop:
+                    max = max_prop
+
+        if num_particles == 0:
+            return 1e20, -1e20
+
+        return min, max
+
+    def update_property_bounds(self):
+        """ Updates the min and max values of all properties in all
+        particle arrays that are being binned by this cell manager.
+
+        Not sure if this is the correct place for such a function.
+
+        """
+        pass

@@ -42,9 +42,6 @@ cdef class ParallelCellManager(CellManager):
     cpdef glb_update_proc_map(self)
     cpdef remove_remote_particles(self)
 
-
-#rom pysph.parallel.parallel_controller cimport ParallelController
-#cdef class ParallelRootCell(RootCell):
     cdef public bint initial_redistribution_done
     cdef public dict adjacent_remote_cells
     cdef public dict remote_particle_indices
