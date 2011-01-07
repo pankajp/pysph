@@ -1155,7 +1155,8 @@ cdef class CellManager:
             # find the cell to which this particle belongs to 
             id = find_cell_id(self.origin, pnt, cell_size)
             if PyDict_Contains(particles_for_cells, id) == 1:
-                cell_indices = <LongArray>PyDict_GetItem(particles_for_cells, id)
+                cell_indices = <LongArray>PyDict_GetItem(particles_for_cells,
+                                                         id)
             else:
                 cell_indices = LongArray()
                 particles_for_cells[id] = cell_indices
