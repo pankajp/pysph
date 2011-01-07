@@ -40,6 +40,9 @@ TAG_REMOTE_CELL_REPLY = 6
 TAG_REMOTE_DATA_REQUEST = 7
 TAG_REMOTE_DATA_REPLY = 8
 
+cdef extern from 'math.h':
+    cdef double ceil(double)
+    cdef double floor(double)
 
 ###############################################################################
 # `share_data` function.
@@ -115,8 +118,9 @@ cdef class ProcessorMap:
     #Defined in the .pxd file
     #cdef public ParallelCellManager cell_manager
     #cdef public Point origin
-    #cdef public dict local_p_map
-    #cdef public dict p_map
+    #cdef public dict local_block_map
+    #cdef public dict block_map
+    #cdef public dict cell_map
     #cdef public list nbr_procs
     #cdef public int pid
     #cdef public double block_size
@@ -132,6 +136,7 @@ cdef class ProcessorMap:
         self.origin = Point()
         self.local_block_map = {}
         self.block_map = {}
+        self.cell_map = {}
         self.nbr_procs = []
         self.pid = pid
 
@@ -151,6 +156,7 @@ cdef class ProcessorMap:
         d['origin'] = self.origin
         d['local_block_map'] = self.local_block_map
         d['block_map'] = self.block_map
+        d['cell_map'] = self.cell_map
         d['pid'] = self.pid
         d['block_size'] = self.block_size
 
@@ -168,6 +174,8 @@ cdef class ProcessorMap:
         self.local_block_map.update(d['local_block_map'])
         self.block_map = {}
         self.block_map.update(d['block_map'])
+        self.cell_map = {}
+        self.cell_map.update(d['cell_map'])
         self.pid = d['pid']
         self.block_size = d['block_size']
     
@@ -201,6 +209,11 @@ cdef class ProcessorMap:
             cell.get_centroid(centroid)
             id = find_cell_id(self.origin, centroid, self.block_size)
             block_map.setdefault(id, pid)
+
+            if self.cell_map.has_key(id):
+                self.cell_map[id].append(cell)
+            else:
+                self.cell_map[id] = [cell]
         
         self.block_map = block_map
         self.local_block_map = copy.deepcopy(block_map)
@@ -948,41 +961,46 @@ cdef class ParallelCellManager(CellManager):
         # particles as remote.
 
         self.new_particles_for_neighbors = self.create_new_particle_copies(
-            remote_cells)
+            remote_block_cells)
 
         self.new_region_particles = self.create_new_particle_copies(
-            new_cells)
+            new_block_cells)
 
         # exchange particles moving into a region assigned to a known
         # processor's region. 
-        self.exchange_crossing_particles_with_neighbors(
-            remote_cells,
+
+        self.exchange_crossing_particles_with_neighbors(remote_block_cells,
             self.new_particles_for_neighbors
             )
         
         # remove all particles with local flag set to 0.
+
         cell_manager.remove_remote_particles()
 
         # make sure each new cell is with exactly one processor.
-        self.assign_new_cells(new_cells, self.new_region_particles)
+
+        self.assign_new_blocks(new_block_cells, self.new_region_particles)
 
         # all new particles entering this processors region and in regions
         # assigned to this processor have been added to the respective particles
         # arrays. The data in the particles arrays is stale and the indices
-        # invalid. Perform a top down insertion of all particles into the
-        # hierarchy tree.
+        # invalid. Perform a top down insertion of all particles
+
         self.bin_particles_top_down()
 
         # now update the processor map.
+
         cell_manager.glb_update_proc_map()
         
         # re-compute the neighbor information
-        self.update_cell_neighbor_information()
+        #self.update_cell_neighbor_information()
 
         # wait till all processors have reached this point.
+
         self.parallel_controller.comm.Barrier()
 
         # call a load balancer function.
+
         if cell_manager.initialized == True:
             if cell_manager.load_balancing == True:
                 cell_manager.load_balancer.load_balance()
@@ -990,21 +1008,24 @@ cdef class ParallelCellManager(CellManager):
         # at this point each processor has all the real particles it is supposed
         # to handle. We can now exchange neighbors particle data with the
         # neighbors.adjacent_remote_cells
+
         self.exchange_neighbor_particles()
 
         logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
         return 0
 
     cpdef bin_particles_top_down(self):
-        """
-        Clears the tree and re-inserts particles.
+        """ Re-insert particle indices for all arrays.
 
-        **Algorithm**
+        Algorithm:
+        ----------
 
-            - clear the indices of all the particle arrays that need to be
-              binned.
-            - reinsert particle indices of all particle arrays that are to be
-              binned. 
+        - clear the indices of all the particle arrays that need to be
+          binned.  
+
+        - reinsert particle indices of all particle
+          arrays that are to be binned.
+
         """
         cdef int i
         cdef int num_arrays, num_particles
@@ -1025,6 +1046,7 @@ cdef class ParallelCellManager(CellManager):
             self.insert_particles(i, indices)
 
         # delete any empty cells.
+
         self.delete_empty_cells()
 
     cpdef bin_particles(self):
@@ -1121,41 +1143,6 @@ cdef class ParallelCellManager(CellManager):
 
         return new_block_cells, remote_block_cells
                        
-            # check if this cell is already there in the list of children cells.
-#            smaller_cell_1 = self.cells_dict.get(cid)
-#            if smaller_cell_1 is not None:
-#                # check if this is a remote cell
-#                if smaller_cell_1.pid != self.pid:
-#                    # add it to the remote cells.
-#                    r_cell = remote_cells.get(cid)
-#                    if r_cell is None:
-#                        smaller_cell.pid = smaller_cell_1.pid
-#                        remote_cells[cid] = smaller_cell
-#                    else:
-#                        (<Cell>r_cell).add_particles(smaller_cell)
-#                else:
-#                    # add it to the current cells.
-#                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
-#            else:
-#                # check if this cell is in new cells
-#                smaller_cell_1 = new_cells.get(cid)
-#                if smaller_cell_1 is None:
-#                    new_cells[cid] = smaller_cell
-#                else:
-#                    (<Cell>smaller_cell_1).add_particles(<Cell>smaller_cell)
-
-        #logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
-        #for cid in new_cells:
-        #    logger.debug('new cell (%s)'%(cid))
-        #logger.debug('<<<<<<<<<<<<<<<<<< NEW CELLS >>>>>>>>>>>>>>>>>>>>>')
-
-        #logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
-        #for cid in remote_cells:
-        #    logger.debug('remote cell (%s) for proc %d'%(cid, remote_cells[cid].pid))
-        #logger.debug('<<<<<<<<<<<<<<<<<< REMOTE CELLS >>>>>>>>>>>>>>>>>>>>>')
-
-        #return new_cells, remote_cells
-    
     cpdef Cell get_new_cell(self, IntPoint id):
         """get a new parallel cell"""
         return ParallelCell(id=id, cell_manager=self,
@@ -1171,11 +1158,21 @@ cdef class ParallelCellManager(CellManager):
                                       jump_tolerance=self.jump_tolerance,
                                       pid=pid)
     
-    cpdef create_new_particle_copies(self, dict cell_dict):
-        """
-        Copies all particles in cell_dict to new particle arrays - one for each
-        cell and returns a dictionary indexed on cell_id, containing the newly
-        created particles.
+    cpdef create_new_particle_copies(self, dict cell_dict_to_copy):
+        """ Make copies of all particles in the given cell dict.
+
+        One new particle array is created for each array in
+        `arrays_to_bin` and the particles from `cell_dict_to_copy` are
+        appended to these arrays.
+
+        The function returns a dictionary keyed on the block id to
+        which the particle arrays belong with the list of particle
+        arrays to send to the processor responsible for that block.
+        
+        Parameters:
+        -----------
+
+        cell_dict_to_copy -- the new cell dictionary to copy
 
         **Algorithm**
 
@@ -1189,33 +1186,42 @@ cdef class ParallelCellManager(CellManager):
                 
         """
         cdef dict copies = {}
-        cdef IntPoint cid
+        cdef IntPoint bid
         cdef Cell c
-        cdef list index_lists, parrays
+        cdef list cell_list, index_lists, parrays
         cdef int i, num_index_lists
         cdef LongArray index_array
         cdef ParticleArray parr, parr_new
+
+        cdef int num_arrays = len(self.arrays_to_bin)
         
-        for cid, c in cell_dict.iteritems():
-            index_lists = []
-            parrays = []
-            c.get_particle_ids(index_lists)
+        parrays = []
+        for i in range(num_arrays):
+            parrays.append(ParticleArray())
 
-            num_index_lists = len(index_lists)
-            for i in range(num_index_lists):
-                index_array = index_lists[i]
-                parr = c.arrays_to_bin[i]
-                
-                parr_new = parr.extract_particles(index_array)
-                parr_new.set_name(parr.name)
-                parrays.append(parr_new)
-                
-                # mark the particles as remote in the particle array.
-                parr.set_flag('local', 0, index_array)
-                # also set them as dummy particles.
-                parr.set_tag(get_dummy_tag(), index_array)
+        for bid, cell_list in cell_dict_to_copy.iteritems():
+            for c in cell_list:
+                index_lists = []
+                c.get_particle_ids(index_lists)
 
-            copies[cid] = parrays
+                num_index_lists = len(index_lists)
+                for i in range(num_index_lists):
+                    parr_new = parrays[i]
+                    index_array = index_lists[i]
+                    parr = c.arrays_to_bin[i]
+                
+                    parr_new.append(parr.extract_particles(index_array))
+                    parr_new.set_name(parr.name)
+                
+                    # mark the particles as remote in the particle array.
+
+                    parr.set_flag('local', 0, index_array)
+
+                    # also set them as dummy particles.
+
+                    parr.set_tag(get_dummy_tag(), index_array)
+
+            copies[bid] = parrays
 
         logger.debug('<<<<<<<<<<<<<create_new_particle_copies>>>>>>>>>>>')
         for cid, parrays in copies.iteritems():
@@ -1227,87 +1233,73 @@ cdef class ParallelCellManager(CellManager):
         
         return copies
         
-    cpdef assign_new_cells(self, dict new_cell_dict, dict new_particles):
+    cpdef assign_new_blocks(self, dict new_block_dict, dict new_particles):
         """
         Assigns cells created in new regions (i.e. regions not assigned to any
         processor) to some processor. Conflicts are resolved using a
         deterministic scheme which returns the same winner in all processors.
         
-        **Parameters**
-            
-            - new_cell_dict - dictionary of new cells created during a bottom-up
-            update of the current tree.
-            - new_particles - a set of ParticleArrays for each new cell that was
-            created.
+        Parameters:
+        -----------
 
-        **Algorithm**
-        
+        new_block_dict -- a dictionary keyed on block id with a list of
+                          cells to be sent to the processor responsible for
+                          that block.
+
+        new_particles -- a dictionary keyed on block id with a list of
+                         particle arrays, one for each array in
+                         arrays_to_bin.
+
+        Algorithm:
+        -----------
+
             - share new particles with all neighbor procs in the proc map.
             - resolve conflict.
             - add data assigned to self into the local particle arrays.
 
         """
         cdef MPI.Comm comm = self.parallel_controller.comm
+        cdef ProcessorMap proc_map = self.proc_map
         cdef list nbr_procs = self.proc_map.nbr_procs
         cdef int pid
-        cdef IntPoint cid
+        cdef IntPoint cid, bid
         cdef ParticleArray p
         cdef int np
         cdef dict winning_procs
-        cdef list parrays
+        cdef list parrays, block_neighbor_list
+        cdef dict candidates = {}
+        cdef dict proc_data = dict()
 
-        logger.debug('SHARING NEW CELLS WITH : %s'%(nbr_procs))
+        #logger.debug('SHARING NEW CELLS WITH : %s'%(nbr_procs))
+
+        for nbr_pid in nbr_procs:
+            proc_data[nbr_pid] = {}
+
+        for bid in new_particles.keys():
+            candidates[bid] = set()
+            block_neighbor_list = []
+            construct_immediate_neighbor_list(bid, block_neighbor_list, False)
+            for cid in block_neighbor_list:
+                if proc_map.block_map.has_key(cid):
+                    candidates[bid].add(proc_map.block_map[cid])
+
+            if len(candidates[bid]) > 1: # need to resolve conflicts
+                proc_data[min(candidates[bid])][bid] = new_particles[bid]
+            else:
+                #share data with lone neighbor                
+                proc_data[candidates[bid].pop()][bid] = new_particles[bid]
 
         proc_data = share_data(self.pid, 
                                nbr_procs,
-                               new_particles,
+                               proc_data,
                                comm,
                                TAG_NEW_CELL_PARTICLES, 
-                               False)
-
-        proc_data[self.pid] = new_particles
-
-        logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')
-        for pid, cells in proc_data.iteritems():
-            logger.debug('FROM PID %d received %d cells'%(pid,len(cells)))
-            for cid in cells:
-                logger.debug('  received : (%s)'%(cid))
-        logger.debug('<<<<<<<<<<<<<<<new received particles>>>>>>>>>>>>>>>>>')
-
-        
-        # we now have data for all the new cells that were created.
-        # invert the data - we have a dictionary indexed on pids, and then on
-        # cids. - make it indexed on cid and then pids
-        # along with this get the number of particles contributed to each cell
-        # by each processor.
-        cdef dict cell_data = {}
-        cdef dict num_particles = {}
-
-        for pid, cell_dict in proc_data.iteritems():
-            for cid, parr_list in cell_dict.iteritems():
-                c = cell_data.get(cid)
-                if c is None:
-                    c = {}
-                    cell_data[cid] = c
-                    num_particles[cid] = {}
-                c[pid] = parr_list
-                np = 0
-                for p in parr_list:
-                    np += p.get_number_of_particles()
-                num_particles[cid][pid] = np
-
-        winning_procs = self._resolve_conflicts(num_particles)
+                               True)
 
         # now add the particles in the cells assigned to self into corresponding
         # particle arrays.
-        for cid, pid in winning_procs.iteritems():
-            if pid != self.pid:
-                continue
-            
-            c_data = cell_data[cid]
-            
-            for parrays in c_data.values():
-                self.add_local_particles_to_parray({cid:parrays})
+        for pid, particle_data in proc_data.iteritems():
+            self.add_local_particles_to_parray(particle_data)
 
     cpdef dict _resolve_conflicts(self, dict data):
         """
@@ -1361,11 +1353,20 @@ cdef class ParallelCellManager(CellManager):
         Send all particles that crossed into a known neighbors region, receive
         particles that got into our region from a neighbors.
 
-        **Parameters**
+        Parameters:
+        -----------
         
-            - remote_cells - dictionary of cells that are to be sent to some
-              remote neighbour.
-            - particles - particle arrays to be sent to each of these cells.
+        remote_cells -- dictionary keyed on block id with a list of cells to send
+                        to that block.
+
+        particles    -- dictionary keyed on block id with a list of particle 
+                        arrays to send to that block
+
+        Notes:
+        -------
+
+        Called from cells_update after the remote block and new block
+        particles are created.
 
         **Algorithm**
             
@@ -1387,59 +1388,75 @@ cdef class ParallelCellManager(CellManager):
         cdef dict proc_data = {}
         cdef MPI.Comm comm = self.parallel_controller.comm
         cdef int proc_id, num_particles
-        cdef IntPoint cid
+        cdef IntPoint cid, bid
         cdef dict p_data
+        cdef list parray_list
+        cdef ParticleArray parray
+        cdef ProcessorMap proc_map = self.proc_map
 
         # create one entry here for each neighbor processor.
-        for proc_id in self.adjacent_processors:
+        
+        adjacent_processors = proc_map.nbr_procs
+
+        for proc_id in adjacent_processors:
             proc_data[proc_id] = {}
 
-        for cid, c in remote_cells.iteritems():
-            p_data = proc_data[c.pid]
-            parrays = particles[cid]
+        for bid, parray_list in particles.iteritems():
+
+            #find the processor to which the block belongs
+
+            pid = proc_map.block_map.get(bid)            
             
-            p_data[cid] = parrays
+            proc_data[pid][bid] = parray_list
+
+        #for proc_id in self.adjacent_processors:
+        #    proc_data[proc_id] = {}
+
+        #for cid, c in remote_cells.iteritems():
+        #    p_data = proc_data[c.pid]
+        #    parrays = particles[cid]
             
-        new_particles = share_data(self.pid,
-                                   self.adjacent_processors,
-                                   proc_data, comm,
-                                   TAG_CROSSING_PARTICLES, True)
+        #    p_data[cid] = parrays
+            
+        new_particles = share_data(self.pid, adjacent_processors,
+                                   proc_data, comm, TAG_CROSSING_PARTICLES, True)
         
         # for each neigbor processor, there is one entry in new_particles
         # containing all new cells that processor sent to us.
+
         self.add_entering_particles_from_neighbors(new_particles)
 
     cpdef add_entering_particles_from_neighbors(self, dict new_particles):
-        """
-        Add particles that entered into our parrays from other processors
-        regions.
+        """ Add particles that entered into this processors region.
 
-        **Parameter**
+        Parameters:
+        -----------
         
-            - new_particles - a dictionary having one entry per processor.
-              each entry has a dictionary indexed on the cells into which the
-              particles are entering.
+        new_particles - a dictionary keyed on processor ids with value
+                        another dictionary of block ids that have a
+                        list of particle arrays that have moved into 
+                        this processors region.
 
-        **Algorithm**
-            
-             - for data from each processor
-                 - add the particle arrays.
+        Algorithm:
+        ----------    
+        - for data from each processor
+            - add the particle arrays.
         
         """
-        for pid, particle_list in new_particles.iteritems():
-            self.add_local_particles_to_parray(particle_list)
+        for pid, particle_data in new_particles.iteritems():
+            self.add_local_particles_to_parray(particle_data)
 
-    cpdef add_local_particles_to_parray(self, dict particle_list):
+    cpdef add_local_particles_to_parray(self, dict particle_data):
         """
         Adds the given particles to the local parrays as local particles.
                 
         """
-        cdef IntPoint cid
+        cdef IntPoint bid
         cdef list parrays
         cdef ParticleArray s_parr, d_parr
         cdef int num_arrays, i, count
         
-        for cid, parrays in particle_list.iteritems():
+        for bid, parrays in particle_data.iteritems():
             count = 0
 
             num_arrays = len(self.arrays_to_bin)
@@ -1451,12 +1468,6 @@ cdef class ParallelCellManager(CellManager):
                 s_parr.local[:] = 1
                 d_parr.append_parray(s_parr)
                 count += s_parr.get_number_of_particles()
-
-            cnt = self.new_cells_added.get(cid)
-            if cnt is None:
-                self.new_cells_added[cid] = count
-            else:
-                self.new_cells_added[cid] += count
 
     cpdef update_remote_particle_properties(self, list props=None):
         """
@@ -1563,7 +1574,49 @@ cdef class ParallelCellManager(CellManager):
         cdef object c
         cdef dict rpi = self.remote_particle_indices
         cdef list rpi_list 
-        
+
+        cdef dict blocks_to_send = {}
+        cdef ProcessorMap proc_map = self.proc_map        
+        cdef dict local_block_map = proc_map.local_block_map
+        cdef dict global_block_map = proc_map.block_map
+        cdef list nbr_procs = proc_map.nbr_procs
+        cdef int num_arrays = len(self.arrays_to_bin)
+        cdef list block_neighbors
+        cdef IntPoint bid, nid, pid
+        cdef ParticleArray parray
+        cdef list parray_list = []
+
+        # prepare the data for sending
+        for pid in nbr_procs:
+            proc_data[pid] = []
+            blocks_to_send[pid] = []
+
+        # get the list of blocks to send to each processor id
+        for bid in local_block_map:
+            block_neighbors = []
+            construct_immediate_neighbor_list(bid, block_neighbors, False)
+            for nid in block_neighbors:
+                if global_block_map.has_key(nid):
+                    blocks_to_send[pid].append(bid)
+
+        for pid, block_list in blocks_to_send.iteritems():
+
+            # Create a copy array for each array in arrays_to_bin
+            parray_list = []
+            for i in range(num_arrays):
+                parray_list.append(ParticleArray(name=self.arrays_to_bin[i].name))
+
+            for bid in block_list:
+                cell_list = proc_map.cell_map[bid]
+                for cell in cell_list:
+                    for j in range(num_arrays):
+                        s_parr = self.arrays_to_bin[j]
+                        d_parr = parray_list[j]
+                                
+                        d_parr.append(s_parr.extract(cell.index_lists[j]))
+
+            proc_data[pid] = parray_list                                
+
         # sort the processors in increasing order of ranks.
         if nbr_procs.count(self.pid) == 0:
             nbr_procs.append(self.pid)
@@ -1695,7 +1748,7 @@ cdef class ParallelCellManager(CellManager):
         cdef int num_index_lists
         cdef ParticleArray parr, parr_new
         cdef LongArray index_array, ca
-        
+         
         cdef list collected_indices = list()
         cdef list particle_counts = list()
         cdef list particle_arrays = list()

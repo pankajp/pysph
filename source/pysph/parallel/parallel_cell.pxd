@@ -20,6 +20,7 @@ cdef class ProcessorMap:
      cdef public list nbr_procs
      cdef public int pid
      cdef public double block_size
+     cdef public dict cell_map
 
      cpdef merge(self, ProcessorMap proc_map)
      cpdef find_region_neighbors(self)
@@ -57,13 +58,13 @@ cdef class ParallelCellManager(CellManager):
     cpdef bin_particles_top_down(self)
     cpdef bin_particles(self)
     cpdef create_new_particle_copies(self, dict cell_dict)
-    cpdef assign_new_cells(self, dict new_cell_dict, dict new_particles)
+    cpdef assign_new_blocks(self, dict new_block_dict, dict new_particles)
     cpdef dict _resolve_conflicts(self, dict data)
     cpdef exchange_crossing_particles_with_neighbors(self, dict remote_cells,
                                                      dict particles)
     cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef add_entering_particles_from_neighbors(self, dict new_particles)
-    cpdef add_local_particles_to_parray(self, dict particle_list)
+    cpdef add_local_particles_to_parray(self, dict particle_data)
     cpdef update_remote_particle_properties(self, list props=*)
     cpdef exchange_neighbor_particles(self)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
