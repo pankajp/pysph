@@ -52,8 +52,8 @@ cdef class ParallelCellManager(CellManager):
     cdef public dict new_cells_added
     cdef public list adjacent_processors
 
-    cdef public dict neighbor_particles
-    
+    cdef public dict neighbor_share_data
+
     #cdef public ParallelCellManager cell_manager
     cpdef find_adjacent_remote_cells(self)
     cpdef update_cell_neighbor_information(self)
