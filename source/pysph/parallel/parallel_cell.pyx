@@ -18,7 +18,7 @@ cimport mpi4py.MPI as MPI
 
 # local imports
 from pysph.base.point import Point, IntPoint
-from pysph.base.point cimport Point, IntPoint
+from pysph.base.point cimport Point, IntPoint, Point_new
 from pysph.base import cell
 from pysph.base.cell cimport construct_immediate_neighbor_list, find_cell_id
 from pysph.base.cell cimport CellManager, Cell
@@ -272,7 +272,7 @@ cdef class ProcessorMap:
 
         for i in range(num_blocks):
             other_id = block_list[i]
-            other_proc = <int>PyDict_GetItem(other_block_map, other_id)
+            other_proc = other_block_map.get(other_id)
                             
             merged_block_map[other_id] = other_proc
         
@@ -297,26 +297,24 @@ cdef class ProcessorMap:
         cdef list empty_list = []
         cdef int num_local_bins, i, len_nids, j
         cdef IntPoint nid
-        cdef set n_pids
+        cdef int n_pid
 
         # for each cell in local_pm
-
         for id in local_block_map:
             nids[:] = empty_list
             
-            # constructor list of neighbor cell ids in the proc_map.
+            # construct list of neighbor cell ids in the proc_map.
 
             construct_immediate_neighbor_list(id, nids)
             len_nids = len(nids)
             for i in range(len_nids):
                 nid = nids[i]
 
-                # if cell exists, collect all occupying processor ids
+                # if cell exists, collect the occupying processor id
+                n_pid = block_map.get(nid, -1)
+                if n_pid >= 0:
+                    nb.add(n_pid)
 
-                n_pids = block_map.get(nid)
-                if n_pids is not None:
-                    nb.update(n_pids)
-        
         self.nbr_procs = sorted(list(nb))
 
     def __str__(self):
@@ -1032,6 +1030,7 @@ cdef class ParallelCellManager(CellManager):
         cdef dict remote_block_cells = {}
         cdef dict collected_data = {}
         cdef IntPoint cid
+        cdef Point centroid = Point_new(0,0,0)
         cdef Cell cell
         cdef ProcessorMap pmap = self.proc_map
         
@@ -1066,8 +1065,8 @@ cdef class ParallelCellManager(CellManager):
         for cid, cell in collected_data.iteritems():
 
             #find the block id to which the newly created cell belongs
-
-            block_id = find_cell_id(pmap.origin, cell.centroid, pmap.block_size)
+            cell.get_centroid(centroid)
+            block_id = find_cell_id(pmap.origin, centroid, pmap.block_size)
                         
             #get the pid corresponding to the block_id
             
@@ -1171,7 +1170,7 @@ cdef class ParallelCellManager(CellManager):
                     index_array = index_lists[i]
                     d_parr = c.arrays_to_bin[i]
                 
-                    s_parr.append(d_parr.extract_particles(index_array))
+                    s_parr.append_parray(d_parr.extract_particles(index_array))
                     s_parr.set_name(d_parr.name)
                 
                     # mark the particles as remote in the particle array.
@@ -1243,16 +1242,15 @@ cdef class ParallelCellManager(CellManager):
                 if proc_map.block_map.has_key(nid):
                     candidates[bid].add(proc_map.block_map[nid])
 
-            if len(candidates[bid]) > 1: 
-
+            if len(candidates[bid]) > 0:
                 # need to resolve conflicts
-                pid = min(candidates[bid])
+                pid = max(candidates[bid])
                 proc_data[pid][bid] = new_particles[bid]
 
             else:
-
-                #share data with lone neighbor
-                pid = candidates[bid].pop()                
+                # no neighbor proc found
+                # choose a number based on arbitrary cell id
+                pid = hash(bid) % self.pc.num_procs
                 proc_data[pid][bid] = new_particles[bid]
 
         proc_data = share_data(self.pid, 
@@ -1326,7 +1324,7 @@ cdef class ParallelCellManager(CellManager):
         # create one entry here for each neighbor processor.
         
         adjacent_processors = proc_map.nbr_procs
-
+        
         for proc_id in adjacent_processors:
             proc_data[proc_id] = {}
 
@@ -1451,8 +1449,8 @@ cdef class ParallelCellManager(CellManager):
         
         # share data with all processors
 
-        proc_data = share(self.pid, nbr_procs, proc_data, comm, 
-                          TAG_REMOTE_DATA, True)
+        proc_data = share_data(self.pid, nbr_procs, proc_data, comm, 
+                               TAG_REMOTE_DATA, True)
 
         # now copy the new remote values into the existing local copy.
 
@@ -1515,25 +1513,22 @@ cdef class ParallelCellManager(CellManager):
 
         cdef int num_arrays = len(self.arrays_to_bin)
         cdef int i, j, pid, dest, num_nbrs
-        cdef IntPoint bid, nid, pid
+        cdef IntPoint bid, nid
 
         cdef list parray_list = []
         cdef list index_lists = [] 
         cdef list block_neighbors = []
         cdef list nbr_procs = proc_map.nbr_procs
-        cdef list cell_list, parray_list
+        cdef list cell_list
 
         cdef dict remote_particle_data = {}
         cdef dict blocks_to_send = {}
-        cdef dict local_block_map = proc_map.local_block_map
-        cdef dict global_block_map = proc_map.block_map
 
         cdef ParticleArray parray, s_parr, d_parr
         cdef Cell cell
 
         cdef list requested_cells, cell_ids, parrays, particle_counts
 
-        cdef int num_arrays = len(self.arrays_to_bin)
         cdef LongArray current_counts = LongArray(num_arrays)
         cdef LongArray indices
         
@@ -1593,8 +1588,8 @@ cdef class ParallelCellManager(CellManager):
         
         # share data with all processors
 
-        proc_data = share(self.pid, nbr_procs, proc_data, comm, 
-                          TAG_REMOTE_DATA, True)
+        proc_data = share_data(self.pid, nbr_procs, proc_data, comm, 
+                               TAG_REMOTE_DATA, True)
 
         # setup the remote particle indices
         
@@ -1656,7 +1651,7 @@ cdef class ParallelCellManager(CellManager):
 
         #    else:
         #        requested_cells = comm.recv(source=pid,
-                                            tag=TAG_REMOTE_CELL_REQUEST)
+        #                                    tag=TAG_REMOTE_CELL_REQUEST)
         #        data = self._get_cell_data_for_neighbor(requested_cells)
         #        comm.send(data, dest=pid, tag=TAG_REMOTE_CELL_REPLY)
 
