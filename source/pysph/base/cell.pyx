@@ -887,7 +887,6 @@ cdef class CellManager:
         self.cells_dict = dict()
 
     cpdef double compute_cell_size(self, double min_size, double max_size):
-        # TODO: compute size depending on some variation of 'h'
         """
         # TODO: compute size depending on some variation of 'h'
         
