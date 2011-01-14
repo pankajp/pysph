@@ -5,6 +5,12 @@ Declaration file for cython parallel cell module.
 
 from pysph.base.point cimport Point, IntPoint
 from pysph.base.cell cimport CellManager, Cell
+cimport mpi4py.MPI as MPI
+
+
+cpdef dict share_data(int mypid, list send_procs, object data,
+                      MPI.Comm comm, int tag=*, bint multi=*,
+                      list recv_procs=*)
 
 # forward declarations.
 cdef class ParallelCellManager(CellManager)
@@ -15,12 +21,13 @@ cdef class ParallelCellManager(CellManager)
 cdef class ProcessorMap:
      cdef public ParallelCellManager cell_manager
      cdef public Point origin
-     cdef public local_block_map
+     cdef public dict local_block_map
      cdef public dict block_map
      cdef public list nbr_procs
      cdef public int pid
      cdef public double block_size
      cdef public dict cell_map
+     cdef public dict conflicts
 
      cpdef merge(self, ProcessorMap proc_map)
      cpdef find_region_neighbors(self)
@@ -62,19 +69,24 @@ cdef class ParallelCellManager(CellManager):
     cpdef update_cell_neighbor_information(self)
     cpdef bin_particles_top_down(self)
     cpdef bin_particles(self)
-    cpdef create_new_particle_copies(self, dict cell_dict)
+    cpdef create_new_particle_copies(self, dict blocks_dict_to_copy)
     cpdef assign_new_blocks(self, dict new_block_dict, dict new_particles)
     cpdef dict _resolve_conflicts(self, dict data)
-    cpdef exchange_crossing_particles_with_neighbors(self, dict remote_cells,
-                                                     dict particles)
+    cpdef exchange_crossing_particles_with_neighbors(self, dict block_particles)
     cpdef update_remote_particle_properties(self, list props=*)
     cpdef exchange_neighbor_particles(self)
     cpdef add_entering_particles_from_neighbors(self, dict new_particles)
     cpdef add_local_particles_to_parray(self, dict particle_data)
+    cpdef update_remote_particle_properties(self, list props=*)
+    cpdef exchange_neighbor_particles(self)
+    cpdef transfer_blocks_to_procs(self, dict procs_blocks,
+                                   bint mark_remote=*, list recv_procs=*)
     cdef list get_communication_data(self, int num_arrays, list cell_list)
 
     cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
+    cpdef list get_particle_indices_in_block(self, IntPoint bid)
+    cpdef list get_particles_in_block(self, IntPoint bid)
     
 cdef class ParallelCellInfo:
     cdef public Cell cell

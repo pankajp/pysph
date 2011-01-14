@@ -2,7 +2,7 @@
 Module to run the parallel files in pysph.parallel.tests using mpiexec and
 report their success/failure results
 
-Add a function to the ParalelTest class corresponding to a parallel script to
+Add a function to the ParallelTest class corresponding to a parallel script to
 be tested.
 This is done till better strategy for parallel testing is implemented
 """
@@ -15,19 +15,11 @@ import sys
 
 directory = os.path.dirname(os.path.abspath(__file__))
 
-# seconds after which the spawned process will be killed
-timeout = 5.0
-
-# number of processes to start
-nprocs = 2
-
 def kill_process(process):
     print 'KILLING PROCESS ON TIMEOUT'
     process.kill()
-    #time.sleep(0.5)
-    #process.terminate()
 
-def run_mpi_script(filename, path=None):
+def run_mpi_script(filename, nprocs=2, timeout=5.0, path=None):
     if path is None:
         path = directory
     path = os.path.join(path, filename)
@@ -65,6 +57,11 @@ class ParallelTest(unittest.TestCase):
     
     def test_parallel_cell_check(self):
         run_mpi_script('parallel_cell_check.py')
+    
+    def test_share_data(self):
+        for i in range(1,6):
+            run_mpi_script('share_data.py', i)
+        
 
 #for filename in tests:
 #    test_name = 'test_%s' %(filename)
