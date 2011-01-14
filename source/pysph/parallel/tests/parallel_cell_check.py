@@ -18,7 +18,7 @@ rank = comm.Get_rank()
 # logging setup
 import logging
 logger = logging.getLogger()
-log_file_name = '/tmp/log_pysph_'+str(rank)
+log_file_name = 'parallel_cell_check.log.'+str(rank)
 logging.basicConfig(level=logging.DEBUG, filename=log_file_name,
                     filemode='w')
 logger.addHandler(logging.StreamHandler())
@@ -30,73 +30,29 @@ from pysph.solver.basic_generators import LineGenerator
 from pysph.base.cell import INT_INF
 from pysph.base.point import *
 
+from pysph.parallel.load_balancer import LoadBalancer
+
 pcm = ParallelCellManager(initialize=False)
 
 # create 2 particles, one with proc 0 another with proc 1
 
-lg = LineGenerator(parallel_spacing=0.5)
+lg = LineGenerator(particle_spacing=0.5)
 
-if rank == 0:
-    lg.start_point.x = -5.0
-    lg.start_point.y = lg.start_point.z = 0.0
-    
-    lg.end_point.x = lg.end_point.y = lg.end_point.z = 0.0
-    
-    x, y, z = lg.get_coords()
+lg.start_point.x = 0.0
+lg.end_point.x = 10.0
+lg.start_point.y = lg.start_point.z = 0.0
+lg.end_point.y = lg.end_point.z = 0.0
 
-    logger.info('Num particles : %d'%(len(x)))
+x, y, z = lg.get_coords()
 
-    parray = ParticleArray(name='p1',
-                           x={'data':x},
-                           y={'data':y},
-                           z={'data':z},
-                           h={'data':None, 'default':0.5})
+logger.info('Num particles : %d'%(len(x)))
 
-elif rank == 1:
-    lg.start_point.x = 0.5
-    lg.start_point.y = lg.start_point.z = 0.0
+parray = ParticleArray(name='p1',
+                       x={'data':x},
+                       y={'data':y},
+                       z={'data':z},
+                       h={'data':None, 'default':0.5})
 
-    lg.end_point.x = 5.0
-    lg.end_point.y = lg.end_point.z = 0.0
-
-    x, y, z = lg.get_coords()
-    logger.info('Num particles : %d'%(len(x)))
-
-    parray = ParticleArray(name='p1',
-                           x={'data':x},
-                           y={'data':y},
-                           z={'data':z},
-                           h={'data':None, 'default':0.5})
-elif rank == 2:
-    lg.start_point.x = 5.5
-    lg.start_point.y = lg.start_point.z = 0.0
-
-    lg.end_point.x = 10.0
-    lg.end_point.y = lg.end_point.z = 0.0
-
-    x, y, z = lg.get_coords()
-    logger.info('Num particles : %d'%(len(x)))
-
-    parray = ParticleArray(name='p1',
-                           x={'data':x},
-                           y={'data':y},
-                           z={'data':z},
-                           h={'data':None, 'default':0.5})
-elif rank == 3:
-    lg.start_point.x = 10.5
-    lg.start_point.y = lg.start_point.z = 0.0
-
-    lg.end_point.x = 15.0
-    lg.end_point.y = lg.end_point.z = 0.0
-
-    x, y, z = lg.get_coords()
-    logger.info('Num particles : %d'%(len(x)))
-
-    parray = ParticleArray(name='p1',
-                           x={'data':x},
-                           y={'data':y},
-                           z={'data':z},
-                           h={'data':None, 'default':0.5})
 
 # add parray to the cell manager
 parray.add_property({'name':'u'})
@@ -104,28 +60,32 @@ parray.add_property({'name':'v'})
 parray.add_property({'name':'w'})
 parray.add_property({'name':'rho'})
 parray.add_property({'name':'p'})
+
+parray = LoadBalancer.distribute_particles(parray, num_procs, 1.0)[rank]
+
 pcm.add_array_to_bin(parray)
+
 pcm.initialize()
 
 pcm.set_jump_tolerance(INT_INF())
 
-print rank, len(pcm.cells_dict)
-print rank, ('\n%d '%rank).join([str(c) for c  in pcm.cells_dict.values()])
+logger.debug('%d: num_cells=%d'%(rank,len(pcm.cells_dict)))
+logger.debug('%d:'%rank + ('\n%d '%rank).join([str(c) for c  in pcm.cells_dict.values()]))
 
-# on processor 0 move all particles from cell (7, 5, 5) to cell (8, 5, 5).
+# on processor 0 move all particles from cell (5,0,0) to cell (6,0,0).
 if rank == 0:
-    c_7_5_5 = pcm.cells_dict.get(IntPoint(7, 5, 5))
-    logger.debug('Cell (7, 5, 5) is %s'%(c_7_5_5))
+    cell = pcm.cells_dict.get(IntPoint(5,0,0))
+    logger.debug('Cell (5,0,0) is %s'%(cell))
     indices = []
-    c_7_5_5.get_particle_ids(indices)
+    cell.get_particle_ids(indices)
     indices = indices[0]
-    logger.debug('NuM particles in (7, 5, 5) is %d'%(indices.length))
-    parr = pcm.arrays_to_bin[0]
-    x, y, z = parr.get('x', 'y', 'z')
-    print len(x), x
-    print indices.length, indices.get_npy_array()
+    logger.debug('Num particles in (5,0,0) is %d'%(indices.length))
+    parr = cell.arrays_to_bin[0]
+    x, y, z = parr.get('x', 'y', 'z', only_real_particles=False)
+    logger.debug(str(len(x)) + str(x))
+    logger.debug(str(indices.length) + str(indices.get_npy_array()))
     for i in range(indices.length):
-        x[indices[i]] += c_7_5_5.cell_size
+        x[indices[i]] += cell.cell_size
 
     parr.set_dirty(True)
 

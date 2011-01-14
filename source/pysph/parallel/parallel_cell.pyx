@@ -95,16 +95,12 @@ cpdef dict share_data(int mypid, list send_procs, object data,
     num_recv_procs = len(recv_procs)
 
     cdef dict proc_data = {}
-    if multi:
-        print mypid, 'share_data', send_procs, recv_procs, data.keys()
-    else:
-        print mypid, 'share_data', send_procs, recv_procs
+    
     # recv from procs with lower rank
     while i < num_recv_procs:
         pid = recv_procs[i]
         if pid < mypid:
             i += 1
-            print mypid, 'recv', pid
             proc_data[pid] = comm.recv(source=pid, tag=tag)
         else:
             break
@@ -121,7 +117,6 @@ cpdef dict share_data(int mypid, list send_procs, object data,
     
     # send data to all nbrs
     for pid in send_procs:
-        print mypid, 'send', pid
         if multi:
             comm.send(data[pid], dest=pid, tag=tag)
         else:
@@ -131,7 +126,6 @@ cpdef dict share_data(int mypid, list send_procs, object data,
     # i value as set in first loop
     for j in range(i, len(recv_procs)):
         pid = recv_procs[j]
-        print mypid, 'recv', pid
         proc_data[pid] = comm.recv(source=pid, tag=tag)
     
     return proc_data
@@ -291,10 +285,6 @@ cdef class ProcessorMap:
         block_list = other_block_map.keys()
         num_blocks = len(block_list)
         
-        print self.pid, 'block_map', self.block_map
-        print self.pid, 'conflicts', self.conflicts, proc_map.conflicts
-        print self.pid, 'other_block_map', proc_map.block_map
-
         for i in range(num_blocks):
             other_bid = block_list[i]
             other_proc = other_block_map.get(other_bid)
@@ -324,8 +314,6 @@ cdef class ProcessorMap:
             else:
                 merged_block_map[other_bid] = other_proc
         
-        print self.pid, 'merged_block_map', merged_block_map
-    
     cpdef find_region_neighbors(self):
         """ Find processors that are occupying regions in the
         neighborhood of this processors blocks.
@@ -349,13 +337,11 @@ cdef class ProcessorMap:
         cdef IntPoint nid
         cdef int n_pid
 
-        print '(%d)'%pid, local_block_map, block_map
         # for each cell in local_pm
         for bid in local_block_map:
             nids[:] = empty_list
             
             # construct list of neighbor block ids in the proc_map.
-
             construct_immediate_neighbor_list(bid, nids, False)
             len_nids = len(nids)
             for i in range(len_nids):
@@ -364,9 +350,8 @@ cdef class ProcessorMap:
                 # if cell exists, collect the occupying processor id
                 n_pid = block_map.get(nid, -1)
                 if n_pid >= 0:
-                    print '(%d)'%pid, 'nbr', n_pid, nid
                     nb.add(n_pid)
-        print '(%d)'%pid, 'nbr_procs', nb, pid, block_map
+        
         self.nbr_procs = sorted(list(nb))
 
     def __str__(self):
@@ -726,10 +711,7 @@ cdef class ParallelCellManager(CellManager):
         cdef double yc = self.local_bounds_min[1] + 0.5 * cell_size
         cdef double zc = self.local_bounds_min[2] + 0.5 * cell_size
 
-        print self.pid, xc, yc, zc
-
         id = find_cell_id(self.origin, Point(xc, yc, zc), cell_size)
-        print "Build Cell, ", self.pid, id
 
         cell = ParallelCell(id=id, cell_manager=self, cell_size=cell_size,
                             jump_tolerance=INT_INF(), pid=self.pid)
@@ -802,37 +784,27 @@ cdef class ParallelCellManager(CellManager):
 
         # we now have partially merged data, send it to parent if not root.
 
-        print 'my_proc_map'
-        print self.proc_map.block_map, self.proc_map.conflicts
         if pc.parent_rank > -1:
             comm.send(self.proc_map, dest=pc.parent_rank,
                       tag=TAG_PROC_MAP_UPDATE)
 
             # receive updated proc map from parent
-
             updated_proc_map = comm.recv(source=pc.parent_rank,
                                          tag=TAG_PROC_MAP_UPDATE)
 
             # set our proc data with the updated data.
-
             PyDict_Clear(self.proc_map.block_map)
             PyDict_Update(self.proc_map.block_map, updated_proc_map.block_map)
             
-            print 'updated_proc_map'
-            print updated_proc_map.block_map, updated_proc_map.conflicts
-
             self.proc_map.conflicts.clear()
             self.proc_map.conflicts.update(updated_proc_map.conflicts)
 
         # send updated data to children.
-
         for c_rank in pc.children_proc_ranks:
             comm.send(self.proc_map, dest=c_rank, tag=TAG_PROC_MAP_UPDATE)
         
         # now all procs have same proc_map
-        print 'glb_proc_map_update'
-        print 'proc_map', self.proc_map.block_map
-        print 'conflicts', self.proc_map.conflicts
+        
         # resolve any conflicts
         if self.proc_map.conflicts:
             # calculate num_blocks per proc
@@ -1065,12 +1037,7 @@ cdef class ParallelCellManager(CellManager):
 
             # update the processor map once - no neighbor information is
             # available at this point.
-            print self.pid, 'init_redistr proc_map', self.proc_map.nbr_procs
-            print self.pid, self.proc_map.local_block_map, self.proc_map.block_map
             self.glb_update_proc_map()
-            print self.pid, 'init_redistr proc_map', self.proc_map.nbr_procs
-            print self.pid, self.proc_map.local_block_map, self.proc_map.block_map
-            print self.cells_dict.keys()
             c = self.cells_dict.values()[0]
             if (<Cell>c).get_number_of_particles() > 0:
                 collected_data[(<Cell>c).id] = c
@@ -1234,8 +1201,6 @@ cdef class ParallelCellManager(CellManager):
         if not self.pid in nbr_procs: nbr_procs.append(self.pid)
         for nbr_pid in nbr_procs:
             proc_data[nbr_pid] = {}
-        
-        print self.pid, nbr_procs, proc_data
         
         for bid in new_particles.keys():
             candidates[bid] = set()
