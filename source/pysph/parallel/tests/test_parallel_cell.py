@@ -51,6 +51,8 @@ def draw_particles(cell, color="y"):
 
     for i in range(num_arrays):
         array = arrays[i]
+        index_array = index_lists[i]
+        
         indices = index_lists[i].get_npy_array()
 
         xarray, yarray = array.get('x','y')
@@ -86,12 +88,12 @@ cm = parallel.ParallelCellManager(arrays_to_bin=[pa,], max_radius_scale=0.5,
                                   initialize=True, load_balancing=False,
                                   dimension=2)
 
+cells_dict = cm.cells_dict
+proc_map = cm.proc_map
 
 # check for the number of cells on processor 0
 if pid == 0:
-    cells_dict = cm.cells_dict
-    proc_map = cm.proc_map
-
+    
     for id, cell in cells_dict.iteritems():
         draw_cell(cell)
         draw_particles(cell)
@@ -102,3 +104,18 @@ if pid == 0:
     pylab.title("Cell structure on processor 0")
     pylab.show()
 
+    print proc_map.local_block_map
+
+if pid == 1:
+    
+    for id, cell in cells_dict.iteritems():
+        draw_cell(cell)
+        draw_particles(cell)
+
+    for block_id in proc_map.local_block_map.keys():
+        draw_block(proc_map.origin, proc_map.block_size, block_id)
+        
+    pylab.title("Cell structure on processor 1")
+    pylab.show()
+
+    print proc_map.local_block_map

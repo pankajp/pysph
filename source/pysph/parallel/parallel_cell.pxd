@@ -32,7 +32,10 @@ cdef class ParallelCellManager(CellManager):
     cdef public object solver 
     cdef public int dimension
     cdef public list glb_bounds_min, glb_bounds_max
+    cdef public list local_bounds_min, local_bounds_max
     cdef public double glb_min_h, glb_max_h
+    cdef public double local_min_h, local_max_h
+    cdef public int factor
     cdef public int pid
 
     cdef public object parallel_controller, pc
@@ -64,11 +67,13 @@ cdef class ParallelCellManager(CellManager):
     cpdef dict _resolve_conflicts(self, dict data)
     cpdef exchange_crossing_particles_with_neighbors(self, dict remote_cells,
                                                      dict particles)
-    cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
-    cpdef add_entering_particles_from_neighbors(self, dict new_particles)
-    cpdef add_local_particles_to_parray(self, dict particle_data)
     cpdef update_remote_particle_properties(self, list props=*)
     cpdef exchange_neighbor_particles(self)
+    cpdef add_entering_particles_from_neighbors(self, dict new_particles)
+    cpdef add_local_particles_to_parray(self, dict particle_data)
+    cdef list get_communication_data(self, int num_arrays, list cell_list)
+
+    cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
     
 cdef class ParallelCellInfo:
