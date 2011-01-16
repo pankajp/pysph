@@ -1,10 +1,7 @@
-"""
-Some checks for the parallel cell manager.
+""" Some checks for the parallel cell manager.
 
-Run this script only with two processors.
-
-mpiexec -n 2 python parallel_cell_check.py
-
+Run this script only with less than 5 processors.
+example : mpiexec -n 2 python parallel_cell_check.py
 """
 
 # mpi imports
@@ -72,14 +69,14 @@ pcm.set_jump_tolerance(INT_INF())
 logger.debug('%d: num_cells=%d'%(rank,len(pcm.cells_dict)))
 logger.debug('%d:'%rank + ('\n%d '%rank).join([str(c) for c  in pcm.cells_dict.values()]))
 
-# on processor 0 move all particles from cell (5,0,0) to cell (6,0,0).
+# on processor 0 move all particles from one of its cell to the next cell
 if rank == 0:
-    cell = pcm.cells_dict.get(IntPoint(5,0,0))
-    logger.debug('Cell (5,0,0) is %s'%(cell))
+    cell = pcm.cells_dict.get(list(pcm.proc_map.cell_map.values()[0])[0])
+    logger.debug('Cell is %s'%(cell))
     indices = []
     cell.get_particle_ids(indices)
     indices = indices[0]
-    logger.debug('Num particles in (5,0,0) is %d'%(indices.length))
+    logger.debug('Num particles in Cell is %d'%(indices.length))
     parr = cell.arrays_to_bin[0]
     x, y, z = parr.get('x', 'y', 'z', only_real_particles=False)
     logger.debug(str(len(x)) + str(x))

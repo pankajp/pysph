@@ -60,7 +60,6 @@ cdef class ParallelCellManager(CellManager):
     cdef public dict new_particles_for_neighbors
     cdef public dict new_region_particles
     cdef public dict new_cells_added
-    cdef public list adjacent_processors
 
     cdef public dict neighbor_share_data
 
@@ -85,6 +84,7 @@ cdef class ParallelCellManager(CellManager):
 
     cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
+    cpdef list get_cells_in_block(self, IntPoint bid)
     cpdef list get_particle_indices_in_block(self, IntPoint bid)
     cpdef list get_particles_in_block(self, IntPoint bid)
     

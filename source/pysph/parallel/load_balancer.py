@@ -219,7 +219,7 @@ class LoadBalancer:
         """
         self.procs_to_communicate = self._get_procs_to_communicate(
             self.particles_per_proc,
-            self.cell_manager.adjacent_processors)
+            self.cell_manager.proc_map.nbr_procs)
         num_procs = len(self.procs_to_communicate)
 
         # PASS 1

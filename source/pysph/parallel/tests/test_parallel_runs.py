@@ -20,6 +20,18 @@ def kill_process(process):
     process.kill()
 
 def run_mpi_script(filename, nprocs=2, timeout=5.0, path=None):
+    """ run a file python script in mpi
+    
+    Parameters:
+    -----------
+    filename - filename of python script to run under mpi
+    nprocs - (2) number of processes of the script to run
+    timeout - (5) time in seconds to wait for the script to finish running,
+        else raise a RuntimeError exception
+    path - the path under which the script is located
+        Defaults to the location of this file (__file__), not curdir
+    
+    """
     if path is None:
         path = directory
     path = os.path.join(path, filename)
@@ -56,7 +68,8 @@ class ParallelTest(unittest.TestCase):
         run_mpi_script('remote_data_copy.py')
     
     def test_parallel_cell_check(self):
-        run_mpi_script('parallel_cell_check.py')
+        for i in range(1,5):
+            run_mpi_script('parallel_cell_check.py', i)
     
     def test_share_data(self):
         for i in range(1,6):

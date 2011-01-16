@@ -486,11 +486,6 @@ cdef class ParallelCellManager(CellManager):
 
         self.remote_particle_indices = {}
 
-        # adjacent processors - list of processors that share a cell boundary
-        # with this processor.
-
-        self.adjacent_processors = []
-
         # a dict containing information about which processor each neighbor cell
         # is located.
 
@@ -1249,22 +1244,19 @@ cdef class ParallelCellManager(CellManager):
                                 block belongs to self proc
                                 (eg. sending neighbor information to nbr procs)
         recv_procs -- list of procs from which to receive data
-                None -> same as the keys of procs_blocks
+                None -> same as the procs_blocks.keys()
         
         Algorithm:
         ----------
-            
-            - invert the remote_cells list, i.e. find the list of cells to be
-              sent to each processor.
-            - prepare this data for sending.
-            - exchange this data with all processors in adjacent_processors.
-            - we now have a set of particles (in particle arrays) that entered
-              our domain.
-            - add these particles as real particles into the corresponding
-              particle arrays.
+        
+            - get cells to send for each proc by checking cells in
+                self.cells_dict belonging in the blocks to be send to proc
+            - create_new_particle_copies() for these cells
+            - send this data to procs in procs_blocks.keys() and recv particles
+                from procs in recv_procs
+            - add_entering_particles_from_neighbors(recv_particles)
 
         **Data sent to and received from each processor**
-
             - 'block_id' - block id of received particles
             - 'particles' - particles received located in that block
         
@@ -1286,14 +1278,14 @@ cdef class ParallelCellManager(CellManager):
             remote_block_cells = {}
             for bid in procs_blocks[proc]:
                 remote_block_cells[bid] = [self.cells_dict[cid] for cid in
-                                                self.proc_map.cell_map[bid]]
+                                                self.get_cells_in_block(bid)]
             proc_data[proc] = self.create_new_particle_copies(remote_block_cells)
         
         send_procs = proc_data.keys()
         logger.info('exchange_particles:'+str(send_procs)+str(recv_procs))
         recv_particles = share_data(self.pid, send_procs, proc_data, comm,
                                     TAG_CROSSING_PARTICLES, True, recv_procs)
-        logger.info('recv_particles_real:'+str(recv_particles))
+        logger.info('recv_particles:'+str(recv_particles))
         rp = []
         for p in recv_particles.values():
             for q in p.values():
@@ -1302,10 +1294,8 @@ cdef class ParallelCellManager(CellManager):
         logger.info('recv_particles_tot:'+str([p.get_number_of_particles() for p in rp]))
         
         # for each neighbor processor, there is one entry in recv_particles
-        # containing all new cells that processor sent to us.
-
+        # containing all new cells that processor sent to us
         self.add_entering_particles_from_neighbors(recv_particles)
-
 
     cpdef exchange_crossing_particles_with_neighbors(self, dict block_particles):
         """
@@ -1336,7 +1326,7 @@ cdef class ParallelCellManager(CellManager):
             - invert the remote_cells list, i.e. find the list of cells to be
               sent to each processor.
             - prepare this data for sending.
-            - exchange this data with all processors in adjacent_processors.
+            - exchange this data with all processors in nbr_procs.
             - we now have a set of particles (in particle arrays) that entered
               our domain.
             - add these particles as real particles into the corresponding
@@ -1636,6 +1626,20 @@ cdef class ParallelCellManager(CellManager):
                 indices = arange_long(index_info[0], index_info[1])
                 self.insert_particles(i, indices)
 
+    cpdef list get_cells_in_block(self, IntPoint bid):
+        """ return the list of cells in the cells_dict located in block bid """
+        cdef list ret = []
+        cdef IntPoint p = IntPoint()
+        for i in range(bid.x*self.factor, (bid.x+1)*self.factor):
+            p.x = i
+            for j in range(bid.y*self.factor, (bid.y+1)*self.factor):
+                p.y = j
+                for k in range(bid.z*self.factor, (bid.z+1)*self.factor):
+                    p.z = k
+                    if p in self.cells_dict:
+                        ret.append(p.copy())
+        return ret
+        
     cpdef list get_particle_indices_in_block(self, IntPoint bid):
         """ Return the list of indices for particles located in block bid """
         cdef int num_arrs = len(self.arrays_to_bin)
@@ -1650,7 +1654,6 @@ cdef class ParallelCellManager(CellManager):
                 parray_list[j].extend(index_lists[j].get_npy_array())
         
         return parray_list
-
 
     cpdef list get_particles_in_block(self, IntPoint bid):
         """ Returns the list of parrays for particles located in block bid. """
@@ -1745,8 +1748,6 @@ cdef class ParallelCellManager(CellManager):
         """
         Finds all cells from other processors that are adjacent to cells handled
         by this processor. 
-
-        This also updates the adjacent_processors list.
         
         **Note**
             - assumes the neighbor information of all cells to be up-to-date.
@@ -1780,19 +1781,13 @@ cdef class ParallelCellManager(CellManager):
         # copy temp data in arc into self.adjacent_remote_cells
         for pid, cell_dict in arc.iteritems():
             self.adjacent_remote_cells[pid] = cell_dict.keys()            
-        
-        self.adjacent_processors[:] = self.adjacent_remote_cells.keys()
-        # add my pid also into adjacent_processors.
-        self.adjacent_processors.append(self.pid)
-
-        self.adjacent_processors[:] = sorted(self.adjacent_processors)
 
         # setup the remote_particle_indices data.
         # for every adjacent processor, we store 
         # two indices for every parray that is 
         # being binned by the cell manager.
         rpi = self.remote_particle_indices
-        for pid in self.adjacent_processors:
+        for pid in self.proc_map.nbr_procs:
             data = []
             for i in range(len(self.arrays_to_bin)):
                 data.append([-1, -1])

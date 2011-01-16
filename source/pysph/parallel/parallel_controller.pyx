@@ -19,7 +19,7 @@ cimport numpy
 
 cdef class ParallelController:
     """
-    Class to hold information requireed for a parallel solver.
+    Class to hold information required for a parallel solver.
     """
     
     # some message tags that will be used while communication appear as class
