@@ -14,7 +14,7 @@ from nnps import NbrParticleLocatorBase, FixedDestNbrParticleLocator, \
 from particle_array import ParticleArray
 from particles import Particles, get_particle_array
 
-from point import Point
+from point import Point, IntPoint
 
 from particle_types import ParticleType
 

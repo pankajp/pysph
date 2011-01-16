@@ -63,8 +63,8 @@ cdef extern from "stdlib.h":
 import_array()
 
 # forward declaration
-cdef class BaseArray
-cdef class LongArray(BaseArray)
+#cdef class BaseArray
+#cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """ Base class for managed C-arrays. """
