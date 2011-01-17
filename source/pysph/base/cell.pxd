@@ -74,7 +74,7 @@ cdef class CellManager:
     cpdef clear(self)
     cpdef add_array_to_bin(self, ParticleArray parr)
 
-    cpdef double compute_cell_size(self, double, double)
+    cpdef double compute_cell_size(self, double min_size=*, double max_size=*)
     
     # carried over from RootCell
     cpdef int cells_update(self) except -1

@@ -96,7 +96,7 @@ cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
                 cell_list.append(IntPoint(cell_id.x+i, cell_id.y+j,
                                           cell_id.z+k))
     if not include_self:
-        cell_list.remove(cell_id)
+        del cell_list[((distance*2+1)*(distance*2+1)*(distance*2+1)-1)/2]
     neighbor_list.extend(cell_list)
 
 def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
@@ -205,7 +205,7 @@ cdef class Cell:
     for each particle array.
     When a cell's update method is called, the cell checks for particles 
     that have possibly escaped it's limits and creates a new cell id for 
-    those partices, while removing the corresponding indices from the 
+    those particles, while removing the corresponding indices from the 
     appropriate list in `index_lists`. This new cell data can then 
     be used in any which way one wants.    
 
@@ -676,7 +676,7 @@ cdef class CellManager:
 
         if initialize == True:
             self.initialize()
-            
+    
     def is_boundary_cell(self, cid):
         """ Returns true if this cell is a boundary cell, false otherwise. """
         cdef int dim = self.dimension
@@ -886,7 +886,7 @@ cdef class CellManager:
         """ Create an empty dict for `cells_dict`"""
         self.cells_dict = dict()
 
-    cpdef double compute_cell_size(self, double min_size, double max_size):
+    cpdef double compute_cell_size(self, double min_size=0, double max_size=0):
         """
         # TODO: compute size depending on some variation of 'h'
         
@@ -1143,7 +1143,8 @@ cdef class CellManager:
             if indices.data[i] >= num_particles:
                 # invalid particle being added.
                 # raise error and exit
-                msg = 'Particle %d does not exist'%(indices.data[i])
+                msg = 'Particle %d does not exist for parray %d %d'%(
+                                indices.data[i], parray_id, num_particles)
                 logger.error(msg)
                 raise ValueError, msg
             
