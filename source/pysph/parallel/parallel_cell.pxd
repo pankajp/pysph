@@ -45,6 +45,9 @@ cdef class ParallelCellManager(CellManager):
     cdef public int factor
     cdef public int pid
 
+    cdef double block_size
+    cdef double min_block_size
+
     cdef public object parallel_controller, pc
     cdef public load_balancer
     cdef public ProcessorMap proc_map
@@ -64,6 +67,7 @@ cdef class ParallelCellManager(CellManager):
     cdef public dict neighbor_share_data
 
     #cdef public ParallelCellManager cell_manager
+    cpdef compute_block_size(self, double block_size)
     cpdef find_adjacent_remote_cells(self)
     cpdef update_cell_neighbor_information(self)
     cpdef rebin_particles(self)

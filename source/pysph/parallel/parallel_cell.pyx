@@ -455,6 +455,8 @@ cdef class ParallelCellManager(CellManager):
         self.max_radius_scale = max_radius_scale
         self.pid = 0
 
+        self.min_block_size = min_block_size
+
         # set the parallel controller and procesor id
 
         if parallel_controller is None:
@@ -541,10 +543,11 @@ cdef class ParallelCellManager(CellManager):
 
         self.setup_origin()
 
-        if self.min_cell_size > 0.0:
-            self.cell_size = self.min_cell_size
-        else:
-            self.compute_cell_size(self.min_cell_size, self.max_cell_size)
+        # find the block size and cell size to use
+
+        self.compute_block_size(self.min_block_size)
+
+        self.compute_cell_size(self.min_cell_size, self.max_cell_size)
 
         # setup array indices.
 
@@ -637,35 +640,40 @@ cdef class ParallelCellManager(CellManager):
         logger.info('(%d) Origin : %s'%(pc.rank,
                                         str(self.origin)))
 
-    cpdef double compute_cell_size(self, double min_block_size, 
-                                   double max_block_size):
+    cpdef double compute_cell_size(self, double min_size=0, double max_size=0):
         """ Setup the cell size to use from the 'h' values.
         
-        Parameters:
-        -----------
-        
-        min_cell_size -- the minimum cell size to use
-        max_cell_size -- the maximum cell size to use
-
         Notes:
         ------
 
         The cell size is set to 2*self.max_radius_scale*self.glb_min_h
 
         """
-        cdef double block_size = self.max_radius_scale * self.glb_max_h
-
-        if block_size < min_block_size:
-            block_size = min_block_size
-            
         cdef int factor = int(ceil(self.glb_max_h/self.local_max_h))
-        cdef double cell_size = block_size/factor
+        cdef double cell_size = self.block_size/factor
         
         self.cell_size = cell_size
         self.factor = factor
         
-        logger.info('(R=%d) cell_size=%g'%(self.pc.rank, self.cell_size))
+        logger.info('(R=%d) cell_size=%g'%(self.pc.rank,
+                                           self.cell_size,))
         return self.cell_size
+
+    cpdef compute_block_size(self, double min_block_size):
+        """ Setup the block size to use 
+        
+        Parameters:
+        -----------
+        
+        min_block_size -- the minimum block size to use
+
+        """
+        cdef double block_size = self.max_radius_scale * self.glb_max_h
+
+        if block_size < min_block_size:
+            block_size = min_block_size
+        
+        self.block_size = block_size
 
     def setup_processor_map(self):
         """ Setup the processor map 
@@ -891,7 +899,6 @@ cdef class ParallelCellManager(CellManager):
         #logger.debug('remote_block_cells:'+str(remote_block_cells))
         
         self.proc_map.update()
-        
         # create a particle copies and mark those particles as remote.
 
         self.new_particles_for_neighbors = self.create_new_particle_copies(
@@ -913,13 +920,17 @@ cdef class ParallelCellManager(CellManager):
 
         self.assign_new_blocks(new_block_cells, self.new_region_particles)
 
-        # update the processor map and resolve the conflicts
+        # compute the cell sizes for binning
 
-        self.glb_update_proc_map()
+        self.compute_cell_size()
 
         # rebin the particles
 
         self.rebin_particles()
+
+        # update the processor map and resolve the conflicts
+
+        self.glb_update_proc_map()
 
         # wait till all processors have reached this point.
 
@@ -931,8 +942,8 @@ cdef class ParallelCellManager(CellManager):
             if cell_manager.load_balancing == True:
                 cell_manager.load_balancer.load_balance()
 
-        #logger.info('cells_update:'+str([parr.get_number_of_particles()
-        #for parr in self.arrays_to_bin]))
+        logger.info('cells_update:'+str([parr.get_number_of_particles()
+                                            for parr in self.arrays_to_bin]))
 
         # exchange neighbor information
                 
@@ -1192,52 +1203,7 @@ cdef class ParallelCellManager(CellManager):
         `create_new_particle_copies` for new block particles.
 
         """
-        cdef MPI.Comm comm = self.parallel_controller.comm
-        cdef ProcessorMap proc_map = self.proc_map
-        cdef list nbr_procs = self.proc_map.nbr_procs
-        cdef int pid
-        cdef IntPoint nid, bid
-        cdef ParticleArray p
-        cdef int np
-        cdef list parrays, block_neighbor_list
-        cdef dict candidates = {}
-        cdef dict proc_data = dict()
-
-        if not self.pid in nbr_procs: nbr_procs.append(self.pid)
-        for nbr_pid in nbr_procs:
-            proc_data[nbr_pid] = {}
-        
-        for bid in new_particles.keys():
-            candidates[bid] = set()
-            block_neighbor_list = []
-            construct_immediate_neighbor_list(bid, block_neighbor_list, True)
-            for nid in block_neighbor_list:
-                if proc_map.block_map.has_key(nid):
-                    candidates[bid].add(proc_map.block_map[nid])
-
-            if len(candidates[bid]) > 0:
-                # need to resolve conflicts
-                #pid = max(candidates[bid])
-                proc_data[self.pid][bid] = new_particles[bid]
-
-            else:
-                # no neighbor proc found
-                # choose self
-                #pid = hash(bid) % self.pc.num_procs
-                proc_data[self.pid][bid] = new_particles[bid]
-
-        proc_data = share_data(self.pid, 
-                               nbr_procs,
-                               proc_data,
-                               comm,
-                               TAG_NEW_CELL_PARTICLES, 
-                               True)
-
-        # now add the particles in the cells assigned to self into
-        # corresponding particle arrays.
-
-        for pid, particle_data in proc_data.iteritems():
-            self.add_local_particles_to_parray(particle_data)
+        self.add_local_particles_to_parray(new_particles)
 
     cpdef transfer_blocks_to_procs(self, dict procs_blocks,
                                    bint mark_remote=True, list recv_procs=None):

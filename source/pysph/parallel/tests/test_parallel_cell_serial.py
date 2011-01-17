@@ -97,6 +97,8 @@ class ParallelCellManagerTestCase(unittest.TestCase):
 
         cm.setup_origin()
 
+        cm.compute_block_size(0)
+
         cm.compute_cell_size(0,0)
 
         cm.py_rebuild_array_indices()
@@ -144,6 +146,8 @@ class ParallelCellManagerTestCase(unittest.TestCase):
         cm.update_global_properties()
 
         cm.setup_origin()
+
+        cm.compute_block_size(0)
 
         cm.compute_cell_size(0,0)
 
