@@ -183,7 +183,7 @@ class LoadBalancer:
 
             # update the cell information.
             self.cell_manager.remove_remote_particles()
-            self.cell_manager.bin_particles_top_down()
+            self.cell_manager.rebin_particles()
             self.cell_manager.glb_update_proc_map()
             self.cell_manager.update_cell_neighbor_information()
             
@@ -713,7 +713,7 @@ class LoadBalancer:
         logger.info('load distribution : %s : '%(str(set(self.cell_proc.values()))) + str(self.particles_per_proc))
         # update the cell information.
         self.cell_manager.remove_remote_particles()
-        self.cell_manager.bin_particles_top_down()
+        self.cell_manager.rebin_particles()
         self.cell_manager.glb_update_proc_map()
         self.cell_manager.update_cell_neighbor_information()
         

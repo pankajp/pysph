@@ -73,7 +73,7 @@ cdef class ParallelCellManager(CellManager):
     cpdef rebin_particles(self)
     cpdef bin_particles(self)
     cpdef create_new_particle_copies(self, dict blocks_dict_to_copy,
-                                     bint mark_src_remote=*)
+                                     bint mark_src_remote=*, bint local_only=*)
     cpdef assign_new_blocks(self, dict new_block_dict, dict new_particles)
     cpdef dict _resolve_conflicts(self, dict data)
     cpdef exchange_crossing_particles_with_neighbors(self, dict block_particles)

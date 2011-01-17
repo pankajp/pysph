@@ -534,7 +534,6 @@ cdef class ParallelCellManager(CellManager):
             return
 
         pc = self.parallel_controller
-
         # exchange bounds and interaction radii (h) information.
 
         self.update_global_properties()
@@ -550,34 +549,28 @@ cdef class ParallelCellManager(CellManager):
         self.compute_cell_size(self.min_cell_size, self.max_cell_size)
 
         # setup array indices.
-
         self.py_rebuild_array_indices()
 
         # setup the cells_dict
-
         self.py_setup_cells_dict()
         
         # setup information for the processor map.
-
         self.setup_processor_map()
 
         # build a single cell with all the particles
-
         self._build_cell()
-        
+
         pc = self.parallel_controller
         logger.info('(%d) cell_size: %g'%(pc.rank,
                                            self.cell_size))
         self.cells_update()
-
         self.py_reset_jump_tolerance()
 
         self.initialized = True
 
         # update the processor maps now.
-
         self.glb_update_proc_map()
-
+    
     def update_global_properties(self):
         """ Exchange bound and smoothing length information among all
         processors.
@@ -784,14 +777,12 @@ cdef class ParallelCellManager(CellManager):
         self.proc_map.update()
 
         # merge data from all children proc maps.
-
         for c_rank in pc.children_proc_ranks:
             c_proc_map = comm.recv(source=c_rank,
                                    tag=TAG_PROC_MAP_UPDATE)
             self.proc_map.merge(c_proc_map)
-
+        
         # we now have partially merged data, send it to parent if not root.
-
         if pc.parent_rank > -1:
             comm.send(self.proc_map, dest=pc.parent_rank,
                       tag=TAG_PROC_MAP_UPDATE)
@@ -812,7 +803,6 @@ cdef class ParallelCellManager(CellManager):
             comm.send(self.proc_map, dest=c_rank, tag=TAG_PROC_MAP_UPDATE)
         
         # now all procs have same proc_map
-        
         # resolve any conflicts
         if self.proc_map.conflicts:
             # calculate num_blocks per proc
@@ -840,7 +830,7 @@ cdef class ParallelCellManager(CellManager):
                             proc = candidates[i]
                 
                 blocks_per_proc[proc] += 1
-                self.proc_map.local_block_map[bid] = self.proc_map.block_map[bid] = proc
+                self.proc_map.block_map[bid] = proc
                 
                 if proc != self.pid:
                     # send to winning proc
@@ -848,6 +838,8 @@ cdef class ParallelCellManager(CellManager):
                         procs_blocks[proc].append(bid)
                     else:
                         procs_blocks[proc] = [bid]
+                    if bid in self.proc_map.local_block_map:
+                        del self.proc_map.local_block_map[bid]
                 else:
                     # recv from other conflicting procs
                     recv_procs.update(candidates)
@@ -856,11 +848,11 @@ cdef class ParallelCellManager(CellManager):
             if self.pid in recv_procs: recv_procs.remove(self.pid)
             self.transfer_blocks_to_procs(procs_blocks, mark_remote=True,
                                           recv_procs=list(recv_procs))
-            
+            # remove the transferred particles from 
+            self.remove_remote_particles()
             self.proc_map.conflicts.clear()
         
         # setup the region neighbors.
-
         self.proc_map.find_region_neighbors()
 
     cpdef remove_remote_particles(self):
@@ -881,63 +873,47 @@ cdef class ParallelCellManager(CellManager):
         """ Update particle information """
 
         cdef ParallelCellManager cell_manager = <ParallelCellManager>self
-
-        cell_manager.remove_remote_particles()
         
-        # wait till all processors have reached this point.
+        cell_manager.remove_remote_particles()
 
+        # wait till all processors have reached this point.
         self.parallel_controller.comm.Barrier()
 
         logger.debug('++++++++++++++++ UPDATE BEGIN +++++++++++++++++++++')
 
         # bin the particles and find the new_cells and remote_cells.
-
         new_block_cells, remote_block_cells = self.bin_particles()
-
-        #logger.debug('bin_particles() done')
-        #logger.debug('new_block_cells:'+str(new_block_cells))
-        #logger.debug('remote_block_cells:'+str(remote_block_cells))
         
         self.proc_map.update()
         # create a particle copies and mark those particles as remote.
-
         self.new_particles_for_neighbors = self.create_new_particle_copies(
             remote_block_cells, True)
 
         # exchange particles moving into another processor
-
         self.exchange_crossing_particles_with_neighbors(
                                     self.new_particles_for_neighbors)
-        
+
         # remove any remote particles
-
         cell_manager.remove_remote_particles()
-        
+
         # assign new blocks based on the new_block_cells
-
         self.new_region_particles = self.create_new_particle_copies(
-            new_block_cells, False)
-
+            new_block_cells, True)
         self.assign_new_blocks(new_block_cells, self.new_region_particles)
 
         # compute the cell sizes for binning
-
         self.compute_cell_size()
 
         # rebin the particles
-
         self.rebin_particles()
 
         # update the processor map and resolve the conflicts
-
         self.glb_update_proc_map()
 
         # wait till all processors have reached this point.
-
         self.parallel_controller.comm.Barrier()
 
         # call a load balancer function.
-
         if cell_manager.initialized == True:
             if cell_manager.load_balancing == True:
                 cell_manager.load_balancer.load_balance()
@@ -946,9 +922,8 @@ cdef class ParallelCellManager(CellManager):
                                             for parr in self.arrays_to_bin]))
 
         # exchange neighbor information
-                
         self.exchange_neighbor_particles()
-
+        
         logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
         return 0
 
@@ -1063,7 +1038,6 @@ cdef class ParallelCellManager(CellManager):
             block_id = find_cell_id(pmap.origin, centroid, pmap.block_size)
             
             #get the pid corresponding to the block_id
-            
             pid = pmap.block_map.get(block_id, -1)
             if pid < 0:
                 #add to new block particles
@@ -1073,9 +1047,7 @@ cdef class ParallelCellManager(CellManager):
                 else:
                     new_block_cells[block_id] = [cell]
             else:
-
                 #find to which remote processor the block belongs to and add
-                
                 if not pid == self.pid:
                     if remote_block_cells.has_key(block_id):
                         remote_block_cells[block_id].append(cell)
@@ -1087,7 +1059,8 @@ cdef class ParallelCellManager(CellManager):
         return new_block_cells, remote_block_cells                      
    
     cpdef create_new_particle_copies(self, dict block_dict_to_copy,
-                                     bint mark_src_remote=True):
+                                     bint mark_src_remote=True,
+                                     bint local_only=True):
         """ Make copies of all particles in the given cell dict.
               
         Parameters:
@@ -1132,7 +1105,7 @@ cdef class ParallelCellManager(CellManager):
         cdef dict copies = {}
         cdef IntPoint bid
         cdef list cell_list, parray_list
-
+        cdef ParticleArray pa
         cdef int num_arrays = len(self.arrays_to_bin)
         
         for bid, cell_list in block_dict_to_copy.iteritems():
@@ -1151,18 +1124,18 @@ cdef class ParallelCellManager(CellManager):
                     index_array = index_lists[j]
 
                     d_parr = parray_list[j]
-                
-                    d_parr.append_parray(s_parr.extract_particles(index_array))
+                    pa = s_parr.extract_particles(index_array)
+                    
+                    if local_only:
+                        pa.remove_flagged_particles('local', 0)
+                    
+                    d_parr.append_parray(pa)
                     d_parr.set_name(s_parr.name)
-                
+                    
                     # mark the particles as remote in the src particle array.
-
                     if mark_src_remote:
-
                         s_parr.set_flag('local', 0, index_array)
-
                         # also set them as dummy particles.
-
                         s_parr.set_tag(get_dummy_tag(), index_array)
 
             copies[bid] = parray_list

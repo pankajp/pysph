@@ -4,12 +4,14 @@ Run this script only with less than 5 processors.
 example : mpiexec -n 2 python parallel_cell_check.py
 """
 
+import time
+
 # mpi imports
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 num_procs = comm.Get_size()
-if num_procs > 4:
-    raise SystemError, 'Start this script on less than 5 processors'
+#if num_procs > 4:
+#    raise SystemError, 'Start this script on less than 5 processors'
 rank = comm.Get_rank()
 
 # logging setup
@@ -41,6 +43,7 @@ lg.start_point.y = lg.start_point.z = 0.0
 lg.end_point.y = lg.end_point.z = 0.0
 
 x, y, z = lg.get_coords()
+num_particles = len(x)
 
 logger.info('Num particles : %d'%(len(x)))
 
@@ -59,10 +62,17 @@ parray.add_property({'name':'rho'})
 parray.add_property({'name':'p'})
 
 parray = LoadBalancer.distribute_particles(parray, num_procs, 1.0)[rank]
-
 pcm.add_array_to_bin(parray)
 
+np = pcm.arrays_to_bin[0].num_real_particles
+nptot = comm.bcast(comm.reduce(np))
+assert nptot == num_particles
+
 pcm.initialize()
+
+np = pcm.arrays_to_bin[0].num_real_particles
+nptot = comm.bcast(comm.reduce(np))
+assert nptot == num_particles
 
 pcm.set_jump_tolerance(INT_INF())
 
@@ -90,6 +100,10 @@ pcm.update_status()
 logger.debug('Calling cell manager update')
 logger.debug('Is dirty %s'%(pcm.is_dirty))
 pcm.update()
+
+np = pcm.arrays_to_bin[0].num_real_particles
+nptot = comm.bcast(comm.reduce(np))
+assert nptot == num_particles
 
 #logger.debug('hierarchy :%s'%(pcm.hierarchy_list))
 logger.debug('cells : %s'%(pcm.cells_dict))
