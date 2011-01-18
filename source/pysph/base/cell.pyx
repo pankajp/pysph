@@ -1138,7 +1138,7 @@ cdef class CellManager:
         x = parray.get_carray(self.coord_x)
         y = parray.get_carray(self.coord_y)
         z = parray.get_carray(self.coord_z)
-        
+
         for i in range(indices.length):
             if indices.data[i] >= num_particles:
                 # invalid particle being added.

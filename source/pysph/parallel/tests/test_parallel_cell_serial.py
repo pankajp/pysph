@@ -215,8 +215,8 @@ class ParallelCellManagerTestCase(unittest.TestCase):
         # test for block (0,0,0)
 
         index_lists = []
-        cid = base.IntPoint(0,0,0)
-        cell = cm.cells_dict.get(cid)
+        bid = base.IntPoint(0,0,0)
+        cell = new_block_cells.get(bid)[0]
         cell.get_particle_ids(index_lists)
 
         particles_in_cell = pa.extract_particles(index_lists[0])
