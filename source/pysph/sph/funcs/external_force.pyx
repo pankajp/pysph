@@ -7,7 +7,7 @@ cdef class GravityForce(SPHFunctionParticle):
     """ Class to compute the gravity force on a particle """ 
 
     #Defined in the .pxd file
-    #cded double gx, gy, gz
+    #cdef double gx, gy, gz
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, double gx = 0.0, 

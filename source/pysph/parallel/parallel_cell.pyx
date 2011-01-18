@@ -848,7 +848,7 @@ cdef class ParallelCellManager(CellManager):
             if self.pid in recv_procs: recv_procs.remove(self.pid)
             self.transfer_blocks_to_procs(procs_blocks, mark_remote=True,
                                           recv_procs=list(recv_procs))
-            # remove the transferred particles from 
+            # remove the transferred particles
             self.remove_remote_particles()
             self.proc_map.conflicts.clear()
         

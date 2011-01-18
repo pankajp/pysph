@@ -46,7 +46,7 @@ class Solver(object):
     kernel_correction -- flag to indicate type of kernel correction.
                          Defaults to -1 for no correction
 
-    pid -- the procesor id if running in parallel
+    pid -- the processor id if running in parallel
 
     eps -- the epsilon value to use for XSPH stepping. 
            Defaults to -1 for no XSPH
@@ -127,7 +127,7 @@ class Solver(object):
         The id for the operation must be unique. An error is raised if an
         operation with the same id exists.
 
-        Simillarly, an error is raised if an invalid 'id' is provided 
+        Similarly, an error is raised if an invalid 'id' is provided 
         as an argument.
 
         Usage Examples:
@@ -148,7 +148,7 @@ class Solver(object):
         
         >>> solver.add_operation(operation, before=True, id=soleid)
         
-        Add an operation befor the operation with id 'someid'
+        Add an operation before the operation with id 'someid'
         
 
         """
@@ -159,7 +159,7 @@ class Solver(object):
         self.operation_dict[operation.id] = operation
             
         if id:
-            msg = 'The specified operation dosent exist'
+            msg = 'The specified operation doesnt exist'
             assert self.operation_dict.has_key(id), msg  + ' in the calcs dict!'
             assert id in self.order, msg + ' in the order list!'
 
@@ -188,7 +188,7 @@ class Solver(object):
 
         """
 
-        msg = 'The specified operation dosent exist'
+        msg = 'The specified operation doesnt exist'
         assert self.operation_dict.has_key(id), msg  + ' in the op dict!'
         assert id in self.order, msg + ' in the order list!'
 
@@ -216,12 +216,12 @@ class Solver(object):
         
         """
         if type(id_or_operation) == str:
-           id = id_or_operation
+            id = id_or_operation
         else:
             id = id_or_operation.id
 
-        assert id in self.operation_dict.keys(), 'id dosent exist!'
-        assert id in self.order, 'id dosent exist!'
+        assert id in self.operation_dict.keys(), 'id doesnt exist!'
+        assert id in self.order, 'id doesnt exist!'
 
         self.order.remove(id)
         self.operation_dict.pop(id)

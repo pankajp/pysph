@@ -36,20 +36,6 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         lb.lb_max_iteration = 10
         lb.setup()
     
-    def get_lb_args(self):
-        return [
-                # This test is only for serial cases
-                #dict_from_kwargs(method='normal'),
-                dict_from_kwargs(),
-                dict_from_kwargs(distr_func='auto'),
-                dict_from_kwargs(distr_func='geometric'),
-                dict_from_kwargs(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
-                dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=False),
-                dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=True),
-                #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=False),
-                #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=True),
-               ]
-    
     def load_balance(self):
         np0 = 0
         nc0 = len(self.cm.cell_dict)
@@ -59,20 +45,53 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         for lbargs in self.get_lb_args():
             lb.load_balance(**lbargs)
             self.cm.exchange_neighbor_particles()
+
+
+def get_lb_args():
+    return [
+            # This test is only for serial cases
+            #dict_from_kwargs(method='normal'),
+            dict_from_kwargs(),
+            dict_from_kwargs(distr_func='auto'),
+            dict_from_kwargs(distr_func='geometric'),
+            dict_from_kwargs(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
+            dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=False),
+            dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=True),
+            #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=False),
+            #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=True),
+           ]
+
+# function names have 't' instead of 'test' otherwise nose test collector
+# assumes them to be test functions
+def create_t_func1(lbargs, num_procs):
+    """ create and return test functions for load balancing """ 
+    def test(self):
+        self.create_solver()
+        proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
+        nps = [sum([pa.get_number_of_particles() for pa in pas]) for pas in proc_pas]
+        self.assertTrue(sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas]))
+        for pa in pas:
+            self.assertEqual(len(pa.get('x')),pa.get_number_of_particles())
+            self.assertEqual(len(pa.get('y')),pa.get_number_of_particles())
+        # each proc should have at least one cell since num_cells>num_procs
+        for np in nps:
+            assert np > 0
     
-    def test_distribute_particle_arrays(self):
+    test.__name__ = 'test_distribute_particle_arrays_p%d'%(num_procs)
+    test.__doc__ = 'distribute_particle_arrays; procs=%d; lbargs=' + str(lbargs)
+    
+    return test
+
+def gen_ts():
+    """ generate test functions and attach them to TestSerialLoadBalancer1D """
+    for i, lbargs in enumerate(get_lb_args()):
         for num_procs in [1,5,11]:
-            for lbargs in self.get_lb_args():
-                self.create_solver()
-                proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
-                nps = [sum([pa.get_number_of_particles() for pa in pas]) for pas in proc_pas]
-                self.assertTrue(sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas]))
-                for pa in pas:
-                    self.assertEqual(len(pa.get('x')),pa.get_number_of_particles())
-                    self.assertEqual(len(pa.get('y')),pa.get_number_of_particles())
-                # each proc should have at least one cell since num_cells>num_procs
-                for np in nps:
-                    assert np > 0
+            t_method = create_t_func1(lbargs, num_procs)
+            t_method.__name__ = t_method.__name__ + '_%d'%(i)
+            setattr(TestSerialLoadBalancer1D, t_method.__name__, t_method)
+
+# generate the test functions
+gen_ts()
 
 
 class TestSerialLoadBalancer2D(TestSerialLoadBalancer1D):

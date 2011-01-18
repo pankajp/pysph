@@ -511,7 +511,6 @@ class Integrator(object):
     def step(self, calcs, dt):
         """ Perform stepping for the integrating calcs """
 
-        particles = self.particles
         ncalcs = len(calcs)
 
         k_num = 'k' + str(self.cstep)
@@ -535,7 +534,7 @@ class Integrator(object):
                     step_array = pa.get(k_prop)
 
                     if logger.level < 30:
-
+                        k_name = k_num + '_' + update_prop + str(i) + str(j)
                         logger.info("""Integrator:do_step: Updating the k array
                                     %s """%(k_name))
 
