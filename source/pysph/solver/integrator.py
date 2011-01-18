@@ -5,7 +5,7 @@ logger = logging.getLogger()
 #`Integrator` class
 #############################################################################
 class Integrator(object):
-    """ The base class for all integraotrs. Currently, the following 
+    """ The base class for all integrators. Currently, the following 
     integrators are supported:
     
     (a) Forward Euler Integrator
@@ -14,7 +14,7 @@ class Integrator(object):
     (d) Predictor Corrector Integrator
     (e) Leap Frog Integrator
 
-    The integraotr operates on a list of SPHBase objects which define the 
+    The integrator operates on a list of SPHBase objects which define the 
     interaction between a single destination particle array and a list of 
     source particle arrays.
 
@@ -137,7 +137,7 @@ class Integrator(object):
     u_0 and v_0 which are stored in the particle array.
     
     During the final integration step, care must be taken to ensure that the
-    intial arrays are also stepped. This would be necessary since multiple
+    initial arrays are also stepped. This would be necessary since multiple
     calcs could be updating the same property and we want the cumulative 
     result of these.
 
@@ -185,8 +185,8 @@ class Integrator(object):
 
     After all the evals have been called, we are ready for integrating step.
     The result of all the integrating calcs have been stored in the `k` 
-    dictionay. The current array is retreived via the calc's update property
-    and the step array is retreived through the k dictionary. Stepping is
+    dictionary. The current array is retrieved via the calc's update property
+    and the step array is retrieved through the k dictionary. Stepping is
     as simple as `updated_array = current_array + step_array*dt`
 
     The integrate step
@@ -217,32 +217,6 @@ class Integrator(object):
         for i in range(len(self.particles.arrays)):
             self.rupdate_list.append([])
 
-    def reset_current_arrays(self):
-        """ Reset the current arrays """
-        
-        if logger.level < 30:
-            logger.info("Integrator: Setting current arrays")
-
-        ncalcs = len(self.calcs)
-        for i in range(ncalcs):
-            calc = self.calcs[i]
-            updates = calc.updates
-
-            #get the dest particle array for this calc
-            
-            pa = self.arrays[calc.dnum]
-
-            nupdates = len(updates)
-            for j in range(nupdates):
-                #get the calc's update property
-
-                prop = updates[j]
-
-                #reset the current property to the initial array
-
-                prop_initial = prop+'_0'
-                pa.set(**{prop:pa.get(prop_initial)})
-
     def setup_integrator(self):
         """ Setup the information required for the stepping
         
@@ -254,7 +228,7 @@ class Integrator(object):
 
         Algorithm:
         ----------
-        intialize calling_sequence to []
+        initialize calling_sequence to []
         initialize k to []
         for each step in the integrator
            append a dictionary to k

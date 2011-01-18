@@ -71,6 +71,9 @@ class ParallelTest(unittest.TestCase):
         for i in range(1,5):
             run_mpi_script('parallel_cell_check.py', i)
     
+    def test_parallel_cell_check2(self):
+        run_mpi_script('parallel_cell_check2.py', 2)
+    
     def test_share_data(self):
         for i in range(1,6):
             run_mpi_script('share_data.py', i)

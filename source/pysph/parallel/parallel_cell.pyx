@@ -643,11 +643,12 @@ cdef class ParallelCellManager(CellManager):
         The cell size is set to 2*self.max_radius_scale*self.glb_min_h
 
         """
-        cdef int factor = int(ceil(self.glb_max_h/self.local_max_h))
-        cdef double cell_size = self.block_size/factor
+        if self.local_max_h > 0:
+            self.factor = int(ceil(self.glb_max_h/self.local_max_h))
+        else:
+            self.factor = 1
         
-        self.cell_size = cell_size
-        self.factor = factor
+        self.cell_size = self.block_size/self.factor
         
         logger.info('(R=%d) cell_size=%g'%(self.pc.rank,
                                            self.cell_size,))

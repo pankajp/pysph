@@ -8,7 +8,7 @@ import unittest
 
 
 class ParallelCellManagerTestCase(unittest.TestCase):
-    """ Test case for tht ParallelCellManagerTestCase """
+    """ Test case for the ParallelCellManagerTestCase """
 
     def setUp(self):
         """ The setup consists of a 2D square ([0,1] X [0,1]) with 25
