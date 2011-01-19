@@ -286,7 +286,7 @@ if pid == 0:
     # ensure all particles are local (!=0)
 
     pa = cm.arrays_to_bin[0]
-    local = pa.get("local")
+    local = pa.get("local", only_real_particles=False)
     for i in range(pa.get_number_of_particles()):
         assert local[i] != 0
 
@@ -386,7 +386,7 @@ if pid == 0:
 
     rpi = cm.remote_particle_indices[1][0]
 
-    assert rpi[0] == nrp, "here"
+    assert rpi[0] == nrp
     assert rpi[1] == (np - 1)
     
     for i in range(np):
@@ -426,6 +426,75 @@ if pid == 0:
         if i >= nrp:
             assert p[i] == -1
             assert rho[i] == -1
+
+
+    #####################################################################
+    # SECOND ITERATION
+    #####################################################################
+
+    # test the configuration 
+    
+    cids = [base.IntPoint(0,0,0), base.IntPoint(1,0,0), base.IntPoint(1,1,0),
+            base.IntPoint(0,1,0), base.IntPoint(2,0,0), base.IntPoint(2,1,0)]
+
+    pa = cm.arrays_to_bin[0]
+    for cid in cids:
+        assert cm.cells_dict.has_key(cid)
+        if cid in [base.IntPoint(2,0,0), base.IntPoint(2,1,0)]:
+            cell = cells_dict.get(cid)
+            index_lists = []
+            cell.get_particle_ids(index_lists)            
+            parray = pa.extract_particles(index_lists[0])
+            local =  parray.get('local', only_real_particles=False)
+            for val in local:
+                assert val == 0
+
+    # remove non local particles
+
+    cm.remove_remote_particles()
+    
+    np = pa.get_number_of_particles()
+    
+    assert np == 25
+
+    # move 6 particles in cell/block (1,0,0) to (2,0,0)
+    
+    x = pa.get('x')
+    
+    for i in block_100_indices:
+        x[i] += 0.5
+
+    cm.cells_update()
+
+    np = pa.get_number_of_particles()
+    nrp = pa.num_real_particles
+
+    assert np == 40
+    assert nrp == 19
+
+    # now move the 4 particles in cell/block (1,1,0) to block/cell (1,2,0)
+
+    y = pa.get('y')
+    
+    cell_110 = cm.cells_dict.get(base.IntPoint(1,1,0))
+    index_lists = []
+    cell_110.get_particle_ids(index_lists)
+    index_array = index_lists[0].get_npy_array()
+
+    for i in index_array:
+        y[i] += 0.5
+
+    # now call a cells update
+        
+    cm.cells_update()
+
+    np = pa.get_number_of_particles()
+    nrp = pa.num_real_particles
+
+    print pid, np
+    
+    assert nrp == 19 - 4 
+    #assert np  == nrp + 10
 
 if pid == 1:
     
@@ -704,3 +773,49 @@ if pid == 1:
         if i >= nrp:
             assert p[i] == -1
             assert rho[i] == -1
+
+    cm.remove_remote_particles()
+    
+    np = pa.get_number_of_particles()
+    
+    assert np == 25
+
+    cm.cells_update()
+
+    np = pa.get_number_of_particles()
+    nrp = pa.num_real_particles
+
+    assert np == 35
+    assert nrp == 31
+
+    # now move particles in cell (2,1,0) to cell (1, 2, 0)
+
+    x, y = pa.get('x', 'y')
+
+    cell_210 = cm.cells_dict.get(base.IntPoint(2,1,0))
+    index_lists = []
+    cell_210.get_particle_ids(index_lists)
+    index_array = index_lists[0].get_npy_array()
+
+    for i in index_array:
+        y[i] += 0.5
+        x[i] -= 0.5
+    
+    # now call a cells update 
+
+    cm.cells_update()
+
+    np = pa.get_number_of_particles()
+    nrp = pa.num_real_particles
+
+    assert nrp == 31 + 4
+    assert np == 41
+
+    cell = cm.cells_dict.get(base.IntPoint(1,2,0))
+    index_lists = []
+    cell.get_particle_ids(index_lists)
+
+    print pid, cell.get_number_of_particles()
+
+    print cm.cells_dict.values()
+    

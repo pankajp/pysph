@@ -874,10 +874,13 @@ cdef class ParallelCellManager(CellManager):
         """ Update particle information """
 
         cdef ParallelCellManager cell_manager = <ParallelCellManager>self
-        
+
         cell_manager.remove_remote_particles()
 
+        self.delete_empty_cells()
+
         # wait till all processors have reached this point.
+
         self.parallel_controller.comm.Barrier()
 
         logger.debug('++++++++++++++++ UPDATE BEGIN +++++++++++++++++++++')
@@ -885,8 +888,6 @@ cdef class ParallelCellManager(CellManager):
         # bin the particles and find the new_cells and remote_cells.
 
         new_block_cells, remote_block_cells = self.bin_particles()
-        
-        self.proc_map.update()
 
         # create particle copies and mark those particles as remote.
 
@@ -1065,8 +1066,8 @@ cdef class ParallelCellManager(CellManager):
                     else:
                         remote_block_cells[block_id] = [cell]
 
-        return new_block_cells, remote_block_cells                      
-   
+        return new_block_cells, remote_block_cells
+
     cpdef create_new_particle_copies(self, dict block_dict_to_copy,
                                      bint mark_src_remote=True,
                                      bint local_only=True):
@@ -1141,11 +1142,10 @@ cdef class ParallelCellManager(CellManager):
                     d_parr.append_parray(pa)
                     d_parr.set_name(s_parr.name)
                     
-                    # mark the particles as remote in the src particle array.
+                    # mark the particles as remote and dummy in src.
 
                     if mark_src_remote:
                         s_parr.set_flag('local', 0, index_array)
-                        # also set them as dummy particles.
                         s_parr.set_tag(get_dummy_tag(), index_array)
 
             copies[bid] = parray_list
@@ -1259,7 +1259,7 @@ cdef class ParallelCellManager(CellManager):
         # containing all new cells that processor sent to us
         self.add_entering_particles_from_neighbors(recv_particles)
 
-    cpdef exchange_crossing_particles_with_neighbors(self, dict block_particles):
+    cpdef exchange_crossing_particles_with_neighbors(self,dict block_particles):
         """
         Send all particles that crossed into a known neighbors region,
         receive particles that got into our region from a neighbors.
@@ -1319,6 +1319,7 @@ cdef class ParallelCellManager(CellManager):
             proc_data[pid][bid] = parray_list
         
         logger.info('exchange_particles:'+str(proc_data.keys())+str(proc_map.nbr_procs))
+        
         new_particles = share_data(self.pid, nbr_procs, proc_data, comm,
                                    TAG_CROSSING_PARTICLES, True)
         
@@ -1372,7 +1373,9 @@ cdef class ParallelCellManager(CellManager):
             for i in range(num_arrays):
                 s_parr = parrays[i]
                 d_parr = self.arrays_to_bin[i]
-                
+
+                np = s_parr.get_number_of_particles()
+
                 # set the local property to '1'
 
                 s_parr.local[:] = 1
@@ -1739,6 +1742,48 @@ cdef class ParallelCellManager(CellManager):
                                       cell_size=self.cell_size,
                                       jump_tolerance=self.jump_tolerance,
                                       pid=pid)
+
+    def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
+        """ Check if the particle has moved more than the jump tolerance """
+
+        cdef ProcessorMap pmap = self.proc_map
+        cdef IntPoint block1, block2, pdiff
+        cdef Point cent1, cent2
+
+        cent1 = Point()
+        cent2 = Point()
+
+        block1 = IntPoint()
+        block2 = IntPoint()
+        
+        cent1.x = self.origin.x + (<double>myid.x + 0.5)*self.cell_size
+        cent1.y = self.origin.y + (<double>myid.y + 0.5)*self.cell_size
+        cent1.z = self.origin.z + (<double>myid.z + 0.5)*self.cell_size
+
+        cent2.x = self.origin.x + (<double>newid.x + 0.5)*self.cell_size
+        cent2.y = self.origin.y + (<double>newid.y + 0.5)*self.cell_size
+        cent2.z = self.origin.z + (<double>newid.z + 0.5)*self.cell_size
+
+        block1 = find_cell_id(pmap.origin, cent1, pmap.block_size)
+        block2 = find_cell_id(pmap.origin, cent2, pmap.block_size)
+
+        pdiff = block1.diff(block2)        
+        
+        if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
+            self.jump_tolerance or abs(pdiff.z) >
+            self.jump_tolerance):
+            
+            msg = 'Particle moved  more than one block width\n'
+
+            msg += 'old id : (%d, %d, %d)\n'%(block1.id.x, block1.id.y,
+                                               block1.id.z)
+
+            msg += 'new id  : (%d, %d, %d)\n'%(block2.id.x, block2.id.y, 
+                                               block2.id.z)
+
+            msg += 'Block Jump Tolerance is : %s, %d\n'%(self, 
+                                                         self.jump_tolerance)
+            raise RuntimeError, msg    
 
     cpdef find_adjacent_remote_cells(self):
         """

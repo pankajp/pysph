@@ -373,17 +373,16 @@ cdef class Cell:
                     # find the cell containing this point
 
                     id = find_cell_id(self.origin, pnt, self.cell_size)
+
+                    # has the particle moved too far??
+
+                    self.check_jump_tolerance(myid=self.id, newid=id)
                     
                     if id.is_equal(self.id):
                         continue
 
                     to_remove.append(j)
                     
-                    # has the particle moved too far??
-
-                    pdiff = self.id.diff(id)
-                    self.check_jump_tolerance(id)
-
                     #create new cell if id doesn't exist and add particles
 
                     cell = data.get(id)
@@ -571,10 +570,11 @@ cdef class Cell:
         for i in range(num_arrays):
             self.index_lists.append(LongArray())
 
-    def check_jump_tolerance(self, IntPoint id):
+    def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
         """ Check if the particle has moved more than the jump tolerance """
 
-        pdiff = self.id.diff(id)                    
+        cdef IntPoint pdiff = myid.diff(newid)
+
         if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
             self.jump_tolerance or abs(pdiff.z) >
             self.jump_tolerance):
