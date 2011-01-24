@@ -44,6 +44,8 @@ cdef class ParallelCellManager(CellManager):
     cdef public double local_min_h, local_max_h
     cdef public int factor
     cdef public int pid
+    cdef dict trf_particles
+    cdef dict remote_block_pid
 
     cdef double block_size
     cdef double min_block_size
@@ -74,6 +76,7 @@ cdef class ParallelCellManager(CellManager):
     cpdef bin_particles(self)
     cpdef create_new_particle_copies(self, dict blocks_dict_to_copy,
                                      bint mark_src_remote=*, bint local_only=*)
+    cpdef mark_crossing_particles(self, dict remote_block_dict)
     cpdef assign_new_blocks(self, dict new_block_dict)
     cpdef dict _resolve_conflicts(self, dict data)
     cpdef exchange_crossing_particles_with_neighbors(self, dict block_particles)

@@ -493,8 +493,16 @@ if pid == 0:
 
     print pid, np
     
-    assert nrp == 19 - 4 
+    assert nrp == 19 + 6
     #assert np  == nrp + 10
+    
+    cell = cm.cells_dict.get(base.IntPoint(1,2,0))
+    index_lists = []
+    cell.get_particle_ids(index_lists)
+
+    print pid, cell.get_number_of_particles()
+
+    print cm.cells_dict.values()
 
 if pid == 1:
     
@@ -808,14 +816,7 @@ if pid == 1:
     np = pa.get_number_of_particles()
     nrp = pa.num_real_particles
 
-    assert nrp == 31 + 4
-    assert np == 41
+    assert nrp == 31 -6
+    assert np == nrp
 
-    cell = cm.cells_dict.get(base.IntPoint(1,2,0))
-    index_lists = []
-    cell.get_particle_ids(index_lists)
-
-    print pid, cell.get_number_of_particles()
-
-    print cm.cells_dict.values()
     

@@ -83,7 +83,7 @@ cdef class CellManager:
     cpdef _rebuild_array_indices(self)
     cpdef _setup_cells_dict(self)
     cpdef set_jump_tolerance(self, int jump_tolerance)
-    cpdef int delete_empty_cells(self) except -1
+    cpdef list delete_empty_cells(self)
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef Cell get_new_cell(self, IntPoint id)
     

@@ -1125,6 +1125,7 @@ cdef class CellManager:
         """Insert particles"""
         cdef ParticleArray parray = self.arrays_to_bin[parray_id]
         cdef dict particles_for_cells = dict()
+        cdef cells_created = []
         cdef int num_particles = parray.get_number_of_particles()
         cdef int i
         cdef DoubleArray x, y, z
@@ -1170,8 +1171,11 @@ cdef class CellManager:
                 # create a cell with the given id.
                 cell = self.get_new_cell(cid)
                 self.cells_dict[cid] = cell
+                cells_created.append(cid)
 
             cell.insert_particles(parray_id, la)
+        
+        return cells_created
     
     cpdef Cell get_new_cell(self, IntPoint id):
         """Create and return a new cell. """
@@ -1179,19 +1183,20 @@ cdef class CellManager:
                             cell_size=self.cell_size,
                             jump_tolerance=self.jump_tolerance)
     
-    cpdef int delete_empty_cells(self) except -1:
-        '''delete empty cells'''
+    cpdef list delete_empty_cells(self):
+        '''delete empty cells and return the ids of deleted cells'''
         cdef int num_cells = len(self.cells_dict)
         cdef int i
         cdef Cell cell
         cdef list cell_list = self.cells_dict.values()
-
+        cdef list deleted_cells = []
         for i in range(num_cells):
             cell = cell_list[i]
             if cell.get_number_of_particles() == 0:
                 self.cells_dict.pop(cell.id)
+                deleted_cells.append(cell.id)
 
-        return 0
+        return deleted_cells
    
     # python functions for each corresponding cython function for testing.
     def py_update(self):
