@@ -823,9 +823,13 @@ cdef class ParallelCellManager(CellManager):
             recv_procs = set([])
             procs_blocks_particles = {self.pid:{}}
             
+            for proc in range(self.pc.num_procs):
+                blocks_per_proc[proc] = 0
+            
             for bid in self.proc_map.block_map:
                 proc = self.proc_map.block_map[bid]
-                blocks_per_proc[proc] = blocks_per_proc.get(proc, 0) + 1
+                if proc > -1:
+                    blocks_per_proc[proc] = blocks_per_proc.get(proc) + 1
             
             # assign block to proc with least blocks then max rank
             for bid in self.proc_map.conflicts:
@@ -900,7 +904,7 @@ cdef class ParallelCellManager(CellManager):
 
         cell_manager.remove_remote_particles()
 
-        self.delete_empty_cells()
+        #self.delete_empty_cells()
 
         # wait till all processors have reached this point.
 
