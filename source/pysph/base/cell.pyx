@@ -376,7 +376,9 @@ cdef class Cell:
 
                     # has the particle moved too far??
 
-                    self.check_jump_tolerance(myid=self.id, newid=id)
+                    #self.check_jump_tolerance(myid=self.id, newid=id)
+                    self.cell_manager.check_jump_tolerance(myid=self.id,
+                                                           newid=id)
                     
                     if id.is_equal(self.id):
                         continue
@@ -570,24 +572,6 @@ cdef class Cell:
         for i in range(num_arrays):
             self.index_lists.append(LongArray())
 
-    def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
-        """ Check if the particle has moved more than the jump tolerance """
-
-        cdef IntPoint pdiff = myid.diff(newid)
-
-        if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
-            self.jump_tolerance or abs(pdiff.z) >
-            self.jump_tolerance):
-            
-            msg = 'Particle moved by more than one cell width\n'
-            #msg += 'Point (%f, %f, %f)\n'%(pnt.x, pnt.y, pnt.z)
-            msg += 'self id : (%d, %d, %d)\n'%(self.id.x, self.id.y,
-                                               self.id.z)
-            msg += 'new id  : (%d, %d, %d)\n'%(id.x, id.y, id.z)
-            msg +='J Tolerance is : %s, %d\n'%(self, 
-                                               self.jump_tolerance)
-            raise RuntimeError, msg
-
     def check_particle_id(self, int id, int num_particles):
         """ Sanity check on the particle index """
         if id >= num_particles or id < 0:
@@ -732,8 +716,7 @@ cdef class CellManager:
 
             self.is_dirty = False
 
-        return 0
-    
+        return 0    
     
     cpdef int cells_update(self) except -1:
         """Update particle information.
@@ -954,6 +937,8 @@ cdef class CellManager:
         cdef numpy.ndarray index_arr_source
         cdef LongArray index_arr
         cdef Cell cell
+
+        self.jump_tolerance = INT_MAX
  
         # create a leaf cell with all particles.
 
@@ -1197,6 +1182,24 @@ cdef class CellManager:
                 deleted_cells.append(cell.id)
 
         return deleted_cells
+
+    def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
+        """ Check if the particle has moved more than the jump tolerance """
+
+        cdef IntPoint pdiff = myid.diff(newid)
+
+        if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
+            self.jump_tolerance or abs(pdiff.z) >
+            self.jump_tolerance):
+            
+            msg = 'Particle moved by more than one cell width\n'
+            #msg += 'Point (%f, %f, %f)\n'%(pnt.x, pnt.y, pnt.z)
+            msg += 'self id : (%d, %d, %d)\n'%(myid.x, myid.y,
+                                               myid.z)
+            msg += 'new id  : (%d, %d, %d)\n'%(newid.x, newid.y, newid.z)
+            msg +='J Tolerance is : %s, %d\n'%(self, 
+                                               self.jump_tolerance)
+            raise RuntimeError, msg
    
     # python functions for each corresponding cython function for testing.
     def py_update(self):

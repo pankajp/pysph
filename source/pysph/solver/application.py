@@ -229,11 +229,21 @@ class Application(object):
             pa = self.comm.scatter(data, root=0)
 
         self.particle_array = pa
+
         in_parallel = num_procs > 1
         if isinstance(pa, (ParticleArray,)):
             pa = [pa]
+
+        no_load_balance = self.options.no_load_balance
+        if no_load_balance:
+            self.load_balance = False
+        else:
+            self.load_balance = True
+
         self.particles = Particles(arrays=pa, in_parallel=in_parallel,
-                                   load_balancing=self.load_balance)
+                                   load_balancing=self.load_balance,
+                                   update_particles=True)
+
         return self.particles
 
     def set_solver(self, solver):

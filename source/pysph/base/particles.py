@@ -54,7 +54,7 @@ class Particles(object):
     """
     
     def __init__(self, arrays=[], in_parallel=False,
-                 load_balancing=True):
+                 load_balancing=True, update_particles=True):
         """ Construct a representation of a particle array 
 
         Parameters:
@@ -77,6 +77,7 @@ class Particles(object):
         else:
             self.cell_manager = ParallelCellManager(
                 arrays_to_bin=arrays, load_balancing=load_balancing)
+
             self.pid = self.cell_manager.pid
 
         self.nnps_manager = NNPSManager(cell_manager=self.cell_manager,
@@ -84,8 +85,10 @@ class Particles(object):
 
         self.correction_manager = None
 
-        #call an update on the particles
-        self.update()
+        # call an update on the particles
+        
+        if update_particles:
+            self.update()
 
     def update(self):
         """ Update the status of the neighbor locators and cell manager.

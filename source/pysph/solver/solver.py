@@ -358,7 +358,7 @@ class Solver(object):
         self.detailed_output = detailed_output
 
     def set_output_directory(self, path):
-        """ Set the out put directory """
+        """ Set the output directory """
         self.path = path
 
     def set_kernel_correction(self, kernel_correction):

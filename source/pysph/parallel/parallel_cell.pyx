@@ -572,12 +572,14 @@ cdef class ParallelCellManager(CellManager):
         pc = self.parallel_controller
         logger.info('(%d) cell_size: %g'%(pc.rank,
                                            self.cell_size))
+
         self.cells_update()
         self.py_reset_jump_tolerance()
 
         self.initialized = True
 
         # update the processor maps now.
+
         self.glb_update_proc_map()
     
     def update_global_properties(self):
@@ -655,7 +657,7 @@ cdef class ParallelCellManager(CellManager):
             self.factor = int(ceil(self.glb_max_h/self.local_max_h))
         else:
             self.factor = 1
-        
+
         self.cell_size = self.block_size/self.factor
         
         logger.info('(R=%d) cell_size=%g'%(self.pc.rank,
@@ -716,6 +718,9 @@ cdef class ParallelCellManager(CellManager):
         except that the cells used are the Parallel variants.
 
         """
+        
+        self.jump_tolerance = INT_INF()
+
         cdef double cell_size = self.cell_size
 
         cdef double xc = self.local_bounds_min[0] + 0.5 * cell_size
@@ -853,11 +858,12 @@ cdef class ParallelCellManager(CellManager):
                 
                 if self.pid in candidates and self.trf_particles:
                     # this is a remote block
-                    if proc in procs_blocks_particles:
-                        t = self.trf_particles[bid]
-                        procs_blocks_particles[proc][bid] = t
-                    else:
-                        procs_blocks_particles[proc] = {bid:self.trf_particles[bid]}
+                    if bid in self.trf_particles:
+                        if proc in procs_blocks_particles:
+                            t = self.trf_particles[bid]
+                            procs_blocks_particles[proc][bid] = t
+                        else:
+                            procs_blocks_particles[proc] = {bid:self.trf_particles[bid]}
                 else:
                     # this is a newly created block
                     pass
@@ -940,6 +946,7 @@ cdef class ParallelCellManager(CellManager):
         self.trf_particles.update(new_region_particles)
         
         cell_manager.remove_remote_particles()
+
         # compute the cell sizes for binning
 
         self.compute_cell_size()
@@ -1056,7 +1063,7 @@ cdef class ParallelCellManager(CellManager):
         self.nbr_cell_info = {}        
 
         #find the new configuration of the cells
-        
+
         for cid, cell in self.cells_dict.iteritems():
             if cell.pid == self.pid:
                 (<Cell>cell).update(collected_data)
@@ -1864,11 +1871,11 @@ cdef class ParallelCellManager(CellManager):
             
             msg = 'Particle moved  more than one block width\n'
 
-            msg += 'old id : (%d, %d, %d)\n'%(block1.id.x, block1.id.y,
-                                               block1.id.z)
+            msg += 'old id : (%d, %d, %d)\n'%(block1.x, block1.y,
+                                               block1.z)
 
-            msg += 'new id  : (%d, %d, %d)\n'%(block2.id.x, block2.id.y, 
-                                               block2.id.z)
+            msg += 'new id  : (%d, %d, %d)\n'%(block2.x, block2.y, 
+                                               block2.z)
 
             msg += 'Block Jump Tolerance is : %s, %d\n'%(self, 
                                                          self.jump_tolerance)
