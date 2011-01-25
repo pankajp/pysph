@@ -268,6 +268,8 @@ class Solver(object):
         if particles:
             self.particles = particles
 
+            self.particles.kernel = self.kernel
+
             if particles.in_parallel:
                 self.pid = particles.cell_manager.pid
 

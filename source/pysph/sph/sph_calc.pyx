@@ -174,7 +174,7 @@ cdef class SPHBase:
 
         self.tag = self.funcs[0].tag
 
-        #set the neighbor locators
+        # set the neighbor locators
 
         for i in range(nsrcs):
             src = self.sources[i]
@@ -187,7 +187,7 @@ cdef class SPHBase:
             
             self.nbr_locators.append(loc)
 
-        #set the kernel correction arrays if reqired
+        # set the kernel correction arrays if reqired
 
         if self.rkpm_first_order_correction:
 
@@ -516,6 +516,8 @@ cdef class SPHCalc(SPHBase):
         cdef LongArray nbrs = self.nbrs
         cdef int j
 
+        cdef LongArray particle_neighbors
+
         for j in range(self.nsrcs):
             
             src = self.sources[j]
@@ -524,6 +526,14 @@ cdef class SPHCalc(SPHBase):
 
             nbrs.reset()
             loc.get_nearest_particles(i, nbrs, exclude_self)
+
+            particle_neighbors = loc.particle_neighbors.get(i)
+            assert nbrs.length == particle_neighbors.length
+            for l from 0 <= l < self.nbrs.length:
+                assert nbrs.data[l] == particle_neighbors.data[l]
+
+            func.kernel_function_evaluation = loc.kernel_function_evaluation
+            func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
 
             if logger.level < 30:
 

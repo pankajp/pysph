@@ -80,10 +80,17 @@ cdef class SPHFunctionParticle:
         self._dst = Point()
 
         #kernel correction of Bonnet and Lok
+
         self.bonnet_and_lok_correction = False
 
         #flag for the rkpm first order kernel correction
+
         self.rkpm_first_order_correction = False
+
+        # kernel function and gradient evaulation
+
+        self.kernel_function_evaluation = {}
+        self.kernel_gradient_evaluation = {}
 
         if setup_arrays:
             self.setup_arrays()

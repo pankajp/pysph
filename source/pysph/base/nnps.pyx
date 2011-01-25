@@ -162,6 +162,10 @@ cdef class NbrParticleLocatorBase:
         self.cell_manager = cell_manager
         self.source_index = -1
 
+        self.particle_neighbors = {}
+        self.kernel_function_evaluation = {}
+        self.kernel_gradient_evaluation = {}
+
         if self.cell_manager is not None:
             # find the index of source in cell_manager.
             self.source_index = cell_manager.array_indices.get(source.name)
@@ -824,11 +828,69 @@ cdef class NNPSManager:
                 str source_name, str dest_name, double radius):
         """Returns a cached object if it exists, else returns None."""
         return self.particle_locator_cache.get((source_name,dest_name,radius))
-    
+
+    def cache_neighbors(self, kernel):
+        cdef dict locator_cache = self.particle_locator_cache
+        cdef NbrParticleLocatorBase loc
+        cdef ParticleArray dest, source
+        cdef long np, i, j, nnbrs
+        cdef double h, w
+
+        cdef DoubleArray xd, yd, zd, xs, ys, zs, hs, hd
+
+        cdef Point _dst, _src, grad
+
+        for loc in locator_cache.values():
+            dest = loc.dest
+            source = loc.source
+            
+            np = dest.get_number_of_particles()
+
+            loc.particle_neighbors = {}
+            loc.kernel_function_evaluation = {}
+            loc.kernel_gradient_evaluation = {}
+
+            xd = dest.get_carray('x')
+            yd = dest.get_carray('y')
+            zd = dest.get_carray('z')
+            hd = dest.get_carray('h')
+          
+            xs = source.get_carray('x')
+            ys = source.get_carray('y')
+            zs = source.get_carray('z')
+            hs = source.get_carray('h')
+
+            for i in range(np):
+                nbrs = LongArray()
+                loc.py_get_nearest_particles(i, nbrs, exclude_self=False)
+                loc.particle_neighbors[i] = nbrs
+
+                _dst = Point(xd.data[i], yd.data[i], zd.data[i])
+
+                if nbrs.length > 0:
+                    loc.kernel_function_evaluation[i] = {}
+                    loc.kernel_gradient_evaluation[i] = {}
+
+                    # compute the kenrel evaluations
+                
+                    for j in range(nbrs.length):
+                        s_id = nbrs.data[j]
+                        
+                        _src = Point(xs.data[s_id],ys.data[s_id],zs.data[s_id])
+
+                        h = 0.5 * (hd[i] + hs[s_id])
+                        
+                        grad = Point()
+
+                        w = kernel.py_function(_dst, _src, h)
+                        kernel.py_gradient(_dst, _src, h, grad)
+                        
+                        loc.kernel_function_evaluation[i][s_id] = w
+                        loc.kernel_gradient_evaluation[i][s_id] = grad
+
     ######################################################################
     # python wrappers.
     ######################################################################
     def py_update(self):
         """ Update the status of the neighbor locators. """
         return self.update()
-

@@ -24,6 +24,10 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_p, s_e, d_p, d_e	
     cdef public DoubleArray s_cs, d_cs
 
+    # kernel function and gradient evaluations
+    cdef public dict kernel_function_evaluation
+    cdef public dict kernel_gradient_evaluation
+
     #rkpm first order correction terms
     
     cdef public DoubleArray rkpm_beta1, rkpm_beta2, rkpm_beta3

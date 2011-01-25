@@ -71,6 +71,8 @@ class Particles(object):
         self.arrays=arrays
         self.in_parallel = in_parallel
         self.load_balancing = load_balancing
+        
+        self.kernel = None
 
         if not in_parallel:
             self.cell_manager = CellManager(arrays_to_bin=arrays)
@@ -108,6 +110,11 @@ class Particles(object):
 
         if self.correction_manager:
             self.correction_manager.update()
+
+        # cache the particle neighbors
+
+        if self.kernel:
+            self.nnps_manager.cache_neighbors(self.kernel)
 
         self.needs_update = False
 

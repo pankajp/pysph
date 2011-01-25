@@ -15,6 +15,10 @@ cdef class NbrParticleLocatorBase:
     cdef public CellManager cell_manager
     cdef public int source_index
 
+    cdef public dict particle_neighbors
+    cdef public dict kernel_function_evaluation
+    cdef public dict kernel_gradient_evaluation
+
     cdef int get_nearest_particles_to_point(self, Point pnt, double radius,
                                             LongArray output_array, 
                                             long exclude_index=*) except -1

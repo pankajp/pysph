@@ -48,6 +48,12 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         
         kernel.gradient(self._dst, self._src, h, grad)
 
+        other_grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+
+        assert grad.x == other_grad.x
+        assert grad.y == other_grad.y
+        assert grad.z == other_grad.z
+
         if self.rkpm_first_order_correction:
             pass
 
@@ -151,6 +157,12 @@ cdef class MomentumEquation(SPHFunctionParticle):
         grad = Point_new(0,0,0)
 
         kernel.gradient(self._dst, self._src, hab, grad)
+
+        other_grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+
+        assert grad.x == other_grad.x
+        assert grad.y == other_grad.y
+        assert grad.z == other_grad.z
 
         if self.rkpm_first_order_correction:
             pass

@@ -585,7 +585,7 @@ class EulerIntegrator(Integrator):
         for calc in self.pcalcs:
             self.final_step(calc, dt)
 
-        #update the particles to get the new neighbors
+        # update the particles to get the new neighbors
 
         self.particles.update()
 
