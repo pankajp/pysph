@@ -24,6 +24,8 @@ cdef extern from 'limits.h':
 cimport numpy
 import numpy
 
+import pickle
+
 def INT_INF():
     return INT_MAX
 
@@ -579,6 +581,37 @@ cdef class Cell:
             msg += 'num_particles : %d\n'%(num_particles)
             msg += 'pid : %d\n'%(id)
             raise RuntimeError, msg
+
+    def get_particle_representation(self):
+        
+        ret = {}
+        num_arrays = len(self.arrays_to_bin)
+
+        centroid = Point()
+        self.get_centroid(centroid)
+        
+        ret['cid'] = self.id.x, self.id.y, self.id.z
+        ret['cell_size'] = self.cell_size
+        ret['centroid'] = centroid.x, centroid.y, centroid.z 
+        ret['positions'] = {}
+        
+        for i in range(num_arrays):
+            d = ret['positions']
+            s_parr = self.arrays_to_bin[i]
+            
+            d[s_parr.name] = {}                
+            
+            index_lists = []
+            self.get_particle_ids(index_lists)
+            d_parr = s_parr.extract_particles(index_lists[i])
+            
+            x, y, z = d_parr.get('x','y','z')
+            
+            d[s_parr.name]['x'] = list(x)
+            d[s_parr.name]['y'] = list(y)
+            d[s_parr.name]['z'] = list(z)
+            
+        return ret
 
     def py_add_particles(self, Cell cell):
         self.add_particles(cell)
@@ -1200,6 +1233,17 @@ cdef class CellManager:
             msg +='J Tolerance is : %s, %d\n'%(self, 
                                                self.jump_tolerance)
             raise RuntimeError, msg
+
+    def get_particle_representation(self, fname):
+        
+        ret = []        
+
+        for cid, cell in self.cells_dict.iteritems():
+            ret.append(cell.get_particle_representation())
+
+        f = open(fname, 'w')
+        pickle.dump(ret, f)
+        f.close()
    
     # python functions for each corresponding cython function for testing.
     def py_update(self):
