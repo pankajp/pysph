@@ -472,181 +472,8 @@ for blockid in cm.proc_map.block_map:
     print blockid, cm.proc_map.block_map[blockid]
 print
 
-if True:
-    cm.cells_update()
-else:
-    
-    cm.remove_remote_particles()
-    cm.delete_empty_cells()
-    print 'cells_dict'
-    print cm.cells_dict.values()
+cm.cells_update()
 
-    # wait till all processors have reached this point.
-
-    cm.parallel_controller.comm.Barrier()
-
-    logger.debug('++++++++++++++++ UPDATE BEGIN +++++++++++++++++++++')
-
-    # bin the particles and find the new_cells and remote_cells.
-
-    new_block_cells, remote_block_cells = cm.bin_particles()
-    #cm.delete_empty_cells()
-    # create particle copies and mark those particles as remote.
-
-    #cm.new_particles_for_neighbors = cm.create_new_particle_copies(
-    #    remote_block_cells, True)
-
-    # exchange particles moving into another processor
-
-    #cm.exchange_crossing_particles_with_neighbors(
-    #                            cm.new_particles_for_neighbors)
-
-    # remove any remote particles
-    print 'binned_particles'
-    print remote_block_cells
-    print new_block_cells
-    print cm.cells_dict
-    
-    # assign crossing particles' blocks 
-    cm.mark_crossing_particles(remote_block_cells)
-    new_particles_for_neighbors = cm.create_new_particle_copies(
-        remote_block_cells, True)
-    # assign new blocks based on the new_block_cells
-    cm.assign_new_blocks(new_block_cells)
-    new_region_particles = cm.create_new_particle_copies(
-        new_block_cells, True)
-    trf_particles = new_particles_for_neighbors
-    trf_particles.update(new_region_particles)
-    
-    npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
-    assert comm.bcast(comm.reduce(npr)) == 50
-    
-    npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
-    nprt = comm.bcast(comm.reduce(npr))
-    assert nprt==50, 'num_particles = %d != 50, %d'%(nprt,npr)
-    
-    cm.remove_remote_particles()
-    # compute the cell sizes for binning
-
-    cm.compute_cell_size()
-
-    # rebin the particles
-
-    cm.rebin_particles()
-
-    # wait till all processors have reached this point.
-
-    cm.parallel_controller.comm.Barrier()
-    
-    # update the processor map and resolve the conflicts
-    #pdb.set_trace()
-    if False:
-        cm.glb_update_proc_map()
-    else:
-        block_particles = {}
-        cm.proc_map.update()
-        print 'block_map'
-        print cm.proc_map.block_map
-        
-        TAG_PROC_MAP_UPDATE = 101
-        # merge data from all children proc maps.
-        for c_rank in cm.pc.children_proc_ranks:
-            c_proc_map = comm.recv(source=c_rank,
-                                   tag=TAG_PROC_MAP_UPDATE)
-            cm.proc_map.merge(c_proc_map)
-        
-        # we now have partially merged data, send it to parent if not root.
-        if cm.pc.parent_rank > -1:
-            comm.send(cm.proc_map, dest=cm.pc.parent_rank,
-                      tag=TAG_PROC_MAP_UPDATE)
-
-            # receive updated proc map from parent
-            updated_proc_map = comm.recv(source=cm.pc.parent_rank,
-                                         tag=TAG_PROC_MAP_UPDATE)
-
-            # set our proc data with the updated data.
-            cm.proc_map.block_map.clear()
-            cm.proc_map.block_map.update(updated_proc_map.block_map)
-            
-            cm.proc_map.conflicts.clear()
-            cm.proc_map.conflicts.update(updated_proc_map.conflicts)
-
-        # send updated data to children.
-        for c_rank in cm.pc.children_proc_ranks:
-            comm.send(cm.proc_map, dest=c_rank, tag=TAG_PROC_MAP_UPDATE)
-        
-        # now all procs have same proc_map
-        # resolve any conflicts
-        print 'conflicts'
-        print cm.proc_map.conflicts
-        if cm.proc_map.conflicts:
-            # calculate num_blocks per proc
-            blocks_per_proc = {}
-            recv_procs = set([cm.pid])
-            procs_blocks_particles = {cm.pid:{}}
-            
-            for bid in cm.proc_map.block_map:
-                proc = cm.proc_map.block_map[bid]
-                blocks_per_proc[proc] = blocks_per_proc.get(proc, 0)
-            
-            #pdb.set_trace()
-            # assign block to proc with least blocks then max rank
-            for bid in cm.proc_map.conflicts:
-                proc = cm.proc_map.block_map.get(bid)
-                candidates = list(cm.proc_map.conflicts[bid])
-                if proc < 0:
-                    proc = candidates[0]
-                    blocks = blocks_per_proc[0]
-                    
-                    # find the winning proc for each block
-                    for i in range(1, len(candidates)):
-                        if blocks_per_proc[i] < blocks:
-                            proc = candidates[i]
-                            blocks = blocks_per_proc[i]
-                        elif blocks_per_proc[i] == blocks:
-                            if candidates[i] > proc:
-                                proc = candidates[i]
-                    
-                    cm.proc_map.block_map[bid] = proc
-                    blocks_per_proc[proc] += 1
-                
-                if proc != cm.pid:
-                    if proc in procs_blocks_particles:
-                        procs_blocks_particles[proc][bid] = trf_particles[bid]
-                    else:
-                        procs_blocks_particles[proc] = {bid:trf_particles[bid]}
-                    # send to winning proc
-                    if bid in cm.proc_map.local_block_map:
-                        del cm.proc_map.local_block_map[bid]
-                else:
-                    # recv from other conflicting procs
-                    cm.proc_map.local_block_map[bid] = proc
-                    recv_procs.update(candidates)
-            
-            logger.info('remote_block_particles: '+str(procs_blocks_particles))
-            #if self.pid in recv_procs: recv_procs.remove(self.pid)
-            cm.transfer_particles_to_procs(procs_blocks_particles,
-                                          recv_procs=list(recv_procs))
-            # remove the transferred particles
-            cm.remove_remote_particles()
-            #cm.delete_empty_cells()
-            cm.proc_map.conflicts.clear()
-        
-        # setup the region neighbors.
-        cm.proc_map.find_region_neighbors()
-
-    # call a load balancer function.
-
-    if cm.initialized == True:
-        if cm.load_balancing == True:
-            cm.load_balancer.load_balance()
-
-    logger.info('cells_update:'+str([parr.get_number_of_particles()
-                                        for parr in cm.arrays_to_bin]))
-
-    # exchange neighbor information
-
-    cm.exchange_neighbor_particles()
 
 npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
 nprt = comm.bcast(comm.reduce(npr))
@@ -727,6 +554,13 @@ print cm.proc_map.block_map
 for cid, cell in cm.cells_dict.iteritems():
     print cid, cell, cell.get_number_of_particles()
     assert cell.get_number_of_particles() == cells_nps[cid], '%r'%(cell)
+
+npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
+assert comm.bcast(comm.reduce(npr)) == 50
+assert nrp == [19 + 6, 31 - 6][pid]
+
+
+cm.cells_update()
 
 npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
 assert comm.bcast(comm.reduce(npr)) == 50

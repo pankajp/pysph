@@ -291,6 +291,8 @@ cdef class ProcessorMap:
                 self.conflicts[bid].update(proc_map.conflicts[bid])
             else:
                 self.conflicts[bid] = proc_map.conflicts[bid]
+            if bid not in self.block_map:
+                self.block_map[bid] = -1
         
         for i in range(num_blocks):
             other_bid = block_list[i]
@@ -301,22 +303,25 @@ cdef class ProcessorMap:
                 local_proc = self.block_map.get(other_bid)
                 
                 if local_proc < 0:
-                    # there is a conflict in self proc_map
-                    conflicts = self.conflicts.get(other_bid)
-                    if other_bid not in proc_map.conflicts:
-                        conflicts.add(other_proc)
+                    if other_proc < 0:
+                        # new region block
+                        self.conflicts.get(other_bid).update(proc_map.conflicts.get(other_bid))
+                    else:
+                        # remote block into other
+                        merged_block_map[other_bid] = other_proc
+                        self.conflicts.get(other_bid).update(proc_map.conflicts.get(other_bid, []))
                 elif other_proc < 0:
-                    # there is conflict in other proc_map
-                    self.conflicts[other_bid] = proc_map.conflicts.get(other_bid)
-                    self.conflicts[other_bid].add(local_proc)
-                    merged_block_map[other_bid] = -1
-                elif other_proc != local_proc:
+                    # remote block into self
+                    self.conflicts[other_bid] = self.conflicts.get(other_bid, set())
+                    self.conflicts.get(other_bid).update(proc_map.conflicts.get(other_bid, []))
+                elif other_proc == local_proc:
+                    # unlikely
+                    self.conflicts[other_bid] = self.conflicts.get(other_bid, set())
+                    self.conflicts.get(other_bid).update(proc_map.conflicts.get(other_bid, []))
+                else:
                     # conflict created at this level
                     merged_block_map[other_bid] = -1
                     self.conflicts[other_bid] = set([local_proc, other_proc])
-                #else:
-                # same proc in both proc_maps
-                #    pass
             else:
                 merged_block_map[other_bid] = other_proc
                 if other_bid in proc_map.conflicts:
@@ -517,6 +522,7 @@ cdef class ParallelCellManager(CellManager):
         # the neighbor share data in a step
 
         self.neighbor_share_data = {}
+        self.trf_particles = {}
 
         if initialize is True:
             self.initialize()
@@ -577,10 +583,6 @@ cdef class ParallelCellManager(CellManager):
         self.py_reset_jump_tolerance()
 
         self.initialized = True
-
-        # update the processor maps now.
-
-        self.glb_update_proc_map()
     
     def update_global_properties(self):
         """ Exchange bound and smoothing length information among all
@@ -789,10 +791,10 @@ cdef class ParallelCellManager(CellManager):
         cdef ProcessorMap c_proc_map, updated_proc_map
         cdef dict block_particles = {}
         
-        self.proc_map.update()
+        self.remove_remote_particles()
+        self.delete_empty_cells()
         
-        for bid in self.remote_block_pid:
-            self.proc_map.block_map[bid] = self.remote_block_pid[bid]
+        self.proc_map.update()
         
         # merge data from all children proc maps.
         for c_rank in pc.children_proc_ranks:
@@ -823,72 +825,75 @@ cdef class ParallelCellManager(CellManager):
         # now all procs have same proc_map
         # resolve any conflicts
         if self.proc_map.conflicts:
-            # calculate num_blocks per proc
-            blocks_per_proc = {}
-            recv_procs = set([])
-            procs_blocks_particles = {self.pid:{}}
-            
-            for proc in range(self.pc.num_procs):
-                blocks_per_proc[proc] = 0
-            
-            for bid in self.proc_map.block_map:
-                proc = self.proc_map.block_map[bid]
-                if proc > -1:
-                    blocks_per_proc[proc] = blocks_per_proc.get(proc) + 1
-            
-            # assign block to proc with least blocks then max rank
-            for bid in self.proc_map.conflicts:
-                candidates = list(self.proc_map.conflicts[bid])
-                proc = self.proc_map.block_map.get(bid, -1)
-                if proc < 0:
-                    proc = candidates[0]
-                    blocks = blocks_per_proc[0]
-                    
-                    # find the winning proc for each block
-                    for i in range(1, len(candidates)):
-                        if blocks_per_proc[i] < blocks:
-                            proc = candidates[i]
-                            blocks = blocks_per_proc[i]
-                        elif blocks_per_proc[i] == blocks:
-                            if candidates[i] > proc:
-                                proc = candidates[i]
-                    
-                    self.proc_map.block_map[bid] = proc
-                    blocks_per_proc[proc] += 1
-                
-                if self.pid in candidates and self.trf_particles:
-                    # this is a remote block
-                    if bid in self.trf_particles:
-                        if proc in procs_blocks_particles:
-                            t = self.trf_particles[bid]
-                            procs_blocks_particles[proc][bid] = t
-                        else:
-                            procs_blocks_particles[proc] = {bid:self.trf_particles[bid]}
-                else:
-                    # this is a newly created block
-                    pass
-                
-                if proc != self.pid:
-                    # send to winning proc
-                    if bid in self.proc_map.local_block_map:
-                        del self.proc_map.local_block_map[bid]
-                else:
-                    # recv from other conflicting procs
-                    self.proc_map.local_block_map[bid] = proc
-                    recv_procs.update(candidates)
-            
-            logger.info('remote_block_particles: '+str(procs_blocks_particles))
-            #if self.pid in recv_procs: recv_procs.remove(self.pid)
-            
-            self.transfer_particles_to_procs(procs_blocks_particles, recv_procs=list(recv_procs))
-            # remove the transferred particles
-            self.remove_remote_particles()
-            self.delete_empty_cells()
-            self.proc_map.conflicts.clear()
+            self.resolve_procmap_conflicts()
         
         # setup the region neighbors.
         self.proc_map.find_region_neighbors()
+    
+    def resolve_procmap_conflicts(self):
+        # calculate num_blocks per proc
+        blocks_per_proc = {}
+        recv_procs = set([self.pid])
+        procs_blocks_particles = {self.pid:{}}
+        
+        for proc in range(self.pc.num_procs):
+            blocks_per_proc[proc] = 0
+        
+        for bid in self.proc_map.block_map:
+            proc = self.proc_map.block_map[bid]
+            if proc > -1:
+                blocks_per_proc[proc] += 1
+        
+        # assign block to proc with least blocks then max rank
+        for bid in self.proc_map.conflicts:
+            candidates = list(self.proc_map.conflicts[bid])
+            proc = self.proc_map.block_map.get(bid, -1)
+            if proc < 0:
+                # need to resolve conflict, new block
+                proc = candidates[0]
+                blocks = blocks_per_proc[0]
+                
+                # find the winning proc for each block
+                for i in range(1, len(candidates)):
+                    if blocks_per_proc[i] < blocks:
+                        proc = candidates[i]
+                        blocks = blocks_per_proc[i]
+                    elif blocks_per_proc[i] == blocks:
+                        if candidates[i] > proc:
+                            proc = candidates[i]
+                
+                self.proc_map.block_map[bid] = proc
+                blocks_per_proc[proc] += 1
 
+            if self.pid in candidates:
+                # this is a remote block
+                if bid in self.trf_particles:
+                    if proc in procs_blocks_particles:
+                        t = self.trf_particles[bid]
+                        procs_blocks_particles[proc][bid] = t
+                    else:
+                        procs_blocks_particles[proc] = {bid:self.trf_particles[bid]}
+            
+            if proc != self.pid:
+                # send to winning proc
+                if bid in self.proc_map.local_block_map:
+                    del self.proc_map.local_block_map[bid]
+            else:
+                # recv from other conflicting procs
+                self.proc_map.local_block_map[bid] = proc
+                recv_procs.update(candidates)
+        
+        logger.info('remote_block_particles: '+str(procs_blocks_particles))
+        logger.info('recv_procs: %r'%(recv_procs))
+        #if self.pid in recv_procs: recv_procs.remove(self.pid)
+        
+        self.transfer_particles_to_procs(procs_blocks_particles, recv_procs=list(recv_procs))
+        # remove the transferred particles
+        self.remove_remote_particles()
+        #self.delete_empty_cells() # not needed, cm will be rebinned
+        self.proc_map.conflicts.clear()
+        self.trf_particles.clear()
+    
     cpdef remove_remote_particles(self):
         """ Remove all remote particles from the particle arrays.
         
@@ -909,8 +914,6 @@ cdef class ParallelCellManager(CellManager):
         cdef ParallelCellManager cell_manager = <ParallelCellManager>self
 
         cell_manager.remove_remote_particles()
-
-        #self.delete_empty_cells()
 
         # wait till all processors have reached this point.
 
@@ -937,15 +940,16 @@ cdef class ParallelCellManager(CellManager):
         
         #logger.debug('remote_blocks: %r'%remote_block_cells)
         #logger.debug('new_blocks: %r'%new_block_cells)
-        
-        self.remote_block_pid = {}
-        for bid in remote_block_cells:
-            self.remote_block_pid[bid] = self.proc_map.block_map[bid]
-        
-        self.trf_particles = new_particles_for_neighbors
+        self.trf_particles = {}
+        self.trf_particles.update(new_particles_for_neighbors)
         self.trf_particles.update(new_region_particles)
+
+        self.mark_crossing_particles(remote_block_cells)
+        self.assign_new_blocks(new_block_cells)
         
-        cell_manager.remove_remote_particles()
+        # update the processor map and resolve the conflicts
+
+        self.glb_update_proc_map()
 
         # compute the cell sizes for binning
 
@@ -955,16 +959,9 @@ cdef class ParallelCellManager(CellManager):
 
         self.rebin_particles()
 
-        self.mark_crossing_particles(remote_block_cells)
-        self.assign_new_blocks(new_block_cells)
-        
         # wait till all processors have reached this point.
 
         self.parallel_controller.comm.Barrier()
-
-        # update the processor map and resolve the conflicts
-
-        self.glb_update_proc_map()
 
         # call a load balancer function.
 
@@ -978,7 +975,7 @@ cdef class ParallelCellManager(CellManager):
         # exchange neighbor information
 
         self.exchange_neighbor_particles()
-        
+
         logger.debug('+++++++++++++++ UPDATE DONE ++++++++++++++++++++')
         return 0
 
@@ -1205,7 +1202,7 @@ cdef class ParallelCellManager(CellManager):
         
         for bid in remote_block_dict:
             self.proc_map.block_map[bid] = self.proc_map.block_map[bid]
-            proc_map.conflicts[bid] = set([self.pid, self.proc_map.block_map[bid]])
+            proc_map.conflicts[bid] = set([self.pid])
     
     cpdef assign_new_blocks(self, dict new_block_dict):
         """
@@ -1651,12 +1648,6 @@ cdef class ParallelCellManager(CellManager):
         cdef LongArray indices
         self.remove_remote_particles()
 
-        # prepare the data for sharing
-
-        for pid in nbr_procs:
-            proc_data[pid] = []
-            blocks_to_send[pid] = set()
-
         # get the list of blocks to send to each processor id
 
         for bid in local_block_map:
@@ -1666,8 +1657,13 @@ cdef class ParallelCellManager(CellManager):
                 
                 pid = global_block_map.get(nid, -1)
                 if pid > -1 and not pid == self.pid:
-                    blocks_to_send[pid].add(bid)
+                    if pid not in blocks_to_send:
+                        proc_data[pid] = []
+                        blocks_to_send[pid] = set([bid])
+                    else:
+                        blocks_to_send[pid].add(bid)
 
+        nbr_procs = proc_data.keys()
         # construct the list of particle arrays to be sent to each processor
 
         for pid, block_list in blocks_to_send.iteritems():
@@ -1694,7 +1690,6 @@ cdef class ParallelCellManager(CellManager):
         
         self.setup_remote_particle_indices()
 
-        proc_data.pop(self.pid)
         for pid, parray_list in proc_data.iteritems():
             pid_index_info = self.remote_particle_indices[pid]
 
@@ -1879,7 +1874,7 @@ cdef class ParallelCellManager(CellManager):
 
             msg += 'Block Jump Tolerance is : %s, %d\n'%(self, 
                                                          self.jump_tolerance)
-            raise RuntimeError, msg    
+            raise RuntimeError, msg
 
     cpdef find_adjacent_remote_cells(self):
         """
