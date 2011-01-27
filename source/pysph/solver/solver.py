@@ -400,7 +400,7 @@ class Solver(object):
             #perform any pre step functions
             
             for func in self.pre_step_functions:
-                func.eval(self.particles, count)
+                func.eval(self.particles, count, self.t)
 
             #perform the integration 
 
@@ -411,7 +411,7 @@ class Solver(object):
             #perform any post step functions
             
             for func in self.post_step_functions:
-                func.eval(self.particles, count)
+                func.eval(self.particles, count, self.t)
 
             #dump output
             if count % self.pfreq == 0:

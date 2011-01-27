@@ -178,8 +178,13 @@ cdef class SPHBase:
 
         for i in range(nsrcs):
             src = self.sources[i]
+            func = self.funcs[i]
+
             loc = self.nnps_manager.get_neighbor_particle_locator(
                 src, self.dest, self.kernel.radius())
+
+            func.kernel_function_evaluation = loc.kernel_function_evaluation
+            func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
 
             logger.info("""SPHBase:setup_internals: calc %s using 
                         locator (src: %s) (dst: %s) %s """
@@ -278,11 +283,11 @@ cdef class SPHBase:
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
 
-        #logger.info("""SPHBase:sph: calc %s looping over all destination 
-        #               particles """%(self.id))
-
         #loop over all particles
+
         for i from 0 <= i < np:
+
+            print "Looping over particles: ", i
 
             dnr[0] = dnr[1] = dnr[2] = 0.0
             nr[0] = nr[1] = nr[2] = 0.0
@@ -513,10 +518,11 @@ cdef class SPHCalc(SPHBase):
         cdef SPHFunctionParticle func
         cdef FixedDestNbrParticleLocator loc
         cdef size_t k, s_idx
-        cdef LongArray nbrs = self.nbrs
         cdef int j
 
-        cdef LongArray particle_neighbors
+        cdef LongArray nbrs
+
+        print "Within Eval: "
 
         for j in range(self.nsrcs):
             
@@ -524,16 +530,14 @@ cdef class SPHCalc(SPHBase):
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
 
-            nbrs.reset()
-            loc.get_nearest_particles(i, nbrs, exclude_self)
+            print "Getting neighbors"
 
-            particle_neighbors = loc.particle_neighbors.get(i)
-            assert nbrs.length == particle_neighbors.length
-            for l from 0 <= l < self.nbrs.length:
-                assert nbrs.data[l] == particle_neighbors.data[l]
+            nbrs = loc.particle_neighbors.get(i)
 
-            func.kernel_function_evaluation = loc.kernel_function_evaluation
-            func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
+            print "?"
+
+            #func.kernel_function_evaluation = loc.kernel_function_evaluation
+            #func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
 
             if logger.level < 30:
 
@@ -547,8 +551,9 @@ cdef class SPHCalc(SPHBase):
                 logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
                             %(i, pae.get('idx')))
 
-            for k from 0 <= k < self.nbrs.length:
-                s_idx = self.nbrs.data[k]
+            print nbrs.length
+            for k from 0 <= k < nbrs.length:
+                s_idx = nbrs.data[k]
                 func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])
 
 #############################################################################

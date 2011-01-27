@@ -1,6 +1,6 @@
 """API module to simplify import of common names from pysph.base package"""
 
-from carray import LongArray, DoubleArray
+from carray import LongArray, DoubleArray, IntArray
 
 from cell import Cell, CellManager
 

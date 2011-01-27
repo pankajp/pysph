@@ -3,6 +3,7 @@ Module contains some common functions.
 """
 
 # standard imports
+import pickle
 import numpy
 import sys
 import os 
@@ -260,3 +261,16 @@ def mkdir(newdir):
 
         if tail:
             os.mkdir(newdir)
+
+
+##############################################################################
+# read neighbor information from a file
+############################################################################## 
+def get_neighbors_from_file(fname):
+    
+    f = open(fname, 'r')
+    neighbors = pickle.load(f)
+    f.close()
+
+    return neighbors
+    

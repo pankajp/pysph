@@ -48,12 +48,13 @@ class SPHTestCase(unittest.TestCase):
         self.type[::2] = base.ParticleType.Fluid
         
         self.pa = pa = base.get_particle_array(x=x, y=y, h=h)
-        #pa.set(**{'type':type})
+
         pa.add_property({'name':'type','data':type})
 
         self.kernel = kernel = base.CubicSplineKernel(dim=2)
 
         self.particles = particles = base.Particles([pa], kernel.radius())
+        self.particles.kernel = self.kernel
 
         self.func = func = sph.GravityForce(gx=1, gy=2, gz=3).get_func(pa,pa)
         
@@ -222,8 +223,9 @@ class TestSPHCalc(SPHTestCase):
         calc.from_types = [Solid, Fluid]
 
         calc.sph()
-        
+
         nbrs = pa.get('tmpx')
+
         nbrs0 = nbrs[0]
 
         self.assertEqual(nbrs0, pa.get_number_of_particles())

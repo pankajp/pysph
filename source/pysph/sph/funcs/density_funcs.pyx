@@ -24,7 +24,8 @@ cdef class SPHRho(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        w = kernel.function(self._dst, self._src, h)
+        #w = kernel.function(self._dst, self._src, h)
+        w = self.kernel_function_evaluation[dest_pid][source_pid]
 
         if self.rkpm_first_order_correction:
             pass
@@ -67,7 +68,13 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         vel.y = self.d_v.data[dest_pid] - self.s_v.data[source_pid]
         vel.z = self.d_w.data[dest_pid] - self.s_w.data[source_pid]
 
-        kernel.gradient(self._dst, self._src, h, grad)
+
+        grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+        #kernel.gradient(self._dst, self._src, h, grad)
+        
+        #assert grad.x == other_grad.x
+        #assert grad.y == other_grad.y
+        #assert grad.z == other_grad.z
 
         if self.rkpm_first_order_correction:
             pass

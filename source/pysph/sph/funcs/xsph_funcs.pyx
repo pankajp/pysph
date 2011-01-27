@@ -50,7 +50,10 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        w = kernel.function(self._dst, self._src, h)
+        #w = kernel.function(self._dst, self._src, h)
+        w = self.kernel_function_evaluation[dest_pid][source_pid]
+
+        #assert w == other_w
 
         if self.rkpm_first_order_correction:
             pass
@@ -136,7 +139,8 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        kernel.gradient(self._dst, self._src, h, grad)
+        grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+        #kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
             pass

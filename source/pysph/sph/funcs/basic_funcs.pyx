@@ -366,7 +366,8 @@ cdef class CountNeighbors(SPHFunctionParticle):
 
     cdef void eval(self, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
-
+    
+        print source_pid, dest_pid
         nr[0] += 1
 ###########################################################################
 

@@ -844,11 +844,11 @@ cdef class NNPSManager:
             dest = loc.dest
             source = loc.source
             
-            np = dest.get_number_of_particles()
+            nrp = dest.num_real_particles
 
-            loc.particle_neighbors = {}
-            loc.kernel_function_evaluation = {}
-            loc.kernel_gradient_evaluation = {}
+            loc.particle_neighbors.clear()
+            loc.kernel_function_evaluation.clear()
+            loc.kernel_gradient_evaluation.clear()
 
             xd = dest.get_carray('x')
             yd = dest.get_carray('y')
@@ -860,7 +860,7 @@ cdef class NNPSManager:
             zs = source.get_carray('z')
             hs = source.get_carray('h')
 
-            for i in range(np):
+            for i in range(nrp):
                 nbrs = LongArray()
                 loc.py_get_nearest_particles(i, nbrs, exclude_self=False)
                 loc.particle_neighbors[i] = nbrs
