@@ -39,6 +39,7 @@ def get_sample_data2(mass=1.0, radius=1.0):
 
     Two particle arrays with one point each is returned. The points and values
     at them are the same as in the above function.
+
     """
     p1 = ParticleArray(x={'data':[0.0]},
                        y={'data':[0.0]},
@@ -54,65 +55,5 @@ def get_sample_data2(mass=1.0, radius=1.0):
 
     return p1, p2
     
-class TestSPHRho(unittest.TestCase):
-    """
-    Tests for the SPHRho class.
-    """
-    def test_constructor(self):
-        """
-        Tests the constructor.
-        """
-        parr = get_sample_data1()
-        sph_rho = SPHRho(parr, parr)
-        
-        self.assertEqual(sph_rho.source, parr)
-        self.assertEqual(sph_rho.dest, parr)
-
-
-        parr1, parr2 = get_sample_data2()
-        sph_rho = SPHRho(parr1, parr2)
-
-        self.assertEqual(sph_rho.source, parr1)
-        self.assertEqual(sph_rho.dest, parr2)
-
-    def test_eval_1(self):
-        """
-        Tests the eval function.
-        """
-        parr = get_sample_data1()
-        sph_rho = SPHRho(parr, parr)
-        
-        k = Poly6Kernel(3)
-        # get contribution of particle 1 on particle 0
-        nr, dnr = sph_rho.py_eval(1, 0, k)
-        self.assertEqual(check_array(nr, [0]), True)
-        self.assertEqual(check_array(nr, [0]), True)
-
-        nr, dnr = sph_rho.py_eval(0, 1, k)
-        self.assertEqual(check_array(nr, [0]), True)
-        self.assertEqual(check_array(dnr, [0]), True)
-
-        nr, dnr = sph_rho.py_eval(0, 0, k)
-        self.assertEqual(check_array(nr, [1.5666814710608448]), True)
-        self.assertEqual(check_array(dnr, [0]), True)
-
-        nr, dnr = sph_rho.py_eval(1, 1, k)
-        self.assertEqual(check_array(nr, [1.5666814710608448]), True)
-        self.assertEqual(check_array(dnr, [0]), True)
-
-    def test_eval_2(self):
-        """
-        Tests the eval function.
-        """
-        parr1, parr2 = get_sample_data2(mass=4.0, radius=2.0)
-        
-        sph_rho = SPHRho(parr1, parr2)
-        
-        k = Poly6Kernel(3)
-        # get contribution of particle 1 on particle 0
-        nr, dnr = sph_rho.py_eval(0, 0, k)
-        self.assertEqual(check_array(nr, [0.01223969899266285]), True)
-        self.assertEqual(check_array(dnr, [0]), True)
-
 if __name__ == '__main__':
     unittest.main()

@@ -84,7 +84,6 @@ class BoundaryForceTestCase(unittest.TestCase):
 
         self.integrator = self.solver.integrator
 
-
     def test_constructor(self):
         
         fluid = self.fluid
@@ -110,7 +109,10 @@ class BoundaryForceTestCase(unittest.TestCase):
         np = fluid.get_number_of_particles()
         calc = self.integrator.calcs[0]
 
-        #evaluate the force and store the result in tmp
+        # evaluate the force and store the result in tmp
+
+        self.particles.update()
+
         calc.sph('tmpx', 'tmpy', 'tmpz')
 
         force = fluid.tmpy

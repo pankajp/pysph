@@ -191,54 +191,6 @@ cdef class SPHBase:
                         %(self.id, src.name, self.dest.name, loc))
             
             self.nbr_locators.append(loc)
-
-        # set the kernel correction arrays if reqired
-
-        if self.rkpm_first_order_correction:
-
-            if not self.dest.properties.has_key('rkpm_beta1'):
-                self.dest.add_property({'name':"rkpm_beta1"})
-            
-            if not self.dest.properties.has_key('rkpm_beta2'):
-                self.dest.add_property({'name':"rkpm_beta2"})
-
-            if not self.dest.properties.has_key('rkpm_beta3'):
-                self.dest.add_property({'name':"rkpm_beta3"})
-            
-            if not self.dest.properties.has_key('rkpm_alpha'):
-                self.dest.add_property({'name':"rkpm_alpha"})
-                
-            if not self.dest.properties.has_key("rkpm_dalphadx"):
-                self.dest.add_property({"name":"rkpm_dalphadx"})
-
-            if not self.dest.properties.has_key("rkpm_dalphady"):
-                self.dest.add_property({"name":"rkpm_dalphady"})
-
-            if not self.dest.properties.has_key("rkpm_dbeta1dx"):
-                self.dest.add_property({"name":"rkpm_dbeta1dx"})
-
-            if not self.dest.properties.has_key("rkpm_dbeta1dy"):
-                self.dest.add_property({"name":"rkpm_dbeta1dy"})
-
-            if not self.dest.properties.has_key("rkpm_beta2dx"):
-                self.dest.add_property({"name":"rkpm_dbeta2dy"})
-
-            if not self.dest.properties.has_key("rkpm_dbeta2dy"):
-                self.dest.add_property({"name":"rkpm_dbeta2dy"})
-
-            for i in range(nsrcs):
-                func = self.funcs[i]
-                func.rkpm_first_order_correction = True
-                func.d_rkpm_beta1 = self.dest.get_carray("rkpm_beta1")
-                func.d_rkpm_beta2 = self.dest.get_carray("rkpm_beta2")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_beta3")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_alpha")
-                func.d_rkpm_beta1 = self.dest.get_carray("rkpm_dalphadx")
-                func.d_rkpm_beta2 = self.dest.get_carray("rkpm_dalphady")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_dbeta1dx")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_dbeta1dy")
-                func.d_rkpm_beta3 = self.dest.get_carray("rkpm_dbeta2dx")
-                func.d_rkpm_alpha = self.dest.get_carray("rkpm_dbeta2dy")
             
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 
@@ -275,7 +227,7 @@ cdef class SPHBase:
         cdef double nr[3], dnr[3]
         cdef size_t i
 
-        #get the tag array pointer
+        # get the tag array pointer
 
         cdef LongArray tag_arr = self.dest.get_carray('tag')
         cdef long* tag = tag_arr.get_data_ptr()
@@ -283,11 +235,9 @@ cdef class SPHBase:
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
 
-        #loop over all particles
+        # loop over all particles
 
         for i from 0 <= i < np:
-
-            print "Looping over particles: ", i
 
             dnr[0] = dnr[1] = dnr[2] = 0.0
             nr[0] = nr[1] = nr[2] = 0.0
@@ -313,199 +263,7 @@ cdef class SPHBase:
 
     cdef eval(self, size_t i, double* nr, double* dnr,
               bint exclude_self):
-        raise NotImplementedError, 'SPHBase::eval'
-
-    cdef evaluate_rkpm_first_order_correction_terms(
-        self,  bint exclude_self=False):
-
-        """ Evaluate the kernel correction terms """
-        
-        cdef SPHFunctionParticle fbeta, falpha, fmatgrad, fvecgrad, func
-
-        cdef double mat[3], rhs[3]
-        cdef double matg1[3], matg2[3]
-        cdef double rhs1[3], rhs2[3]
-        cdef double aj[3], bj[3]
-
-        cdef double a, b, d, l11, l12, l22
-
-        cdef double b1, b2, b3
-        cdef double det, one_by_det
-        cdef double dadx, dady, dbdx, dbdy, dddx, dddy
-        cdef double db1dx, db1dy, db2dx, db2dy
-        cdef double ddetdx, ddetdy
-        cdef tmpdx, tmpdy
-
-        cdef size_t np = self.dest.get_number_of_particles()
-        cdef long dest_pid, source_pid
-        cdef size_t i, k, s_idx
-        cdef int j
-
-        cdef ParticleArray src
-        cdef FixedDestNbrParticleLocator loc
-
-        cdef DoubleArray beta1, beta2, alpha
-        cdef DoubleArray dbeta1dx, dbeta1dy, dbeta2dx, dbeta2dy
-        cdef DoubleArray dalphadx, dalphady
-
-        cdef LongArray nbrs = self.nbrs
-
-        cdef LongArray tag_arr = self.dest.get_carray('tag')
-        cdef long* tag = tag_arr.get_data_ptr()
-
-        beta1 = self.dest.get_carray("rkpm_beta1")
-        beta2 = self.dest.get_carray("rkpm_beta2")
-        alpha = self.dest.get_carray("rkpm_alpha")
-        
-        dbeta1dx = self.dest.get_carray("rkpm_dbeta1dx")
-        dbeta1dy = self.dest.get_carray("rkpm_dbeta1dy")
-
-        dbeta2dx = self.dest.get_carray("rkpm_dbeta2dx")
-        dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
-
-        dalphadx = self.dest.get_carray("rkpm_dalphadx")
-        dalphady = self.dest.get_carray("rkpm_dalphady")
-
-        for i from 0 <= i < np:
-
-            if tag[i] == LocalReal:
-
-                mat[0] = mat[1] = mat[2] = 0.0
-
-                rhs[0] = rhs[1] = rhs[2] = 0.0
-
-                matg1[0] = matg1[1] = matg1[2] = 0.0
-
-                matg2[0] = matg2[1] = matg2[2] = 0.0
-
-                rhs1[0] = rhs1[1] = rhs1[2] = 0.0
-
-                rhs2[0] = rhs2[1] = rhs2[2] = 0.0
-
-                aj[0] = aj[1] = aj[2] = 0.0
-
-                bj[0] = bj[1] = bj[2] = 0.0
-
-                #evaluate the beta terms for particle i
-                for j in range(self.nsrcs):
-            
-                    func = self.funcs[j]
-                    loc  = self.nbr_locators[j]
-                    src = self.sources[j]
-
-                    nbrs.reset()
-                    loc.get_nearest_particles(i, nbrs, exclude_self)
-  
-                    #set the kernel gradient correction function
-                    
-                    fbeta=FirstOrderCorrectionMatrix(
-                        source=src, dest=self.dest)
-
-                    fmatgrad = FirstOrderCorrectionMatrixGradient(
-                        source=src, dest=self.dest)
-
-                    fvecgrad = FirstOrderCorrectionVectorGradient(
-                        source=src, dest=self.dest)
-
-                    for k from 0 <= k < self.nbrs.length:
-                        s_idx = self.nbrs.get(k)
-
-                        fbeta.eval(s_idx, i, self.kernel, &mat[0], &rhs[0])
-                        
-                        fmatgrad.eval(s_idx,i,self.kernel,&matg1[0],&matg2[0])
-
-                        fvecgrad.eval(s_idx, i, self.kernel, &rhs1[0], &rhs2[0])
-
-                #get the coefficients of the matrix to invert
-                
-                a = mat[0]; b = mat[1]; d = mat[2]
-                b1 = rhs[0]; b2 = rhs[1]; b3 = rhs[2]
-
-                if self.dim == 1:
-                    d = 1.0
-                
-                det = a*d - b*b
-
-                #prevent a divide by zero if the source is the dest
-
-                if not (-1e-15 < det < 1e-15):
-                    one_by_det = 1./det
-                    
-                    #set the coefficients of the inverted matrix
-            
-                    l11 = det*d; l12 = det * -b; l22 = det * a
-
-                    #set the beta vector for particle i
-
-                    beta1.data[i] = l11*b1 + l12*b2
-                    beta2.data[i] = l12*b1 + l22*b2
-                    
-                    dadx = matg1[0]; dady = matg1[1]; dbdx = matg1[2]
-                    dbdy = matg2[0]; dddx = matg2[1]; dddy = matg2[2]
-                    
-                    db1dx = rhs1[0]; db1dy = rhs1[1]
-                    db2dx = rhs1[2]; db2dy = rhs2[0]
-
-                    ddetdx = a*dddx + d*dadx - 2*b*dbdx
-                    ddetdy = a*dddy + d*dady - 2*b*dbdy
-
-                    #evaluate dbeta1dx
-                    tmpdx = det*(d*db1dx + b1*dddx - b*db2dx - b2*dbdx) -\
-                        ddetdx*(d*b1 - b*b2)
-                    
-                    tmpdx *= (one_by_det*one_by_det)
-                    dbeta1dx.data[i] = tmpdx
-
-                    #evaluate dbeta1dy
-                    tmpdy = det*(d*db1dy + b1*dddy - b*db2dy - b2*dbdy) -\
-                        ddetdy*(d*b1 - b*b2)
-
-                    tmpdy *= (one_by_det*one_by_det)                    
-                    dbeta1dy.data[i] = tmpdy
-
-                    #evaluate dbeta2dx
-                    tmpdx = det*(-b*db1dx - b1*dbdx + a*db2dx + b2*dadx) -\
-                        ddetdx*(a*b2 - b*b1)
-                    
-                    tmpdx *= (one_by_det*one_by_det)
-                    dbeta2dx.data[i] = tmpdx
-
-                    #evaluate dbeta2dy
-                    tmpdy = det*(-b*db1dy - b1*dbdy + a*db2dy + b2*dady) -\
-                        ddetdx*(a*b2 - b*b1)
-                    
-                    tmpdy *= (one_by_det*one_by_det)
-                    dbeta2dy.data[i] = tmpdx                    
-                   
-                    for j in range(self.nsrcs):
-            
-                        func = self.funcs[j]
-                        loc  = self.nbr_locators[j]
-                        src = self.sources[j]
-                
-                        nbrs.reset()
-                        loc.get_nearest_particles(i, nbrs, exclude_self)
-  
-                        #set the alpha correction function
-
-                        falpha=FirstOrderCorrectionTermAlpha(
-                            source=src, dest=self.dest)
-                
-                        for k from 0 <= k < nbrs.length:
-                            s_idx = self.nbrs.get(k)
-                            falpha.eval(s_idx, i, self.kernel, &aj[0], &bj[0])
-                            
-                    #prevent a divide by zero if the source is the dest
-                    if -1e-15 < aj[0] < 1e-15:
-                        alpha.data[i] = 1.0
-                    else:
-                        alpha.data[i] = 1./(aj[0])
-                        dalphadx.data[i] = aj[1]/(aj[0]*aj[0])
-                        dalphady.data[i] = aj[2]/(aj[0]*aj[0])
-
-                else:
-                    func.rkpm_first_order_correction = False
-                        
+        raise NotImplementedError, 'SPHBase::eval'                       
 
 #############################################################################
 
@@ -522,22 +280,17 @@ cdef class SPHCalc(SPHBase):
 
         cdef LongArray nbrs
 
-        print "Within Eval: "
-
         for j in range(self.nsrcs):
             
             src = self.sources[j]
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
 
-            print "Getting neighbors"
-
             nbrs = loc.particle_neighbors.get(i)
 
-            print "?"
-
-            #func.kernel_function_evaluation = loc.kernel_function_evaluation
-            #func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
+            for k from 0 <= k < nbrs.length:
+                s_idx = nbrs.data[k]
+                func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])
 
             if logger.level < 30:
 
@@ -550,11 +303,6 @@ cdef class SPHCalc(SPHBase):
                 pae = src.extract_particles(nbrs, ['idx'])
                 logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
                             %(i, pae.get('idx')))
-
-            print nbrs.length
-            for k from 0 <= k < nbrs.length:
-                s_idx = nbrs.data[k]
-                func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])
 
 #############################################################################
 
@@ -586,7 +334,7 @@ cdef class SPHEquation(SPHBase):
                 msg = 'All sph_funcs should be of same type'
                 raise ValueError, msg
             
-        #check that the function src and dsts are the same as the calc's
+        # check that the function src and dsts are the same as the calc's
 
             if funcs[i].dest != self.dest:
                 msg = 'SPHFunctionParticle.dest not same as'
