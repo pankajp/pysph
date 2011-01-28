@@ -591,7 +591,6 @@ cdef class Cell:
         self.get_centroid(centroid)
         
         ret['cid'] = self.id.x, self.id.y, self.id.z
-        ret['cell_size'] = self.cell_size
         ret['centroid'] = centroid.x, centroid.y, centroid.z 
         ret['positions'] = {}
         

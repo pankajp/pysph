@@ -435,6 +435,8 @@ class Solver(object):
         fname = self.fname + '_' 
         props = {}
 
+        cell_size = self.particles.cell_manager.cell_size
+
         for pa in self.particles.arrays:
             name = pa.name
             _fname=os.path.join(self.path,fname + name + '_' + str(t) + '.npz')
@@ -461,7 +463,8 @@ class Solver(object):
                         props['z'] = pa.get('z')
                         props['w'] = pa.get('w')
 
-                savez(_fname, dt=self.dt, **props)                        
+                savez(_fname, dt=self.dt, cell_size=cell_size, 
+                      np = pa.num_real_particles, **props)
 
     def setup_solver(self):
         """ Implement the basic solvers here 
