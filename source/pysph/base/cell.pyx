@@ -605,11 +605,12 @@ cdef class Cell:
             self.get_particle_ids(index_lists)
             d_parr = s_parr.extract_particles(index_lists[i])
             
-            x, y, z = d_parr.get('x','y','z')
+            x, y, z, idx = d_parr.get('x','y','z', 'idx')
             
             d[s_parr.name]['x'] = list(x)
             d[s_parr.name]['y'] = list(y)
             d[s_parr.name]['z'] = list(z)
+            d[s_parr.name]['idx'] = list(idx)
             
         return ret
 
@@ -1236,10 +1237,10 @@ cdef class CellManager:
 
     def get_particle_representation(self, fname):
         
-        ret = []        
+        ret = {} 
 
         for cid, cell in self.cells_dict.iteritems():
-            ret.append(cell.get_particle_representation())
+            ret[cid] = cell.get_particle_representation()
 
         f = open(fname, 'w')
         pickle.dump(ret, f)

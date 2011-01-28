@@ -257,20 +257,17 @@ def mkdir(newdir):
         if head and not os.path.isdir(head):
             mkdir(head)
 
-        #print "_mkdir %s" % repr(newdir)
-
         if tail:
             os.mkdir(newdir)
 
 
 ##############################################################################
-# read neighbor information from a file
+# read pickled data from a file
 ############################################################################## 
-def get_neighbors_from_file(fname):
+def get_pickled_data(fname):
     
     f = open(fname, 'r')
-    neighbors = pickle.load(f)
+    data = pickle.load(f)
     f.close()
 
-    return neighbors
-    
+    return data

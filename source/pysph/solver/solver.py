@@ -450,6 +450,7 @@ class Solver(object):
                 props['m'] = pa.get('m')
                 props['e'] = pa.get('e')
                 props['p'] = pa.get('p')
+                props['idx'] = pa.get("idx")
                 props['rho'] = pa.get('rho')                
 
                 if self.dim > 1:

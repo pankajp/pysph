@@ -17,7 +17,7 @@ s.set_time_step(1e-5)
 
 app.set_solver(s)
 
-s.post_step_functions.append(solver.PrintNeighborInformation(count=10,
+s.post_step_functions.append(solver.PrintNeighborInformation(count=20,
                                                              path=app.path,
                                                              rank=app.rank))
 
