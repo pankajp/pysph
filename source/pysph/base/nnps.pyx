@@ -42,8 +42,7 @@
    
 ::
     
-    output_array = LongArray()
-    nbrl.get_nearest_particles(2, output_array)
+    output_array = nbrl.get_nearest_particles(2)
 
 """
 
@@ -162,7 +161,6 @@ cdef class NbrParticleLocatorBase:
         self.cell_manager = cell_manager
         self.source_index = -1
 
-        self.particle_neighbors = {}
         self.kernel_function_evaluation = {}
         self.kernel_gradient_evaluation = {}
 
@@ -331,7 +329,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  double radius_scale, CellManager cell_manager=None,
-                 bint caching_enabled=False, str h='h'):
+                 str h='h'):
         """ Constructor
         
         Parameters:
@@ -353,7 +351,6 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         self.radius_scale = radius_scale
         self.dest_index = -1
         
-        self.caching_enabled = caching_enabled
         self.particle_cache = []
         self.is_dirty = True
 
@@ -367,16 +364,15 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             if self.dest_index is None:
                 msg = 'Destination %s does not exist'%(dest.name)
                 raise ValueError, msg
-
+        
         if self.dest is not None:
             self.d_h = self.dest.get_carray(self.h)
             self.d_x = self.dest.get_carray(self.cell_manager.coord_x)
             self.d_y = self.dest.get_carray(self.cell_manager.coord_y)
             self.d_z = self.dest.get_carray(self.cell_manager.coord_z)
 
-    cdef int get_nearest_particles(self, long dest_p_index, 
-                                   LongArray output_array,
-                                   bint exclude_self=False) except -1:
+    cdef LongArray get_nearest_particles(self, long dest_p_index, 
+                                   bint exclude_self=False):
         """
         Get the nearest source particles to particles in `dest_p_index`
 
@@ -384,50 +380,44 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         -----------
 
         dest_p_index -- index of query destination particle
-        output_array -- array to store the neighbor indices into.
         exclude_self -- indicates if dest_p_index be excluded from
                         output_array.
 
         Algorithm:
         ----------
-        if caching is enabled:
-            return cache data after removing self if exclude_self is true
-        else:
-           call get_nearest_particles_nocache to get neighbors directly
+        return cache data after removing self if exclude_self is true
         
+        Note:
+        -----
+        
+        If exclude_self is True then a copy of the internal cached array is
+        returned after removing last element, else the cached array is returned.
+        Do **NOT** modify the returned array
+        exclude_self argument is deprecated (lot slower)
+        The last index in returned array is guaranteed to be self particle if
+        src and dest arrays are same. This can be used to exclude it.
         """
-        cdef LongArray index_array
-        cdef int self_id = -1
+        cdef LongArray index_array, output_array
         cdef int i
-        cdef LongArray to_remove
         cdef long *data
-        cdef long exclude_index = -1
 
         # update internal data.
         self.update()
-
-        if self.caching_enabled:
-            # return data from cache.
-            index_array = self.particle_cache[dest_p_index]
-
-            output_array.resize(index_array.length)
-            output_array.set_data(index_array.get_npy_array())
-            data = output_array.get_data_ptr()
-            
-            if self.dest is self.source:
-                if exclude_self:
-                    to_remove = LongArray()
-                    # cached array have self index as first value
-                    to_remove.append(0)
-                    output_array.remove(to_remove.get_npy_array())
-        else:
-            # dont use cache, get neighbors directly
-            return self.get_nearest_particles_nocache(dest_p_index, 
-                                   output_array, exclude_self)
         
-        return 0
+        # return data from cache.
+        output_array = index_array = self.particle_cache[dest_p_index]
+        
+        if self.dest is self.source:
+            if exclude_self:
+                # cached array has self index as last value
+                output_array = LongArray(index_array.length-1)
+                # TODO: can use memcpy
+                for i in range(index_array.length-1):
+                    output_array[i] = index_array.data[i]
+        
+        return output_array
     
-    cdef int get_nearest_particles_nocache(self, long dest_p_index, 
+    cdef int get_nearest_particles_nocache(self, long dest_p_index,
                                    LongArray output_array,
                                    bint exclude_self=False) except -1:
         """ Direct computation of the neighbor search
@@ -462,16 +452,6 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         return NbrParticleLocatorBase.get_nearest_particles_to_point(
         self, pnt, eff_radius, output_array, exclude_index)
 
-    cpdef enable_caching(self):
-        """Enable caching."""
-        if self.caching_enabled ==  False:
-            self.caching_enabled = True
-            self.is_dirty = True
-
-    cpdef disable_caching(self):
-        """Disables Caching."""
-        self.caching_enabled = False
-
     cdef void update_status(self):
         """Updates the dirty flag."""
         if not self.is_dirty:
@@ -492,18 +472,17 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         cdef int ret = 0
 
         if self.is_dirty:
+            # make sure the cache list and number of particles are the same
+            # and resize if necessary.
+            num_particles = self.dest.get_number_of_particles()
 
-            if self.caching_enabled:
-                # make sure the cache list and number of particles are the same
-                # and resize if necessary.
-                num_particles = self.dest.get_number_of_particles()
+            if len(self.particle_cache) != num_particles:
+                self.particle_cache = []
+                for i in range(num_particles):
+                    self.particle_cache.append(LongArray())
 
-                if len(self.particle_cache) != num_particles:
-                    self.particle_cache = []
-                    for i in range(num_particles):
-                        self.particle_cache.append(LongArray())
-
-                ret = self._update_cache()
+            ret = self._update_cache()
+            
             self.is_dirty = False
 
         return ret
@@ -522,13 +501,13 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             self.get_nearest_particles_nocache(
                 i, index_cache, False)
             
-            # keep particle at the first index for possibly faster exclude_self
+            # keep particle at the last index for faster exclude_self
             if self.source == self.dest:
-                for j in range(index_cache.length):
+                for j in range(index_cache.length-1):
                     if i == index_cache[j]:
-                        # swap first index with i
-                        index_cache[j] = index_cache[0]
-                        index_cache[0] = i
+                        # swap last index with i
+                        index_cache[j] = index_cache[index_cache.length-1]
+                        index_cache[index_cache.length-1] = i
                         break
             
         return 0
@@ -544,8 +523,8 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         """Updates the dirty flag."""
         self.update_status()
 
-    def py_get_nearest_particles(self, long dest_p_index, LongArray
-                                 output_array, bint exclude_self=False):
+    def py_get_nearest_particles(self, long dest_p_index,
+                                 bint exclude_self=False):
         """
         Gets particles in source, that are nearest to the particle dest_p_index
         in dest.
@@ -554,13 +533,11 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
          - dest_p_index - id of the particle in dest whose neighbors are to be
            found. 
-         - output_array - array to store the neighbor indices into.
          - exclude_self - indicates if dest_p_index be excluded from
            output_array.
         
         """
-        return self.get_nearest_particles(dest_p_index, output_array,
-                                          exclude_self)
+        return self.get_nearest_particles(dest_p_index, exclude_self)
 
 
 ###############################################################################
@@ -600,45 +577,6 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         
         self.update()
 
-    cdef int get_nearest_particles(self, long dest_p_index,
-                                   LongArray output_array,
-                                   bint exclude_self=False) except -1:
-        """
-        Get neighbors from source to `dest_p_index` particle in dest
-
-        Parameters:
-        -----------
-
-        dest_p_index -- query destination particle index
-        output_array -- array to store the neighbor indices into.
-        exclude_self -- exclude dest_p_index if true
-        
-        """
-
-        cdef LongArray index_array
-        cdef int self_id = -1
-        cdef int i
-        cdef LongArray to_remove
-        cdef long *data
-        cdef long exclude_index = -1
-
-        # update internal data.
-        self.update()
-
-        # return data from cache.
-        index_array = self.particle_cache[dest_p_index]
-
-        output_array.resize(index_array.length)
-        output_array.set_data(index_array.get_npy_array())
-        data = output_array.data
-        if self.dest is self.source:
-            if exclude_self:
-                to_remove = LongArray()
-                # remove dest_p_index if its present
-                to_remove.append(0)
-                output_array.remove(to_remove.get_npy_array())
-        return 0
-    
     cdef int update(self) except -1:
         """Computes contents of the cache. 
         
@@ -819,10 +757,6 @@ cdef class NNPSManager:
                 loc = VarHNbrParticleLocator(source, dest, radius_scale,
                                  cell_manager=self.cell_manager, h=self.h)
             self.particle_locator_cache[t] = loc
-        else:
-            # meaning this interaction was already present.
-            # just enable caching for it.
-            loc.enable_caching()
     
     cpdef FixedDestNbrParticleLocator get_cached_locator(self,
                 str source_name, str dest_name, double radius):
@@ -833,8 +767,9 @@ cdef class NNPSManager:
         cdef dict locator_cache = self.particle_locator_cache
         cdef NbrParticleLocatorBase loc
         cdef ParticleArray dest, source
-        cdef long np, i, j, nnbrs
+        cdef long nrp, i, j, nnbrs
         cdef double h, w
+        cdef LongArray nbrs
 
         cdef DoubleArray xd, yd, zd, xs, ys, zs, hs, hd
 
@@ -846,7 +781,6 @@ cdef class NNPSManager:
             
             nrp = dest.num_real_particles
 
-            loc.particle_neighbors.clear()
             loc.kernel_function_evaluation.clear()
             loc.kernel_gradient_evaluation.clear()
 
@@ -861,9 +795,7 @@ cdef class NNPSManager:
             hs = source.get_carray('h')
 
             for i in range(nrp):
-                nbrs = LongArray()
-                loc.py_get_nearest_particles(i, nbrs, exclude_self=False)
-                loc.particle_neighbors[i] = nbrs
+                nbrs = loc.py_get_nearest_particles(i, exclude_self=False)
 
                 _dst = Point(xd.data[i], yd.data[i], zd.data[i])
 
@@ -871,7 +803,7 @@ cdef class NNPSManager:
                     loc.kernel_function_evaluation[i] = {}
                     loc.kernel_gradient_evaluation[i] = {}
 
-                    # compute the kenrel evaluations
+                    # compute the kernel evaluations
                 
                     for j in range(nbrs.length):
                         s_id = nbrs.data[j]

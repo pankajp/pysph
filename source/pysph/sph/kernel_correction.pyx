@@ -134,8 +134,7 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
                     src = calc.sources[j]
                     loc = calc.nbr_locators[j]
             
-                    nbrs.reset()
-                    loc.get_nearest_particles(i, nbrs, False)
+                    nbrs = loc.get_nearest_particles(i, False)
 
                     cfunc=BonnetAndLokKernelGradientCorrectionTerms(
                         source=src, dest=dest)

@@ -29,6 +29,8 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
 
 from pysph.base.carray cimport IntArray, DoubleArray
 
+cdef int log_level = logger.level
+
 ###############################################################################
 # `SPHBase` class.
 ###############################################################################
@@ -198,7 +200,7 @@ cdef class SPHBase:
         """
         if output_array1 is None: output_array1 = 'tmpx'
         if output_array2 is None: output_array2 = 'tmpy'
-        if output_array3 is None: output_array3 = 'tmpz'            
+        if output_array3 is None: output_array3 = 'tmpz'
 
         cdef DoubleArray output1 = self.dest.get_carray(output_array1)
         cdef DoubleArray output2 = self.dest.get_carray(output_array2)
@@ -226,6 +228,9 @@ cdef class SPHBase:
         cdef long dest_pid, source_pid
         cdef double nr[3], dnr[3]
         cdef size_t i
+        cdef SPHFunctionParticle func
+        global log_level
+        log_level = logger.level
 
         # get the tag array pointer
 
@@ -234,6 +239,9 @@ cdef class SPHBase:
 
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
+        
+        for func in self.funcs:
+            func.setup_iter_data()
 
         # loop over all particles
 
@@ -275,9 +283,8 @@ cdef class SPHCalc(SPHBase):
         cdef ParticleArray src, pae
         cdef SPHFunctionParticle func
         cdef FixedDestNbrParticleLocator loc
-        cdef size_t k, s_idx
-        cdef int j
-
+        cdef size_t k
+        cdef int j, nnbrs
         cdef LongArray nbrs
 
         for j in range(self.nsrcs):
@@ -286,13 +293,17 @@ cdef class SPHCalc(SPHBase):
             func = self.funcs[j]
             loc  = self.nbr_locators[j]
 
-            nbrs = loc.particle_neighbors.get(i)
+            nbrs = loc.get_nearest_particles(i)
+            nnbrs = nbrs.length
+            if exclude_self:
+                if src is self.dest:
+                    # this works because nbrs has self particle in last position
+                    nnbrs -= 1
 
-            for k from 0 <= k < nbrs.length:
-                s_idx = nbrs.data[k]
-                func.eval(s_idx, i, self.kernel, &nr[0], &dnr[0])
+            for k in range(nnbrs):
+                func.eval(nbrs.data[k], i, self.kernel, &nr[0], &dnr[0])
 
-            if logger.level < 30:
+            if log_level < 30:
 
                 logger.info("""SPHCalc:eval: calc %s, dest %s, source %s"""
                             %(self.id, self.dest.name, src.name))

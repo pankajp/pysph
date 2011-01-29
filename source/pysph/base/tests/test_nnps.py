@@ -227,51 +227,43 @@ class TestFixedDestNbrParticleLocator(unittest.TestCase):
         nbrl4 = FixedDestNbrParticleLocator(parrs[0], parrs[1], 4.0, cm, 'h')
         nbrl05 = FixedDestNbrParticleLocator(parrs[0], parrs[1], 0.5, cm, 'h')
         
-        output_array = LongArray()
-
         # querying neighbors of dark point 4, with radius 0.5
-        nbrl05.py_get_nearest_particles(3, output_array)
+        output_array = nbrl05.py_get_nearest_particles(3)
         self.assertEqual(output_array.length, 1)
         self.assertEqual(output_array[0], 0)
-        output_array.reset()
         
         # querying neighbors of dark point 4, with radius 1
-        nbrl.py_get_nearest_particles(3, output_array)
+        output_array = nbrl.py_get_nearest_particles(3)
         self.assertEqual(output_array.length, 4)
         a = list(output_array.get_npy_array())
         for i in range(4):
             self.assertEqual(a.count(i), 1)
 
         # querying neighbors of dark point 3, with radius 4.0
-        output_array.reset()
-        nbrl4.py_get_nearest_particles(2, output_array)
+        output_array = nbrl4.py_get_nearest_particles(2)
         self.assertEqual(output_array.length, 8)
         a = list(output_array.get_npy_array())
         for i in range(8):
             self.assertEqual(a.count(i), 1)
         
-        nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 2.0, cm,
-                                        caching_enabled=False)
+        nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 2.0, cm)
         nbrl.py_update()
         
         bnpl = NbrParticleLocatorBase(parrs[0], cm)
         
-        a1 = LongArray()
         a2 = LongArray()
         xa, ya, za = parrs[1].get('x'), parrs[1].get('y'), parrs[1].get('z')
         
         pnt = Point(xa[0], ya[0], za[0])
         nbrl.py_update()
-        nbrl.py_get_nearest_particles(0, a1)
+        a1 = nbrl.py_get_nearest_particles(0)
         bnpl.py_get_nearest_particles_to_point(pnt, 2.0, a2)
         
         self.assertEqual(set(a1.get_npy_array()), set(a2.get_npy_array()))
         
         # test for another point.
-        a1.reset()
-        a2.reset()
         pnt = Point(xa[3], ya[3], za[3])
-        nbrl.py_get_nearest_particles(3, a1)
+        a1 = nbrl.py_get_nearest_particles(3)
         bnpl.py_get_nearest_particles_to_point(pnt, 2.0, a2)
         
         self.assertEqual(set(a1.get_npy_array()), set(a2.get_npy_array()))
@@ -311,9 +303,7 @@ class TestFixedDestNbrParticleLocator(unittest.TestCase):
         nbrl.py_update()
 
         self.assertEqual(nbrl.is_dirty, False)
-        # since caching has not been explicitly enabled, nothing will be cached
-        self.assertEqual(len(nbrl.particle_cache), 0)
-        nbrl.enable_caching()
+        
         nbrl.py_update()
         self.assertEqual(len(nbrl.particle_cache),
                          parrs[1].get_number_of_particles())        
@@ -363,24 +353,20 @@ class TestVarHNbrParticleLocator(unittest.TestCase):
         nbrl4 = VarHNbrParticleLocator(parrs[0], parrs[1], 4.0, cm, 'h')
         nbrl05 = VarHNbrParticleLocator(parrs[0], parrs[1], 0.5, cm, 'h')
         
-        output_array = LongArray()
-
         # querying neighbors of dark point 4, with radius 0.5
-        nbrl05.py_get_nearest_particles(3, output_array)
+        output_array = nbrl05.py_get_nearest_particles(3)
         self.assertEqual(output_array.length, 1)
         self.assertEqual(output_array[0], 0)
-        output_array.reset()
 
         # querying neighbors of dark point 4, with radius 1
-        nbrl.py_get_nearest_particles(3, output_array)
+        output_array = nbrl.py_get_nearest_particles(3)
         self.assertEqual(output_array.length, 4)
         a = list(output_array.get_npy_array())
         for i in range(4):
             self.assertEqual(a.count(i), 1)
 
         # querying neighbors of dark point 3, with radius 4.0
-        output_array.reset()
-        nbrl4.py_get_nearest_particles(2, output_array)
+        output_array = nbrl4.py_get_nearest_particles(2)
         self.assertEqual(output_array.length, 8)
         a = list(output_array.get_npy_array())
         for i in range(8):
@@ -406,12 +392,10 @@ class TestVarHNbrParticleLocator(unittest.TestCase):
         nbrl4 = VarHNbrParticleLocator(parrs[0], parrs[1], 4.0, cm, 'h')
         nbrl05 = VarHNbrParticleLocator(parrs[0], parrs[1], 0.5, cm, 'h')
         
-        output_array = LongArray()
-        
         # querying neighbors of dark point 3, with radius 1
         # since we have kept h1 very large (3), all particles in parr1 should
         # be neighbors
-        nbrl.py_get_nearest_particles(2, output_array)
+        output_array = nbrl.py_get_nearest_particles(2)
         self.assertEqual(output_array.length, 8)
         a = list(output_array.get_npy_array())
         for i in range(8):
@@ -420,10 +404,9 @@ class TestVarHNbrParticleLocator(unittest.TestCase):
         # now check by setting h of parr2 to be 0.1
         parrs[1].get('h')[:] = 0.1
         parrs[1].set_dirty(True)
-        output_array.reset()
         
         # should again return all the points
-        nbrl.py_get_nearest_particles(2, output_array)
+        output_array = nbrl.py_get_nearest_particles(2)
         self.assertEqual(output_array.length, 8)
         a = list(output_array.get_npy_array())
         for i in range(8):
@@ -437,11 +420,10 @@ class TestVarHNbrParticleLocator(unittest.TestCase):
         parrs[0].get('h')[5] = 3
         parrs[0].set_dirty(True)
         nbrl.py_update_status()
-        output_array.reset()
         
         # should only return white point 6
         for j in range(4):
-            nbrl.py_get_nearest_particles(j, output_array)
+            output_array = nbrl.py_get_nearest_particles(j)
             self.assertEqual(output_array.length, 1)
             self.assertEqual(output_array[0], 5)
         
@@ -474,16 +456,13 @@ class TestNNPSManager(unittest.TestCase):
 
     def test_get_neighbor_particle_locator(self):
         """
-        Tests the get_neighbor_particle_locator function, with
-        all types of caching enabled/disabled. Thus, this effectively
-        tests the enable/disable functions too.
+        Tests the get_neighbor_particle_locator function
 
         """
         parrs = generate_sample_dataset_1()
         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
                          max_cell_size=2.0)
 
-        # create an nnps manager with all types of caching disabled.
         nm = NNPSManager(cell_manager=cm)
         
         # now get a locator for a single source, without any destination
@@ -501,15 +480,9 @@ class TestNNPSManager(unittest.TestCase):
         self.assertEqual(nl1 is nl2, False)
         self.assertEqual(type(nl2), FixedDestNbrParticleLocator)
         
-        # caching should be disabled on the locator
-        self.assertEqual(nl2.caching_enabled, False)
-        
         # this should return cached locator
         nl2 = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(nl1 is nl2, True)
-        
-        # caching should enabled on re-requesting a locator
-        self.assertEqual(nl1.caching_enabled, True)
         
         # now test for the variable h case
         
@@ -536,12 +509,8 @@ class TestNNPSManager(unittest.TestCase):
         self.assertEqual(nl1 is not nl2, True)
         self.assertEqual(type(nl1), VarHNbrParticleLocator) 
         
-        # variable-h locator always has caching enabled
-        self.assertEqual(nl2.caching_enabled, True)
-        self.assertEqual(nl1.caching_enabled, True)
         nl = nm.get_neighbor_particle_locator(parrs[0], parrs[1], 1.0)
         self.assertEqual(nl1 is nl, True)
-        self.assertEqual(nl.caching_enabled, True)
 
     def test_update(self):
         """Tests the update function. """
@@ -584,9 +553,7 @@ class TestNNPSManager(unittest.TestCase):
         self.assertEqual(e.source, parrs[0])
         self.assertEqual(e.dest, parrs[1])
         self.assertEqual(e.radius_scale, 1.0)
-        self.assertEqual(e.caching_enabled, False)
         m.add_interaction(parrs[0], parrs[1], 1.0)
-        self.assertEqual(e.caching_enabled, True)
 
         m.add_interaction(parrs[0], parrs[1], 1.1)
         e1 = m.particle_locator_cache.get((parrs[0].name, parrs[1].name, 1.1))
@@ -605,10 +572,7 @@ class TestNNPSManager(unittest.TestCase):
         e = m.particle_locator_cache.get((parrs[0].name, parrs[1].name, 1.0))
         self.assertEqual(type(e), VarHNbrParticleLocator)
         
-        # variable-h locator always has caching enabled
-        self.assertEqual(e.caching_enabled, True)
         m.add_interaction(parrs[0], parrs[1], 1.0)
-        self.assertEqual(e.caching_enabled, True)
 
         m.add_interaction(parrs[0], parrs[1], 1.1)
         e1 = m.particle_locator_cache.get((parrs[0].name, parrs[1].name, 1.1))

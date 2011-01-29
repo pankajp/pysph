@@ -15,7 +15,6 @@ cdef class NbrParticleLocatorBase:
     cdef public CellManager cell_manager
     cdef public int source_index
 
-    cdef public dict particle_neighbors
     cdef public dict kernel_function_evaluation
     cdef public dict kernel_gradient_evaluation
 
@@ -40,18 +39,14 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
     cdef public DoubleArray d_h, d_x, d_y, d_z
     
     # caching support
-    cdef public bint caching_enabled
     cdef public list particle_cache
     cdef public bint is_dirty
-    cpdef enable_caching(self)
-    cpdef disable_caching(self)
     cdef void update_status(self)
     cdef int update(self) except -1
     cdef int _update_cache(self) except -1
     
-    cdef int get_nearest_particles(self, long dest_p_index,
-                                   LongArray output_array,
-                                   bint exclude_self=*) except -1
+    cdef LongArray get_nearest_particles(self, long dest_p_index,
+                                   bint exclude_self=*)
     
     cdef int get_nearest_particles_nocache(self, long dest_p_index,
                                    LongArray output_array,

@@ -46,7 +46,7 @@ def get_data(variable_h=True, Nps=(40,40,1), cell_size=4.0):
 cpdef dict nnps():
     cdef dict ret = {}
     cdef double t, t1, t2, t3, h
-    cdef LongArray output_array = LongArray()
+    cdef LongArray output_array
     cdef int np, i
     cdef FixedDestNbrParticleLocator nbrl
     for var_h in [False, True]:
@@ -54,7 +54,6 @@ cpdef dict nnps():
         for nam,nps in Nps.items():
             np = nps[0]*nps[1]*nps[2]
             nbrl = get_data(var_h, nps)
-            nbrl.enable_caching()
             nbrl.is_dirty = True
             t = time()
             nbrl.update()
@@ -62,14 +61,12 @@ cpdef dict nnps():
             
             t = time()
             for i in range(np):
-                output_array.reset()
-                nbrl.get_nearest_particles(i, output_array)
+                output_array = nbrl.get_nearest_particles(i)
             t2 = time() - t
             
             t = time()
             for i in range(np):
-                output_array.reset()
-                nbrl.get_nearest_particles(i, output_array, True)
+                output_array = nbrl.get_nearest_particles(i, True)
             t3 = time() - t
             
             ret['%s up %s /%d'%(vh,nam,np)] = t1/np
@@ -86,15 +83,18 @@ cpdef nbr_particles_from_cell_list():
     cdef list cell_list
     cdef Point pnt = Point()
     cdef FixedDestNbrParticleLocator nbrl
+    
     for nam,nps in Nps.items():
         np = nps[0]*nps[1]*nps[2]
         cell_list = []
         output_array.reset()
         pnt.set(nps[0]/2.0, nps[1]/2.0, nps[2]/2.0)
         nbrl = get_data(False, nps)
+        
         t = time()
         nbrl.cell_manager.get_potential_cells(pnt, radius, cell_list)
         t1 = time() - t
+        
         t = time()
         nbrl._get_nearest_particles_from_cell_list(pnt,
                 radius, cell_list, output_array)
