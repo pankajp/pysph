@@ -59,14 +59,22 @@ cpdef dict nnps():
             t = time()
             nbrl.update()
             t1 = time() - t
+            
             t = time()
             for i in range(np):
                 output_array.reset()
                 nbrl.get_nearest_particles(i, output_array)
             t2 = time() - t
             
+            t = time()
+            for i in range(np):
+                output_array.reset()
+                nbrl.get_nearest_particles(i, output_array, True)
+            t3 = time() - t
+            
             ret['%s up %s /%d'%(vh,nam,np)] = t1/np
             ret['%s %s /%d'%(vh,nam,np)] = t2/np
+            ret['%s es %s /%d'%(vh,nam,np)] = t3/np
     return ret
 
 cpdef nbr_particles_from_cell_list():

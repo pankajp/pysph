@@ -134,7 +134,11 @@ cdef class SPHFunctionParticle:
 
     cpdef int output_fields(self) except -1:
         raise NotImplementedError, 'SPHFunctionParticle::output_fields'
-
+    
+    cpdef setup_iter_data(self):
+        """ setup operations performed in each iteration """
+        pass
+    
     cdef double rkpm_first_order_kernel_correction(self, int dest_pid):
         """ Return the first order correction term for an interaction """
 

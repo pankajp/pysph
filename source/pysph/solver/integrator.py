@@ -435,7 +435,7 @@ class Integrator(object):
                 logger.info("Integrator:eval: operating on calc %d, %s"%(
                         i, calc.id))
 
-            # Evaluatte the calc
+            # Evaluate the calc
 
             step_props = self.step_props[calc.id]
             calc.sph(*step_props)

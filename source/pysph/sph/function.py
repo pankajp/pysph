@@ -12,11 +12,15 @@ import funcs.xsph_funcs as xsph
 
 #base class
 class Function(object):
-    def __init__(self):
-        pass
+    def __init__(self, sph_func=None, *args, **kwargs):
+        self.sph_func = sph_func
+        self.args = args
+        self.kwargs = kwargs
 
-    def get_func(self, source, dst):
-        raise NotImplementedError
+    def get_func(self, source, dest):
+        if self.sph_func is None:
+            raise NotImplementedError, 'Function(sph_func=None).get_func()'
+        return self.sph_func(source, dest, *self.args, **self.kwargs)
 
 #basic functions
 class SPHInterpolation(Function):

@@ -48,6 +48,7 @@ cdef class SPHFunctionParticle:
     cdef public bint rkpm_first_order_correction
 
     cpdef setup_arrays(self)
+    cpdef setup_iter_data(self)
 
     cpdef int output_fields(self) except -1
 

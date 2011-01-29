@@ -48,7 +48,7 @@ cdef class SPH(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
 
         """ 
-        Perform an SPH intterpolation of the property `prop_name` 
+        Perform an SPH interpolation of the property `prop_name` 
 
         The expression used is:
         
