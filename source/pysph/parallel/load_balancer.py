@@ -477,7 +477,7 @@ class LoadBalancer:
                 max_nbr_cell = self.cell_manager.cells_dict[cid]
                 # change the pid of the cell that was donated.
                 max_nbr_cell.pid = pid
-                cell_dict[cid] = max_nbr_cell
+                cell_dict[cid] = [max_nbr_cell]
             # if all cells are being sent away, keep the last cid with self
             if len(cells) == len(cell_dict):
                 del cell_dict[cid]
@@ -614,7 +614,7 @@ class LoadBalancer:
                                                                    self.pid,
                                                                    pid))
             particles = self.cell_manager.create_new_particle_copies(
-                {min_neighbor_id:min_nbr_cell})
+                {min_neighbor_id:[min_nbr_cell]})
 
             # mark that cell as a remote cell
             min_nbr_cell.pid = pid
@@ -947,7 +947,7 @@ class LoadBalancer:
             cell = self.cell_manager.cells_dict[cid]
             # change the pid of the cell that was donated.
             cell.pid = pid
-            cell_dict[cid] = cell
+            cell_dict[cid] = [cell]
         particles = self.cell_manager.create_new_particle_copies(cell_dict)
         # update the neighbor information locally
         self.cell_manager.update_neighbor_information_local()

@@ -45,12 +45,10 @@ class PrintNeighborInformation:
 
             neighbor_idx = {}
             
-            neighbor_cache = loc.particle_neighbors
-
             nrp = dest.num_real_particles
 
             for j in range(nrp):
-                neighbors = neighbor_cache[j]
+                neighbors = loc.py_get_nearest_particles(j)
                 
                 temp = dest.extract_particles(neighbors)
                 particle_idx = particle_indices[j]
