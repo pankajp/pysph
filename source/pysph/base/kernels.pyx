@@ -11,6 +11,8 @@ cdef extern from "math.h":
     double sin(double)
     double cos(double)
     double pow(double x, double y)
+    int floor(double)
+    double fmod(double, double)
 
 cimport numpy 
 import numpy
@@ -39,7 +41,7 @@ cdef class KernelBase:
     #Defined in the .pxd file
     #cdef readonly int dim
 
-    def __init__(self, dim=1):
+    def __init__(self, int dim=1, double constant_h=-1):
         """ Constructor interface for multidimensional kernels
 
         Parameters:
@@ -49,6 +51,21 @@ cdef class KernelBase:
         """
         self.dim = dim
         self.fac = self._fac(1.0)
+
+        self.smoothing = DoubleArray()
+
+        self.distances = DoubleArray()
+        self.function_cache = DoubleArray()
+        self.gradient_cache = DoubleArray()
+
+        n = 1000001
+
+        self.distances_dx = -1
+
+        self.has_constant_h = False
+        self.constant_h = constant_h
+        if constant_h > 0:
+            self.init_cache(n)
 
     cdef double function(self, Point pa, Point pb, double h):
         """        
@@ -83,6 +100,91 @@ cdef class KernelBase:
 
     def py_gradient(self, Point pa, Point pb, double h, Point grad):
         self.gradient(pa, pb, h, grad)
+
+    cpdef double __gradient(self, Point pa, Point pb, double h):
+        raise NotImplementedError, 'KernelBase::__gradient'
+
+    def init_cache(self, n=10001):
+
+        cdef int i
+        cdef double w, grad
+        cdef double h = self.constant_h
+        cdef numpy.ndarray h_arr = numpy.linspace(0,2*h,n)
+
+        self.distances.resize(n)
+        self.distances.set_data(h_arr)
+
+        self.distances_dx = h_arr[1] - h_arr[0]
+        
+        self.function_cache.resize(n)
+        self.gradient_cache.resize(n)
+
+        cdef numpy.ndarray fc = numpy.zeros(n, dtype=float)
+        cdef numpy.ndarray gc = numpy.zeros(n, dtype=float)
+
+        cdef Point pa = Point(0,0,0)
+        cdef Point pb
+
+        for i in range(n):
+            pb = Point(self.distances[i])
+            w = self.py_function(pa, pb, h)
+            grad = self.__gradient(pa, pb, h)
+
+            fc[i] = w
+            gc[i] = grad
+
+        self.function_cache.set_data(fc)
+        self.gradient_cache.set_data(gc)
+
+        self.has_constant_h = True
+
+    cdef interpolate_function(self, double rab):
+
+        cdef double dx = self.distances_dx
+        cdef int index_low, index_high
+
+        cdef double* fc = self.function_cache.get_data_ptr()
+
+        if rab > 2*self.constant_h:
+            return 0.0
+
+        else:
+            index_low = floor(rab/dx)
+            index_high = index_low + 1
+
+            slope = (fc[index_high] - fc[index_low])/dx
+
+            # y = mx + c
+
+            return slope * fmod(rab,dx) + fc[index_low]
+            
+            #print "Numpy interpolation ", numpy.interp(rab, self.distances,
+            #self.function_cache)
+            
+            #print "This interpolation ", slope*fmod(rab,dx) + fc[index_low]
+
+    cdef interpolate_gradients(self, double rab):
+
+        cdef double dx = self.distances_dx
+        cdef int index_low, index_high
+
+        cdef double* gc = self.gradient_cache.get_data_ptr()
+
+        if rab > 2 * self.constant_h:
+            return 0.0
+        else:
+            index_low = floor(rab/dx)
+            index_high = index_low + 1
+
+            slope = (gc[index_high] - gc[index_low])/dx
+
+            # y = mx + c
+
+            return slope * fmod(rab,dx) + gc[index_low]
+
+            #print "Numpy interpolation ", numpy.interp(rab, self.distances,
+            #                                           self.gradient_cache)
+            #print "This interpolation ", slope*fmod(rab,dx) + gc[index_low]
 
     ##########################################################################
     # Functions used for testing.
@@ -231,6 +333,9 @@ cdef class CubicSplineKernel(KernelBase):
                               (pa.y-pb.y)*(pa.y-pb.y) + 
                               (pa.z-pb.z)*(pa.z-pb.z))
 
+        if self.has_constant_h:
+            return self.interpolate_function(rab)
+
         cdef double q = rab/h
         cdef double val
         cdef double fac = h_dim(h, self.dim) * self.fac
@@ -250,15 +355,50 @@ cdef class CubicSplineKernel(KernelBase):
         """
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
-                              (pa.z-pb.z)*(pa.z-pb.z)                                
-                                )
+                              (pa.z-pb.z)*(pa.z-pb.z))
+
         cdef double rx, ry, rz
+        cdef double q = rab/h
+        cdef double val = 0.0
+        cdef double wgrad
+        
+        fac = h_dim(h, self.dim)*self.fac
+        
+        rx = pa.x - pb.x; ry = pa.y - pb.y; rz = pa.z - pb.z
+
+        if self.has_constant_h:
+            wgrad = self.interpolate_gradients(rab)
+
+            grad.x = wgrad*rx
+            grad.y = wgrad*ry
+            grad.z = wgrad*rz
+            
+        else:
+        
+            if q > 2.0:
+                pass
+            elif q >= 1.0:
+                val = -0.75 * (2-q) * (2-q)/(h * rab)
+            elif q > 1e-14:
+                val = 3.0*(0.75*q - 1)/(h*h)
+
+            grad.x = rx * (val * fac)
+            grad.y = ry * (val * fac)
+            grad.z = rz * (val * fac)
+
+    cpdef double __gradient(self, Point pa, Point pb, double h):
+        """Evaluate the gradient of the kernel centered at `pa`, at the
+        point `pb`.
+        """
+        cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
+                              (pa.y-pb.y)*(pa.y-pb.y) + 
+                              (pa.z-pb.z)*(pa.z-pb.z))
+
         cdef double q = rab/h
         cdef double val = 0.0
         
         fac = h_dim(h, self.dim)*self.fac
         
-        rx = pa.x - pb.x; ry = pa.y - pb.y; rz = pa.z - pb.z
         if q > 2.0:
             pass
         elif q >= 1.0:
@@ -266,10 +406,8 @@ cdef class CubicSplineKernel(KernelBase):
         elif q > 1e-14:
             val = 3.0*(0.75*q - 1)/(h*h)
 
-        grad.x = rx * (val * fac)
-        grad.y = ry * (val * fac)
-        grad.z = rz * (val * fac)
-    
+        return val * fac
+
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim

@@ -1,10 +1,13 @@
 """ Definitions for the SPH kernels defined in kernels.pyx
 """
 
-#Author: Kunal Puri <kunalp@aero.iitb.ac.in>
-#Copyright (c) 2010, Kunal Puri
+#Author: Kunal Puri <kunal.r.puri@gmail.com>
+#Copyright (c) 2010, Prabhu Ramachandran
 
 from pysph.base.point cimport Point, Point_sub
+from pysph.base.carray cimport DoubleArray
+
+cimport numpy
 
 ##############################################################################
 #`KernelBase`
@@ -13,12 +16,25 @@ cdef class KernelBase:
     cdef readonly int dim
     cdef readonly double fac
 
+    cdef public DoubleArray smoothing
+    cdef public DoubleArray distances
+    cdef public DoubleArray function_cache
+    cdef public DoubleArray gradient_cache
+
+    cdef public bint has_constant_h
+    cdef public double constant_h
+    cdef public double distances_dx
+
     cdef double function(self, Point pa, Point pb, double h)
     cdef void gradient(self, Point pa, Point pb, double h, Point result)
     cdef double laplacian(self, Point pa, Point pb, double h)
     cdef double _fac(self, double h)
     cpdef double radius(self)
     cpdef int dimension(self)
+    cpdef double __gradient(self, Point pa, Point pb, double h)
+
+    cdef interpolate_function(self, double rab)
+    cdef interpolate_gradients(self, double rab)
 
 ##############################################################################
 # `Poly6Kernel` class.

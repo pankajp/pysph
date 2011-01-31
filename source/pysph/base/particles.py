@@ -113,8 +113,8 @@ class Particles(object):
 
         # cache the particle neighbors
 
-        if self.kernel:
-            self.nnps_manager.cache_neighbors(self.kernel)
+        #if self.kernel:
+            #self.nnps_manager.cache_neighbors(self.kernel)
 
         self.needs_update = False
 
