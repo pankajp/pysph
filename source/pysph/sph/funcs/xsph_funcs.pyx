@@ -1,4 +1,5 @@
 from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.carray cimport DoubleArray
 
 ###############################################################################
 # `XSPHCorrection' class.
@@ -15,13 +16,12 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         self.eps = eps
         self.id = 'xsph'
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         The expression used is:
 
         """
-
         cdef double temp, w
 
         cdef double h=0.5*(self.s_h.data[source_pid] + \
@@ -40,6 +40,8 @@ cdef class XSPHCorrection(SPHFunctionParticle):
 
         cdef Point Vba = Point_sub(Vb, Va)
 
+        #cdef DoubleArray fc = self.function_cache[dest_pid]
+
         cdef double mb = self.s_m.data[source_pid]
 
         self._src.x = self.s_x.data[source_pid]
@@ -52,6 +54,8 @@ cdef class XSPHCorrection(SPHFunctionParticle):
 
         w = kernel.function(self._dst, self._src, h)
         #w = self.kernel_function_evaluation[dest_pid][source_pid]
+
+        #w = fc.data[k]
 
         #assert w == other_w
 
@@ -97,7 +101,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self.d_vbar = self.dest.get_carray('vbar')
         self.d_wbar = self.dest.get_carray('wbar')
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         Perform an SPH interpolation of the property `prop_name`

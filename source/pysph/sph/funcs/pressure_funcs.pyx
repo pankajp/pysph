@@ -19,7 +19,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.id = 'pgrad'
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """
         """
@@ -87,7 +87,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.gamma = gamma
         self.id = 'momentumequation'
         
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
     
     
@@ -95,6 +95,8 @@ cdef class MomentumEquation(SPHFunctionParticle):
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta
+
+        cdef DoubleArray xgc, ygc, zgc
 
         cdef double hab = 0.5*(self.s_h.data[source_pid] + \
                                    self.d_h.data[dest_pid])
@@ -153,8 +155,14 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
         #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
 
-        kernel.gradient(self._dst, self._src, hab, grad)        
+        kernel.gradient(self._dst, self._src, hab, grad)
 
+        #xgc = self.xgradient_cache[dest_pid]
+        #ygc = self.ygradient_cache[dest_pid]
+        #zgc = self.zgradient_cache[dest_pid]
+
+        #grad = Point_new(xgc.data[k], ygc.data[k], zgc.data[k])
+        
         #assert grad.x == other_grad.x
         #assert grad.y == other_grad.y
         #assert grad.z == other_grad.z

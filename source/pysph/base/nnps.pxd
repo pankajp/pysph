@@ -18,6 +18,11 @@ cdef class NbrParticleLocatorBase:
     cdef public dict kernel_function_evaluation
     cdef public dict kernel_gradient_evaluation
 
+    cdef public list function_cache
+    cdef public list xgradient_cache
+    cdef public list ygradient_cache
+    cdef public list zgradient_cache
+
     cdef int get_nearest_particles_to_point(self, Point pnt, double radius,
                                             LongArray output_array, 
                                             long exclude_index=*) except -1

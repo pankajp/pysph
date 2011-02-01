@@ -283,7 +283,7 @@ cdef class SPHCalc(SPHBase):
         cdef ParticleArray src, pae
         cdef SPHFunctionParticle func
         cdef FixedDestNbrParticleLocator loc
-        cdef size_t k
+        cdef int k
         cdef int j, nnbrs
         cdef LongArray nbrs
 
@@ -300,8 +300,13 @@ cdef class SPHCalc(SPHBase):
                     # this works because nbrs has self particle in last position
                     nnbrs -= 1
 
-            for k in range(nnbrs):
-                func.eval(nbrs.data[k], i, self.kernel, &nr[0], &dnr[0])
+            #func.function_cache = loc.function_cache
+            #func.xgradient_cache = loc.xgradient_cache
+            #func.ygradient_cache = loc.ygradient_cache
+            #func.zgradient_cache = loc.zgradient_cache
+
+            for k from 0 <= k < nnbrs:
+                func.eval(k, nbrs.data[k], i, self.kernel, &nr[0], &dnr[0])
 
             if log_level < 30:
 
@@ -356,6 +361,6 @@ cdef class SPHEquation(SPHBase):
               bint exclude_self):
     
         cdef SPHFunctionParticle func = self.funcs[0]
-        func.eval(-1, i, self.kernel, &nr[0], &dnr[0])
+        func.eval(-1,-1, i, self.kernel, &nr[0], &dnr[0])
 
 #############################################################################

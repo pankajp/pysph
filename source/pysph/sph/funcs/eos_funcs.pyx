@@ -16,7 +16,7 @@ cdef class IdealGasEquation(SPHFunctionParticle):
         self.gamma = gamma
         self.id = 'idealgas'
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         
@@ -65,7 +65,7 @@ cdef class TaitEquation(SPHFunctionParticle):
         self.gamma = gamma
         self.id = 'tait'
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         

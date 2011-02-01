@@ -92,6 +92,11 @@ cdef class SPHFunctionParticle:
         self.kernel_function_evaluation = {}
         self.kernel_gradient_evaluation = {}
 
+        self.function_cache = []
+        self.xgradient_cache = []
+        self.ygradient_cache = []
+        self.zgradient_cache = []
+
         if setup_arrays:
             self.setup_arrays()
 
@@ -123,7 +128,7 @@ cdef class SPHFunctionParticle:
         self.d_e = self.dest.get_carray(self.e)
         self.d_cs = self.dest.get_carray(self.cs)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         """ Computes the contribution of particle at source_pid on particle at
@@ -190,14 +195,14 @@ cdef class SPHFunctionParticle:
 
         grad.z = l31*x + l32*y + l33*z        
 
-    def py_eval(self, int source_pid, int dest_pid,
+    def py_eval(self, int k, int source_pid, int dest_pid,
                 KernelBase kernel):
 
         cdef double nr[3], dnr[3]
 
         nr[0] = 0.0; nr[1] = 0.0; nr[2] = 0.0
         dnr[0] = 0.0; dnr[1] = 0.0; dnr[2] = 0.0
-        self.eval(source_pid, dest_pid, kernel, &nr[0], &dnr[0])
+        self.eval(k, source_pid,  dest_pid, kernel, &nr[0], &dnr[0])
 
         return nr[0], dnr[0]
 

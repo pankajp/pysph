@@ -164,6 +164,11 @@ cdef class NbrParticleLocatorBase:
         self.kernel_function_evaluation = {}
         self.kernel_gradient_evaluation = {}
 
+        self.function_cache = []
+        self.xgradient_cache = []
+        self.ygradient_cache = []
+        self.zgradient_cache = []
+
         if self.cell_manager is not None:
             # find the index of source in cell_manager.
             self.source_index = cell_manager.array_indices.get(source.name)
@@ -370,6 +375,14 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             self.d_x = self.dest.get_carray(self.cell_manager.coord_x)
             self.d_y = self.dest.get_carray(self.cell_manager.coord_y)
             self.d_z = self.dest.get_carray(self.cell_manager.coord_z)
+
+        nrp = dest.num_real_particles
+
+        for i in range(nrp):
+            self.function_cache.append(DoubleArray())
+            self.xgradient_cache.append(DoubleArray())
+            self.ygradient_cache.append(DoubleArray())
+            self.zgradient_cache.append(DoubleArray())
 
     cdef LongArray get_nearest_particles(self, long dest_p_index, 
                                    bint exclude_self=False):
@@ -730,6 +743,30 @@ cdef class NNPSManager:
         self.cell_manager.update_status()
 
         #self.polygon_cache_manager.update()
+
+        for loc in cache_list:
+            dest = loc.dest
+            nrp = dest.num_real_particles
+
+            diff = nrp -  len(loc.function_cache)
+            if diff > 0:
+                for i in range(diff):
+                    loc.function_cache.append(DoubleArray())
+
+            diff = nrp - len(loc.xgradient_cache)
+            if diff > 0:
+                for i in range(diff):
+                    loc.xgradient_cache.append(DoubleArray())
+
+            diff = nrp - len(loc.ygradient_cache)
+            if diff > 0:
+                for i in range(diff):
+                    loc.ygradient_cache.append(DoubleArray())
+
+            diff = nrp - len(loc.zgradient_cache)
+            if diff > 0:
+                for i in range(diff):
+                    loc.zgradient_cache.append(DoubleArray())
     
     cpdef add_interaction(self, ParticleArray source, ParticleArray dest,
                           double radius_scale):
@@ -770,6 +807,7 @@ cdef class NNPSManager:
         cdef long nrp, i, j, nnbrs
         cdef double h, w
         cdef LongArray nbrs
+        cdef DoubleArray fci, xgci, ygci, zgci
 
         cdef DoubleArray xd, yd, zd, xs, ys, zs, hs, hd
 
@@ -780,9 +818,6 @@ cdef class NNPSManager:
             source = loc.source
             
             nrp = dest.num_real_particles
-
-            loc.kernel_function_evaluation.clear()
-            loc.kernel_gradient_evaluation.clear()
 
             xd = dest.get_carray('x')
             yd = dest.get_carray('y')
@@ -796,29 +831,36 @@ cdef class NNPSManager:
 
             for i in range(nrp):
                 nbrs = loc.py_get_nearest_particles(i, exclude_self=False)
+                nnbrs = nbrs.length
 
                 _dst = Point(xd.data[i], yd.data[i], zd.data[i])
 
-                if nbrs.length > 0:
-                    loc.kernel_function_evaluation[i] = {}
-                    loc.kernel_gradient_evaluation[i] = {}
+                fci = loc.function_cache[i]
+                xgci = loc.xgradient_cache[i]
+                ygci = loc.ygradient_cache[i]
+                zgci = loc.zgradient_cache[i]
 
-                    # compute the kernel evaluations
-                
-                    for j in range(nbrs.length):
-                        s_id = nbrs.data[j]
-                        
-                        _src = Point(xs.data[s_id],ys.data[s_id],zs.data[s_id])
+                fci.resize(nnbrs)
+                xgci.resize(nnbrs)
+                ygci.resize(nnbrs)
+                zgci.resize(nnbrs)
 
-                        h = 0.5 * (hd[i] + hs[s_id])
-                        
-                        grad = Point()
-
-                        w = kernel.py_function(_dst, _src, h)
-                        kernel.py_gradient(_dst, _src, h, grad)
-                        
-                        loc.kernel_function_evaluation[i][s_id] = w
-                        loc.kernel_gradient_evaluation[i][s_id] = grad
+                for j in range(nnbrs):
+                    s_id = nbrs.data[j]
+                    
+                    _src = Point(xs.data[s_id],ys.data[s_id],zs.data[s_id])
+                    
+                    h = 0.5 * (hd[i] + hs[s_id])
+                    
+                    grad = Point()
+                    
+                    w = kernel.py_function(_dst, _src, h)
+                    kernel.py_gradient(_dst, _src, h, grad)
+                    
+                    fci.data[j] = w
+                    xgci.data[j] = grad.x
+                    ygci.data[j] = grad.y
+                    zgci.data[j] = grad.z
 
     ######################################################################
     # python wrappers.

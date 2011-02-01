@@ -141,7 +141,7 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
 
                     for k from 0 <= k < nbrs.length:
                         s_idx = nbrs.get(k)
-                        cfunc.eval(s_idx, i, calc.kernel, &nr[0], &dnr[0])
+                        cfunc.eval(k, s_idx, i, calc.kernel, &nr[0], &dnr[0])
 
                 m11 = nr[0]; m12 = nr[1]; m13 = nr[2]
                 m22 = dnr[0]; m23 = dnr[1]; m33 = dnr[2]

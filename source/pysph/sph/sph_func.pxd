@@ -24,9 +24,14 @@ cdef class SPHFunctionParticle:
     cdef public DoubleArray s_p, s_e, d_p, d_e	
     cdef public DoubleArray s_cs, d_cs
 
-    # kernel function and gradient evaluations
+    # kernel function and gradient evaluation cache
     cdef public dict kernel_function_evaluation
     cdef public dict kernel_gradient_evaluation
+
+    cdef public list function_cache
+    cdef public list xgradient_cache
+    cdef public list ygradient_cache
+    cdef public list zgradient_cache
 
     #rkpm first order correction terms
     
@@ -52,7 +57,7 @@ cdef class SPHFunctionParticle:
 
     cpdef int output_fields(self) except -1
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr)
 
     cdef double rkpm_first_order_kernel_correction(self, int dest_pid)

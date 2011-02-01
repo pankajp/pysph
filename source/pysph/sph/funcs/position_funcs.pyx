@@ -14,7 +14,7 @@ cdef class PositionStepping(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.id = 'positionstepper'
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         The expression used is:

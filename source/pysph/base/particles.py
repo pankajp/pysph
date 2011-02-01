@@ -92,7 +92,7 @@ class Particles(object):
         if update_particles:
             self.update()
 
-    def update(self):
+    def update(self, cache_neighbors=True):
         """ Update the status of the neighbor locators and cell manager.
         
         Call this function if any particle has moved to properly get the 
@@ -111,10 +111,10 @@ class Particles(object):
         if self.correction_manager:
             self.correction_manager.update()
 
-        # cache the particle neighbors
+        # cache the particle neighbors        
 
-        #if self.kernel:
-            #self.nnps_manager.cache_neighbors(self.kernel)
+        #if self.kernel and cache_neighbors:
+        #    self.nnps_manager.cache_neighbors(self.kernel)
 
         self.needs_update = False
 

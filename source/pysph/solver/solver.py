@@ -395,7 +395,7 @@ class Solver(object):
             
             #update the particles explicitly
 
-            self.particles.update()
+            self.particles.update(cache_neighbors=True)
 
             #perform any pre step functions
             

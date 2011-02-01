@@ -20,7 +20,7 @@ cdef class GravityForce(SPHFunctionParticle):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ Perform the gravity force computation """
 
@@ -48,7 +48,7 @@ cdef class VectorForce(SPHFunctionParticle):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ Perform the force computation """
 
@@ -72,7 +72,7 @@ cdef class MoveCircleX(SPHFunctionParticle):
         self.id = 'circlex'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         self._dst.x = self.d_x.data[dest_pid]
@@ -107,7 +107,7 @@ cdef class MoveCircleY(SPHFunctionParticle):
         self.id = 'circley'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         self._dst.x = self.d_x.data[dest_pid]

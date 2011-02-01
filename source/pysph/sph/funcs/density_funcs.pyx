@@ -1,11 +1,12 @@
 from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.carray cimport DoubleArray 
 
 ###############################################################################
 # `SPHRho` class.
 ###############################################################################
 cdef class SPHRho(SPHFunctionParticle):
     """ SPH Summation Density """
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ Compute the contribution from source_pid on dest_pid. """
 
@@ -41,7 +42,7 @@ cdef class SPHRho(SPHFunctionParticle):
 cdef class SPHDensityRate(SPHFunctionParticle):
     """
     """
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
@@ -51,6 +52,8 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         cdef Point vel, grad        
         cdef double h = 0.5*(self.s_h.data[source_pid] + \
                                  self.d_h.data[dest_pid])
+
+        cdef DoubleArray xgc, ygc, zgc
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -67,9 +70,14 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         vel.y = self.d_v.data[dest_pid] - self.s_v.data[source_pid]
         vel.z = self.d_w.data[dest_pid] - self.s_w.data[source_pid]
 
-
         #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
         kernel.gradient(self._dst, self._src, h, grad)
+
+        #xgc = self.xgradient_cache[dest_pid]
+        #ygc = self.ygradient_cache[dest_pid]
+        #zgc = self.zgradient_cache[dest_pid]
+
+        #grad = Point_new(xgc.data[k], ygc.data[k], zgc.data[k])
         
         #assert grad.x == other_grad.x
         #assert grad.y == other_grad.y

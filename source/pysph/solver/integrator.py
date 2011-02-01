@@ -587,7 +587,7 @@ class EulerIntegrator(Integrator):
 
         # update the particles to get the new neighbors
 
-        self.particles.update()
+        self.particles.update(cache_neighbors=False)
 
 #############################################################################
 

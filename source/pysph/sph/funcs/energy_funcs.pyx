@@ -13,7 +13,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.id = 'energyeqn'
     
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
@@ -90,7 +90,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
         self.eta = eta
         self.id = 'energyavisc'
     
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """
         Compute the contribution of particle at source_pid on particle at
@@ -188,7 +188,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.gamma = gamma
         self.id = 'energyequation'
         
-    cdef void eval(self, int source_pid, int dest_pid,
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
     
     

@@ -44,7 +44,7 @@ cdef class SPH(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         """ 
@@ -128,7 +128,7 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH interpolation of the property `prop_name` 
@@ -209,7 +209,7 @@ cdef class SPHGrad(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
@@ -298,7 +298,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         self.s_prop = self.source.get_carray(self.prop_name)
         self.d_prop = self.dest.get_carray(self.prop_name)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
@@ -364,7 +364,7 @@ cdef class CountNeighbors(SPHFunctionParticle):
         self.id = 'nbrs'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
     
         print source_pid, dest_pid
@@ -394,7 +394,7 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         self.id = 'kgc'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
@@ -459,7 +459,7 @@ cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
         self.id = 'liu-correction'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
@@ -531,7 +531,7 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
         self.rkpm_d_dbeta2dx = self.dest.get_carray("rkpm_dbeta2dx")
         self.rkpm_d_dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
@@ -597,7 +597,7 @@ cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
 
     """
 
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid,  
                    KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
@@ -652,7 +652,7 @@ cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
     """
 
     #Defined in the .pxd file
-    cdef void eval(self, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
