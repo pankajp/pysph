@@ -19,10 +19,10 @@ cdef class ParallelCellManager(CellManager)
 # `ProcessorMap` class.
 ###############################################################################
 cdef class ProcessorMap:
-     cdef public ParallelCellManager cell_manager
      cdef public Point origin
      cdef public dict local_block_map
      cdef public dict block_map
+     cdef public dict load_per_proc
      cdef public list nbr_procs
      cdef public int pid
      cdef public double block_size
@@ -45,12 +45,11 @@ cdef class ParallelCellManager(CellManager):
     cdef public int factor
     cdef public int pid
     cdef dict trf_particles
-    cdef dict remote_block_pid
 
     cdef double block_size
     cdef double min_block_size
 
-    cdef public object parallel_controller, pc
+    cdef public object parallel_controller
     cdef public load_balancer
     cdef public ProcessorMap proc_map
     cdef public bint load_balancing
@@ -59,18 +58,10 @@ cdef class ParallelCellManager(CellManager):
     cpdef remove_remote_particles(self)
 
     cdef public bint initial_redistribution_done
-    cdef public dict adjacent_remote_cells
     cdef public dict remote_particle_indices
-    cdef public dict nbr_cell_info
-    cdef public dict new_particles_for_neighbors
-    cdef public dict new_region_particles
-    cdef public dict new_cells_added
-
-    cdef public dict neighbor_share_data
 
     #cdef public ParallelCellManager cell_manager
     cpdef compute_block_size(self, double block_size)
-    cpdef find_adjacent_remote_cells(self)
     cpdef update_cell_neighbor_information(self)
     cpdef rebin_particles(self)
     cpdef bin_particles(self)
@@ -90,7 +81,6 @@ cdef class ParallelCellManager(CellManager):
                                    bint mark_remote=*, list recv_procs=*)
     cdef list get_communication_data(self, int num_arrays, list cell_list)
 
-    cpdef Cell get_new_cell_for_copy(self, IntPoint id, int pid)
     cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
     cpdef list get_cells_in_block(self, IntPoint bid)
     cpdef list get_particle_indices_in_block(self, IntPoint bid)
@@ -107,8 +97,3 @@ cdef class ParallelCellInfo:
 cdef class ParallelCell(Cell):
     cdef public int pid
     cdef public ParallelCellInfo parallel_cell_info
-
-cdef class ParallelCellRemoteCopy(ParallelCell):
-    cdef public list particle_start_indices
-    cdef public list particle_end_indices
-    cdef public int num_particles
