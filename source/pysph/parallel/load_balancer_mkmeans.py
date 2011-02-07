@@ -143,8 +143,8 @@ class ParDecompose:
         er = (6) `e` on reversal (see `tr`)
         r = (2) clipping of resize factor between (1/r and r)
         """
-        self.cell_proc = cell_proc
-        self.proc_cell_np = proc_cell_np
+        self.block_proc = cell_proc
+        self.proc_block_np = proc_cell_np
         self.num_procs = len(proc_cell_np)
         self.c = kwargs.get('c', 0.3)
         if init:
@@ -155,7 +155,7 @@ class ParDecompose:
         "weighted distance" from the center of the cluster"""
         for cluster in self.clusters:
             cluster.cells[:] = []
-        for cell in self.cell_proc:
+        for cell in self.block_proc:
             wdists = []
             for cluster in self.clusters:
                 s = cluster.size
@@ -173,9 +173,9 @@ class ParDecompose:
         """return the list of cells and the number of particles in each
         cluster to be used for distribution to processes"""
         self.calc()
-        proc_cells = self.proc_cells
+        proc_blocks = self.proc_blocks
         proc_num_particles = self.particle_loads
-        cell_proc = LoadBalancer.get_cell_proc(proc_cells=proc_cells)
+        cell_proc = LoadBalancer.get_block_proc(proc_blocks=proc_blocks)
         return cell_proc, proc_num_particles
     
     def cluster_bal_iter(self):
@@ -209,8 +209,8 @@ class ParDecompose:
     def calc(self):
         """calculates the cells in each process, the cell and particle loads
         and the imbalance in the distribution"""
-        self.proc_cells = [cluster.cells for cluster in self.clusters]
-        self.cell_loads = [sum([len(cell) for cell in self.proc_cells])]
+        self.proc_blocks = [cluster.cells for cluster in self.clusters]
+        self.cell_loads = [sum([len(cell) for cell in self.proc_blocks])]
         self.particle_loads = [cluster.np for cluster in self.clusters]
         self.imbalance = LoadBalancer.get_load_imbalance(self.particle_loads)
     
@@ -218,7 +218,7 @@ class ParDecompose:
         """generate the clusters to operate on. This is automatically called
         by the constructor if its `init` argument is True (default)"""
         cell_np = {}
-        for tmp_cells_np in self.proc_cell_np:
+        for tmp_cells_np in self.proc_block_np:
             cell_np.update(tmp_cells_np)
         self.cell_np = cell_np
         if proc_cells is None:

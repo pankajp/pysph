@@ -64,6 +64,9 @@ class ParallelTest(unittest.TestCase):
     def test_lb_check_2d(self):
         run_mpi_script('lb_check_2d.py')
     
+    def test_lb_check_parallel(self):
+        run_mpi_script('lb_check_parallel.py', 2)
+    
     def test_remote_data_copy(self):
         run_mpi_script('remote_data_copy.py')
     

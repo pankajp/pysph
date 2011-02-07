@@ -19,18 +19,21 @@ cdef class ParallelCellManager(CellManager)
 # `ProcessorMap` class.
 ###############################################################################
 cdef class ProcessorMap:
-     cdef public Point origin
-     cdef public dict local_block_map
-     cdef public dict block_map
-     cdef public dict load_per_proc
-     cdef public list nbr_procs
-     cdef public int pid
-     cdef public double block_size
-     cdef public dict cell_map
-     cdef public dict conflicts
+    cdef public Point origin
+    cdef public dict local_block_map
+    cdef public dict block_map
+    cdef public dict load_per_proc
+    cdef public list nbr_procs
+    cdef public int pid
+    cdef public double block_size
+    cdef public dict cell_map
+    cdef public dict conflicts
+    cdef public parallel_controller
 
-     cpdef merge(self, ProcessorMap proc_map)
-     cpdef find_region_neighbors(self)
+    cpdef glb_update_proc_map(self, dict cells_dict)
+    cpdef resolve_procmap_conflicts(self, dict trf_particles)
+    cpdef merge(self, ProcessorMap proc_map)
+    cpdef find_region_neighbors(self)
 
 ###############################################################################
 # `ParallelCellManager` class.
@@ -54,7 +57,6 @@ cdef class ParallelCellManager(CellManager):
     cdef public ProcessorMap proc_map
     cdef public bint load_balancing
 
-    cpdef glb_update_proc_map(self)
     cpdef remove_remote_particles(self)
 
     cdef public bint initial_redistribution_done
@@ -81,7 +83,6 @@ cdef class ParallelCellManager(CellManager):
                                    bint mark_remote=*, list recv_procs=*)
     cdef list get_communication_data(self, int num_arrays, list cell_list)
 
-    cpdef dict _get_cell_data_for_neighbor(self, list cell_list, list props=*)
     cpdef list get_cells_in_block(self, IntPoint bid)
     cpdef list get_particle_indices_in_block(self, IntPoint bid)
     cpdef list get_particles_in_block(self, IntPoint bid)
@@ -93,7 +94,3 @@ cdef class ParallelCellInfo:
     cdef public dict remote_pid_cell_count
     cdef public int num_remote_neighbors
     cdef public int num_local_neighbors
-    
-cdef class ParallelCell(Cell):
-    cdef public int pid
-    cdef public ParallelCellInfo parallel_cell_info

@@ -338,7 +338,12 @@ if pid == 0:
         
         # update the global processor map
 
-        cm.glb_update_proc_map()
+        cm.remove_remote_particles()
+        cm.delete_empty_cells()
+        cm.proc_map.glb_update_proc_map(cm.cells_dict)
+        recv_particles = cm.proc_map.resolve_procmap_conflicts({})
+        cm.add_entering_particles_from_neighbors(recv_particles)
+        cm.remove_remote_particles()
         
         # check the processor maps
 
@@ -682,7 +687,12 @@ if pid == 1:
 
         # update the global processor map
 
-        cm.glb_update_proc_map()    
+        cm.remove_remote_particles()
+        cm.delete_empty_cells()
+        cm.proc_map.glb_update_proc_map(cm.cells_dict)
+        recv_particles = cm.proc_map.resolve_procmap_conflicts({})
+        cm.add_entering_particles_from_neighbors(recv_particles)
+        cm.remove_remote_particles() 
         
         # check the processor maps
 

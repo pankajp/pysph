@@ -223,7 +223,7 @@ class Application(object):
                 # initially. Negative cell size forces automatic computation. 
                 data = LoadBalancer.distribute_particles(pa, 
                                                          num_procs=num_procs, 
-                                                         cell_size=-1)
+                                                         block_size=-1)
         if num_procs > 1:
             # Now scatter the distributed data.
             pa = self.comm.scatter(data, root=0)

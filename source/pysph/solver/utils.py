@@ -191,7 +191,7 @@ def get_distributed_particles(pa, comm, cell_size):
 
     if rank == 0:
         lb = LoadBalancer.distribute_particles(pa, num_procs=num_procs, 
-                                               cell_size=cell_size)
+                                               block_size=cell_size)
     else:
         lb = None
 

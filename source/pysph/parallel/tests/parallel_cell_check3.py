@@ -4,9 +4,7 @@ import pysph.base.api as base
 import pysph.parallel.api as parallel
 
 import numpy
-import pylab
 import time
-
 import pdb
 
 # mpi imports
@@ -19,65 +17,6 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler())
-
-def draw_cell(cell, color="b"):
-    centroid = base.Point()
-    cell.get_centroid(centroid)
-    
-    half_size = 0.5 * cell.cell_size
-
-    x1, y1 = centroid.x - half_size, centroid.y - half_size
-    x2, y2 = x1 + cell.cell_size, y1
-    x3, y3 = x2, y1 + cell.cell_size
-    x4, y4 = x1, y3
-
-    pylab.plot([x1,x2,x3,x4,x1], [y1, y2, y3, y4,y1], color)
-
-def draw_block(origin, block_size, block_id, color="r"):
-
-    half_size = 0.5 * block_size
-    x,y = [], []
-
-    xc = origin.x + ((block_id.x + 0.5) * proc_map.block_size)        
-    yc = origin.y + ((block_id.y + 0.5) * proc_map.block_size)
-        
-    x1, y1 = xc - half_size, yc - half_size
-    x2, y2 = x1 + block_size, y1
-    x3, y3 = x2, y2 + block_size
-    x4, y4 = x1, y3
-    
-    pylab.plot([x1,x2,x3,x4,x1], [y1, y2, y3, y4,y1], color)
-
-def draw_particles(cell, color="y"):
-    arrays = cell.arrays_to_bin
-    num_arrays = len(arrays)
-    
-    index_lists = []
-    cell.get_particle_ids(index_lists)
-
-    x, y = [], []
-
-    for i in range(num_arrays):
-        array = arrays[i]
-        index_array = index_lists[i]
-        
-        indices = index_lists[i].get_npy_array()
-
-        xarray, yarray = array.get('x','y')
-        for j in indices:
-            x.append(xarray[j])
-            y.append(yarray[j])
-
-    pylab.plot(x,y,color+"o")
-
-def get_sorted_indices(cell):
-    index_lists = []
-    cell.get_particle_ids(index_lists)
-    index_array = index_lists[0].get_npy_array()
-    index_array.sort()
-
-    print type(index_array)
-    return index_array
 
 xc = numpy.arange(0,1.0, 0.2)
 x, y = numpy.meshgrid(xc,xc)
@@ -98,17 +37,10 @@ block_010_indices = 15,16,17,20,21,22
 block_110_indices = 18,19,23,24
 
 name = "rank" + str(pid)
-pa = pa = base.get_particle_array(name="test", x=x, y=y, h=h)
+pa = base.get_particle_array(name="test", x=x, y=y, h=h)
 
-if pid == 1:
-    pa.x += 1.0
-    pa.x += 1e-10
-
-if pid == 2:
-    pa.y += 9
-
-if pid == 3:
-    pa.x += 9; pa.y += 9
+pa.x += 1.0*pid
+pa.x += 1e-10
 
 # create the cell manager
 
@@ -169,9 +101,9 @@ index_array.sort()
 
 # check the indices
 
-cid = cells_dict.keys()[0]
+#cid = cells_dict.keys()[0]
 
-assert (cid.x, cid.y, cid.z) == [(0,0,0),(2,0,0)][pid]
+#assert (cid.x, cid.y, cid.z) == [(0,0,0),(2,0,0)][pid]
 
 for i in range(25):
     assert index_array[i] == i       
@@ -336,7 +268,12 @@ print "Testing glb_update_proc_map"
 
 # update the global processor map
 
-cm.glb_update_proc_map()
+cm.remove_remote_particles()
+cm.delete_empty_cells()
+cm.proc_map.glb_update_proc_map(cm.cells_dict)
+recv_particles = cm.proc_map.resolve_procmap_conflicts({})
+cm.add_entering_particles_from_neighbors(recv_particles)
+cm.remove_remote_particles()
 
 # check the processor maps
 
@@ -353,7 +290,7 @@ for blockid in cm.proc_map.block_map:
 print
 
 print "Testing Neighbors", pid
-assert cm.proc_map.nbr_procs == [0,1]
+assert cm.proc_map.nbr_procs == [i for i in (pid-1, pid, pid+1) if i>=0 and i<num_procs]
 
 # exchange neighbor particles
 
@@ -361,38 +298,44 @@ cm.exchange_neighbor_particles()
 
 print "Testing Exchange Neighbor Particles"
 
-print "Cells Dict For Processor 0 After Exchange\n"
+print "Cells Dict For Processor", pid, "After Exchange\n"
 for cid, cell in cells_dict.iteritems():
     print cid, "np = ", cell.get_number_of_particles()
 
 #print_yours=True
 #comm.send(obj=print_yours, dest=1)
 
-print "Testing remote particle indices on Processor 0"
+print "Testing remote particle indices on Processor", pid
 
 parray = cm.arrays_to_bin[0]
 np = parray.get_number_of_particles()
 nrp = parray.num_real_particles
 
-assert nrp == 25
-assert np == [40,35][pid]
+assert nrp == 25, "nrp=%r"%nrp
+assert np == nrp + 15*(pid<num_procs-1)+10*(pid>0), "np=%r != %r"%(np,
+                                        nrp + 15*(pid<num_procs)+10*(pid>0))
 
 local = parray.get("local", only_real_particles=False)
 
-rpi = cm.remote_particle_indices[1-pid][0]
 
-assert rpi[0] == nrp
-assert rpi[1] == (np - 1)
-
-for i in range(np):
-    if i >= nrp:
-        assert local[i] == 0
-    else:
-        assert local[i] == 1
+for i in proc_map.nbr_procs:
+    if i == pid: continue
+    rpi = cm.remote_particle_indices[i][0]
+    print pid, cm.remote_particle_indices
+    r = nrp + 10*(pid<i and pid>0)
+    assert rpi[0] == r, "%r,%r, rpi[0]=%r, r=%r"%(i,pid, rpi[0], r)
+    r = r + 9 + 5*(pid<i)
+    assert rpi[1] == r, "%r,%r, rpi[1]=%r != %r"%(i,pid, rpi[1], r)
+    
+    for i in range(np):
+        if i >= nrp:
+            assert local[i] == 0
+        else:
+            assert local[i] == 1
 
 # test the update of remote particle indices
 
-print "Testing Update Remote Particle Properties on processor 0"
+print "Testing Update Remote Particle Properties on processor", pid
 
 # change the local property say 'p' and 'rho' to -1
 
@@ -429,12 +372,22 @@ for i in range(np):
 
 # test the configuration 
 
-cids = [base.IntPoint(0+pid,0,0), base.IntPoint(1+pid,0,0), base.IntPoint(1+pid,1,0),
-        base.IntPoint(0+pid,1,0), base.IntPoint(2+pid,0,0), base.IntPoint(2+pid,1,0)]
+cids = [base.IntPoint(0+pid*2,0,0), base.IntPoint(1+pid*2,0,0),
+        base.IntPoint(1+pid*2,1,0), base.IntPoint(0+pid*2,1,0)]
+
+for nbr in proc_map.nbr_procs:
+    if nbr == pid: continue
+    if nbr < pid:
+        cids.append(base.IntPoint(-1+pid*2,0,0))
+        cids.append(base.IntPoint(-1+pid*2,1,0))
+    elif nbr > pid:
+        cids.append(base.IntPoint(2+pid*2,0,0))
+        cids.append(base.IntPoint(2+pid*2,1,0))
+    
 
 pa = cm.arrays_to_bin[0]
 for cid in cids:
-    assert cm.cells_dict.has_key(cid)
+    assert cm.cells_dict.has_key(cid), "%r %r"%(pid, cid)
     if cid in [base.IntPoint(2-pid,0,0), base.IntPoint(2-pid,1,0)]:
         cell = cells_dict.get(cid)
         index_lists = []
@@ -477,7 +430,7 @@ cm.cells_update()
 
 npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
 nprt = comm.bcast(comm.reduce(npr))
-assert nprt==50, 'num_particles = %d != 50, %d'%(nprt,npr)
+assert nprt==25*num_procs
 
 print "Local\n"
 for blockid in cm.proc_map.local_block_map:
@@ -494,23 +447,25 @@ print cm.cells_dict.values()
 np = pa.get_number_of_particles()
 nrp = pa.num_real_particles
 print pid, np, nrp
-assert np == [40,35][pid], '%r, %r'%(pid, np)
-assert nrp == [19,31][pid], '%r, %r'%(pid, np)
+if num_procs == 2:
+    assert np == [40,35][pid], '%r, %r'%(pid, np)
+    assert nrp == [19,31][pid], '%r, %r'%(pid, np)
 
 # now move the 4 particles in cell/block (1,1,0) to block/cell (1,2,0) in pid=0
 # and particles in cell (2,1,0) to cell (1, 2, 0) in pid=1
 
 x, y = pa.get('x', 'y')
 
-cell = cm.cells_dict.get(base.IntPoint([1,2][pid],1,0))
-index_lists = []
-cell.get_particle_ids(index_lists)
-index_array = index_lists[0].get_npy_array()
-print index_array
-for i in index_array:
-    y[i] += 0.5
-    if pid == 1:
-        x[i] -= 0.5
+if num_procs == 2:
+    cell = cm.cells_dict.get(base.IntPoint([1,2][pid],1,0))
+    index_lists = []
+    cell.get_particle_ids(index_lists)
+    index_array = index_lists[0].get_npy_array()
+    print index_array
+    for i in index_array:
+        y[i] += 0.5
+        if pid == 1:
+            x[i] -= 0.5
 
 # now call a cells update
 cm.cells_update()
@@ -529,40 +484,42 @@ print cm.cells_dict.values()
 
 npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
 nprt = comm.bcast(comm.reduce(npr))
-assert nprt==50, 'num_particles = %d != 50, %d'%(nprt,npr)
+assert nprt==25*num_procs
 
 np = pa.get_number_of_particles()
 nrp = pa.num_real_particles
 
 print pid, np
 
-assert nrp == [19 + 6, 31 - 6][pid]
-#assert np  == nrp + 10
-#assert np == [np, 41][pid]
-assert np == nrp
+if num_procs == 2:
+    assert nrp == [19 + 6, 31 - 6][pid]
+    #assert np  == nrp + 10
+    #assert np == [np, 41][pid]
+    assert np == nrp, "%r, %r!=%r"%(pid,np, nrp)
 
 
-cells_nps = {base.IntPoint(0,0,0):9,
-             base.IntPoint(2,0,0):15,
-             base.IntPoint(3,0,0):6,
-             base.IntPoint(0,1,0):6,
-             base.IntPoint(3,1,0):4,
-             base.IntPoint(1,2,0):10,
-             }
+    cells_nps = {base.IntPoint(0,0,0):9,
+                 base.IntPoint(2,0,0):15,
+                 base.IntPoint(3,0,0):6,
+                 base.IntPoint(0,1,0):6,
+                 base.IntPoint(3,1,0):4,
+                 base.IntPoint(1,2,0):10,
+                 }
+    
+    print cm.proc_map.block_map
+    for cid, cell in cm.cells_dict.iteritems():
+        print cid, cell, cell.get_number_of_particles()
+        assert cell.get_number_of_particles() == cells_nps[cid], '%r'%(cell)
+    
+    npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
+    assert comm.bcast(comm.reduce(npr)) == 50
+    assert nrp == [19 + 6, 31 - 6][pid]
+    
+    
+    cm.cells_update()
+    
+    npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
+    assert comm.bcast(comm.reduce(npr)) == 50
+    assert nrp == [19 + 6, 31 - 6][pid]
 
-print cm.proc_map.block_map
-for cid, cell in cm.cells_dict.iteritems():
-    print cid, cell, cell.get_number_of_particles()
-    assert cell.get_number_of_particles() == cells_nps[cid], '%r'%(cell)
-
-npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
-assert comm.bcast(comm.reduce(npr)) == 50
-assert nrp == [19 + 6, 31 - 6][pid]
-
-
-cm.cells_update()
-
-npr = sum([i.num_real_particles for i in cm.arrays_to_bin])
-assert comm.bcast(comm.reduce(npr)) == 50
-assert nrp == [19 + 6, 31 - 6][pid]
-
+#print cm.proc_map.nbr_procs

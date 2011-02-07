@@ -83,7 +83,7 @@ class LoadBalancerSFC(LoadBalancer):
         np = 0
         proc = 0
         for cell_id in cell_ids:
-            np += self.proc_cell_np[cell_proc[cell_id]][cell_id]
+            np += self.proc_block_np[cell_proc[cell_id]][cell_id]
             #print proc, cell_id, np
             ret_cells[proc].append(cell_id)
             if np > np_per_proc:
@@ -94,7 +94,7 @@ class LoadBalancerSFC(LoadBalancer):
         self.particles_per_proc = [0]*self.num_procs
         
         cell_np = {}
-        for cnp in self.proc_cell_np:
+        for cnp in self.proc_block_np:
             cell_np.update(cnp)
         for proc,cells in enumerate(ret_cells):
             for cid in cells:
