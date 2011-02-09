@@ -31,14 +31,13 @@ cpdef make_nd_array(list arrays=[]):
 
 
 cpdef LongArray arange_long(long start, long stop=-1):
-    """
-    Creates a long array of size range and fills in values from 0-range-1 into
-    it. 
+    """ Creates a LongArray working same as builtin range with upto 2 arguments
+    both expected to be positive
     """
     
     cdef LongArray arange
-    cdef int i = 0
-    cdef int size = 0
+    cdef long i = 0
+    cdef long size = 0
     
     if stop == -1:
         arange = LongArray(start)
@@ -46,7 +45,7 @@ cpdef LongArray arange_long(long start, long stop=-1):
             arange.data[i] = i
         return arange
     else:
-        size = stop-start+1
+        size = stop-start
         arange = LongArray(size)
         for i in range(size):
             arange.data[i] = start + i

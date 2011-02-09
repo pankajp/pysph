@@ -168,6 +168,8 @@ class LoadBalancer:
             logger.debug('Upper threshold : %f'%(self.upper_threshold))
             logger.debug('Lower threshold : %f'%(self.lower_threshold))
             
+            self.block_proc = self.cell_manager.proc_map.block_map
+            
             if min(self.particles_per_proc) == 0:
                 self.load_balance_with_zero_procs()
             else:
@@ -180,6 +182,7 @@ class LoadBalancer:
             self.proc_map.glb_update_proc_map(self.cell_manager.cells_dict)
             #assert len(self.proc_map.conflicts) == 0
             #recv_particles = self.proc_map.resolve_procmap_conflicts({})
+            self.proc_map.find_region_neighbors()
             #self.cell_manager.add_entering_particles_from_neighbors(recv_particles)
             
             self.comm.Barrier()
@@ -213,8 +216,6 @@ class LoadBalancer:
             self.particles_per_proc,
             self.cell_manager.proc_map.nbr_procs)
         num_procs = len(self.procs_to_communicate)
-        
-        self.block_proc = self.cell_manager.proc_map.block_map
         
         # PASS 1
         num_procs = len(self.procs_to_communicate)
@@ -622,6 +623,7 @@ class LoadBalancer:
         self.proc_map.glb_update_proc_map(self.cell_manager.cells_dict)
         #assert len(self.proc_map.conflicts) == 0
         #recv_particles = self.proc_map.resolve_procmap_conflicts({})
+        self.proc_map.find_region_neighbors()
         #self.cell_manager.add_entering_particles_from_neighbors(recv_particles)
         
         logger.info('waiting for lb to finish')

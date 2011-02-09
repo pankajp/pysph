@@ -1215,7 +1215,15 @@ cdef class CellManager:
                 deleted_cells.append(cell.id)
 
         return deleted_cells
-
+    
+    cpdef long get_number_of_particles(self):
+        """ return the number of particles in the cell manager """
+        cdef long ret = 0
+        cdef ParticleArray pa
+        for pa in self.arrays_to_bin:
+            ret += pa.get_number_of_particles()
+        return ret
+    
     def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
         """ Check if the particle has moved more than the jump tolerance """
 

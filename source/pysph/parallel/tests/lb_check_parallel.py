@@ -101,6 +101,8 @@ t = time() - t
 print 'transfer_blocks time', t
 
 t = time()
+cm.delete_empty_cells()
+cm.rebin_particles()
 cm.cells_update()
 t = time() - t
 print 'cells_update time', t

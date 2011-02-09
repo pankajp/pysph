@@ -92,4 +92,4 @@ cdef class CellManager:
     cdef int _get_cells_within_radius(self, Point pnt, double radius,
                                       list cell_list) except -1
     cdef void _reset_jump_tolerance(self)
-
+    cpdef long get_number_of_particles(self)

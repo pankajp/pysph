@@ -1595,17 +1595,14 @@ cdef class ParallelCellManager(CellManager):
 
             for i in range(num_arrays):
                 s_parr = parray_list[i]
+                d_parr = self.arrays_to_bin[i]
 
                 index_info = pid_index_info[i]
-
-                d_parr = self.arrays_to_bin[i]
-                current_counts.data[i] = d_parr.get_number_of_particles()
-
-                index_info[0] = current_counts.data[i]
-
+                index_info[0] = d_parr.get_number_of_particles()
+                
                 if s_parr.get_number_of_particles() > 0:
                     index_info[1] = index_info[0] + \
-                        s_parr.get_number_of_particles() - 1
+                        s_parr.get_number_of_particles()
                 else:
                     index_info[1] = index_info[0]
 
@@ -1665,6 +1662,7 @@ cdef class ParallelCellManager(CellManager):
         cdef int i, pid, num_arrays
         cdef list index_data
 
+        self.remote_particle_indices.clear()
         num_arrays = len(self.arrays_to_bin)
         
         for pid in proc_map.nbr_procs:
