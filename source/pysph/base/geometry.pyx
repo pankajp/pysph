@@ -64,7 +64,7 @@ cdef class Line:
 
         Parameters:
         -----------
-        origon -- The origon for the line
+        origin -- The origon for the line
         length -- The length of the line
         angle -- The inclination with the positive x axis
         
@@ -124,7 +124,7 @@ cdef class Line:
         tang = -self.tangent
 
         pos = self.xa + self.tangent*dx
-        while (pos-self.xa).length() < length:
+        while (length - ((pos-self.xa).length()-1e-10)) > dx:
             mpnt = MeshPoint(pos, norm, tang)
             mpnts.append(mpnt)
             pos = pos + self.tangent*dx
@@ -301,18 +301,25 @@ cdef class Geometry:
                 lm = lines[i-1]
                 l = lines[i]
                 
-                pos = lm.xa
+                pos = lm.xb
                 norm = (lm.normal + l.normal) * -0.5
                 tang = (lm.tangent + l.tangent) * -0.5
+
+                norm.normalize()
+                tang.normalize()
 
                 mpnt  = MeshPoint(pos, norm, tang)
                 self.mpnts2.append(mpnt)
                 
             l = lines[-1]
             lp = lines[0]
-            pos = l.xa
+            pos = l.xb
+
             norm = (lp.normal + l.normal) * -0.5
             tang = (lp.tangent + l.tangent) * -0.5
+
+            norm.normalize()
+            tang.normalize()
             
             mpnt  = MeshPoint(pos, norm, tang)
             self.mpnts2.append(mpnt)            
@@ -326,12 +333,21 @@ cdef class Geometry:
                 pos = l.xa
                 norm = (l.normal + lp.normal) * -0.5
                 tang = (l.tangent + lp.tangent) * -0.5
+                
+                norm.normalize()
+                tang.normalize()
+
                 mpnt = MeshPoint(pos, norm, tang)
                 self.mpnts2.append(mpnt)
 
                 pos = l.xb
+
                 norm = (l.normal + lm.normal) * -0.5
                 tang = (l.tangent + lm.tangent) * -0.5
+
+                norm.normalize()
+                tang.normalize()
+
                 mpnt = MeshPoint(pos, norm, tang)
                 self.mpnts2.append(mpnt)
 

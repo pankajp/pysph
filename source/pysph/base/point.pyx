@@ -152,6 +152,14 @@ cdef class Point:
         return sqrt((p.x-self.x)*(p.x-self.x)+
                     (p.y-self.y)*(p.y-self.y)+
                     (p.z-self.z)*(p.z-self.z))
+    
+    def normalize(self):
+        """ Normalize the point """
+        norm = self.length()
+
+        self.x /= norm
+        self.y /= norm
+        self.z /= norm
 
 cdef class IntPoint:
     

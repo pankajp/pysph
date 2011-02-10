@@ -87,7 +87,6 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
                 nforce = 0.0
                    
             force = (mb/(ma+mb)) * nforce * tforce * beta
-            #print dest_pid, source_pid, q, nforce, tforce, force
         
         nr[0] += force*norm.x
         nr[1] += force*norm.y
