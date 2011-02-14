@@ -324,7 +324,7 @@ for i in proc_map.nbr_procs:
     print pid, cm.remote_particle_indices
     r = nrp + 10*(pid<i and pid>0)
     assert rpi[0] == r, "%r,%r, rpi[0]=%r, r=%r"%(i,pid, rpi[0], r)
-    r = r + 9 + 5*(pid<i)
+    r = r + 10 + 5*(pid<i)
     assert rpi[1] == r, "%r,%r, rpi[1]=%r != %r"%(i,pid, rpi[1], r)
     
     for i in range(np):

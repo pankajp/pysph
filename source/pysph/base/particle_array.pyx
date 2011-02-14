@@ -1138,13 +1138,14 @@ cdef class ParticleArray:
         Copy properties from source to self, starting from start_index uptill
         end_index in self.
 
-        **Parameters**
+        Parameters:
+        -----------
 
             - source - the particle array from where to copy.
             - start_index - the first particle in self which maps to the 0th
-              particle in source.
-            - end_index - the last particle in self which maps to the last
-              particle in source.
+                particle in source
+            - end_index - the index of first particle from start_index that
+                is not copied
 
         """
         cdef BaseArray src_array, dst_array
@@ -1156,9 +1157,7 @@ cdef class ParticleArray:
                 dst_array.copy_subset(src_array, start_index, end_index)
 
     cpdef remove_property(self, str prop_name):
-        """
-        Removes property prop_name from the particle array.
-        """
+        """ Removes property prop_name from the particle array """
 
         if self.properties.has_key(prop_name):
             self.properties.pop(prop_name)

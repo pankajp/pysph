@@ -1489,13 +1489,7 @@ cdef class ParallelCellManager(CellManager):
                             s_parr.remove_property(prop)
                 
                 d_parr = self.arrays_to_bin[i]
-
-                if si != ei:
-                    d_parr.copy_properties(s_parr, si, ei)
-
-                else:
-                    # this means no particles were added for this array
-                    pass
+                d_parr.copy_properties(s_parr, si, ei)
 
     cpdef exchange_neighbor_particles(self):
         """ Exchange neighbor particles.

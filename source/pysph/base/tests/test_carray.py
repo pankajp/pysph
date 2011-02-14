@@ -214,7 +214,7 @@ class TestLongArray(unittest.TestCase):
         l2[3] = 1
 
         # a valid copy.
-        l1.copy_subset(l2, 5, 8)
+        l1.copy_subset(l2, 5, 9)
         self.assertEqual(numpy.allclose([0, 1, 2, 3, 4, 4, 3, 2, 1, 9],
                                         l1.get_npy_array()), True)
         
@@ -234,7 +234,7 @@ class TestLongArray(unittest.TestCase):
         l1.set_data(numpy.arange(10))
         self.assertRaises(ValueError, l1.copy_subset, l2, -1, 1)
         self.assertRaises(ValueError, l1.copy_subset, l2, 3, 2)
-        self.assertRaises(ValueError, l1.copy_subset, l2, 0, 10)
+        self.assertRaises(ValueError, l1.copy_subset, l2, 0, 11)
         self.assertRaises(ValueError, l1.copy_subset, l2, 10, 20)
         self.assertRaises(ValueError, l1.copy_subset, l2, -1, -1)
 

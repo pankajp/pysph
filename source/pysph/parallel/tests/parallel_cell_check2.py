@@ -392,7 +392,7 @@ if pid == 0:
     rpi = cm.remote_particle_indices[1][0]
 
     assert rpi[0] == nrp
-    assert rpi[1] == (np - 1)
+    assert rpi[1] == np
     
     for i in range(np):
         if i >= nrp:
@@ -742,7 +742,7 @@ if pid == 1:
     rpi = cm.remote_particle_indices[0][0]
 
     assert rpi[0] == nrp
-    assert rpi[1] == np - 1
+    assert rpi[1] == np
     
     for i in range(np):
         if i >= nrp:

@@ -552,12 +552,12 @@ class ParticleArrayTest(unittest.TestCase):
         p2.add_property({'name':'s', 'data':[2, 3, 4, 5]})
         p2.align_particles()
         
-        p1.copy_properties(p2, start_index=5, end_index=8)
+        p1.copy_properties(p2, start_index=5, end_index=9)
         self.assertEqual(check_array(p1.t, [0, 0, 0, 0, 0, -1, -1, -1, -1, 0]),
                          True)
 
         p1.add_property({'name':'s'})
-        p1.copy_properties(p2, start_index=5, end_index=8)
+        p1.copy_properties(p2, start_index=5, end_index=9)
         self.assertEqual(check_array(p1.t, [0, 0, 0, 0, 0, -1, -1, -1, -1, 0]),
                          True)
         self.assertEqual(check_array(p1.s, [0, 0, 0, 0, 0, 2, 3, 4, 5, 0]), True)

@@ -1,5 +1,5 @@
 # This file (carray.pxd) has been generated automatically on
-# Sun Nov 14 15:49:35 2010
+# Mon Feb 14 16:36:03 2011
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -28,7 +28,7 @@ The numpy array may however be copied and used in any manner.
 
 """
 # For malloc etc.
-from libc.stdlib cimport *
+from stdlib cimport *
 
 cimport numpy as np
 
@@ -61,10 +61,6 @@ cdef extern from "stdlib.h":
 
 # numpy module initialization call
 import_array()
-
-# forward declaration
-#cdef class BaseArray
-#cdef class LongArray(BaseArray)
 
 cdef class BaseArray:
     """ Base class for managed C-arrays. """
@@ -424,9 +420,9 @@ cdef class IntArray(BaseArray):
         **Parameters**
 
             - start_index - the first index in dest that corresponds to the 0th
-            index in source.
-            - end_index   - the last index in dest that corresponds to the last
-            index in source.
+            index in source
+            - end_index   - the first index in dest from start_index that
+            is not copied
 
         """
         cdef long si, ei, s_length, d_length, i, j
@@ -441,19 +437,19 @@ cdef class IntArray(BaseArray):
                     logger.error(msg)
                     raise ValueError, msg
                 si = 0
-                ei = self.length - 1
+                ei = self.length
             else:
                 # meaning we copy from the specified start index to the end of
                 # self. make sure the sizes are consistent.
                 si = start_index
-                ei = d_length-1
+                ei = d_length
 
                 if start_index > (d_length-1):
                     msg = 'start_index beyond array length'
                     logger.error(msg)
                     raise ValueError, msg
 
-                if (ei - si + 1) > s_length:
+                if (ei - si) > s_length:
                     msg = 'Not enough values in source'
                     logger.error(msg)
                     raise ValueError, msg
@@ -464,7 +460,7 @@ cdef class IntArray(BaseArray):
                 logger.error(msg)
                 raise ValueError, msg
             else:
-                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                if (start_index > (d_length-1) or end_index > d_length or
                     start_index > end_index):
                     msg = 'start_index : %d, end_index : %d'%(start_index,
                                                               end_index)
@@ -476,7 +472,7 @@ cdef class IntArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i in range(si, ei+1):
+        for i in range(si, ei):
             self.data[i] = src.data[j]
             j += 1
 
@@ -758,9 +754,9 @@ cdef class DoubleArray(BaseArray):
         **Parameters**
 
             - start_index - the first index in dest that corresponds to the 0th
-            index in source.
-            - end_index   - the last index in dest that corresponds to the last
-            index in source.
+            index in source
+            - end_index   - the first index in dest from start_index that
+            is not copied
 
         """
         cdef long si, ei, s_length, d_length, i, j
@@ -775,19 +771,19 @@ cdef class DoubleArray(BaseArray):
                     logger.error(msg)
                     raise ValueError, msg
                 si = 0
-                ei = self.length - 1
+                ei = self.length
             else:
                 # meaning we copy from the specified start index to the end of
                 # self. make sure the sizes are consistent.
                 si = start_index
-                ei = d_length-1
+                ei = d_length
 
                 if start_index > (d_length-1):
                     msg = 'start_index beyond array length'
                     logger.error(msg)
                     raise ValueError, msg
 
-                if (ei - si + 1) > s_length:
+                if (ei - si) > s_length:
                     msg = 'Not enough values in source'
                     logger.error(msg)
                     raise ValueError, msg
@@ -798,7 +794,7 @@ cdef class DoubleArray(BaseArray):
                 logger.error(msg)
                 raise ValueError, msg
             else:
-                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                if (start_index > (d_length-1) or end_index > d_length or
                     start_index > end_index):
                     msg = 'start_index : %d, end_index : %d'%(start_index,
                                                               end_index)
@@ -810,7 +806,7 @@ cdef class DoubleArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i in range(si, ei+1):
+        for i in range(si, ei):
             self.data[i] = src.data[j]
             j += 1
 
@@ -1092,9 +1088,9 @@ cdef class FloatArray(BaseArray):
         **Parameters**
 
             - start_index - the first index in dest that corresponds to the 0th
-            index in source.
-            - end_index   - the last index in dest that corresponds to the last
-            index in source.
+            index in source
+            - end_index   - the first index in dest from start_index that
+            is not copied
 
         """
         cdef long si, ei, s_length, d_length, i, j
@@ -1109,19 +1105,19 @@ cdef class FloatArray(BaseArray):
                     logger.error(msg)
                     raise ValueError, msg
                 si = 0
-                ei = self.length - 1
+                ei = self.length
             else:
                 # meaning we copy from the specified start index to the end of
                 # self. make sure the sizes are consistent.
                 si = start_index
-                ei = d_length-1
+                ei = d_length
 
                 if start_index > (d_length-1):
                     msg = 'start_index beyond array length'
                     logger.error(msg)
                     raise ValueError, msg
 
-                if (ei - si + 1) > s_length:
+                if (ei - si) > s_length:
                     msg = 'Not enough values in source'
                     logger.error(msg)
                     raise ValueError, msg
@@ -1132,7 +1128,7 @@ cdef class FloatArray(BaseArray):
                 logger.error(msg)
                 raise ValueError, msg
             else:
-                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                if (start_index > (d_length-1) or end_index > d_length or
                     start_index > end_index):
                     msg = 'start_index : %d, end_index : %d'%(start_index,
                                                               end_index)
@@ -1144,7 +1140,7 @@ cdef class FloatArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i in range(si, ei+1):
+        for i in range(si, ei):
             self.data[i] = src.data[j]
             j += 1
 
@@ -1426,9 +1422,9 @@ cdef class LongArray(BaseArray):
         **Parameters**
 
             - start_index - the first index in dest that corresponds to the 0th
-            index in source.
-            - end_index   - the last index in dest that corresponds to the last
-            index in source.
+            index in source
+            - end_index   - the first index in dest from start_index that
+            is not copied
 
         """
         cdef long si, ei, s_length, d_length, i, j
@@ -1443,19 +1439,19 @@ cdef class LongArray(BaseArray):
                     logger.error(msg)
                     raise ValueError, msg
                 si = 0
-                ei = self.length - 1
+                ei = self.length
             else:
                 # meaning we copy from the specified start index to the end of
                 # self. make sure the sizes are consistent.
                 si = start_index
-                ei = d_length-1
+                ei = d_length
 
                 if start_index > (d_length-1):
                     msg = 'start_index beyond array length'
                     logger.error(msg)
                     raise ValueError, msg
 
-                if (ei - si + 1) > s_length:
+                if (ei - si) > s_length:
                     msg = 'Not enough values in source'
                     logger.error(msg)
                     raise ValueError, msg
@@ -1466,7 +1462,7 @@ cdef class LongArray(BaseArray):
                 logger.error(msg)
                 raise ValueError, msg
             else:
-                if (start_index > (d_length-1) or end_index > (d_length-1) or
+                if (start_index > (d_length-1) or end_index > d_length or
                     start_index > end_index):
                     msg = 'start_index : %d, end_index : %d'%(start_index,
                                                               end_index)
@@ -1478,7 +1474,7 @@ cdef class LongArray(BaseArray):
 
         # we have valid start and end indices now. can start copying now.
         j = 0
-        for i in range(si, ei+1):
+        for i in range(si, ei):
             self.data[i] = src.data[j]
             j += 1
 
