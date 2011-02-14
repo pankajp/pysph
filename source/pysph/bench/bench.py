@@ -30,6 +30,8 @@ Output from mpi runs is redirected to `mpirunner.log.<rank>'
 import os
 import sys
 import traceback
+import subprocess
+import pickle
 
 # local relative import
 import setup
@@ -41,16 +43,9 @@ def list_pyx_extensions(path):
     return ret
 
 def mpirun(bench_name, num_procs):
-    from mpi4py import MPI
-    comm = MPI.COMM_SELF.Spawn(sys.executable,
-                               args=['mpirunner.py'],
-                               maxprocs=num_procs)
-    
-    comm.bcast(bench_name, root=MPI.ROOT)
-    ret = comm.recv(0)
-    comm.Disconnect()
-    return ret
-    
+    ret = subprocess.check_output(['mpiexec', '-n', '2', sys.executable,
+                                   'mpirunner.py', 'p', bench_name])
+    return pickle.loads(ret)
 
 def run(extns=None, dirname=None, num_runs=1):
     """run the benchmarks in the modules given
@@ -117,7 +112,7 @@ def run(extns=None, dirname=None, num_runs=1):
         sys.stdout = stdout_orig
         sys.stderr = stderr_orig
         if mpi:
-            s = bench_name.split('_',2)[1]+' %d\n'%num_procs
+            s = bench_name.split('_',1)[1]+' %d\n'%num_procs
             s += '#'*len(s)
             print s
             outtext += s + '\n'
