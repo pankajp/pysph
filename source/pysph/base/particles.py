@@ -53,7 +53,7 @@ class Particles(object):
 
     """
     
-    def __init__(self, arrays=[], in_parallel=False,
+    def __init__(self, arrays=[], in_parallel=False, variable_h=False,
                  load_balancing=True, update_particles=True):
         """ Construct a representation of a particle array 
 
@@ -83,7 +83,7 @@ class Particles(object):
             self.pid = self.cell_manager.pid
 
         self.nnps_manager = NNPSManager(cell_manager=self.cell_manager,
-                                        variable_h=False)
+                                        variable_h=variable_h)
 
         self.correction_manager = None
 
