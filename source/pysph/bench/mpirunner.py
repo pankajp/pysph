@@ -51,9 +51,9 @@ def mpirun(args=None):
         for k in sorted(func.keys()):
             s = k.ljust(40) + '\t%g'%func[k]
             outtext += s + '\n'
+        outtext += '\n'
     logfile = open('mpirunner.log', 'w')
     logfile.write(outtext)
-    logfile.write('\n')
     logfile.close()
     
     if args is None:
@@ -61,7 +61,7 @@ def mpirun(args=None):
     elif pkl:
         sys.stdout.write(pickle.dumps(res))
     else:
-        print outtext
+        sys.stdout.write(outtext)
 
 if __name__ == '__main__':
     mpirun(sys.argv[1:])

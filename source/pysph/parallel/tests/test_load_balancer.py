@@ -5,10 +5,13 @@ import unittest
 from pysph.base.kernels import CubicSplineKernel
 from pysph.base.cell import CellManager
 
-from pysph.solver.basic_generators import *
+from pysph.solver.basic_generators import LineGenerator, RectangleGenerator, \
+        CuboidGenerator
 
 from pysph.parallel.parallel_cell import ParallelCellManager
-from pysph.parallel.load_balancer_mkmeans import LoadBalancer
+from pysph.parallel.load_balancer import get_load_balancer_class
+
+LoadBalancer = get_load_balancer_class()
 
 def dict_from_kwargs(**kwargs):
     return kwargs
@@ -30,7 +33,7 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
         cm.load_balancing = False # balancing will be done manually
         cm.dimension = self.dim
         
-        self.lb = lb = self.cm.load_balancer = LoadBalancer(parallel_solver=None, parallel_cell_manager=self.cm)
+        self.lb = lb = self.cm.load_balancer = LoadBalancer(parallel_cell_manager=self.cm)
         lb.skip_iteration = 1
         lb.threshold_ratio = 10.
         lb.lb_max_iteration = 10
@@ -38,7 +41,6 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
     
     def load_balance(self):
         np0 = 0
-        nc0 = len(self.cm.cell_dict)
         for cid, cell in self.cm.cell_dict.items():
             np0 += cell.get_number_of_particles()
         lb = self.cm.load_balancer
@@ -52,13 +54,13 @@ def get_lb_args():
             # This test is only for serial cases
             #dict_from_kwargs(method='normal'),
             dict_from_kwargs(),
+            dict_from_kwargs(adaptive=True),
             dict_from_kwargs(distr_func='auto'),
             dict_from_kwargs(distr_func='geometric'),
             dict_from_kwargs(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
-            dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=False),
-            dict_from_kwargs(distr_func='sfc', sfc_func='morton', start_origin=True),
-            #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=False),
-            #dict_from_kwargs(distr_func='sfc', sfc_func='hilbert', start_origin=True),
+            dict_from_kwargs(distr_func='sfc', sfc_func='morton'),
+            dict_from_kwargs(distr_func='sfc', sfc_func='hilbert'),
+            dict_from_kwargs(distr_func='metis'),
            ]
 
 # function names have 't' instead of 'test' otherwise nose test collector
@@ -67,7 +69,8 @@ def create_t_func1(lbargs, num_procs):
     """ create and return test functions for load balancing """ 
     def test(self):
         self.create_solver()
-        proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs, self.cell_size, 100, **lbargs)
+        proc_pas = LoadBalancer.distribute_particle_arrays(self.pas, num_procs,
+                                    self.cell_size, 100, **lbargs)
         nps = [sum([pa.get_number_of_particles() for pa in pas]) for pas in proc_pas]
         self.assertTrue(sum(nps) == sum([pa.get_number_of_particles() for pa in self.pas]))
         for pa in pas:
@@ -78,14 +81,14 @@ def create_t_func1(lbargs, num_procs):
             assert np > 0
     
     test.__name__ = 'test_distribute_particle_arrays_p%d'%(num_procs)
-    test.__doc__ = 'distribute_particle_arrays; procs=%d; lbargs=' + str(lbargs)
+    test.__doc__ = 'distribute_particle_arrays; procs=%d; lbargs='%num_procs + str(lbargs)
     
     return test
 
 def gen_ts():
     """ generate test functions and attach them to TestSerialLoadBalancer1D """
     for i, lbargs in enumerate(get_lb_args()):
-        for num_procs in [1,5,11]:
+        for num_procs in [1,5,9]:
             t_method = create_t_func1(lbargs, num_procs)
             t_method.__name__ = t_method.__name__ + '_%d'%(i)
             setattr(TestSerialLoadBalancer1D, t_method.__name__, t_method)
