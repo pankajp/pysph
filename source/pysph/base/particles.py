@@ -20,62 +20,106 @@ else:
 import numpy
 
 class Particles(object):
-    """ A particle array for solid and fluid particles.
-    
-    Works as a wrapper around ParticleArray, CellManager and 
-    NNPSManager. Use this to get neighbor locators for an SPH simulation
-    involving with the one particle array only paradigm.
+    """ A collection of particles and related data structures that
+    hat define an SPH simulation.
 
-    Using the ParticleType data structure, we can retrieve tagged particles.
-        
+    In pysph, particle properties are stored in a ParticleArray. The
+    array may represent a particular type of particle (solid, fluid
+    etc). Valid types are defined in base.particle_types.
+
+    Indexing of the particles is performed by a CellManager and
+    nearest neighbors are obtained via an instance of NNPSManager.
+
+    Pafticles is a collection of these data structures to provide a
+    single point access to
+
+    (a) Hold all particle information
+    (b) Update the indexing scheme when particles have moved.
+    (c) Update any variable at the start of an integration step/sub-step
+    (d) Update remote particle properties in parallel runs.
+    (e) Barrier synchronizations across processors
+
+    Data Attributes:
+    ----------------
+
+    arrays -- a list of particle arrays in the simulation.
+
+    cell_manager -- the CellManager for spatial indexing.
+
+    nnps_manager -- the NNPSManager for neighbor queries.
+
+    correction_manager -- a kernel KernelCorrectionManager if kernel
+    correction is used. Defaults to None
+
+    smoothing_update_function -- A function to update the smoothing
+    lengths at the start of a sub step.
+
+    misc_prop_update_functions -- A list of functions to evaluate
+    properties at the begining of a sub step.
+
+    variable_h -- boolean indicating if variable smoothing lenghts are
+    considered. Defaults to False
+
+    in_parallel -- boolean indicating if running in parallel. Defaults to False
+
+    load_balancing -- boolean indicating if load balancing is required.
+    Defaults to False.
+
+    pid -- processor id if running in parallel
+
     Example:
-    --------
+    ---------
+
     In [1]: import pysph.base.api as base
 
     In [2]: x = linspace(-pi,pi,101)
     
     In [3]: pa = base.get_particle_array(x=x)
     
-    In [4]: particles = base.Particles(pa,kfac=2)
+    In [4]: particles = base.Particles(arrays=[pa], in_parallel=True,
+                                       load_balancing=False, variable_h=True)
 
-    In [5]: particles.update()
-    
-    In [6]: neighbors = base.LongArray()
-    
-    In [7]: particles.get_neighbors(0, from_types=[ParticleType.Fluid],
-                                    exclude_self=False)
-    
-    to get all neighbors with tag `0` (ParticleType.Fluid).
 
     Notes:
     ------
-    The `kfac` argument at construction determines the radius of search for 
-    the neighbor locator. The actual search radius is then calculated as 
-    `rad = h*kfac` for each particle.
+
+    An appropriate cell manager (CellManager/ParallelCellManager) is
+    created with reference to the 'in_parallel' attribute.
+
+    Simillarly an appropriate NNPSManager is created with reference to
+    the 'variable_h' attribute.
 
     """
     
     def __init__(self, arrays=[], in_parallel=False, variable_h=False,
                  load_balancing=True, update_particles=True):
-        """ Construct a representation of a particle array 
+        """ Constructor
 
         Parameters:
         -----------
-        pa -- Particle Array generated via `get_particle_array`
 
-        Notes:
-        ------
-        Default properties like those defined in `get_particle_array` are
-        assumed to exist.
-        
+        arrays -- list of particle arrays in the simulation
+
+        in_parallel -- flag for parallel runs
+
+        variable_h -- flag for variable smoothing lengths
+
+        load_balancing -- flag for dynamic load balancing.
+
+
         """
 
-        self.arrays=arrays
+        # set the flags
+
+        self.variable_h = variable_h
         self.in_parallel = in_parallel
         self.load_balancing = load_balancing
-        self.variable_h = variable_h
-        
+
+        self.arrays=arrays        
+
         self.kernel = None
+
+        # create the cell manager
 
         if not in_parallel:
             self.cell_manager = CellManager(arrays_to_bin=arrays)
@@ -85,51 +129,80 @@ class Particles(object):
 
             self.pid = self.cell_manager.pid
 
+        # create the nnps manager
+
         self.nnps_manager = NNPSManager(cell_manager=self.cell_manager,
                                         variable_h=variable_h)
 
-        self.correction_manager = None
-
+        # set defaults
+        
+        self.correction_manager = None        
         self.smoothing_update_function = UpdateSmoothing()
         self.misc_prop_update_functions = []
 
-        # call an update on the particles
+        # call an update on the particles (i.e index)
         
         if update_particles:
             self.update()
 
     def update(self, cache_neighbors=False):
-        """ Update the status of the neighbor locators and cell manager.
-        
-        Call this function if any particle has moved to properly get the 
-        required neighbors.
+        """ Update the status of the Particles.
+
+        Parameters:
+        -----------
+
+        cache_neighbors -- flag for caching kernel interactions 
         
         Notes:
-        ------
-        This calls the nnps_manager's update function, which in turn 
-        sets the `is_dirty` bit for the locators and cell manager based on
-        the particle array's `is_dirty` information.
+        -------
+        
+        This function must be called whenever particles have moved and
+        the indexing structure invalid. After a call to this function,
+        particle neighbors will be accurately returned. 
+
+        Since particles move at the end of an integration
+        step/sub-step, we may perform any other operation that would
+        be required for the subsequent step/sub-step. Examples of
+        these are summation density, equation of state, smoothing
+        length updates, evaluation of velocity divergence/vorticity
+        etc. 
+        
+        The smoothing length is updated after new neighbors are
+        calculated. This only if variable_h is True. The function
+        'smoothing_update_function' must be properly implemented and
+        set. Note that neighbors should be recalculated with new
+        smoothing lengths. An example is the ADKE algorithm in
+        'sph.update_smoothing.py'
+
+        All other properties may be updated by appending functions to
+        the list 'misc_prop_update_functions'. These functions must
+        implement an 'eval' method which takes no arguments. An example
+        is the UpdateDivergence function in 'sph.update_misc_props.py'
         
         """
+
+        # update the cell structure
+
         err = self.nnps_manager.py_update()
         assert err != -1, 'NNPSManager update failed! '
+
+        # update smoothing lengths
 
         if self.variable_h:
             self.smoothing_update_function.update_smoothing_lengths()
             
+        # update any other properties (rho, p, cs, div etc.)
+            
         self.evaluate_misc_properties()
+
+        # evaluate kernel correction terms
 
         if self.correction_manager:
             self.correction_manager.update()
 
-        # cache the particle neighbors        
-
-        #if self.kernel and cache_neighbors:
-        #    self.nnps_manager.cache_neighbors(self.kernel)
-
-        self.needs_update = False
-
     def evaluate_misc_properties(self):
+        """ Evaluate properties from the list of functions. """
+        
         for func in self.misc_prop_update_functions:
             func.eval()
 
@@ -193,6 +266,7 @@ class Particles(object):
             self.cell_manager.update_remote_particle_properties(props=props)
 
     def barrier(self):
+        """ Synchronize all processes """
         if self.in_parallel:
             self.cell_manager.barrier()
 
