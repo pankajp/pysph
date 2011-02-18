@@ -261,7 +261,7 @@ class Integrator(object):
         self.k_props = {}
 
         calcs = self.calcs
-        
+
         self.pcalcs = [calc for calc in calcs if calc.tag == 'position']
         self.ncalcs = [calc for calc in calcs if not calc.tag == 'position']
         self.icalcs = [calc for calc in calcs if not calc.tag == 'position'

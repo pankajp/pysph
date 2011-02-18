@@ -12,9 +12,12 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
     """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True):
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+                 bint setup_arrays=True, **kwargs):
+
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
         self.id = 'energyeqn'
+        self.tag = "energy"
     
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -97,14 +100,18 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True,  beta=1.0, alpha=1.0, 
-                 gamma=1.4, eta=0.1):
+                 gamma=1.4, eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
+
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
         self.eta = eta
+
         self.id = 'energyavisc'
+        self.tag = "energy"
     
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -210,14 +217,17 @@ cdef class EnergyEquation(SPHFunctionParticle):
     #cdef public double eta
 
     def __init__(self, ParticleArray source, dest,  bint setup_arrays=True,
-                 alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
+                 alpha=1.0, beta=1.0, gamma=1.4, eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
 
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+
         self.id = 'energyequation'
+        self.tag = "energy"
         
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -306,7 +316,6 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         nr[0] += 0.5*mb*tmp
         
-###############################################################################
 
 ################################################################################
 # `ArtificialHeat` class.
@@ -325,14 +334,17 @@ cdef class ArtificialHeat(SPHFunctionParticle):
     """
     
     def __init__(self, ParticleArray source, dest,  bint setup_arrays=True,
-                 g1=0.5, g2=0.5, eta=0.1):
+                 g1=0.5, g2=0.5, eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
 
         self.g1 = g1
         self.g2 = g2
         self.eta = eta
+
         self.id = 'aheat'
+        self.tag = "energy"
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """

@@ -13,12 +13,14 @@ cdef class GravityForce(SPHFunctionParticle):
                  bint setup_arrays=True, double gx = 0.0, 
                  double gy = 0.0, double gz = 0.0):
 
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+
         self.id = 'gravityforce'
+        self.tag = "velocity"
+
         self.gx = gx
         self.gy = gy
         self.gz = gz        
-
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -43,10 +45,10 @@ cdef class VectorForce(SPHFunctionParticle):
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, Point force=Point()):
 
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+
         self.id = 'vectorforce'
         self.force = force
-
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -55,8 +57,6 @@ cdef class VectorForce(SPHFunctionParticle):
         nr[0] = self.force.x
         nr[1] = self.force.y
         nr[2] = self.force.z
-
-##############################################################################
 
 ################################################################################
 # `MoveCircleX` class.
@@ -69,8 +69,11 @@ cdef class MoveCircleX(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
+
         self.id = 'circlex'
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.tag = "position"
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
@@ -104,8 +107,10 @@ cdef class MoveCircleY(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'circley'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+
+        self.id = 'circley'
+        self.tag = "position"
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):

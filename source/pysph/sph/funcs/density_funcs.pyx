@@ -6,6 +6,16 @@ from pysph.base.carray cimport DoubleArray
 ###############################################################################
 cdef class SPHRho(SPHFunctionParticle):
     """ SPH Summation Density """
+
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 bint setup_arrays=True, **kwargs):
+
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     **kwargs)
+
+        self.id = 'sphrho'
+        self.tag = "density"
+
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ Compute the contribution from source_pid on dest_pid. """
@@ -51,6 +61,16 @@ cdef class SPHRho(SPHFunctionParticle):
 cdef class SPHDensityRate(SPHFunctionParticle):
     """
     """
+
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 bint setup_arrays=True, **kwargs):
+
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     **kwargs)
+
+        self.id = 'densityrate'
+        self.tag = "density"
+
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """

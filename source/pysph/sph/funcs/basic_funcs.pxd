@@ -22,7 +22,7 @@ cdef class SPH(SPHFunctionParticle):
     cdef DoubleArray d_prop
     cdef DoubleArray s_prop
 
-cdef class SPHGrad(SPHFunctionParticle):
+cdef class SPHSimpleGradient(SPHFunctionParticle):
     """
     SPH Gradient Approximation.
     """
@@ -30,7 +30,7 @@ cdef class SPHGrad(SPHFunctionParticle):
     cdef DoubleArray d_prop
     cdef DoubleArray s_prop
 
-cdef class SPHSimpleDerivative(SPHFunctionParticle):
+cdef class SPHGradient(SPHFunctionParticle):
     """
     SPH Gradient Approximation.
     """

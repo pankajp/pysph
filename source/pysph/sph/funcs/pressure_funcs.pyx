@@ -15,9 +15,13 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
     """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True):
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+                 bint setup_arrays=True, **kwargs):
+        
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
+
         self.id = 'pgrad'
+        self.tag = "velocity"
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
@@ -89,13 +93,15 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, alpha=1, beta=1, gamma=1.4, 
-                 eta=0.1):
+                 eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
 
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+
         self.id = 'momentumequation'
         self.tag = "velocity"
         

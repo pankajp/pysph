@@ -28,7 +28,7 @@ cdef class SPHFunctionParticle:
 
     """
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True, *args, **kwargs):
+                 bint setup_arrays=True, hks = False, *args, **kwargs):
         """
         Constructor.
         """
@@ -94,16 +94,12 @@ cdef class SPHFunctionParticle:
 
         # type of kernel symmetrization
 
-        #self.hks = False
+        self.hks = hks
 
         self.function_cache = []
         self.xgradient_cache = []
         self.ygradient_cache = []
         self.zgradient_cache = []
-
-        # set values passed by kwargs
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
 
         if setup_arrays:
             self.setup_arrays()

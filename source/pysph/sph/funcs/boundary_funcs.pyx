@@ -14,12 +14,14 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
     #cdef public DoubleArray s_tx, s_ty, s_tz, s_nx, s_ny, s_nz
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=False, double delp = 1.0):
+                 bint setup_arrays=False, double delp = 1.0, **kwargs):
+
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     **kwargs)
 
         self.id = 'monaghanbforce'
+        self.tag = "velocity"
         self.delp = delp
-        SPHFunctionParticle.__init__(self, source, dest, 
-                                       setup_arrays = True)
 
     cpdef setup_arrays(self):
         """ Setup the arrays needed for the function """
@@ -106,10 +108,14 @@ cdef class BeckerBoundaryForce(SPHFunctionParticle):
     #cdef public double cs
 
     def __init__(self, ParticleArray source, dest, bint setup_arrays=True,
-                 double sound_speed=0.0):
+                 double sound_speed=0.0, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
+
         self.id = 'beckerbforce'
+        self.tag = "velocity"
+
         self.sound_speed = sound_speed
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
@@ -183,10 +189,15 @@ cdef class LennardJonesForce(SPHFunctionParticle):
     #cdef public double p1, p2
 
     def __init__(self, ParticleArray source, dest, bint setup_arrays=True,
-                 double D=0, double ro=0, double p1=0, double p2=0):
+                 double D=0, double ro=0, double p1=0, double p2=0,
+                 **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
+
         self.id = 'lenardbforce'
+        self.tag = "velocity"
+        
         self.D = D
         self.ro = ro
         self.p1 = p1

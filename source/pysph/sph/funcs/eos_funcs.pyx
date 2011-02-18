@@ -14,7 +14,9 @@ cdef class IdealGasEquation(SPHFunctionParticle):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.gamma = gamma
+
         self.id = 'idealgas'
+        self.tag = "state"
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -59,13 +61,16 @@ cdef class TaitEquation(SPHFunctionParticle):
     
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, double co = 1.0,
-                 double ro = 1000.0, double gamma=7.0):
+                 double ro = 1000.0, double gamma=7.0, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
         self.co = co
         self.ro = ro
         self.gamma = gamma
+
         self.id = 'tait'
+        self.tag = "state"
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):

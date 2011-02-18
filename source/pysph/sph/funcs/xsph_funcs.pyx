@@ -10,11 +10,14 @@ cdef class XSPHCorrection(SPHFunctionParticle):
     #Defined in the .pxd file
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 bint setup_arrays=True, double eps = 0.5):
+                 bint setup_arrays=True, double eps = 0.5, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+                                     **kwargs)
         self.eps = eps
+
         self.id = 'xsph'
+        self.tag = "position"
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):

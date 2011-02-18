@@ -18,13 +18,15 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, alpha=1, beta=1, 
-                 gamma=1.4, eta=0.1):
+                 gamma=1.4, eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+
         self.id = 'momavisc'
+        self.tag = "velocity"
 
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
@@ -126,8 +128,14 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         """
         Constructor.
         """
+
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays=True,
+                                     **kwargs)
+
         self.mu = mu
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays=True)
+        self.id = "morrisvisc"
+        self.tag = "velocity"       
+
 
     cpdef setup_arrays(self):
         """

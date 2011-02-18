@@ -16,7 +16,7 @@ cdef class SPH(SPHFunctionParticle):
     #cdef DoubleArray s_prop, d_prop
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 str prop_name=''):
+                 str prop_name='', **kwargs):
         """ Constructor for SPH
 
         Parameters:
@@ -31,12 +31,13 @@ cdef class SPH(SPHFunctionParticle):
         invoking setup_arrays.
         
         """
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sph'
         self.prop_name = prop_name
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
-
+        
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -103,9 +104,9 @@ cdef class SPH(SPHFunctionParticle):
 
 
 ###############################################################################
-# `SPHSimpleDerivative` class.
+# `SPHSimpleGradient` class.
 ###############################################################################
-cdef class SPHSimpleDerivative(SPHFunctionParticle):
+cdef class SPHSimpleGradient(SPHFunctionParticle):
     """ Basic SPH Derivative Interpolation.  """
 
     #Defined in the .pxd file
@@ -127,11 +128,13 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         name after intialization and then setup the arrays.
         
         """
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
+
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sphd'
         self.prop_name = prop_name
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -200,7 +203,7 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
 ################################################################################
 # `SPHGrad` class.
 ################################################################################
-cdef class SPHGrad(SPHFunctionParticle):
+cdef class SPHGradient(SPHFunctionParticle):
     """ Basic SPH Gradient Interpolation.  """
 
     #Defined in the .pxd file
@@ -222,11 +225,13 @@ cdef class SPHGrad(SPHFunctionParticle):
         name after intialization and then setup the arrays.
         
         """
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
+
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sphgrad'
         self.prop_name = prop_name
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -325,12 +330,14 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         invoking setup_arrays.
         
         """
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
+
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sphlaplacian'
         self.prop_name = prop_name
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
-        
+               
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -419,13 +426,12 @@ cdef class CountNeighbors(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'nbrs'
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.id = 'nbrs'
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
     
-        print source_pid, dest_pid
         nr[0] += 1
 ###########################################################################
 
