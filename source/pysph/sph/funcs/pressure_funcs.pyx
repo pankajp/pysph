@@ -29,11 +29,16 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         cdef double pa = self.d_p.data[dest_pid]
         cdef double pb = self.s_p.data[source_pid]
 
-        cdef double h = 0.5*(self.s_h.data[source_pid] +
-                             self.d_h.data[dest_pid])
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+        
+        cdef double h = 0.5*(ha + hb)
 
         cdef double temp = 0.0
+
         cdef Point grad = Point_new(0,0,0)
+        cdef Point grada = Point_new(0,0,0)
+        cdef Point gradb = Point_new(0,0,0)
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -45,9 +50,15 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
 
         temp = (pa/(rhoa*rhoa) + pb/(rhob*rhob))
         temp *= -mb
-        
-        kernel.gradient(self._dst, self._src, h, grad)
-        #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -86,20 +97,25 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.beta = beta
         self.gamma = gamma
         self.id = 'momentumequation'
+        self.tag = "velocity"
         
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
     
     
-        cdef Point va, vb, vab, rab, grad
+        cdef Point va, vb, vab, rab
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta
 
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
         cdef DoubleArray xgc, ygc, zgc
 
-        cdef double hab = 0.5*(self.s_h.data[source_pid] + \
-                                   self.d_h.data[dest_pid])
+        cdef double hab = 0.5*(ha + hb)
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -153,20 +169,18 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
         grad = Point_new(0,0,0)
 
-        #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
 
-        kernel.gradient(self._dst, self._src, hab, grad)
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+            
+            grad = (grada + gradb) * 0.5
 
-        #xgc = self.xgradient_cache[dest_pid]
-        #ygc = self.ygradient_cache[dest_pid]
-        #zgc = self.zgradient_cache[dest_pid]
-
-        #grad = Point_new(xgc.data[k], ygc.data[k], zgc.data[k])
+        else:
+            kernel.gradient(self._dst, self._src, hab, grad)
         
-        #assert grad.x == other_grad.x
-        #assert grad.y == other_grad.y
-        #assert grad.z == other_grad.z
-
         if self.rkpm_first_order_correction:
             pass
 

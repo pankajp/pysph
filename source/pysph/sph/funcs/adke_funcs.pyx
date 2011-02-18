@@ -80,14 +80,16 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 
         """
 
-        h = 0.5*(self.s_h.data[source_pid] +
-                 self.d_h.data[dest_pid])
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double h = 0.5 * (ha + hb)
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
 
-        cdef Point grad, vba
+        cdef Point grad, grada, gradb, vba
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -102,8 +104,17 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
                         self.s_w.data[source_pid] - self.d_w.data[dest_pid])
 
         grad = Point_new(0.0, 0.0, 0.0)
+        grada = Point_new(0.0, 0.0, 0.0)
+        gradb = Point_new(0.0, 0.0, 0.0)
 
-        kernel.gradient(self._dst, self._src, h, grad)
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, h, grad)
 
         if self.rkpm_first_order_correction:
             pass

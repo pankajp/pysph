@@ -92,10 +92,18 @@ cdef class SPHFunctionParticle:
         self.kernel_function_evaluation = {}
         self.kernel_gradient_evaluation = {}
 
+        # type of kernel symmetrization
+
+        #self.hks = False
+
         self.function_cache = []
         self.xgradient_cache = []
         self.ygradient_cache = []
         self.zgradient_cache = []
+
+        # set values passed by kwargs
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
         if setup_arrays:
             self.setup_arrays()

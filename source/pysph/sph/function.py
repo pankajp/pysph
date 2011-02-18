@@ -11,8 +11,29 @@ import funcs.viscosity_funcs as viscosity
 import funcs.xsph_funcs as xsph
 import funcs.adke_funcs as adke
 
-#base class
+# base class
 class Function(object):
+    """ Base class that defines an sph function (sph.funcs) and it's
+    associated parameter values.
+
+    Methods:
+    --------
+
+    get_func -- Return a particular instance of SPHFunctionParticle
+    with an appropriate source and destincation particle araay.
+
+    Example:
+    --------
+
+    The sph function MonaghanArtificialVsicosity (defined in
+    sph.funcs.viscosity_funcs) requires the parameter values 'alpha',
+    'beta', 'gamma' and 'eta' to define the Monaghan type artificial
+    viscosity. This function may be created as:
+
+    avisc = MonaghanArtificialVsicosity(hks=False, alpha, beta, gamma, eta)
+    avisc_func = avisc.get_funcs(source, dest)
+
+    """
     def __init__(self, sph_func=None, *args, **kwargs):
         self.sph_func = sph_func
         self.args = args
@@ -153,17 +174,19 @@ class ArtificialHeat(Function):
 
 class EnergyEquation(Function):
     
-    def __init__(self, beta=1.0, alpha=1.0, gamma=1.4, eta=0.1):
+    def __init__(self, hks=False, beta=1.0, alpha=1.0, gamma=1.4, eta=0.1):
         self.beta = beta
         self.alpha = alpha
         self.gamma = gamma
-        self.eta = eta        
+        self.eta = eta
+        self.hks = hks
         
     def get_func(self, source, dest):
         func =  energy.EnergyEquation(source=source, dest=dest, beta=self.beta,
                                       gamma=self.gamma, alpha=self.alpha, 
                                       eta=self.eta)
         func.tag = "energy"
+        func.hks = self.hks
         return func
 
 #state equation
@@ -237,11 +260,14 @@ class SPHPressureGradient(Function):
         return func
 
 class MomentumEquation(Function):
-    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1):
+    def __init__(self, alpha=1.0, beta=1.0, gamma=1.4, eta=0.1,
+                 hks=False):
+
         self.alpha=alpha
         self.beta=beta
         self.gamma=gamma
         self.eta=eta
+        self.hks = hks
 
     def get_func(self, source, dest):
         func =  pressure.MomentumEquation(source=source, dest=dest,
@@ -250,6 +276,7 @@ class MomentumEquation(Function):
                                           eta=self.eta, 
                                           )
         func.tag = "velocity"
+        func.hks = self.hks
         return func
 
 #viscosity equations

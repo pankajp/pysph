@@ -42,6 +42,10 @@ cdef class SPHFunctionParticle:
 
     #bonnet and lok correction terms ONLY FOR THE DESTINATION!!!
     cdef public DoubleArray bl_l11, bl_l12, bl_l13, bl_l22, bl_l23, bl_l33
+
+    # type of kernel symmetrization to use
+
+    cdef public bint hks
     
     cdef public Point _src
     cdef public Point _dst

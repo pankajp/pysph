@@ -30,13 +30,17 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
         """
         """
-        cdef Point va, vb, vab, rab, grad
+        cdef Point va, vb, vab, rab
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta
 
-        cdef double hab = 0.5*(self.s_h.data[source_pid] + \
-                                   self.d_h.data[dest_pid])
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+        
+        cdef double hab = 0.5*(ha + hb)
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -85,9 +89,17 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         tmp *= -mb
 
         grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
 
-        #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
-        kernel.gradient(self._dst, self._src, hab, grad)
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -98,7 +110,6 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         nr[0] += tmp*grad.x
         nr[1] += tmp*grad.y
         nr[2] += tmp*grad.z
-
 
 ################################################################################
 # `SPHViscosityMomentum` class.
@@ -130,8 +141,12 @@ cdef class MorrisViscosity(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
         """
         """
-        cdef double h = 0.5*(self.s_h.data[source_pid] +
-                             self.d_h.data[dest_pid])
+        cdef Point grad, grada, gradb
+        
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+        
+        cdef double hab = 0.5*(ha + hb)
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
@@ -141,7 +156,6 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         cdef double mub = self.s_mu.data[source_pid]
 
         cdef double temp = 0.0
-        cdef Point grad = Point_new(0,0,0)
         cdef Point rab, va, vb, vab
         cdef double dot
 
@@ -165,8 +179,18 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         
         rab = Point_sub(self._dst,self._src)
 
-        #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
-        kernel.gradient(self._dst, self._src, h, grad)
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
+        
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+            
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -177,7 +201,7 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         dot = rab.dot(grad)
             
         temp = mb*(mua + mub)*dot/(rhoa*rhob)
-        temp /= (rab.norm() + 0.01*h*h)
+        temp /= (rab.norm() + 0.01*hab*hab)
 
         nr[0] += temp*vab.x
         nr[1] += temp*vab.y

@@ -22,7 +22,7 @@ app.process_command_line()
 
 # Create the particles automatically, the application calls a supplied
 # function which generates the particles.
-particles = app.create_particles(
+particles = app.create_particles(False,
     solver.shock_tube_solver.standard_shock_tube_data,
     name='fluid', type=0)
 pa = particles.arrays[0]

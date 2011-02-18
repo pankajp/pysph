@@ -1,3 +1,5 @@
+from pysph.base.point cimport Point_new, Point_sub
+
 cdef extern from "math.h":
     double sqrt(double)
     double fabs(double)
@@ -26,8 +28,8 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         """
         cdef double dot, tmp, h
-        cdef Point grad = Point()
         cdef Point va, vb, vab
+        cdef Point grad, grada, gradb
 
         cdef double pa = self.d_p.data[dest_pid]
         cdef double pb = self.s_p.data[source_pid]
@@ -35,8 +37,10 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double mb = self.s_m.data[source_pid]
 
-        h = 0.5 * (self.d_h.data[dest_pid] + \
-                       self.s_h.data[source_pid])
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         va = Point(self.d_u.data[dest_pid],
                    self.d_v.data[dest_pid],
@@ -46,7 +50,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
                    self.s_v.data[source_pid],
                    self.s_w.data[source_pid])
 
-        vab = va - vb
+        vab = va - vb     
         
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -55,8 +59,19 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-        
-        kernel.gradient(self._dst, self._src, h, grad)
+
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)        
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+            
+            grad = (grada + gradb) * 0.5
+            
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -105,7 +120,13 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         cdef double test, gamma, alpha, beta, cs
         cdef double pa, rhoa, pb, rhob, cab, h, mu, prod, rhoab
-        cdef Point rab, grad, va, vb, vab
+        cdef Point rab, va, vb, vab
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         va = Point(self.d_u.data[dest_pid],
                    self.d_v.data[dest_pid],
@@ -128,8 +149,6 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
         rab = self._dst - self._src
         test = vab.dot(rab)
 
-        grad = Point()
-        
         if test < 0.0:
             gamma = self.gamma 
             alpha = self.alpha
@@ -142,15 +161,26 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
             rhoa = self.d_rho.data[dest_pid]
             rhob = self.s_rho.data[source_pid]
             mb = self.s_m.data[source_pid]
-            h = 0.5 * (self.d_h.data[dest_pid] + \
-                           self.s_h.data[source_pid])
 
             cab = 0.5*(self.d_cs.data[dest_pid] + self.s_cs.data[source_pid])
 
             rhoab = 0.5 * (rhoa + rhob)
 
             mu = (h * test) / (rab.norm() + eta*eta*h*h)
-            kernel.gradient(self._dst, self._src, h, grad)
+
+
+            grad = Point_new(0,0,0)
+            grada = Point_new(0,0,0)
+            gradb = Point_new(0,0,0)        
+
+            if self.hks:
+                kernel.gradient(self._dst, self._src, ha, grada)
+                kernel.gradient(self._dst, self._src, hb, gradb)
+            
+                grad = (grada + gradb) * 0.5
+            
+            else:            
+                kernel.gradient(self._dst, self._src, hab, grad) 
 
             if self.rkpm_first_order_correction:
                 pass
@@ -161,7 +191,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
             prod  = (-alpha*cab*mu + beta*mu*mu)/(rhoab)
             nr[0] += 0.5 * mb * prod * vab.dot(grad)
         else:
-                pass
+            pass
 ##############################################################################
 
 
@@ -193,13 +223,17 @@ cdef class EnergyEquation(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
     
     
-        cdef Point va, vb, vab, rab, grad, tmp1
+        cdef Point va, vb, vab, rab, tmp1
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta
 
-        cdef double hab = 0.5*(self.s_h.data[source_pid] + \
-                                   self.d_h.data[dest_pid])
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -245,9 +279,18 @@ cdef class EnergyEquation(SPHFunctionParticle):
             piab = -alpha*cab*mu + beta*mu*mu
             piab /= rhoab
 
-        grad = Point()
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)        
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
             
-        kernel.gradient(self._dst, self._src, hab, grad)
+            grad = (grada + gradb) * 0.5
+            
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -309,18 +352,20 @@ cdef class ArtificialHeat(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
     
     
-        cdef Point va, vb, xab, xba, grad
+        cdef Point va, vb, xab, xba
         cdef double rhoa, rhob, rhoab
         cdef double dot, tmp, tmp1
         cdef double ca, cb, g1, g2, eta
         cdef double ea, eb, diva, divb
-        
-        cdef double mb = self.s_m.data[source_pid]
+
+        cdef Point grad, grada, gradb
 
         cdef double ha = self.d_h.data[dest_pid]
         cdef double hb = self.s_h.data[source_pid]
 
-        cdef double hab = 0.5 * (ha + hb)
+        cdef double hab = 0.5 * (ha + hb)        
+        
+        cdef double mb = self.s_m.data[source_pid]
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -371,9 +416,18 @@ cdef class ArtificialHeat(SPHFunctionParticle):
             tmp /= (xab.norm() + eta*eta*hab*hab)
             tmp /= rhoab
 
-        grad = Point()
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)        
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
             
-        kernel.gradient(self._dst, self._src, hab, grad)
+            grad = (grada + gradb) * 0.5
+            
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass

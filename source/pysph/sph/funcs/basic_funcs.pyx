@@ -1,5 +1,7 @@
 """ Implementations for the basic SPH functions """
 
+from pysph.base.point cimport Point_new, Point_sub
+
 cdef extern from "math.h":
     double sqrt(double)
 
@@ -57,8 +59,13 @@ cdef class SPH(SPHFunctionParticle):
             
         """
         
-        cdef double h, w, temp
+        cdef double w, wa, wb,  temp
         cdef double rhob, mb, fb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         rhob = self.s_rho.data[source_pid]
         fb = self.s_prop.data[source_pid]
@@ -74,8 +81,15 @@ cdef class SPH(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-        
-        w = kernel.function(self._dst, self._src, h)
+
+        if self.hks:
+            wa = kernel.function(self._dst, self._src, ha)
+            wb = kernel.function(self._dst, self._src, hb)
+
+            w = 0.5 * (wa + wb)
+
+        else:
+            w = kernel.function(self._dst, self._src, hab)
         
         if self.rkpm_first_order_correction:
             pass
@@ -136,13 +150,20 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         The expression used is:
         
         """
-        cdef double h, temp
-        cdef Point grad
+        cdef double temp
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         h=0.5*(self.s_h.data[source_pid] + 
                self.d_h.data[dest_pid])
         
-        grad = Point()
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
             
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -151,8 +172,15 @@ cdef class SPHSimpleDerivative(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-        
-        kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
         
         temp = self.s_prop[source_pid]
         temp *= self.s_m.data[source_pid]/self.s_rho.data[source_pid]
@@ -217,13 +245,20 @@ cdef class SPHGrad(SPHFunctionParticle):
         The expression used is:
         
         """
-        cdef double h, temp
-        cdef Point grad
+        cdef double temp
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)
 
         h=0.5*(self.s_h.data[source_pid] + 
                self.d_h.data[dest_pid])
-        
-        grad = Point()
+
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
             
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -232,8 +267,15 @@ cdef class SPHGrad(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-            
-        kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -309,8 +351,15 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         \\nabla_aW_{ab}
             
         """
-        cdef double h, mb, rhob, fb, fa, tmp, dot
-        cdef Point rab, grad
+        cdef double mb, rhob, fb, fa, tmp, dot
+        cdef Point rab
+
+        cdef Point grad, grada, gradb
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)        
 
         h = 0.5*(self.s_h.data[source_pid] +
                  self.d_h.data[dest_pid])
@@ -321,8 +370,10 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         fa = self.d_prop[dest_pid]
         tmp, dot
             
-        grad = Point()
-        rab = Point()
+        grad = Point_new(0,0,0)
+        grada = Point_new(0,0,0)
+        gradb = Point_new(0,0,0)
+        rab = Point_new(0,0,0)
         
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -333,8 +384,15 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
             
         rab = self._dst - self._src
-            
-        kernel.gradient(self._dst, self._src, h, grad)
+
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
+
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         if self.rkpm_first_order_correction:
             pass
@@ -400,8 +458,16 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double Vb = mb/rhob
+
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+
+        cdef double hab = 0.5 * (ha + hb)    
         
-        cdef Point grad = Point()
+        cdef Point grad = Point_new(0,0,0)
+        cdef Point grada = Point_new(0,0,0)
+        cdef Point gradb = Point_new(0,0,0)
+
         cdef Point rba
 
         self._src.x = self.s_x.data[source_pid]
@@ -414,10 +480,14 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
 
         rba = self._src - self._dst
 
-        h = 0.5*(self.s_h.data[source_pid] +
-                 self.d_h.data[dest_pid])
+        if self.hks:
+            kernel.gradient(self._dst, self._src, ha, grada)
+            kernel.gradient(self._dst, self._src, hb, gradb)
 
-        kernel.gradient(self._dst, self._src, h, grad)
+            grad = (grada + gradb) * 0.5
+
+        else:            
+            kernel.gradient(self._dst, self._src, hab, grad)
 
         #m11
         nr[0] += Vb * grad.x * rba.x

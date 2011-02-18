@@ -11,6 +11,8 @@ from update_misc_props import UpdateDivergence
 # IMPORT FUNCTIONS
 ############################################################################
 
+from function import Function 
+
 #Import basic functions
 from function import SPHInterpolation, SimpleDerivative, Gradient, \
     Laplacian, NeighborCount

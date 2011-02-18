@@ -22,10 +22,12 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         The expression used is:
 
         """
-        cdef double temp, w
+        cdef double temp, w, wa, wb
 
-        cdef double h=0.5*(self.s_h.data[source_pid] + \
-                               self.d_h.data[dest_pid])
+        cdef double ha = self.d_h.data[dest_pid]
+        cdef double hb = self.s_h.data[source_pid]
+        
+        cdef double hab = 0.5*(ha + hb)
 
         cdef double rhoab = 0.5*(self.s_rho.data[source_pid] + \
                                      self.d_rho.data[dest_pid])
@@ -52,12 +54,14 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        w = kernel.function(self._dst, self._src, h)
-        #w = self.kernel_function_evaluation[dest_pid][source_pid]
+        if self.hks:
+            wa = kernel.function(self._dst, self._src, ha)
+            wb = kernel.function(self._dst, self._src, hb)
 
-        #w = fc.data[k]
+            w = 0.5 * (wa + wb)
 
-        #assert w == other_w
+        else:
+            w = kernel.function(self._dst, self._src, hab)
 
         if self.rkpm_first_order_correction:
             pass
