@@ -133,6 +133,40 @@ class Particles(object):
         for func in self.misc_prop_update_functions:
             func.eval()
 
+    def add_misc_function(self, func, operation, kernel):
+        """ Add a function to be performed when particles are updated
+
+        Parameters:
+        -----------
+        func -- The function to perform. Defined in sph.update_functions
+        operation -- the calc operation that is required for the function
+        kernel -- the kernel used to setup the calcs.
+
+        Example:
+        --------
+
+        The conduction coefficient required for the artificial heat
+        requires the velocity divergence at a particle. This must be
+        available at the start of every substep of an integration step.
+
+        """
+
+        calcs = operation.get_calcs(self, kernel)
+        self.misc_prop_update_functions.append(func(calcs))
+
+    def add_smoothing_update_function(self, func, operation, kernel, **kwargs):
+        """ Add a smoothing update function
+
+        Parameters:
+        -----------
+        func -- the smoothing update function to use.
+        operation -- the SPHOperation that returns appropriate calcs
+        kernel -- the kernel used for the calcs
+
+        """
+        calcs = operation.get_calcs(self, kernel)
+        self.smoothing_update_function = func(calcs=calcs, **kwargs)
+
     def get_named_particle_array(self, name):
         """ Return the named particle array if it exists """
         has_array = False

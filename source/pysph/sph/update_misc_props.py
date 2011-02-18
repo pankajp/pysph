@@ -17,7 +17,7 @@ class UpdateDivergence:
 
     """
 
-    def __init__(self, calcs, g1=0.5, g2=0.5):
+    def __init__(self, calcs):
         """ Constructor
 
         Parameters:
