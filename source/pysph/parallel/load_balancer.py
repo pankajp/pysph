@@ -39,6 +39,7 @@ class LoadBalancer:
         self.load_difference = []
         self.prev_particle_count = []
         self.method = None
+        #self.adaptive = kwargs.get('adaptive', True)
         
     def setup(self):
         """ Sets up some internal data. """
@@ -67,10 +68,10 @@ class LoadBalancer:
                 func = getattr(self, 'load_balance_func_'+method)
                 func(**args)
 
-    def load_balance_func(self):
-        return self.load_balance_func_normal()
+    def load_balance_func(self, adaptive=False):
+        return self.load_balance_func_normal(adaptive)
     
-    def load_balance_func_normal(self):
+    def load_balance_func_normal(self, adaptive=False):
         """ Perform the load balancing.
         
         **Algorithm**
@@ -121,6 +122,7 @@ class LoadBalancer:
 
                 - lb_iterations += 1
         """
+        self.adaptive = adaptive
         balancing_done = False
         current_balance_iteration = 0
         num_procs = self.num_procs
@@ -131,6 +133,14 @@ class LoadBalancer:
         self.load_difference = [0]*num_procs
         
         while balancing_done == False:
+            block_np = {}
+            for bid, cells in self.cell_manager.proc_map.cell_map.iteritems():
+                block_np[bid] = 0
+                for cid in cells:
+                    block_np[bid] += self.cell_manager.cells_dict[cid].get_number_of_particles()
+            self.proc_block_np = [{} for i in range(num_procs)]
+            self.proc_block_np[self.pid].update(block_np)
+            
             logger.info('Load Balance iteration %d -------------------'%(
                     current_balance_iteration))
 
@@ -152,7 +162,10 @@ class LoadBalancer:
                 logger.info('BALANCE ACHIEVED')
                 logger.debug('Num particles are : %s'%(self.particles_per_proc))
                 continue
-
+            
+            logger.info('particle_counts: %r: %r'%(self.prev_particle_count,
+                            self.particles_per_proc))
+            
             if self.particles_per_proc == self.prev_particle_count:
                 # meaning that the previous load balancing iteration did not
                 # change the particle counts, we do not do anything now.
@@ -169,6 +182,9 @@ class LoadBalancer:
             logger.debug('Lower threshold : %f'%(self.lower_threshold))
             
             self.block_proc = self.cell_manager.proc_map.block_map
+            
+            # store the old particle counts in prev_particle_count
+            self.prev_particle_count[:] = self.particles_per_proc
             
             if min(self.particles_per_proc) == 0:
                 self.load_balance_with_zero_procs()
@@ -188,8 +204,6 @@ class LoadBalancer:
             self.comm.Barrier()
 
             current_balance_iteration += 1
-            # store the old particle counts in prev_particle_count
-            self.prev_particle_count[:] = self.particles_per_proc
     
     def collect_num_particles(self):
         """ Finds the number of particles with each processor. 
@@ -420,10 +434,43 @@ class LoadBalancer:
     def _get_particles_for_neighbor_proc(self, pid):
         """ Returns particles (in blocks) to be moved to pid for processing """
         self.block_nbr_proc = self.construct_nbr_block_info(self.block_proc)
-        blocks_for_nbr = self._get_blocks_for_neighbor_proc(pid,
-                                self.proc_map.local_block_map,
-                                self.block_nbr_proc)
         
+        # get one or more blocks to send to pid
+        pidr = self.pid
+        if self.adaptive:
+            num_iters = 10
+        else:
+            num_iters = 1
+        blocks = []
+        for i in range(num_iters):
+            np = self.particles_per_proc[pidr]
+            npr = self.particles_per_proc[pid]
+            
+            if np <= npr or np < self.ideal_load-self.threshold_margin/2 or npr >= self.ideal_load+self.threshold_margin/2:
+                np_reqd = 0
+                break
+            else:
+                mean = (np+npr)/2
+                if mean < self.ideal_load-self.threshold_margin/2:
+                    np_reqd = np-self.ideal_load+self.threshold_margin/2
+                elif mean > self.ideal_load+self.threshold_margin/2:
+                    np_reqd = np-self.ideal_load-self.threshold_margin/2
+                else:
+                    np_reqd = np - mean
+            
+            if self.adaptive:
+                blk = self._get_blocks_for_neighbor_proc2(pid, pidr, self.proc_block_np[pidr], np_reqd)
+            else:
+                blk = self._get_blocks_for_neighbor_proc(pid, self.proc_block_np[pidr])
+            
+            for bid in blk:
+                self._update_block_pid_info(bid, pidr, pid)
+            blocks.extend(blk)
+        
+        #blocks_for_nbr = self._get_blocks_for_neighbor_proc(pid,
+        #                        self.proc_map.local_block_map,
+        #                        self.block_nbr_proc)
+        blocks_for_nbr = blocks
         block_dict = {}
         for bid in blocks_for_nbr:
             block_dict[bid] = []
@@ -437,7 +484,7 @@ class LoadBalancer:
                 del block_dict[bid]
             particles = self.cell_manager.create_new_particle_copies(block_dict)
         else:
-            logger.debug('No cells found for %d'%(pid))
+            logger.debug('No blocks found for %d'%(pid))
             particles = {}
 
         return particles
@@ -734,12 +781,14 @@ class LoadBalancer:
         
         logging.debug('redistribution of blocks done')
     
-    def load_redistr_single(self, block_proc=None, proc_block_np=None, **args):
+    def load_redistr_single(self, block_proc=None, proc_block_np=None,
+                            adaptive=False, **args):
         """ The load balance algorithm running on root proc
         
         The algorithm is same as the parallel normal load balancing algorithm,
         except zero proc handling that is run completely on the root proc
         """
+        self.adaptive = adaptive
         self.procs_to_communicate = self._get_procs_to_communicate(
             self.particles_per_proc, range(self.num_procs))
         self.procs_to_communicate = numpy.argsort(self.particles_per_proc)[::-1]
@@ -754,7 +803,7 @@ class LoadBalancer:
         logger.debug('load_redistr_single done')
         return self.block_proc, self.particles_per_proc
     
-    def load_redistr_auto(self, cell_proc=None, proc_cell_np=None, **args):
+    def load_redistr_auto(self, block_proc=None, proc_block_np=None, **args):
         """ load redistribution by automatic selection of method
         
         If only one proc has all the particles, then use the
@@ -763,20 +812,21 @@ class LoadBalancer:
         non_zeros = len([1 for p in self.particles_per_proc if p > 0])
         if non_zeros == 1:
             logger.info('load_redistr_auto: geometric')
-            cell_proc, np_per_proc = self.load_redistr_geometric(self.block_proc,
+            block_proc, np_per_proc = self.load_redistr_geometric(self.block_proc,
                                                 self.proc_block_np)
             self.balancing_done = False
-            self.block_nbr_proc = self.construct_nbr_block_info(cell_proc)
-            cell_np = {}
+            self.block_nbr_proc = self.construct_nbr_block_info(block_proc)
+            block_np = {}
             for proc,c_np in enumerate(self.proc_block_np):
-                cell_np.update(c_np)
+                block_np.update(c_np)
             self.proc_block_np = [{} for i in range(self.num_procs)]
-            for cid,pid in cell_proc.iteritems():
-                self.proc_block_np[pid][cid] = cell_np[cid]
-            return cell_proc, np_per_proc
+            for cid,pid in block_proc.iteritems():
+                self.proc_block_np[pid][cid] = block_np[cid]
+            return block_proc, np_per_proc
         else:
             logger.info('load_redistr_auto: serial')
-            return self.load_redistr_single(self.block_proc, self.proc_block_np)
+            return self.load_redistr_single(self.block_proc, self.proc_block_np,
+                                            **args)
     
     def single_lb_transfer_blocks(self, pid, pidr):
         """ Allocate particles from proc pidr to proc pid (on root proc) """
@@ -805,7 +855,7 @@ class LoadBalancer:
 
         # check if pid has more particles than pidr
         if num_particles >= num_particlesr:
-            logger.debug('%d has more particles that %d' % (pid, self.pid))
+            logger.debug('%d has more particles that %d' % (pid, pidr))
             return []
         
         # if number of particles in pidr is within the threshold, do not donate
@@ -821,9 +871,35 @@ class LoadBalancer:
             return []
 
         # get one or more blocks to send to pid
-        blocks = self._get_blocks_for_neighbor_proc(pid, self.proc_block_np[pidr])
-        for bid in blocks:
-            self._update_block_pid_info(bid, pidr, pid)
+        if self.adaptive:
+            num_iters = 10
+        else:
+            num_iters = 1
+        blocks = []
+        for i in range(num_iters):
+            np = self.particles_per_proc[pidr]
+            npr = self.particles_per_proc[pid]
+            
+            if np <= npr or np < self.ideal_load-self.threshold_margin/2 or npr >= self.ideal_load+self.threshold_margin/2:
+                np_reqd = 0
+                break
+            else:
+                mean = (np+npr)/2
+                if mean < self.ideal_load-self.threshold_margin/2:
+                    np_reqd = np-self.ideal_load+self.threshold_margin/2
+                elif mean > self.ideal_load+self.threshold_margin/2:
+                    np_reqd = np-self.ideal_load-self.threshold_margin/2
+                else:
+                    np_reqd = np - mean
+            
+            if self.adaptive:
+                blk = self._get_blocks_for_neighbor_proc2(pid, pidr, self.proc_block_np[pidr], np_reqd)
+            else:
+                blk = self._get_blocks_for_neighbor_proc(pid, self.proc_block_np[pidr])
+            
+            for bid in blk:
+                self._update_block_pid_info(bid, pidr, pid)
+            blocks.extend(blk)
         
         return blocks
     
@@ -947,6 +1023,65 @@ class LoadBalancer:
             logger.debug('No blocks found for %d' % (pid))
 
         return blocks_for_nbr
+    
+    def _get_blocks_for_neighbor_proc2(self, pid, pidr, blocks, np_reqd, block_nbr_proc=None):
+        """ return blocks to be sent to nbr proc `pid` """
+        if block_nbr_proc is None:
+            block_nbr_proc = self.block_nbr_proc
+        blocks_for_nbr = []
+        block_score = {}
+
+        # get score for each block
+        x = y = z = 0 # for centroid of blocks
+        max_r_nbr = 0
+        for bid in blocks:
+            bpid = self.block_proc[bid]
+            local_nbr_count = block_nbr_proc[bid].get(bpid, 0)
+            remote_nbr_count = 26 - block_nbr_proc[bid].get(-1, 0) - local_nbr_count
+            num_nbrs_in_pid = block_nbr_proc[bid].get(pid, 0)
+            if max_r_nbr < num_nbrs_in_pid:
+                max_r_nbr = num_nbrs_in_pid
+            block_score[bid] = num_nbrs_in_pid + remote_nbr_count - local_nbr_count
+            x += bid.x
+            y += bid.y
+            z += bid.z
+
+        num_blocks = float(len(blocks))
+        x /= num_blocks
+        y /= num_blocks
+        z /= num_blocks
+        
+        block_dist = {}
+        for bid in blocks:
+            block_dist[bid] = ((bid.x-x)**2+(bid.y-y)**2+(bid.z-z)**2)**0.5
+        
+        mean_dist = numpy.average(block_dist.values())
+        for bid in blocks:
+            block_score[bid] += block_dist[bid] / mean_dist
+        
+        # allocate block for neighbor
+        sblocks = sorted(blocks, key=block_score.get, reverse=True)
+        
+        particles_send = 0
+        
+        block_np = self.proc_block_np[pidr]
+        max_score = block_score[sblocks[0]]
+        #print block_np
+        for bid in sblocks:
+            if max_r_nbr > block_nbr_proc[bid].get(pid, 0):
+                continue
+            particles_send += block_np[bid]
+            if particles_send > np_reqd or block_score[bid] < max_score-2:
+                particles_send -= block_np[bid]
+                break
+            
+            blocks_for_nbr.append(bid)
+        
+        if not blocks_for_nbr:
+            logger.debug('No blocks found for %d' % (pid))
+
+        return blocks_for_nbr
+
     
     @classmethod
     def construct_nbr_block_info(self, block_proc, nbr_for_blocks=None):
@@ -1249,15 +1384,7 @@ class LoadBalancer:
         distribute the particles. Balancing methods can be changed by passing
         the same `args` as to the load_balance_func_serial method
         """
-        try:
-            from load_balancer_mkmeans import LoadBalancerMKMeans as LoadBalancer
-        except ImportError:
-            try:
-                from load_balancer_sfc import LoadBalancerSFC as LoadBalancer
-            except ImportError:
-                pass
-        #print LoadBalancer
-        lb = LoadBalancer()
+        lb = get_load_balancer_class()()
         lb.pid = 0
         lb.num_procs = num_procs
         lb.lb_max_iteration = max_iter
@@ -1336,3 +1463,17 @@ class LoadBalancer:
             ret = [i[0] for i in ret]
         return ret
     
+def get_load_balancer_class():
+    """ return load balancing class at the bottom of implementation hierarchy,
+    so that various types of load balancing methods can be used """
+    try:
+        from load_balancer_metis import LoadBalancerMetis as LoadBalancer
+    except ImportError:
+        try:
+            from load_balancer_mkmeans import LoadBalancerMKMeans as LoadBalancer
+        except ImportError:
+            try:
+                from load_balancer_sfc import LoadBalancerSFC as LoadBalancer
+            except ImportError:
+                pass
+    return LoadBalancer
