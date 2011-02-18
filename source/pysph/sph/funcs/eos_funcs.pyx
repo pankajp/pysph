@@ -29,7 +29,9 @@ cdef class IdealGasEquation(SPHFunctionParticle):
         cdef double gamma = self.gamma
 
         nr[0] = (gamma - 1.0)*rhoa*ea
-        nr[1] = sqrt(gamma*Pa/rhoa)
+        nr[1] = sqrt(ea*(gamma-1))
+        
+        #nr[1] = sqrt(gamma*Pa/rhoa)
 ##############################################################################
 
 cdef class TaitEquation(SPHFunctionParticle):

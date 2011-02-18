@@ -427,7 +427,7 @@ class Integrator(object):
             updates = calc.updates
             nupdates = calc.nupdates
 
-            #get the destination particle array for this calc
+            # get the destination particle array for this calc
             
             pa = self.arrays[calc.dnum]
             
@@ -568,7 +568,7 @@ class EulerIntegrator(Integrator):
         # set the intitial arrays for all calcs
         
         self.set_initial_arrays()
-        
+
         # evaluate the k1 arrays for non position calcs
 
         self.eval(self.ncalcs)

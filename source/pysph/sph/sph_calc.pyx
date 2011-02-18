@@ -87,6 +87,7 @@ cdef class SPHBase:
         self.nsrcs = len(sources)
         self.dest = dest
         self.nbr_locators = []
+
         self.nnps_manager = particles.nnps_manager
 
         self.funcs = funcs
@@ -172,7 +173,7 @@ cdef class SPHBase:
 
         self.nbr_locators[:] = []
 
-        #set the calc's tag from the function tags. Check ensures all are same
+        # set the calc's tag from the function tags. Check ensures all are same
 
         self.tag = self.funcs[0].tag
 

@@ -3,10 +3,15 @@
 #Import from calc
 from sph_calc import SPHCalc, SPHEquation, SPHBase
 
-#Import basic functions
-#from funcs.basic_funcs import SPH, SPHGrad, SPHLaplacian, SPHSimpleDerivative,\
-#    CountNeighbors
+#Import update smoothing and conduction
+from update_smoothing import UpdateSmoothingADKE, TestUpdateSmoothingADKE
+from update_misc_props import UpdateDivergence
 
+############################################################################
+# IMPORT FUNCTIONS
+############################################################################
+
+#Import basic functions
 from function import SPHInterpolation, SimpleDerivative, Gradient, \
     Laplacian, NeighborCount
 
@@ -18,7 +23,8 @@ from function import MonaghanBoundaryForce, LennardJonesForce, \
 from function import SPHRho, SPHDensityRate
 
 #Import Energy functions
-from function import EnergyEquation, EnergyEquationAVisc, EnergyEquationNoVisc
+from function import EnergyEquation, EnergyEquationAVisc,\
+     EnergyEquationNoVisc, ArtificialHeat
 
 #Import viscosity functions
 from function import MonaghanArtificialVsicosity, MorrisViscosity
@@ -38,6 +44,9 @@ from function import IdealGasEquation, TaitEquation
 #Import external force functions
 from function import GravityForce, VectorForce, MoveCircleX, MoveCircleY
 
-#Import Eval functions
-#from funcs.eval_funcs import SPHEval, SPHSimpleDerivativeEval, CSPMEval, \
-#    CSPMDerivativeEval
+#Import ADKE functions
+from function import ADKEPilotRho, VelocityDivergence
+
+############################################################################
+
+

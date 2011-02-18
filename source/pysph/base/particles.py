@@ -3,6 +3,8 @@ from nnps import NNPSManager
 from particle_array import ParticleArray
 from particle_types import ParticleType
 
+from pysph.sph.update_smoothing import UpdateSmoothing
+
 Fluid = ParticleType.Fluid
 Solid = ParticleType.Solid
 
@@ -71,6 +73,7 @@ class Particles(object):
         self.arrays=arrays
         self.in_parallel = in_parallel
         self.load_balancing = load_balancing
+        self.variable_h = variable_h
         
         self.kernel = None
 
@@ -87,12 +90,15 @@ class Particles(object):
 
         self.correction_manager = None
 
+        self.smoothing_update_function = UpdateSmoothing()
+        self.misc_prop_update_functions = []
+
         # call an update on the particles
         
         if update_particles:
             self.update()
 
-    def update(self, cache_neighbors=True):
+    def update(self, cache_neighbors=False):
         """ Update the status of the neighbor locators and cell manager.
         
         Call this function if any particle has moved to properly get the 
@@ -108,6 +114,11 @@ class Particles(object):
         err = self.nnps_manager.py_update()
         assert err != -1, 'NNPSManager update failed! '
 
+        if self.variable_h:
+            self.smoothing_update_function.update_smoothing_lengths()
+            
+        self.evaluate_misc_properties()
+
         if self.correction_manager:
             self.correction_manager.update()
 
@@ -117,6 +128,10 @@ class Particles(object):
         #    self.nnps_manager.cache_neighbors(self.kernel)
 
         self.needs_update = False
+
+    def evaluate_misc_properties(self):
+        for func in self.misc_prop_update_functions:
+            func.eval()
 
     def get_named_particle_array(self, name):
         """ Return the named particle array if it exists """

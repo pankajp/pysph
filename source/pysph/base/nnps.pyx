@@ -742,8 +742,6 @@ cdef class NNPSManager:
         # cell managers update_status is implemented.
         self.cell_manager.update_status()
 
-        #self.polygon_cache_manager.update()
-
         for loc in cache_list:
             dest = loc.dest
             nrp = dest.num_real_particles

@@ -9,6 +9,7 @@ import funcs.position_funcs as position
 import funcs.pressure_funcs as pressure
 import funcs.viscosity_funcs as viscosity
 import funcs.xsph_funcs as xsph
+import funcs.adke_funcs as adke
 
 #base class
 class Function(object):
@@ -138,6 +139,17 @@ class EnergyEquationAVisc(Function):
         func.tag = 'energy'
         return func
 
+class ArtificialHeat(Function):
+    def __init__(self, g1=0.02, g2=0.4, eta=0.1):
+        self.g1 = g1
+        self.g2 = g2
+        self.eta = eta
+
+    def get_func(self, source, dest):
+        func = energy.ArtificialHeat(source=source, dest=dest, g1=self.g1,
+                                     g2=self.g2, eta=self.eta)
+        func.tag = "energy"
+        return func
 
 class EnergyEquation(Function):
     
@@ -153,7 +165,6 @@ class EnergyEquation(Function):
                                       eta=self.eta)
         func.tag = "energy"
         return func
-
 
 #state equation
 
@@ -284,4 +295,22 @@ class XSPHDensityRate(Function):
     def get_func(self, source, dest):
         func = xsph.XSPHDensityRate(source=source, dest=dest)
         func.tag = "density"
+        return func
+
+
+# ADKE Functions
+
+class ADKEPilotRho(Function):
+    def __init__(self, h0=1.0):
+        self.h0 = h0
+
+    def get_func(self, source, dest):
+        func = adke.PilotRho(source=source, dest=dest, h0=self.h0)
+        func.tag = "smoothing"
+        return func
+
+class VelocityDivergence(Function):
+    def get_func(self, source, dest):
+        func = adke.SPHVelocityDivergence(source=source, dest=dest)
+        func.tag = "vdivergence"
         return func

@@ -798,13 +798,17 @@ cdef class GaussianKernel(KernelBase):
         point `pb`.
 
         """
+        cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
+                              (pa.y-pb.y)*(pa.y-pb.y) + 
+                              (pa.z-pb.z)*(pa.z-pb.z))
+
         cdef double fac = self.fac * h_dim(h, self.dim)
         cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
         cdef double q = rab/h
-        cdef double val
+        cdef double val = 0.0
 
-        val = -2*q*exp(-q*q)
+        if q > 1e-14:
+            val = -2*q*exp(-q*q)/(rab*h)
         
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
@@ -820,7 +824,7 @@ cdef class GaussianKernel(KernelBase):
         elif dim == 3: return (1.0/(((PI**.5)*h)**3))
 
     cpdef double radius(self):
-        return 2
+        return 3.0
 ##############################################################################
 
 

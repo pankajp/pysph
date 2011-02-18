@@ -49,7 +49,7 @@ cdef class SPHBase:
     cdef public int dnum
     cdef public str snum
 
-    cdef NNPSManager nnps_manager
+    cdef public NNPSManager nnps_manager
 
     cpdef sph(self, str output_array1=*, str output_array2=*, 
               str output_array3=*, bint exclude_self=*) 

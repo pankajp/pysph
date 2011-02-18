@@ -204,7 +204,7 @@ class Application(object):
             self._setup_logging(options.logfile, level,
                                 options.print_log)
 
-    def create_particles(self, callable, *args, **kw):
+    def create_particles(self, variable_h, callable, *args, **kw):
         """ Create particles given a callable and any arguments to it.
         This will also automatically distribute the particles among
         processors if this is a parallel run.  Returns the `Particles`
@@ -240,7 +240,8 @@ class Application(object):
         else:
             self.load_balance = True
 
-        self.particles = Particles(arrays=pa, in_parallel=in_parallel,
+        self.particles = Particles(arrays=pa, variable_h=variable_h,
+                                   in_parallel=in_parallel,
                                    load_balancing=self.load_balance,
                                    update_particles=True)
 

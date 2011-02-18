@@ -182,40 +182,41 @@ class TestNbrParticleLocatorBase(unittest.TestCase):
 ##############################################################################
 class TestFixedDestNbrParticleLocator(unittest.TestCase):
     """Tests the FixedDestNbrParticleLocator class. """
-    def test_constructor(self):
-        """Tests the constructor. """
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
+#     def test_constructor(self):
+#         """Tests the constructor. """
+#                 
+#         parrs = generate_sample_dataset_1()
+#         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
+#                          max_cell_size=2.0)
 
-        nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, 'h') 
+#         nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 1.0, cm, 'h') 
         
-        self.assertEqual(nbrl.source, parrs[0])
-        self.assertEqual(nbrl.source_index, 0)
-        self.assertEqual(nbrl.dest, parrs[1])
-        self.assertEqual(nbrl.dest_index, 1)
-        self.assertEqual(nbrl.cell_manager, cm)
-        self.assertEqual(nbrl.h, 'h')
-        self.assertEqual(nbrl.d_h, parrs[1].get_carray('h'))
-        self.assertEqual(nbrl.d_x, parrs[1].get_carray(cm.coord_x))
-        self.assertEqual(nbrl.d_y, parrs[1].get_carray(cm.coord_y))
-        self.assertEqual(nbrl.d_z, parrs[1].get_carray(cm.coord_z))
+#         self.assertEqual(nbrl.source, parrs[0])
+#         self.assertEqual(nbrl.source_index, 0)
+#         self.assertEqual(nbrl.dest, parrs[1])
+#         self.assertEqual(nbrl.dest_index, 1)
+#         self.assertEqual(nbrl.cell_manager, cm)
+#         self.assertEqual(nbrl.h, 'h')
+#         self.assertEqual(nbrl.d_h, parrs[1].get_carray('h'))
+#         self.assertEqual(nbrl.d_x, parrs[1].get_carray(cm.coord_x))
+#         self.assertEqual(nbrl.d_y, parrs[1].get_carray(cm.coord_y))
+#         self.assertEqual(nbrl.d_z, parrs[1].get_carray(cm.coord_z))
     
-        nbrl = FixedDestNbrParticleLocator(None, None, 1.0, None)
-        self.assertEqual(nbrl.radius_scale, 1.0)
-        self.assertEqual(nbrl.source, None)
-        self.assertEqual(nbrl.dest, None)
-        self.assertEqual(len(nbrl.particle_cache), 0)
+#         nbrl = FixedDestNbrParticleLocator(None, None, 1.0, None)
+#         self.assertEqual(nbrl.radius_scale, 1.0)
+#         self.assertEqual(nbrl.source, None)
+#         self.assertEqual(nbrl.dest, None)
+#         self.assertEqual(len(nbrl.particle_cache), 0)
         
-        parrs = generate_sample_dataset_1()
-        cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
-                         max_cell_size=2.0)
+#         parrs = generate_sample_dataset_1()
+#         cm = CellManager(arrays_to_bin=parrs, min_cell_size=1.,
+#                          max_cell_size=2.0)
         
-        nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
-        self.assertEqual(nbrl.radius_scale, 1.0)
-        self.assertEqual(nbrl.source, parrs[0])
-        self.assertEqual(nbrl.dest, parrs[1])
-        self.assertEqual(len(nbrl.particle_cache), 0)
+#         nbrl = FixedDestNbrParticleLocator(parrs[0], parrs[1], 1.0, cm)
+#         self.assertEqual(nbrl.radius_scale, 1.0)
+#         self.assertEqual(nbrl.source, parrs[0])
+#         self.assertEqual(nbrl.dest, parrs[1])
+#         self.assertEqual(len(nbrl.particle_cache), 0)
 
     def test_get_nearest_particles(self):
         """Tests the get_nearest_particles. """
@@ -435,6 +436,7 @@ class TestNNPSManager(unittest.TestCase):
     """Tests the NNPSManager class. """
     def test_constructor(self):
         """Tests the constructor. """
+
         nm = NNPSManager()
 
         self.assertEqual(nm.cell_manager, None)

@@ -110,9 +110,13 @@ sph = [
                    ["source/pysph/sph/funcs/xsph_funcs.pyx"], 
                    include_dirs=inc_dirs),
 
-        Extension("pysph.sph.funcs.eos_funcs",
-                  ["source/pysph/sph/funcs/eos_funcs.pyx"], 
-                  include_dirs=inc_dirs),
+    Extension("pysph.sph.funcs.eos_funcs",
+              ["source/pysph/sph/funcs/eos_funcs.pyx"], 
+              include_dirs=inc_dirs),
+
+    Extension("pysph.sph.funcs.adke_funcs",
+              ["source/pysph/sph/funcs/adke_funcs.pyx"], 
+              include_dirs=inc_dirs),
 
         ]
 
