@@ -34,7 +34,7 @@ def parse_options(args=None):
     """parse commandline options from given list (default=sys.argv[1:])"""
     # default values
     square_width = 1.0
-    np_d = 20
+    np_d = 50
     particle_spacing = square_width / np_d
     particle_radius = square_width / np_d
     sph_interpolations = 1
@@ -43,6 +43,8 @@ def parse_options(args=None):
     max_cell_scale = 2.0
 
     op = OptionParser()
+    op.add_option('-t', '--type', dest='type', default="square",
+                  help='type of problem to load_balance, one of "dam_break" or "square"')
     op.add_option('-w', '--width', dest='square_width',
                   metavar='SQUARE_WIDTH')
     op.add_option('-s', '--spacing', dest='particle_spacing',
@@ -150,92 +152,27 @@ def parse_options(args=None):
 
     return options
 
-def create_cell_manager(options):
-    print 'creating cell manager', options
-    
-    radius = 0.2
-    dam_width=10.0
-    dam_height=7.0
-    solid_particle_h=radius
-    dam_particle_spacing=radius/9.
-    solid_particle_mass=1.0
-    origin_x=origin_y=0.0
-
-    fluid_particle_h=radius
-    fluid_density=1000.
-    fluid_column_height=3.0
-    fluid_column_width=2.0
-    fluid_particle_spacing=radius
-    
-    # create a parallel cell manager.
-    cell_manager = ParallelCellManager(arrays_to_bin=[],
-                                       max_cell_scale=options.max_cell_scale,
-                                       dimension=2,
-                                       load_balancing=False,
-                                       initialize=False)
-    # enable load balancing
-    cell_manager.load_balancer = LoadBalancer(parallel_cell_manager=cell_manager)
-    cell_manager.load_balancer.skip_iteration = 1
-    cell_manager.load_balancer.threshold_ratio = 10.
-    
-    dam_wall = ParticleArray()
-    dam_fluid = ParticleArray()
-
-    if rank == 0:
-        # generate the left wall - a line
-        lg = LineGenerator(particle_mass=solid_particle_mass,
-                       mass_computation_mode=Mcm.Set_Constant,
-                       density_computation_mode=Dcm.Ignore,
-                       particle_h=solid_particle_h,
-                       start_point=Point(0, 0, 0),
-                       end_point=Point(0, dam_height, 0),
-                       particle_spacing=dam_particle_spacing)
-        tmp = lg.get_particles()
-        dam_wall.append_parray(tmp)
+def create_particles(options):
+    if options.type == "square":
+        # create the square block of particles.
+        start_point = Point(0, 0, 0)
+        end_point = Point(options.square_width, options.square_width, 0)
         
-        # generate one half of the base
-        lg.start_point = Point(dam_particle_spacing, 0, 0)
-        lg.end_point = Point(dam_width/2, 0, 0)
-        tmp = lg.get_particles()
-        dam_wall.append_parray(tmp)
-
-        # generate particles for the left column of fluid.
-        rg = RectangleGenerator(
-            start_point=Point(origin_x+2.0*solid_particle_h,
-                              origin_y+2.0*solid_particle_h,
-                              0.0),
-            end_point=Point(origin_x+2.0*solid_particle_h+fluid_column_width,
-                            origin_y+2.0*solid_particle_h+fluid_column_height, 0.0),
-            particle_spacing_x1=fluid_particle_spacing,
-            particle_spacing_x2=fluid_particle_spacing,
-            density_computation_mode=Dcm.Set_Constant,
-            mass_computation_mode=Mcm.Compute_From_Density,
-            particle_density=1000.,
-            particle_h=fluid_particle_h,
-            kernel=CubicSplineKernel(2),                            
-            filled=True)
-        dam_fluid = rg.get_particles()
-
-        # generate the right wall - a line
-        lg = LineGenerator(particle_mass=solid_particle_mass,
-                       mass_computation_mode=Mcm.Set_Constant,
-                       density_computation_mode=Dcm.Ignore,
-                       particle_h=solid_particle_h,
-                       start_point=Point(dam_width, 0, 0),
-                       end_point=Point(dam_width, dam_height, 0),
-                       particle_spacing=dam_particle_spacing)
+        parray = ParticleArray()
+        if rank == 0:
+            rg = RectangleGenerator(start_point=start_point,
+                                    end_point=end_point,
+                                    particle_spacing_x1=options.particle_spacing,
+                                    particle_spacing_x2=options.particle_spacing,
+                                    density_computation_mode=Dcm.Set_Constant,
+                                    particle_density=1000.0,
+                                    mass_computation_mode=Mcm.Compute_From_Density,
+                                    particle_h=options.particle_radius,
+                                    kernel=CubicSplineKernel(2),
+                                    filled=True)
+            tmp = rg.get_particles()
+            parray.append_parray(tmp)
         
-        tmp = lg.get_particles()
-        dam_wall.append_parray(tmp)
-        
-        # generate the right half of the base
-        lg.start_point = Point(dam_width/2.+dam_particle_spacing, 0, 0)
-        lg.end_point = Point(dam_width, 0, 0)
-        tmp = lg.get_particles()
-        dam_wall.append_parray(tmp)
-
-    for parray in [dam_fluid, dam_wall]:
-    
         if rank != 0:
             # add some necessary properties to the particle array.
             parray.add_property({'name':'x'})
@@ -249,11 +186,117 @@ def create_cell_manager(options):
         else:
             parray.add_property({'name':'_tmp'})
             parray.add_property({'name':'pid', 'default':0.0})
+        
+        return [parray]
     
-    cell_manager.arrays_to_bin.append(dam_wall)
-    cell_manager.arrays_to_bin.append(dam_fluid)
-    print 'dam_wall', dam_wall.get_number_of_particles()
-    print 'dam_fluid', dam_fluid.get_number_of_particles()
+    elif options.type == "dam_break":
+        
+        dam_wall = ParticleArray()
+        dam_fluid = ParticleArray()
+    
+        if rank == 0:
+                
+            radius = 0.2
+            dam_width=10.0
+            dam_height=7.0
+            solid_particle_h=radius
+            dam_particle_spacing=radius/9.
+            solid_particle_mass=1.0
+            origin_x=origin_y=0.0
+        
+            fluid_particle_h=radius
+            fluid_density=1000.
+            fluid_column_height=3.0
+            fluid_column_width=2.0
+            fluid_particle_spacing=radius
+    
+            # generate the left wall - a line
+            lg = LineGenerator(particle_mass=solid_particle_mass,
+                           mass_computation_mode=Mcm.Set_Constant,
+                           density_computation_mode=Dcm.Ignore,
+                           particle_h=solid_particle_h,
+                           start_point=Point(0, 0, 0),
+                           end_point=Point(0, dam_height, 0),
+                           particle_spacing=dam_particle_spacing)
+            tmp = lg.get_particles()
+            dam_wall.append_parray(tmp)
+            
+            # generate one half of the base
+            lg.start_point = Point(dam_particle_spacing, 0, 0)
+            lg.end_point = Point(dam_width/2, 0, 0)
+            tmp = lg.get_particles()
+            dam_wall.append_parray(tmp)
+    
+            # generate particles for the left column of fluid.
+            rg = RectangleGenerator(
+                start_point=Point(origin_x+2.0*solid_particle_h,
+                                  origin_y+2.0*solid_particle_h,
+                                  0.0),
+                end_point=Point(origin_x+2.0*solid_particle_h+fluid_column_width,
+                                origin_y+2.0*solid_particle_h+fluid_column_height, 0.0),
+                particle_spacing_x1=fluid_particle_spacing,
+                particle_spacing_x2=fluid_particle_spacing,
+                density_computation_mode=Dcm.Set_Constant,
+                mass_computation_mode=Mcm.Compute_From_Density,
+                particle_density=1000.,
+                particle_h=fluid_particle_h,
+                kernel=CubicSplineKernel(2),                            
+                filled=True)
+            dam_fluid = rg.get_particles()
+    
+            # generate the right wall - a line
+            lg = LineGenerator(particle_mass=solid_particle_mass,
+                           mass_computation_mode=Mcm.Set_Constant,
+                           density_computation_mode=Dcm.Ignore,
+                           particle_h=solid_particle_h,
+                           start_point=Point(dam_width, 0, 0),
+                           end_point=Point(dam_width, dam_height, 0),
+                           particle_spacing=dam_particle_spacing)
+            
+            tmp = lg.get_particles()
+            dam_wall.append_parray(tmp)
+            
+            # generate the right half of the base
+            lg.start_point = Point(dam_width/2.+dam_particle_spacing, 0, 0)
+            lg.end_point = Point(dam_width, 0, 0)
+            tmp = lg.get_particles()
+            dam_wall.append_parray(tmp)
+
+        for parray in [dam_fluid, dam_wall]:
+        
+            if rank != 0:
+                # add some necessary properties to the particle array.
+                parray.add_property({'name':'x'})
+                parray.add_property({'name':'y'})
+                parray.add_property({'name':'z'})
+                parray.add_property({'name':'h', 'default':options.particle_radius})
+                parray.add_property({'name':'rho', 'default':1000.})
+                parray.add_property({'name':'pid'})
+                parray.add_property({'name':'_tmp', 'default':0.0})
+                parray.add_property({'name':'m'})
+            else:
+                parray.add_property({'name':'_tmp'})
+                parray.add_property({'name':'pid', 'default':0.0})
+        
+        return [dam_fluid, dam_wall]
+
+def create_cell_manager(options):
+    print 'creating cell manager', options
+    # create a parallel cell manager.
+    cell_manager = ParallelCellManager(arrays_to_bin=[],
+                                       max_cell_scale=options.max_cell_scale,
+                                       dimension=2,
+                                       load_balancing=False,
+                                       initialize=False)
+    # enable load balancing
+    cell_manager.load_balancer = LoadBalancer(parallel_cell_manager=cell_manager)
+    cell_manager.load_balancer.skip_iteration = 1
+    cell_manager.load_balancer.threshold_ratio = 10.
+    
+    for i,pa in enumerate(create_particles(options)):
+        cell_manager.arrays_to_bin.append(pa)
+        print 'parray %d:'%i, pa.get_number_of_particles()
+
     cell_manager.initialize()
     print 'num_particles', cell_manager.get_number_of_particles()
     

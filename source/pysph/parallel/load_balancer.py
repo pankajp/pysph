@@ -275,7 +275,7 @@ class LoadBalancer:
 
         self.procs_to_communicate = self._get_procs_to_communicate(
             self.particles_per_proc, 
-            list(numpy.arange(self.num_procs)))
+            range(self.num_procs))
 
         if self.particles_per_proc[self.pid] == 0:
             self._zero_request_particles()
@@ -570,6 +570,7 @@ class LoadBalancer:
             for cid in self.proc_map.cell_map[bid]:
                 block_dict[bid].append(self.cell_manager.cells_dict[cid])
             del self.proc_map.cell_map[bid]
+            del self.proc_map.local_block_map[bid]
         
         if block_dict:
             # if all blocks are being sent away, keep the last cid with self
@@ -791,15 +792,26 @@ class LoadBalancer:
         self.adaptive = adaptive
         self.procs_to_communicate = self._get_procs_to_communicate(
             self.particles_per_proc, range(self.num_procs))
-        self.procs_to_communicate = numpy.argsort(self.particles_per_proc)[::-1]
+        #self.procs_to_communicate = numpy.argsort(self.particles_per_proc)[::-1]
         num_procs = len(self.procs_to_communicate)
         
-        # pass1 pid = pid, pass2 pid = pidr
-        for i in range(num_procs):
-            pid = self.procs_to_communicate[-i - 1]
-            for j in range(num_procs - i - 1):
-                pidr = self.procs_to_communicate[j]
-                self.single_lb_transfer_blocks(pid, pidr)
+        if self.particles_per_proc[self.procs_to_communicate[-1]] == 0:
+            # load balancing with zero_procs
+            for i in range(num_procs):
+                pid = self.procs_to_communicate[i]
+                for j in range(num_procs-i):
+                    if self.particles_per_proc[pid] != 0:
+                        break
+                    pidr = self.procs_to_communicate[-j-1]
+                    self.single_lb_transfer_blocks(pid, pidr)
+        
+        else:
+            # pass1 pid = pid, pass2 pid = pidr
+            for i in range(num_procs):
+                pid = self.procs_to_communicate[i]
+                for j in range(num_procs-i):
+                    pidr = self.procs_to_communicate[-j-1]
+                    self.single_lb_transfer_blocks(pid, pidr)
         logger.debug('load_redistr_single done')
         return self.block_proc, self.particles_per_proc
     
@@ -955,7 +967,6 @@ class LoadBalancer:
             block_nbr_proc = self.block_nbr_proc
 
         max_empty_count = -1
-        min_nbrs = 27
         blocks_for_nbr = []
 
         for bid in blocks:
@@ -963,14 +974,7 @@ class LoadBalancer:
             
             if empty_count > max_empty_count:
                 max_empty_count = empty_count
-                min_nbrs = len(block_nbr_proc[bid])-1
                 blocks_for_nbr = [bid]
-            elif empty_count == max_empty_count:
-                nbrs = len(block_nbr_proc[bid])-1
-                if nbrs < min_nbrs:
-                    max_empty_count = empty_count
-                    min_nbrs = nbrs
-                    blocks_for_nbr = [bid]
         
         return blocks_for_nbr
     
@@ -996,7 +1000,7 @@ class LoadBalancer:
         if block_nbr_proc is None:
             block_nbr_proc = self.block_nbr_proc
 
-        max_neighbor_count = -1
+        max_neighbor_count = 1
         blocks_for_nbr = []
 
         for bid in blocks:
@@ -1033,19 +1037,23 @@ class LoadBalancer:
 
         # get score for each block
         x = y = z = 0 # for centroid of blocks
-        max_r_nbr = 0
+        max_neighbor_count = 0
         for bid in blocks:
             bpid = self.block_proc[bid]
             local_nbr_count = block_nbr_proc[bid].get(bpid, 0)
             remote_nbr_count = 26 - block_nbr_proc[bid].get(-1, 0) - local_nbr_count
             num_nbrs_in_pid = block_nbr_proc[bid].get(pid, 0)
-            if max_r_nbr < num_nbrs_in_pid:
-                max_r_nbr = num_nbrs_in_pid
-            block_score[bid] = num_nbrs_in_pid + remote_nbr_count - local_nbr_count
+            if max_neighbor_count < num_nbrs_in_pid:
+                max_neighbor_count = num_nbrs_in_pid
+                block_score.clear()
+                block_score[bid] = 2*num_nbrs_in_pid + remote_nbr_count - local_nbr_count
+            elif max_neighbor_count == num_nbrs_in_pid:
+                block_score[bid] = 2*num_nbrs_in_pid + remote_nbr_count - local_nbr_count
             x += bid.x
             y += bid.y
             z += bid.z
-
+        if max_neighbor_count == 0:
+            return []
         num_blocks = float(len(blocks))
         x /= num_blocks
         y /= num_blocks
@@ -1056,11 +1064,11 @@ class LoadBalancer:
             block_dist[bid] = ((bid.x-x)**2+(bid.y-y)**2+(bid.z-z)**2)**0.5
         
         mean_dist = numpy.average(block_dist.values())
-        for bid in blocks:
+        for bid in block_score:
             block_score[bid] += block_dist[bid] / mean_dist
         
         # allocate block for neighbor
-        sblocks = sorted(blocks, key=block_score.get, reverse=True)
+        sblocks = sorted(block_score, key=block_score.get, reverse=True)
         
         particles_send = 0
         
@@ -1068,8 +1076,8 @@ class LoadBalancer:
         max_score = block_score[sblocks[0]]
         #print block_np
         for bid in sblocks:
-            if max_r_nbr > block_nbr_proc[bid].get(pid, 0):
-                continue
+            #if max_neighbor_count > block_nbr_proc[bid].get(pid, 0):
+            #    continue
             particles_send += block_np[bid]
             if particles_send > np_reqd or block_score[bid] < max_score-2:
                 particles_send -= block_np[bid]

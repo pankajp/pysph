@@ -63,8 +63,8 @@ def cargs_from_wadj(xadj, adjncy, vwgt, bid_index, nparts):
     Returns:
     --------
         - n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options,
-            edgecut, part: the arguments for the :func:`METIS_PartGraphKway` functions
-            in ctype data format (all are pointers to int32)
+            edgecut, part: the arguments for the :func:`METIS_PartGraphKway`
+            functions in ctype data format (all are pointers to c_int32)
     """
     n = len(xadj)-1
     c_n = (c_int*1)(n)
@@ -173,14 +173,14 @@ class LoadBalancerMetis(LoadBalancerMKMeans):
     def load_balance_func_serial_metis(self, **args):
         """ serial load balance function which uses METIS to do the partitioning
         
-        calls the :class:Loadbalancer :meth:load_balance_func_serial
+        calls the :class:Loadbalancer :meth:`load_balance_func_serial`
         """
         self.load_balance_func_serial('metis', **args)
         
     def load_redistr_metis(self, block_proc, proc_block_np, **args):
         """ function to redistribute the cells amongst processes using METIS
         
-        This is called by :class:Loadbalancer :meth:load_balance_func_serial
+        This is called by :class:Loadbalancer :meth:`load_balance_func_serial`
         """
         block_proc = lb_metis(block_proc, proc_block_np)
         self.particles_per_proc = [0]*len(proc_block_np)

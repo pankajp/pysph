@@ -43,7 +43,7 @@ def list_pyx_extensions(path):
     return ret
 
 def mpirun(bench_name, num_procs):
-    ret = subprocess.check_output(['mpiexec', '-n', '2', sys.executable,
+    ret = subprocess.check_output(['mpiexec', '-n', str(num_procs), sys.executable,
                                    'mpirunner.py', 'p', bench_name])
     return pickle.loads(ret)
 

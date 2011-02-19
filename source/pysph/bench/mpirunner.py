@@ -21,6 +21,7 @@ size = MPI.COMM_WORLD.Get_size()
 
 def mpirun(args=None):
     pkl = False
+    redir_op = True
     if args is None:
         comm = MPI.Comm.Get_parent()
         #rank = comm.Get_rank()
@@ -29,12 +30,16 @@ def mpirun(args=None):
         if args[0] == 'p':
             pkl = True
             bench_name = args[1]
+        elif args[0] == 'i':
+            redir_op = False
+            bench_name = args[1]
         else:
             bench_name = args[0]
     logfile = open('mpirunner.log.%d'%rank, 'w')
     stdout_orig = sys.stdout
     stderr_orig = sys.stderr
-    sys.stdout = sys.stderr = logfile
+    if redir_op:
+        sys.stdout = sys.stderr = logfile
     
     bench_mod = __import__(bench_name)
     res = bench_mod.bench()
