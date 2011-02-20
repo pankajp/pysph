@@ -357,18 +357,20 @@ class Integrator(object):
         for i in range(ncalcs):
             calc = calcs[i]
 
-            updates = calc.updates
-            nupdates = len(updates)
+            if calc.integrates:
 
-            pa = self.arrays[calc.dnum]
+                updates = calc.updates
+                nupdates = len(updates)
+
+                pa = self.arrays[calc.dnum]
             
-            for j in range(nupdates):
-                prop = updates[j]
+                for j in range(nupdates):
+                    prop = updates[j]
 
-                #reset the current property to the initial array
-
-                initial_prop = self.initial_props[calc.id][j]
-                pa.set(**{prop:pa.get(initial_prop)})
+                    # reset the current property to the initial array
+                    
+                    initial_prop = self.initial_props[calc.id][j]
+                    pa.set(**{prop:pa.get(initial_prop)})
 
     def do_step(self, calcs, dt):
         """ Perform one step for the integration

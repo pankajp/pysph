@@ -70,3 +70,4 @@ class PrintNeighborInformation:
             fname_cells += "_" + str(time)
             cell_manager.get_particle_representation(fname_cells)
             
+

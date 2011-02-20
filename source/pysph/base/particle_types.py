@@ -6,6 +6,7 @@ class ParticleType:
     """
     Fluid = 0
     Solid = 1
+    DummyFluid = 2
     
     def __init__(self):
         """
