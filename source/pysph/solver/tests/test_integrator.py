@@ -87,7 +87,6 @@ class IntegratorBaseTestCase(unittest.TestCase):
             updates = calc.updates
 
             iprops = [k+'_0' for k in updates]
-            sprops = []
             kprops = []
 
             self.assertEqual(initial_props[calc.id], iprops)
@@ -95,11 +94,7 @@ class IntegratorBaseTestCase(unittest.TestCase):
             for j in range(len(updates)):
                 update_prop = updates[j]
 
-                sprops.append(update_prop+'_'+str(i) + str(j))
-
                 kprops.append(k_num + '_' + update_prop + str(i) + str(j))
-
-            self.assertEqual(step_props[calc.id], sprops)
 
             if calc.integrates:
                 self.assertEqual(k_props[calc.id][k_num], kprops)

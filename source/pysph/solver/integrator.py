@@ -206,12 +206,13 @@ class Integrator(object):
         self.cstep = 1
 
         self.initial_props = {}
-        self.step_props = {}
         self.k_props = {}
 
         self.setup_done = False
 
         self.rupdate_list = []
+
+        self.step_props = 'tmpx', 'tmpy', 'tmpz'
 
     def set_rupdate_list(self):
         for i in range(len(self.particles.arrays)):
@@ -252,12 +253,9 @@ class Integrator(object):
         
         """
         
-        logger.info("Setup Integrator called")
-
         self.arrays = self.particles.arrays
 
         self.initial_props = {}
-        self.step_props = {}
         self.k_props = {}
 
         calcs = self.calcs
@@ -283,7 +281,6 @@ class Integrator(object):
             # make an entry in the step and k array for this calc
 
             self.initial_props[calc.id] = []
-            self.step_props[calc.id] = []
             self.k_props[calc.id] = {}
 
             for j in range(nupdates):
@@ -291,16 +288,14 @@ class Integrator(object):
 
                 # define and add the initial and step properties
 
-                prop_step = prop+'_'+str(i)+str(j)
                 prop_initial = prop+'_0'
 
-                pa.add_property({'name':prop_step})
-                pa.add_property({'name':prop_initial})
+                if calc.integrates:             
+                    pa.add_property({'name':prop_initial})
 
                 # set the step array and initial array
 
                 self.initial_props[calc.id].append(prop_initial)
-                self.step_props[calc.id].append(prop_step)
 
                 for l in range(self.nsteps):
                     k_num = 'k'+str(l+1)
@@ -338,17 +333,19 @@ class Integrator(object):
         ncalcs = len(calcs)
         for i in range(ncalcs):
             calc = calcs[i]
-            updates = calc.updates
-            nupdates = len(updates)
 
-            pa = self.arrays[calc.dnum]
+            if calc.integrates:
+                updates = calc.updates
+                nupdates = len(updates)
 
-            for j in range(nupdates):
-                prop = updates[j]
+                pa = self.arrays[calc.dnum]
+            
+                for j in range(nupdates):
+                    prop = updates[j]
 
-                prop_initial = self.initial_props[calc.id][j]
-
-                pa.set(**{prop_initial:pa.get(prop)})
+                    prop_initial = self.initial_props[calc.id][j]
+                    
+                    pa.set(**{prop_initial:pa.get(prop)})
 
     def reset_current_arrays(self, calcs):
         """ Reset the current arrays """
@@ -437,12 +434,11 @@ class Integrator(object):
 
             # Evaluate the calc
 
-            step_props = self.step_props[calc.id]
-            calc.sph(*step_props)
+            calc.sph(*self.step_props)
 
             for j in range(nupdates):
                 update_prop = updates[j]
-                step_prop = step_props[j]
+                step_prop = self.step_props[j]
 
                 step_array = pa.get(step_prop)
 
