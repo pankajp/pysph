@@ -369,6 +369,13 @@ class Solver(object):
         
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
+
+    def set_kernel_symmetrization(self, hks):
+        """ Set the type of kernel symmetrization to use """
+
+        for equation_id in self.order:
+            operation = self.operation_dict[equation_id]
+            operation.function.hks = hks
         
     def solve(self, show_progress=False):
         """ Solve the system

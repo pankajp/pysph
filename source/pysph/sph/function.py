@@ -36,7 +36,7 @@ class Function(object):
     parameter values.
 
     """
-    def __init__(self, sph_func=None, *args, **kwargs):
+    def __init__(self, sph_func=None, hks=False, *args, **kwargs):
         """ Base class Constructor
 
         Parameters:
@@ -53,13 +53,16 @@ class Function(object):
         self.sph_func = sph_func
         self.args = args
         self.kwargs = kwargs
+        self.hks = hks
 
     def get_func(self, source, dest):
         """ Return a SPHFunctionParticle instance with source and dest """
         if self.sph_func is None:
             raise NotImplementedError, 'Function(sph_func=None).get_func()'
 
-        func = self.sph_func(source, dest, *self.args, **self.kwargs)
+        func = self.sph_func(source, dest, hks=self.hks,
+                             *self.args, **self.kwargs)
+        
         return func
 
 ############################################################################

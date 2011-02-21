@@ -179,6 +179,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
         gradb = Point_new(0,0,0)
 
         if self.hks:
+
             kernel.gradient(self._dst, self._src, ha, grada)
             kernel.gradient(self._dst, self._src, hb, gradb)
             

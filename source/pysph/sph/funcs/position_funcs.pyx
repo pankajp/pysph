@@ -10,7 +10,8 @@ cdef class PositionStepping(SPHFunctionParticle):
 
     #Defined in the .pxd file
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 bint setup_arrays=True):
+                 bint setup_arrays=True, hks=False):
+
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 
         self.id = 'positionstepper'
