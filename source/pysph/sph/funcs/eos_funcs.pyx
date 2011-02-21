@@ -10,7 +10,7 @@ cdef class IdealGasEquation(SPHFunctionParticle):
     """ Ideal gas equation of state """
     
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 bint setup_arrays=True, double gamma = 1.4):
+                 bint setup_arrays=True, double gamma = 1.4, **kwargs):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
         self.gamma = gamma
@@ -33,7 +33,6 @@ cdef class IdealGasEquation(SPHFunctionParticle):
         nr[0] = (gamma - 1.0)*rhoa*ea
         nr[1] = sqrt(ea*(gamma-1))
         
-        #nr[1] = sqrt(gamma*Pa/rhoa)
 ##############################################################################
 
 cdef class TaitEquation(SPHFunctionParticle):

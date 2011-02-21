@@ -504,7 +504,7 @@ class VelocityDivergence(Function):
 
     """
     def __init__(self, hks=False):
-        Function.__init__(self, adke.PilotRho, h0=h0, hks=hks)
+        Function.__init__(self, adke.PilotRho, hks=hks)
 
 ############################################################################
 # VectorForce
