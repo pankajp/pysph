@@ -6,7 +6,7 @@ import pysph.solver.api as solver
 app = solver.Application()
 app.process_command_line()
 
-particles = app.create_particles(
+particles = app.create_particles(False,
     solver.fluid_solver.get_circular_patch, name='fluid', type=0)
 
 # use a positive constant_h parameter for kenrel interpolation
