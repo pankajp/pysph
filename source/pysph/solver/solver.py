@@ -402,7 +402,7 @@ class Solver(object):
             
             #update the particles explicitly
 
-            self.particles.update(cache_neighbors=True)
+            self.particles.update()
 
             #perform any pre step functions
             

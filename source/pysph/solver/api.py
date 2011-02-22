@@ -7,7 +7,7 @@ from sph_equation import SPHSimpleODE, SPHSummationODE, SPHAssignment,\
 from solver import Solver
 
 from shock_tube_solver import ShockTubeSolver
-from fluid_solver import FluidSolver
+from fluid_solver import FluidSolver, get_circular_patch
 import shock_tube_solver, fluid_solver
 
 from basic_generators import LineGenerator, CuboidGenerator, RectangleGenerator

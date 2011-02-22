@@ -11,7 +11,7 @@ cdef class GravityForce(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, double gx = 0.0, 
-                 double gy = 0.0, double gz = 0.0):
+                 double gy = 0.0, double gz = 0.0, hks=False):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 

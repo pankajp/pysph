@@ -547,3 +547,7 @@ class NeighborCount(Function):
     """ Compute the number of neighbors """
     def __init__(self):
         Function.__init__(self, basic.CountNeighbors)
+
+class SPHFunction(Function):
+    def __init__(self):
+        Function.__init__(self, basic.SPHFunction)

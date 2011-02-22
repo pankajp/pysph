@@ -14,14 +14,14 @@ from sph_equation import SPHSummation, SPHAssignment, SPHSummationODE, \
 Fluids = base.ParticleType.Fluid
 Solids = base.ParticleType.Solid
 
-def get_circular_patch(name="", type=0):
+def get_circular_patch(name="", type=0, dx=0.025):
     
-    x,y = numpy.mgrid[-1.05:1.05+1e-4:0.025, -1.05:1.05+1e-4:0.025]
+    x,y = numpy.mgrid[-1.05:1.05+1e-4:dx, -1.05:1.05+1e-4:dx]
     x = x.ravel()
     y = y.ravel()
  
-    m = numpy.ones_like(x)*0.025*0.025
-    h = numpy.ones_like(x)*0.05
+    m = numpy.ones_like(x)*dx*dx
+    h = numpy.ones_like(x)*2*dx
     rho = numpy.ones_like(x)
 
     p = 0.5*1.0*100*100*(1 - (x**2 + y**2))

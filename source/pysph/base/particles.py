@@ -92,7 +92,9 @@ class Particles(object):
     """
     
     def __init__(self, arrays=[], in_parallel=False, variable_h=False,
-                 load_balancing=True, update_particles=True):
+                 load_balancing=True, update_particles=True,
+                 min_cell_size=-1):
+        
         """ Constructor
 
         Parameters:
@@ -122,7 +124,8 @@ class Particles(object):
         # create the cell manager
 
         if not in_parallel:
-            self.cell_manager = CellManager(arrays_to_bin=arrays)
+            self.cell_manager = CellManager(arrays_to_bin=arrays,
+                                            min_cell_size=min_cell_size)
         else:
             self.cell_manager = ParallelCellManager(
                 arrays_to_bin=arrays, load_balancing=load_balancing)
@@ -269,6 +272,11 @@ class Particles(object):
         """ Synchronize all processes """
         if self.in_parallel:
             self.cell_manager.barrier()
+
+    def get_neighbor_particle_locator(self, src, dst, radius_scale=2.0):
+        """ Return a neighbor locator from the NNPSManager """
+        return self.nnps_manager.get_neighbor_particle_locator(
+            src, dst, radius_scale)
 
 ###############################################################################
 

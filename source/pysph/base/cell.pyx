@@ -918,16 +918,15 @@ cdef class CellManager:
         This is very simplistic method to find the cell sizes, derived solvers
         may want to use something more sophisticated or probably set the cell
         sizes manually.
+
         """
         # TODO: implement
         if min_size <= 0:
             min_h, max_h = self._compute_minmax_h()
-            # arbitrarily set min_size as some multiple of min_h
             min_size = 2 * self.max_radius_scale * min_h
-        if min_size <= 0:
-            # default min_size, this should *NOT* happen
-            min_size = 1.0
+
         self.cell_size = min_size
+
         logger.info('using cell size of %f'%(min_size))
         return self.cell_size
     

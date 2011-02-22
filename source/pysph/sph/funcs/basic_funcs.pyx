@@ -766,3 +766,9 @@ cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
         dnr[0] += -Vb*rab.y*grad.y - Vb*w
 
 ##########################################################################
+
+cdef class SPHFunction(SPHFunctionParticle):
+
+    cdef void eval(self, int k, int source_pid, int dest_pid, 
+                   KernelBase kernel, double *nr, double *dnr):
+        pass

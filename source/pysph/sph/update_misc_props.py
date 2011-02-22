@@ -86,3 +86,4 @@ class UpdateDivergence:
             for i in range(nsrcs):
                 func = calc.funcs[i]
                 assert func.id == "vdivergence", "Invalid calc!"
+
