@@ -1,5 +1,5 @@
 *************************
-Installaion from source
+Install from source
 *************************
 
 Ensure that your system is properly setup as described `here`_
@@ -7,14 +7,6 @@ Ensure that your system is properly setup as described `here`_
 .. _here: setting-up.html
 
 
-Download and untar the latest source tarball from
-http://pysph.googlecode.com ::
-
-    $(pysph) tar -xvzf <tarball>
-
-Build and install the package as ::
-
-    $(pysph) make develop; make install
 
 Running the tests
 -----------------
