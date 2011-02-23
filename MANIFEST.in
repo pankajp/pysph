@@ -1,5 +1,5 @@
-include MANIFEST.in *.py *.txt
-recursive-include examples *.py
+include MANIFEST.in Makefile *.py *.txt
+recursive-include examples *.py shock-tube/clawpack-solution.npz
 recursive-include docs *.* *
 include source/pysph/base/*.src
 recursive-include source *.pxd
