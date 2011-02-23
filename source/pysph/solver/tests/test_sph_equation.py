@@ -33,10 +33,11 @@ class SPHOperationTestCase(unittest.TestCase):
 
         #create the fluid particles
         x = numpy.linspace(0,1,11)
-        self.fluid = base.get_particle_array(name='fluid', type=Fluid, x=x)
+        h = numpy.ones_like(x) * 2 * (x[1] - x[0])
+        self.fluid = base.get_particle_array(name='fluid', type=Fluid, x=x,h=h)
 
         #create the solid particles
-        self.solid = base.get_particle_array(name="solid", type=Solid, x=x)
+        self.solid = base.get_particle_array(name="solid", type=Solid, x=x,h=h)
 
         #set the particles
         self.particles = particles = base.Particles(arrays=[self.fluid,
