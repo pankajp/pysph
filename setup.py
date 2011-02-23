@@ -1,8 +1,16 @@
-"""A general purpose Smoothed Particle Hydrodynamics framework.
+"""
+PySPH
+=====
 
-The SPH package provides a general purpose framework for SPH simulations
+A general purpose Smoothed Particle Hydrodynamics framework.
+
+This package provides a general purpose framework for SPH simulations
 in Python.  The framework emphasizes flexibility and efficiency while
-allowing most of the user code to be written in pure Python.
+allowing most of the user code to be written in pure Python.  See here:
+
+    http://pysph.googlecode.com
+
+for more information.
 """
 
 from setuptools import find_packages, setup
