@@ -21,7 +21,7 @@ cdef class KernelCorrection:
         raise NotImplementedError
 
 cdef class BonnetAndLokKernelCorrection(KernelCorrection):
-    """ Bonnet and Lok corection """
+    """ Bonnet and Lok correction """
 
     def __init__(self, calc):
 

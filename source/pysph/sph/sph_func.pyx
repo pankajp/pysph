@@ -37,6 +37,7 @@ cdef class SPHFunctionParticle:
         self.tag = ""
         self.source = source
         self.dest = dest
+        self._tmp = Point_new(0,0,0)
 
         #Default properties
         self.x = 'x'

@@ -1,4 +1,4 @@
-from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.point cimport Point_new, Point_sub, Point_add
 
 cdef extern from "math.h":
     double sqrt(double)
@@ -22,6 +22,8 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
 
         self.id = 'pgrad'
         self.tag = "velocity"
+        self._tmpa = Point_new(0,0,0)
+        self._tmpb = Point_new(0,0,0)
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
@@ -40,9 +42,9 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
 
         cdef double temp = 0.0
 
-        cdef Point grad = Point_new(0,0,0)
-        cdef Point grada = Point_new(0,0,0)
-        cdef Point gradb = Point_new(0,0,0)
+        cdef Point grad = self.tmp
+        cdef Point grada = self._tmpa
+        cdef Point gradb = self._tmpb
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -59,7 +61,9 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
             kernel.gradient(self._dst, self._src, ha, grada)
             kernel.gradient(self._dst, self._src, hb, gradb)
 
-            grad = (grada + gradb) * 0.5
+            grad.set((grada.x + gradb.x)*0.5,
+                     (grada.y + gradb.y)*0.5,
+                     (grada.z + gradb.z)*0.5)
 
         else:            
             kernel.gradient(self._dst, self._src, h, grad)
@@ -101,20 +105,19 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+        self._tmpa = Point_new(0,0,0)
+        self._tmpb = Point_new(0,0,0)
+        self._tmpvab = Point_new(0,0,0)
+        self._tmprab = Point_new(0,0,0)
 
         self.id = 'momentumequation'
         self.tag = "velocity"
         
     cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
-    
-    
-        cdef Point va, vb, vab, rab
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta
-
-        cdef Point grad, grada, gradb
 
         cdef double ha = self.d_h.data[dest_pid]
         cdef double hb = self.s_h.data[source_pid]
@@ -131,18 +134,20 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        va = Point_new(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
-                   self.d_w.data[dest_pid])
-
-        vb = Point_new(self.s_u.data[source_pid], self.s_v.data[source_pid],
-                   self.s_w.data[source_pid])
-
         ca = self.d_cs.data[dest_pid]
         cb = self.s_cs.data[source_pid]
         
-        rab = Point_sub(self._dst, self._src)
-        vab = Point_sub(va, vb)
-        dot = vab.dot(rab)
+        #rab = Point_sub(self._dst, self._src)
+        self._tmprab.set(self._dst.x-self._src.x,
+                         self._dst.y-self._src.y,
+                         self._dst.z-self._src.z)
+        
+        #vab = Point_sub(self.tmpva, self.tmpvb)
+        self._tmpvab.set(self.d_u.data[dest_pid]-self.s_u.data[source_pid],
+                         self.d_v.data[dest_pid]-self.s_v.data[source_pid],
+                         self.d_w.data[dest_pid]-self.s_w.data[source_pid])
+        
+        dot = self._tmpvab.dot(self._tmprab)
     
         Pa = self.d_p.data[dest_pid]
         rhoa = self.d_rho.data[dest_pid]        
@@ -165,7 +170,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
             rhoab = 0.5 * (rhoa + rhob)
 
             mu = hab*dot
-            mu /= (rab.norm() + eta*eta*hab*hab)
+            mu /= (self._tmprab.norm() + eta*eta*hab*hab)
             
             piab = -alpha*cab*mu + beta*mu*mu
             piab /= rhoab
@@ -173,17 +178,18 @@ cdef class MomentumEquation(SPHFunctionParticle):
         tmp += piab
         tmp *= -mb
 
-        grad = Point_new(0,0,0)
-
-        grada = Point_new(0,0,0)
-        gradb = Point_new(0,0,0)
+        cdef Point grad = self.tmp
+        cdef Point grada = self._tmpa
+        cdef Point gradb = self._tmpb
 
         if self.hks:
 
             kernel.gradient(self._dst, self._src, ha, grada)
             kernel.gradient(self._dst, self._src, hb, gradb)
             
-            grad = (grada + gradb) * 0.5
+            grad.set((grada.x + gradb.x)*0.5,
+                     (grada.y + gradb.y)*0.5,
+                     (grada.z + gradb.z)*0.5)
 
         else:
             kernel.gradient(self._dst, self._src, hab, grad)

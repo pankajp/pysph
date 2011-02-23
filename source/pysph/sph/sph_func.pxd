@@ -4,7 +4,7 @@ cimport numpy
 # local imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray, IntArray
-from pysph.base.point cimport Point
+from pysph.base.point cimport Point, Point_new
 
 from pysph.base.kernels cimport KernelBase
 
@@ -17,6 +17,7 @@ cdef class SPHFunctionParticle:
     cdef public str h, m, rho, p, e, x, y, z, u, v, w
     cdef public str tmpx, tmpy, tmpz, type
     cdef public str cs
+    cdef Point _tmp
         
     cdef public DoubleArray s_h, s_m, s_rho, d_h, d_m, d_rho
     cdef public DoubleArray s_x, s_y, s_z, d_x, d_y, d_z

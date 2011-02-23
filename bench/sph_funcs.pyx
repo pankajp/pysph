@@ -15,39 +15,46 @@ import numpy
 import time
 
 # the sph_funcs to test
-funcs_calc = [SPHInterpolation('rho'),
-              SimpleDerivative('rho'),
-              Gradient('rho'),
+funcs_calc = [
+              SPHInterpolation('rho'),
+              SPHSimpleGradient('rho'),
+              SPHGradient('rho'),
               Laplacian('rho'),
-              EnergyEquationNoVisc(),
-              EnergyEquationAVisc(beta=1.0, alpha=1.0, gamma=1.0, eta=1.0),
-              EnergyEquation(beta=1.0, alpha=1.0, gamma=1.4, eta=0.1),
               MonaghanBoundaryForce(delp=1.0),
               BeckerBoundaryForce(sound_speed=1.0),
               LennardJonesForce(D=1.0, ro=1.0, p1=1.0, p2=1.0),
               SPHRho(),
               SPHDensityRate(),
+              EnergyEquationNoVisc(),
+              EnergyEquationAVisc(beta=1.0, alpha=1.0, gamma=1.0, eta=1.0),
+              EnergyEquation(beta=1.0, alpha=1.0, gamma=1.4, eta=0.1),
+              ArtificialHeat(),
+              PositionStepping(),
               SPHPressureGradient(),
-              MonaghanArtificialVsicosity(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
               MomentumEquation(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
+              MonaghanArtificialVsicosity(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
               MorrisViscosity(mu='mu'),
               XSPHCorrection(eps=0.5),
+              ADKEPilotRho(),
+              VelocityDivergence(),
               XSPHDensityRate(),
              ]
 
 
-funcs_eqn = [NeighborCount(),
+funcs_eqn = [
+             PositionStepping(),
              IdealGasEquation(gamma=1.4),
              TaitEquation(co=1.0, ro=1.0, gamma=7.0),
              GravityForce(gx=0.0, gy=-9.81, gz=0.0),
-             VectorForce(force=Point(1,1,1)),             
+#             VectorForce(force=Point(1,1,1)),             
              MoveCircleX(),
              MoveCircleY(),
-             PositionStepping(),
+             NeighborCount(),
+             SPHFunction()
             ]
 
 
-Ns = [1000, 100000]
+Ns = [1000]#, 100000]
 
 cpdef dict sph_func_calc(Ns=Ns):
     """sph function function evaluation bench"""
@@ -81,7 +88,11 @@ cpdef dict sph_func_calc(Ns=Ns):
             t = get_time()
             calc.sph('tmp')
             t = get_time() - t
-            ret[func.__class__.__name__+' /%d'%(N)] = t/N
+            nam = func.__class__.__name__+' /%d'%(N)
+            if nam in ret:
+                print 'error:',nam, ' already in ret:', calc
+                nam += 't'
+            ret[nam] = t/N
     return ret
 
 

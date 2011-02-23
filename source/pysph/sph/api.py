@@ -13,7 +13,7 @@ from update_misc_props import UpdateDivergence
 
 #Import basic functions
 from function import SPHInterpolation, SPHGradient, SPHSimpleGradient, \
-     Laplacian, NeighborCount, SPHFunction
+     Laplacian, NeighborCount, SPHFunction, Function
 
 #Import boundary functions
 from function import MonaghanBoundaryForce, LennardJonesForce, \

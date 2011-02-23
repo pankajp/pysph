@@ -17,7 +17,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
     """
     SPH function to compute pressure gradient.
     """
-    pass
+    cdef Point _tmpa, _tmpb
 
 cdef class MomentumEquation(SPHFunctionParticle):
     """ Momentum equation """
@@ -26,3 +26,4 @@ cdef class MomentumEquation(SPHFunctionParticle):
     cdef public double beta 
     cdef public double eta
     cdef public double gamma
+    cdef Point _tmpa, _tmpb, _tmpvab, _tmprab
