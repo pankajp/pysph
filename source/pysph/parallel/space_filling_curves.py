@@ -4,9 +4,10 @@ import numpy
 from pysph.base.point import IntPoint
 try:
     from hilbert import Hilbert_to_int
+    have_hilbert = True
 except ImportError:
     # TODO: implement Hilbert's SFC
-    pass
+    have_hilbert = False
 
 def morton_sfc(cell_id, maxlen=20, dim=3):
     """Returns key of indices using Morton's space filling curve """
@@ -40,5 +41,6 @@ def hilbert_sfc(cell_id, maxlen=20, dim=3):
     s = 2**maxlen
     return Hilbert_to_int([int(i+s) for i in cell_id])
 
-sfc_func_dict = {'morton':morton_sfc,
-                 'hilbert':hilbert_sfc}
+sfc_func_dict = {'morton':morton_sfc}
+if have_hilbert:
+    sfc_func_dict['hilbert'] = hilbert_sfc

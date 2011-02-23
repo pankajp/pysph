@@ -10,11 +10,9 @@ from pysph.solver.basic_generators import LineGenerator, RectangleGenerator, \
 
 from pysph.parallel.parallel_cell import ParallelCellManager
 from pysph.parallel.load_balancer import get_load_balancer_class
+from pysph.parallel.space_filling_curves import sfc_func_dict
 
 LoadBalancer = get_load_balancer_class()
-
-def dict_from_kwargs(**kwargs):
-    return kwargs
 
 class TestSerialLoadBalancer1D(unittest.TestCase):
     
@@ -50,18 +48,19 @@ class TestSerialLoadBalancer1D(unittest.TestCase):
 
 
 def get_lb_args():
-    return [
-            # This test is only for serial cases
-            #dict_from_kwargs(method='normal'),
-            dict_from_kwargs(),
-            dict_from_kwargs(adaptive=True),
-            dict_from_kwargs(distr_func='auto'),
-            dict_from_kwargs(distr_func='geometric'),
-            dict_from_kwargs(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
-            dict_from_kwargs(distr_func='sfc', sfc_func='morton'),
-            dict_from_kwargs(distr_func='sfc', sfc_func='hilbert'),
-            dict_from_kwargs(distr_func='metis'),
+    ret = [
+          # This test is only for serial cases
+          #dict_from_kwargs(method='normal'),
+          dict(),
+          dict(adaptive=True),
+          dict(distr_func='auto'),
+          dict(distr_func='geometric'),
+          dict(distr_func='mkmeans', c=0.3, t=0.2, tr=0.8, u=0.4, e=3, er=6, r=2.0),
+          dict(distr_func='metis'),
            ]
+    for sfc_func in sfc_func_dict:
+        ret.append(dict(distr_func='sfc', sfc_func=sfc_func))
+    return ret
 
 # function names have 't' instead of 'test' otherwise nose test collector
 # assumes them to be test functions
