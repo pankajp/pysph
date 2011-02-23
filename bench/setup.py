@@ -35,7 +35,8 @@ def compile_extns(extensions=None, dirname=None, inc_dirs=None):
     
     if inc_dirs is None:
         inc_dirs = []
-    
+    inc_dirs.append(os.path.join(os.path.split(os.path.abspath(os.path.curdir))[0],'source'))
+    print inc_dirs
     sys.argvold = sys.argv[:]
     sys.argv = [__file__, 'build_ext','--inplace']
     

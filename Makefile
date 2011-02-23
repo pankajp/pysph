@@ -18,7 +18,7 @@ MPI4PY_INCL = $(shell python -c "import mpi4py; print mpi4py.get_include()")
 # the default target to make
 all : $(DIRS) extn
 
-.PHONY : $(DIRS)
+.PHONY : $(DIRS) bench
 
 $(DIRS) : 
 	cd $@;  python $(ROOT)/source/pysph/base/generator.py
@@ -34,10 +34,10 @@ extn : $(DIRS)
 
 clean : 
 	python setup.py clean
-	-for dir in $(DIRS) $(PKG)/bench; do rm -f $$dir/*.so; done
+	-for dir in $(DIRS) bench; do rm -f $$dir/*.so; done
 
 cleanall : clean
-	-for dir in $(DIRS) $(PKG)/bench; do rm -f $$dir/*.c; done
+	-for dir in $(DIRS) bench; do rm -f $$dir/*.c; done
 #	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
 
 test :
@@ -51,7 +51,7 @@ bench :
 	#####################################################################
 	#
 	#-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
-	cd $(PKG)/bench; python bench.py $(BENCH)
+	cd bench; python bench.py $(BENCH)
 
 coverage2 :
 	python `which nosetests` --exe --cover-erase --with-coverage --cover-html-dir=htmlcov/ --cover-html --cover-package=pysph source/pysph/
