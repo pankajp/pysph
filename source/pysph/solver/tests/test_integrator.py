@@ -13,92 +13,6 @@ import unittest
 Fluids = base.ParticleType.Fluid
 Solids = base.ParticleType.Solid
 
-class IntegratorBaseTestCase(unittest.TestCase):
-    """ Tests for the setup integrator and other non-integrating functions """
-    
-    def setUp(self):
-        """ A dummy solver is created along the lines of the solver test """
-
-        self.kernel = kernel = base.CubicSplineKernel(dim = 2)
-
-        self.solver = s = solver.Solver(kernel, solver.EulerIntegrator)
-
-        self.particles = base.Particles(arrays=[base.get_particle_array()])
-
-        # Add the default operations
-
-        s.add_operation(solver.SPHAssignment(
-                
-                sph.TaitEquation(1,1), on_types = [Fluids, Solids],
-                updates=['p','cs'], id = 'eos')
-
-                             )
-                
-        s.add_operation(solver.SPHSummationODE(
-                
-                sph.SPHDensityRate(), on_types=[Fluids, Solids],
-                from_types=[Fluids, Solids], updates=['rho'], id='density_rate')
-                             
-                             )
-
-
-        s.add_operation(solver.SPHSummationODE(
-                
-                sph.SPHPressureGradient(), on_types=[Fluids],
-                from_types=[Fluids, Solids], updates=['u','v'], id='pgrad')
-
-                             )
-
-        s.add_operation(solver.SPHSummationODE(
-
-                sph.MonaghanArtificialVsicosity(), on_types=[Fluids],
-                from_types=[Fluids, Solids], updates=['u','v'], id='avisc')
-
-                             )
-
-        s.to_step([Fluids])
-        s.set_xsph(eps = 0.5)
-
-        s.setup_integrator(self.particles)
-        
-        self.integrator = s.integrator
-
-    def test_setup_integrator(self):
-        """ Test the setup integrator function """
-
-        integrator = self.integrator
-
-        integrator.setup_integrator()
-
-        calcs = integrator.calcs
-
-        ncalcs = len(calcs)
-
-        initial_props = integrator.initial_props
-        step_props = integrator.step_props
-        k_props = integrator.k_props
-
-        # Test the initial_props dictionary
-
-        k_num = 'k1'
-        for i in range(ncalcs):
-            calc = calcs[i]
-
-            updates = calc.updates
-
-            iprops = [k+'_0' for k in updates]
-            kprops = []
-
-            self.assertEqual(initial_props[calc.id], iprops)
-
-            for j in range(len(updates)):
-                update_prop = updates[j]
-
-                kprops.append(k_num + '_' + update_prop + str(i) + str(j))
-
-            if calc.integrates:
-                self.assertEqual(k_props[calc.id][k_num], kprops)
-
 class IntegratorTestCase(unittest.TestCase):
     """ Tests for the Integrator base class 
 
@@ -141,8 +55,9 @@ class IntegratorTestCase(unittest.TestCase):
 
         p = numpy.zeros_like(x)
         e = numpy.zeros_like(x)
+        h = numpy.ones_like(x)
 
-        self.pa = pa = base.get_particle_array(x=x,y=y,p=p,e=e)
+        self.pa = pa = base.get_particle_array(x=x,y=y,p=p,e=e,h=h,name='tmp')
 
         self.particles = particles = base.Particles(arrays=[pa])
         self.kernel = base.CubicSplineKernel(dim=2)

@@ -1,13 +1,28 @@
 Installation
 =============
 
-There are several ways to install the PySPH package.  You need to make
-sure you have the following dependencies installed.
+:Release: |version|
+:Date: |today|
+
+There are several ways to install the PySPH package. All the methods
+described pertain to the installation on Ubuntu 10.10
+
+For each of the installation methods, you need to ensure that the
+following dependencies are installed.
+
+.. toctree::
+   :maxdepth: 2
+   :numbered:
+
+   setting-up.rst
+   install_from_source.rst
 
 Dependencies
-------------
+-------------
 
 The following dependencies are absolutely essential:
+
+  * virtualenv:
 
   * numpy_: version 1.0.4 and above will work.
 
@@ -27,8 +42,7 @@ The following dependencies are optional but recommended:
   * Sphinx_: version 0.5 will work.  This package is used for building
     the documentation.
 
-  * VTK_: versions, 4.x, 5.x and above will work.  This is used to write
-    VTK files for subsequent output and visualization.
+
 
   * Mayavi_: version 3.x and above. This is convenient for visualization
     and generation of VTK files.  This is entirely optional though.
@@ -59,7 +73,7 @@ the package.
 .. _setuptools: http://pypi.python.org/pypi/setuptools
 .. _mpi2py: http://mpi4py.scipy.org
 .. _nose: http://pypi.python.org/pypi/nose
-.. _Sphinx: http://pypi.python.org/pypi/Sphinx/
+.. _Sphinx: http://pypi.python.org/pypi/Sphinx/w
 .. _VTK: http://www.vtk.org
 .. _Mayavi: http://code.enthough.com/projects/mayavi
 
