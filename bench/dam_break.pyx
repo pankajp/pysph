@@ -204,7 +204,7 @@ def dam_break_run():
     ret['process_command_line'] = t
     
     t = get_time()
-    particles = app.create_particles(get_particles)
+    particles = app.create_particles(False, get_particles)
     t = get_time() - t
     ret['create_particles'] = t
     
