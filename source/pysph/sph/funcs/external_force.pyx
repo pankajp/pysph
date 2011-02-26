@@ -43,7 +43,7 @@ cdef class VectorForce(SPHFunctionParticle):
     #cded double fx, fy, fx
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True, Point force=Point()):
+                 bint setup_arrays=True, Point force=Point(), hks=False):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
 

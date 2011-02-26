@@ -4,7 +4,7 @@ import numpy
 from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator, \
         VarHNbrParticleLocator, NbrParticleLocatorBase
 from pysph.base.carray cimport LongArray
-from pysph.base.point cimport Point
+from pysph.base.point cimport cPoint, cPoint_new
 from pysph.base.nnps import brute_force_nnps
 from pysph.base.particle_array import ParticleArray
 from pysph.base.carray import LongArray
@@ -81,14 +81,16 @@ cpdef nbr_particles_from_cell_list():
     cdef LongArray output_array = LongArray()
     cdef int np, i
     cdef list cell_list
-    cdef Point pnt = Point()
+    cdef cPoint pnt = cPoint_new(0,0,0)
     cdef FixedDestNbrParticleLocator nbrl
     
     for nam,nps in Nps.items():
         np = nps[0]*nps[1]*nps[2]
         cell_list = []
         output_array.reset()
-        pnt.set(nps[0]/2.0, nps[1]/2.0, nps[2]/2.0)
+        pnt.x = nps[0]/2.0
+        pnt.y = nps[1]/2.0
+        pnt.z = nps[2]/2.0
         nbrl = get_data(False, nps)
         
         t = time()
