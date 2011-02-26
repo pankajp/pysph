@@ -1,7 +1,7 @@
 cdef extern from "math.h":
     double fabs(double)
 
-from pysph.base.point cimport Point_new
+from pysph.base.point cimport cPoint_new, cPoint, cPoint_dot, cPoint_scale
 
 #############################################################################
 # `MonaghanBoundaryForce` class.
@@ -42,7 +42,6 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
 
         cdef double x, y, nforce, tforce, force
         cdef double beta, q, cs
-        cdef Point tang, norm, rab
 
         cdef double h = self.d_h.data[dest_pid]
         cdef double ma = self.d_m.data[dest_pid]
@@ -56,17 +55,17 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
             
-        norm = Point_new(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
+        cdef cPoint norm = cPoint_new(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
                      self.s_nz.data[source_pid])
         
-        tang = Point_new(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
+        cdef cPoint tang = cPoint_new(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
                      self.s_tz.data[source_pid])
 
         cs = self.d_cs.data[dest_pid]
         
-        rab = self._dst - self._src
-        x = rab.dot(tang)
-        y = rab.dot(norm)
+        cdef cPoint rab = cPoint_sub(self._dst, self._src)
+        x = cPoint_dot(rab, tang)
+        y = cPoint_dot(rab, norm)
 
         force = 0.0
 
@@ -138,7 +137,7 @@ cdef class BeckerBoundaryForce(SPHFunctionParticle):
         """
         cdef double norm, nforce, force
         cdef double beta, q
-        cdef Point rab, rabn
+        cdef cPoint rab, rabn
 
         cdef double h = self.d_h.data[dest_pid]
         cdef double ma = self.d_m.data[dest_pid]
@@ -151,10 +150,10 @@ cdef class BeckerBoundaryForce(SPHFunctionParticle):
         self._dst.x = self.d_x.data[dest_pid]
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
-            
-        rab = self._dst - self._src
-        norm = rab.length()
-        rabn = rab/norm
+        
+        rab = cPoint_sub(self._dst, self._src)
+        norm = cPoint_length(rab)
+        rabn = cPoint_scale(rab, 1/norm)
 
         #Evaluate the normal force
         q = norm/h
@@ -215,7 +214,7 @@ cdef class LennardJonesForce(SPHFunctionParticle):
 
         """
         cdef double norm, force, tmp, tmp1, tmp2
-        cdef Point rab, rabn
+        cdef cPoint rab, rabn
 
         cdef double ro = self.ro
         cdef double D = self.D
@@ -228,9 +227,9 @@ cdef class LennardJonesForce(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        rab = self._dst - self._src
-        norm = rab.length()
-        rabn = rab/norm
+        rab = cPoint_sub(self._dst, self._src)
+        norm = cPoint_length(rab)
+        rabn = cPoint_scale(rab, 1/norm)
 
         #Evaluate the normal force
         if norm <= ro:

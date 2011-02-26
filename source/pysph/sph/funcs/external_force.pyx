@@ -54,9 +54,9 @@ cdef class VectorForce(SPHFunctionParticle):
                    KernelBase kernel, double *nr, double *dnr):
         """ Perform the force computation """
 
-        nr[0] = self.force.x
-        nr[1] = self.force.y
-        nr[2] = self.force.z
+        nr[0] = self.force.data.x
+        nr[1] = self.force.data.y
+        nr[2] = self.force.data.z
 
 ################################################################################
 # `MoveCircleX` class.
@@ -82,9 +82,7 @@ cdef class MoveCircleX(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        i = Point(1)
-        
-        angle = numpy.arccos(i.dot(self._dst)/self._dst.length())
+        angle = numpy.arccos(self._dst.x/cPoint_length(self._dst))
 
         fx = -numpy.sin(angle)
         
@@ -119,9 +117,7 @@ cdef class MoveCircleY(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        i = Point(1)
-        
-        angle = numpy.arccos(i.dot(self._dst)/self._dst.length())
+        angle = numpy.arccos(self._dst.x/cPoint_length(self._dst))
 
         fy = numpy.cos(angle)
         

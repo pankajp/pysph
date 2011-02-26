@@ -50,7 +50,7 @@ cdef extern from 'math.h':
     cdef double fabs(double)
     cdef double sqrt(double)
 
-from pysph.base.point cimport Point_new, Point_distance2, Point_distance
+from pysph.base.point cimport cPoint_new, cPoint_distance2, cPoint_distance
 
 # logger imports
 import logging
@@ -176,13 +176,13 @@ cdef class NbrParticleLocatorBase:
                 msg = 'Source %s does not exist'%(self.source.name)
                 raise ValueError, msg
             
-    cdef int get_nearest_particles_to_point(self, Point pnt, double radius,
+    cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
                                             LongArray output_array, 
                                             long exclude_index=-1) except -1: 
         """
         Return source indices that are within a certain radius from a point.
 
-        Parameters:        
+        Parameters:
         
         pnt -- the query point whose nearest neighbors are to be searched for.
         radius -- the radius within which particles are to be searched for.
@@ -209,7 +209,7 @@ cdef class NbrParticleLocatorBase:
         
         return 0
 
-    cdef int _get_nearest_particles_from_cell_list(self, Point pnt,
+    cdef int _get_nearest_particles_from_cell_list(self, cPoint pnt,
                     double radius, list cell_list,
                     LongArray output_array, long exclude_index=-1) except -1: 
         """ Extract nearest neighbors from a cell_list
@@ -243,7 +243,7 @@ cdef class NbrParticleLocatorBase:
         cdef str xc, yc, zc
         cdef double *x, *y, *z
         cdef LongArray src_indices
-        cdef Point pnt1 = Point_new(0,0,0)
+        cdef cPoint pnt1
         cdef long idx
         
         # get the coordinate arrays.
@@ -270,7 +270,7 @@ cdef class NbrParticleLocatorBase:
                     pnt1.y = y[idx]
                     pnt1.z = z[idx]
     
-                    if Point_distance2(pnt1, pnt) <= radius*radius:
+                    if cPoint_distance2(pnt1, pnt) <= radius*radius:
                         if idx != exclude_index:
                             output_array.append(idx)
         else:
@@ -285,7 +285,7 @@ cdef class NbrParticleLocatorBase:
                     pnt1.y = y[idx]
                     pnt1.z = z[idx]
     
-                    if Point_distance2(pnt1, pnt) <= radius*radius:
+                    if cPoint_distance2(pnt1, pnt) <= radius*radius:
                         output_array.append(idx)
         return 0
     
@@ -308,7 +308,7 @@ cdef class NbrParticleLocatorBase:
         """
 
         return self.get_nearest_particles_to_point(
-            pnt, radius, output_array, exclude_index)
+            pnt.data, radius, output_array, exclude_index)
 
 ###############################################################################
 # `FixedDestNbrParticleLocator` class.
@@ -450,7 +450,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         This is a convenience internal method and works only for constant h
 
         """
-        cdef Point pnt = Point_new(0,0,0)
+        cdef cPoint pnt
         cdef long exclude_index = -1
         pnt.x = self.d_x.data[dest_p_index]
         pnt.y = self.d_y.data[dest_p_index]
@@ -798,7 +798,7 @@ cdef class NNPSManager:
         """Returns a cached object if it exists, else returns None."""
         return self.particle_locator_cache.get((source_name,dest_name,radius))
 
-    def cache_neighbors(self, kernel):
+    cpdef cache_neighbors(self, KernelBase kernel):
         cdef dict locator_cache = self.particle_locator_cache
         cdef NbrParticleLocatorBase loc
         cdef ParticleArray dest, source
@@ -809,7 +809,7 @@ cdef class NNPSManager:
 
         cdef DoubleArray xd, yd, zd, xs, ys, zs, hs, hd
 
-        cdef Point _dst, _src, grad
+        cdef cPoint _dst, _src, grad
 
         for loc in locator_cache.values():
             dest = loc.dest
@@ -831,7 +831,7 @@ cdef class NNPSManager:
                 nbrs = loc.py_get_nearest_particles(i, exclude_self=False)
                 nnbrs = nbrs.length
 
-                _dst = Point(xd.data[i], yd.data[i], zd.data[i])
+                _dst.set(xd.data[i], yd.data[i], zd.data[i])
 
                 fci = loc.function_cache[i]
                 xgci = loc.xgradient_cache[i]
@@ -846,14 +846,12 @@ cdef class NNPSManager:
                 for j in range(nnbrs):
                     s_id = nbrs.data[j]
                     
-                    _src = Point(xs.data[s_id],ys.data[s_id],zs.data[s_id])
+                    _src.set(xs.data[s_id],ys.data[s_id],zs.data[s_id])
                     
                     h = 0.5 * (hd[i] + hs[s_id])
                     
-                    grad = Point()
-                    
-                    w = kernel.py_function(_dst, _src, h)
-                    kernel.py_gradient(_dst, _src, h, grad)
+                    w = kernel.function(_dst, _src, h)
+                    grad = kernel.gradient(_dst, _src, h)
                     
                     fci.data[j] = w
                     xgci.data[j] = grad.x

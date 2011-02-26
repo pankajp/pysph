@@ -7,12 +7,12 @@ from pysph.base.particle_array cimport ParticleArray
 cdef class CellManager
 
 cdef inline int real_to_int(double val, double step)
-cdef inline IntPoint find_cell_id(Point origin, Point pnt, double cell_size)
+cdef inline IntPoint find_cell_id(cPoint origin, cPoint pnt, double cell_size)
 cdef inline void construct_immediate_neighbor_list(IntPoint pnt, list
                neighbor_list, bint include_self=*, int distance=*)
 
-cdef inline bint cell_encloses_sphere(IntPoint id, Point world_origin,
-                          double cell_size, Point pnt, double radius)
+cdef inline bint cell_encloses_sphere(IntPoint id, cPoint world_origin,
+                          double cell_size, cPoint pnt, double radius)
 
 cdef class Cell:
     # Member variables.
@@ -87,9 +87,9 @@ cdef class CellManager:
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef Cell get_new_cell(self, IntPoint id)
     
-    cdef int get_potential_cells(self, Point pnt, double radius, list cell_list) except -1
+    cdef int get_potential_cells(self, cPoint pnt, double radius, list cell_list) except -1
 
-    cdef int _get_cells_within_radius(self, Point pnt, double radius,
+    cdef int _get_cells_within_radius(self, cPoint pnt, double radius,
                                       list cell_list) except -1
     cdef void _reset_jump_tolerance(self)
     cpdef long get_number_of_particles(self)

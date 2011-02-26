@@ -1,6 +1,6 @@
 """ File to hold the functions required for the ADKE procedure of Sigalotti """
 
-from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub
 
 ###############################################################################
 # `PilotRho` class.
@@ -95,7 +95,7 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
 
-        cdef Point grad, grada, gradb, vba
+        cdef cPoint grad, grada, gradb, vba
 
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
@@ -105,22 +105,20 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        vba = Point_new(self.s_u.data[source_pid] - self.d_u.data[dest_pid],
+        vba = cPoint_new(self.s_u.data[source_pid] - self.d_u.data[dest_pid],
                         self.s_v.data[source_pid] - self.d_v.data[dest_pid],
                         self.s_w.data[source_pid] - self.d_w.data[dest_pid])
 
-        grad = Point_new(0.0, 0.0, 0.0)
-        grada = Point_new(0.0, 0.0, 0.0)
-        gradb = Point_new(0.0, 0.0, 0.0)
-
         if self.hks:
-            kernel.gradient(self._dst, self._src, ha, grada)
-            kernel.gradient(self._dst, self._src, hb, gradb)
+            grada = kernel.gradient(self._dst, self._src, ha)
+            gradb = kernel.gradient(self._dst, self._src, hb)
 
-            grad = (grada + gradb) * 0.5
+            grad.set((grada.x + gradb.x)*0.5,
+                     (grada.y + gradb.y)*0.5,
+                     (grada.z + gradb.z)*0.5)
 
         else:            
-            kernel.gradient(self._dst, self._src, h, grad)
+            grad = kernel.gradient(self._dst, self._src, h)
 
         if self.rkpm_first_order_correction:
             pass

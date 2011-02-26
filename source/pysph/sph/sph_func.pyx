@@ -37,7 +37,6 @@ cdef class SPHFunctionParticle:
         self.tag = ""
         self.source = source
         self.dest = dest
-        self._tmp = Point_new(0,0,0)
 
         #Default properties
         self.x = 'x'
@@ -76,9 +75,6 @@ cdef class SPHFunctionParticle:
         self.d_h = None
         self.d_p = None
         self.d_e = None
-
-        self._src = Point()
-        self._dst = Point()
 
         #kernel correction of Bonnet and Lok
 
@@ -153,7 +149,7 @@ cdef class SPHFunctionParticle:
         """ Return the first order correction term for an interaction """
 
         cdef double beta1, beta2, alpha
-        cdef Point rab = self._dst - self._src
+        cdef cPoint rab = cPoint_sub(self._dst, self._src)
         
         beta1 = self.d_beta1.data[dest_pid]
         beta2 = self.d_beta2.data[dest_pid]
@@ -165,7 +161,7 @@ cdef class SPHFunctionParticle:
         """ Return the first order correction term for an interaction """
         
         cdef double beta1, beta2, alpha
-        cdef Point rab = self._dst - self._src
+        cdef cPoint rab = cPoint_sub(self._dst, self._src)
         
         beta1 = self.d_beta1.data[dest_pid]
         beta2 = self.d_beta2.data[dest_pid]
@@ -174,7 +170,7 @@ cdef class SPHFunctionParticle:
         return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
 
     cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
-                                                   Point grad):
+                                                   cPoint grad):
         """ Correct the gradient of the kernel """
 
         cdef double x, y, z
@@ -268,9 +264,6 @@ cdef class SPHFunctionPoint:
         self.d_v = None
         self.d_w = None
 
-        self._src = Point()
-        self._dst = Point()
-        
         if setup_arrays:
             self.setup_arrays()
     
@@ -290,7 +283,7 @@ cdef class SPHFunctionPoint:
         self.s_e = self.source.get_carray(self.e)
 
 
-    cdef void eval(self, Point pnt, int dest_pid, 
+    cdef void eval(self, cPoint pnt, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """
         Computes the contribution of particle at source_pid on point pnt.
@@ -319,7 +312,7 @@ cdef class SPHFunctionPoint:
         _nr = <double*>malloc(sizeof(double)*self.output_fields())
         _dnr = <double*>malloc(sizeof(double)*self.output_fields())
 
-        self.eval(pnt, dest_pid, kernel, _nr, _dnr)
+        self.eval(pnt.data, dest_pid, kernel, _nr, _dnr)
 
         for i in range(self.output_fields()):
             nr[i] += _nr[i]

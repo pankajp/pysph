@@ -37,10 +37,10 @@ cdef class SPHEval(SPHFunctionPoint):
 
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, Point pnt, int source_pid,
+    cdef void eval(self, cPoint pnt, int source_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an SPH intterpolation of the property `prop_name` 
+        Perform an SPH interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -54,15 +54,13 @@ cdef class SPHEval(SPHFunctionPoint):
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double fb = self.s_prop[source_pid]
         
-        cdef Point src_position = self._src
-
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef double w = kernel.function(pnt, src_position, h)
+        cdef double w = kernel.function(pnt, self._src.data, h)
 
-        nr[0] += w*mb*fb/rhob        
+        nr[0] += w*mb*fb/rhob
 ###########################################################################
 
 
@@ -108,7 +106,7 @@ cdef class SPHSimpleDerivativeEval(SPHFunctionPoint):
 
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, Point pnt, int source_pid,
+    cdef void eval(self, cPoint pnt, int source_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ 
         Perform an SPH intterpolation of the property `prop_name` 
@@ -126,13 +124,11 @@ cdef class SPHSimpleDerivativeEval(SPHFunctionPoint):
         cdef double fb = self.s_prop[source_pid]
         cdef double tmp 
         
-        cdef Point grad = Point()
-
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        kernel.gradient(pnt, self._src, h, grad)
+        cdef cPoint grad = kernel.gradient(pnt, self._src.data, h)
         tmp = mb*fb/rhob
 
         nr[0] += tmp*grad.x
@@ -183,10 +179,10 @@ cdef class CSPMEval(SPHFunctionPoint):
 
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, Point pnt, int source_pid,
+    cdef void eval(self, cPoint pnt, int source_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an CSPM intterpolation of the property `prop_name` 
+        Perform an CSPM interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -200,13 +196,11 @@ cdef class CSPMEval(SPHFunctionPoint):
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double fb = self.s_prop[source_pid]
         
-        cdef Point src_position = self._src
-
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef double tmp = kernel.function(pnt, src_position, h)*mb/rhob
+        cdef double tmp = kernel.function(pnt, self._src.data, h)*mb/rhob
 
         nr[0] += tmp*fb
         dnr[0] += tmp
@@ -255,10 +249,10 @@ cdef class CSPMDerivativeEval(SPHFunctionPoint):
 
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, Point pnt, int source_pid,
+    cdef void eval(self, cPoint pnt, int source_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an CSPM intterpolation of the property `prop_name` 
+        Perform an CSPM interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -272,13 +266,11 @@ cdef class CSPMDerivativeEval(SPHFunctionPoint):
         cdef double rhob = self.s_rho.data[source_pid]
         cdef double fb = self.s_prop[source_pid]
         
-        cdef Point grad = Point()
-
         self._src.x = self.s_x.data[source_pid]
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        kernel.gradient(pnt, self._src, h, grad)
+        cdef cPoint grad = kernel.gradient(pnt, self._src.data, h)
         cdef double tmp = grad.x*mb/rhob
 
         nr[0] += tmp*fb

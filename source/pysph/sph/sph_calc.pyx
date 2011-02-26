@@ -17,7 +17,6 @@ logger=logging.getLogger()
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
-from pysph.base.point cimport Point
 from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator
 from pysph.base.nnps cimport NbrParticleLocatorBase
 

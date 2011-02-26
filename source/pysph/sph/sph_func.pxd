@@ -4,7 +4,7 @@ cimport numpy
 # local imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.carray cimport DoubleArray, IntArray
-from pysph.base.point cimport Point, Point_new
+from pysph.base.point cimport Point, cPoint, cPoint_sub
 
 from pysph.base.kernels cimport KernelBase
 
@@ -17,7 +17,6 @@ cdef class SPHFunctionParticle:
     cdef public str h, m, rho, p, e, x, y, z, u, v, w
     cdef public str tmpx, tmpy, tmpz, type
     cdef public str cs
-    cdef Point _tmp
         
     cdef public DoubleArray s_h, s_m, s_rho, d_h, d_m, d_rho
     cdef public DoubleArray s_x, s_y, s_z, d_x, d_y, d_z
@@ -48,8 +47,7 @@ cdef class SPHFunctionParticle:
 
     cdef public bint hks
     
-    cdef public Point _src
-    cdef public Point _dst
+    cdef cPoint _src, _dst
     
     cdef public str name, id
     cdef public str tag
@@ -70,7 +68,7 @@ cdef class SPHFunctionParticle:
     cdef double rkpm_first_order_gradient_correction(self, int dest_pid)
 
     cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
-                                                   Point grad)
+                                                   cPoint grad)
 
 ################################################################################
 # `SPHFunctionPoint` class.
@@ -85,12 +83,12 @@ cdef class SPHFunctionPoint:
     cdef public DoubleArray s_x, s_y, s_z, d_x, d_y, d_z
     cdef public DoubleArray s_u, s_v, s_w, d_u, d_v, d_w
 
-    cdef public Point _src, _dst
+    cdef cPoint _src, _dst
     
     cpdef setup_arrays(self)
     cpdef int output_fields(self) except -1
 
-    cdef void eval(self, Point pnt, int dest_pid, 
+    cdef void eval(self, cPoint pnt, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr)
 
     cpdef py_eval(self, Point pnt, int dest_pid, 

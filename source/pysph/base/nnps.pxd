@@ -3,7 +3,8 @@ from pysph.base.carray cimport LongArray, DoubleArray
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.polygon_array cimport PolygonArray
 from pysph.base.cell cimport CellManager
-from pysph.base.point cimport Point
+from pysph.base.point cimport Point, cPoint, cPoint_distance2
+from pysph.base.kernels cimport KernelBase
 
 
 ##############################################################################
@@ -23,11 +24,11 @@ cdef class NbrParticleLocatorBase:
     cdef public list ygradient_cache
     cdef public list zgradient_cache
 
-    cdef int get_nearest_particles_to_point(self, Point pnt, double radius,
+    cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
                                             LongArray output_array, 
                                             long exclude_index=*) except -1
     cdef int _get_nearest_particles_from_cell_list(
-        self, Point pnt, double radius, list cell_list,
+        self, cPoint pnt, double radius, list cell_list,
         LongArray output_array, long exclude_index=*) except -1
 
 
@@ -105,3 +106,5 @@ cdef class NNPSManager:
             PolygonArray source, ParticleArray dest=*, double radius_scale=*)
 
     cdef int update(self) except -1
+    
+    cpdef cache_neighbors(self, KernelBase kernel)

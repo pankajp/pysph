@@ -16,7 +16,7 @@ cimport mpi4py.MPI as MPI
 
 # local imports
 from pysph.base.point import Point, IntPoint
-from pysph.base.point cimport Point, IntPoint, Point_new, IntPoint_new
+from pysph.base.point cimport cPoint, IntPoint, cPoint_new, IntPoint_new, Point_new
 from pysph.base import cell
 from pysph.base.cell cimport construct_immediate_neighbor_list, find_cell_id
 from pysph.base.cell cimport CellManager, Cell
@@ -236,7 +236,7 @@ cdef class ProcessorMap:
         
         for cid, cell in cells_dict.iteritems():
             cell.get_centroid(centroid)
-            bid = find_cell_id(self.origin, centroid, self.block_size)
+            bid = find_cell_id(self.origin.data, centroid.data, self.block_size)
             block_map.setdefault(bid, pid)
 
             if self.cell_map.has_key(bid):
@@ -767,7 +767,7 @@ cdef class ParallelCellManager(CellManager):
         cdef double yc = self.local_bounds_min[1] + 0.5 * cell_size
         cdef double zc = self.local_bounds_min[2] + 0.5 * cell_size
 
-        id = find_cell_id(self.origin, Point(xc, yc, zc), cell_size)
+        id = find_cell_id(self.origin.data, cPoint_new(xc, yc, zc), cell_size)
 
         cell = Cell(id=id, cell_manager=self, cell_size=cell_size,
                     jump_tolerance=INT_INF())
@@ -988,7 +988,7 @@ cdef class ParallelCellManager(CellManager):
 
             #find the block id to which the newly created cell belongs
             cell.get_centroid(centroid)
-            block_id = find_cell_id(proc_map.origin, centroid, proc_map.block_size)
+            block_id = find_cell_id(proc_map.origin.data, centroid.data, proc_map.block_size)
             
             # get the pid corresponding to the block_id
 
@@ -1716,24 +1716,21 @@ cdef class ParallelCellManager(CellManager):
 
         cdef ProcessorMap pmap = self.proc_map
         cdef IntPoint block1, block2, pdiff
-        cdef Point cent1, cent2
-
-        cent1 = Point()
-        cent2 = Point()
+        cdef cPoint cent1, cent2
 
         block1 = IntPoint()
         block2 = IntPoint()
         
-        cent1.x = self.origin.x + (<double>myid.x + 0.5)*self.cell_size
-        cent1.y = self.origin.y + (<double>myid.y + 0.5)*self.cell_size
-        cent1.z = self.origin.z + (<double>myid.z + 0.5)*self.cell_size
+        cent1.x = self.origin.data.x + (<double>myid.x + 0.5)*self.cell_size
+        cent1.y = self.origin.data.y + (<double>myid.y + 0.5)*self.cell_size
+        cent1.z = self.origin.data.z + (<double>myid.z + 0.5)*self.cell_size
 
-        cent2.x = self.origin.x + (<double>newid.x + 0.5)*self.cell_size
-        cent2.y = self.origin.y + (<double>newid.y + 0.5)*self.cell_size
-        cent2.z = self.origin.z + (<double>newid.z + 0.5)*self.cell_size
+        cent2.x = self.origin.data.x + (<double>newid.x + 0.5)*self.cell_size
+        cent2.y = self.origin.data.y + (<double>newid.y + 0.5)*self.cell_size
+        cent2.z = self.origin.data.z + (<double>newid.z + 0.5)*self.cell_size
 
-        block1 = find_cell_id(pmap.origin, cent1, pmap.block_size)
-        block2 = find_cell_id(pmap.origin, cent2, pmap.block_size)
+        block1 = find_cell_id(pmap.origin.data, cent1, pmap.block_size)
+        block2 = find_cell_id(pmap.origin.data, cent2, pmap.block_size)
 
         pdiff = block1.diff(block2)        
         

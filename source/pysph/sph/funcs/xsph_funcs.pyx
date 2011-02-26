@@ -1,4 +1,4 @@
-from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub
 from pysph.base.carray cimport DoubleArray
 
 ###############################################################################
@@ -35,15 +35,15 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         cdef double rhoab = 0.5*(self.s_rho.data[source_pid] + \
                                      self.d_rho.data[dest_pid])
 
-        cdef Point Va = Point_new(self.d_u.data[dest_pid],
+        cdef cPoint Va = cPoint_new(self.d_u.data[dest_pid],
                               self.d_v.data[dest_pid],
                               self.d_w.data[dest_pid])
 
-        cdef Point Vb = Point_new(self.s_u.data[source_pid],
+        cdef cPoint Vb = cPoint_new(self.s_u.data[source_pid],
                               self.s_v.data[source_pid],
                               self.s_w.data[source_pid])
 
-        cdef Point Vba = Point_sub(Vb, Va)
+        cdef cPoint Vba = cPoint_sub(Vb, Va)
 
         #cdef DoubleArray fc = self.function_cache[dest_pid]
 
@@ -116,11 +116,10 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         The expression used is:
 
         """
-        cdef Point grad = Point()
         cdef double h=0.5*(self.s_h.data[source_pid] + \
                                self.d_h.data[dest_pid])
 
-        cdef Point Va = Point(self.d_u.data[dest_pid]+ \
+        cdef cPoint Va = cPoint(self.d_u.data[dest_pid]+ \
                                   self.d_ubar.data[dest_pid],
 
                               self.d_v.data[dest_pid]+ \
@@ -129,7 +128,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
                               self.d_w.data[dest_pid]+ \
                                   self.d_wbar.data[dest_pid])
 
-        cdef Point Vb = Point(self.s_u.data[source_pid]+ \
+        cdef cPoint Vb = cPoint(self.s_u.data[source_pid]+ \
                                   self.s_ubar.data[source_pid],
 
                               self.s_v.data[source_pid]+ \
@@ -138,7 +137,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
                               self.s_w.data[source_pid]+ \
                                   self.s_wbar.data[source_pid])
 
-        cdef Point Vab = Va - Vb
+        cdef cPoint Vab = cPoint_sub(Va, Vb)
         cdef double mb = self.s_m.data[source_pid]
         cdef double temp
 
@@ -151,7 +150,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
 
         #grad = self.kernel_gradient_evaluation[dest_pid][source_pid]
-        kernel.gradient(self._dst, self._src, h, grad)
+        cdef cPoint grad = kernel.gradient(self._dst, self._src, h)
 
         if self.rkpm_first_order_correction:
             pass

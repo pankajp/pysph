@@ -33,6 +33,7 @@ cpdef dict kernel():
     cdef int tmp
     cdef long i
     cdef int dim
+    cdef Point p2
     for dim from 1<=dim<=3:
         fx = fy = fz = 0
         for tmp from 1 <= tmp <= dim:
@@ -44,12 +45,12 @@ cpdef dict kernel():
         
         for kernel_name in kernel_names:
             kernel = getattr(kernels, kernel_name)(dim)
-            
             t = time()
             for i in range(N):
-                val = kernel.function(P, points[i], h)
+                p2 = points[i]
+                val = kernel.function(P.data, p2.data, h)
             t2 = time()
-            ret['%dD ' %dim + kernel_name] = (t2-t)/N
+            ret['%dD '%dim + kernel_name] = (t2-t)/N
     return ret
 
 cpdef dict gradient():
@@ -61,7 +62,7 @@ cpdef dict gradient():
     cdef int tmp
     cdef long i
     cdef int dim
-    cdef Point p = Point()
+    cdef Point p, p2
     for dim from 1<=dim<=3:
         fx = fy = fz = 0
         for tmp from 1 <= tmp <= dim:
@@ -76,9 +77,10 @@ cpdef dict gradient():
             
             t = time()
             for i in range(N):
-                kernel.gradient(P, points[i], h, p)
+                p2 = points[i]
+                p.data = kernel.gradient(P.data, p2.data, h)
             t2 = time()
-            ret['%dD ' %dim + kernel_name+' gradient'] = (t2-t)/N
+            ret['%dD '%dim + kernel_name+' gradient'] = (t2-t)/N
     return ret
 
 

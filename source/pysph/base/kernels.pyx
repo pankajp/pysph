@@ -17,7 +17,7 @@ cdef extern from "math.h":
 cimport numpy 
 import numpy
 
-from pysph.base.point cimport Point_length, Point_distance, Point_distance2
+from pysph.base.point cimport cPoint_length, cPoint_distance, cPoint_distance2
 
 cdef:
     double PI = numpy.pi
@@ -67,20 +67,15 @@ cdef class KernelBase:
         if constant_h > 0:
             self.init_cache(n)
 
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """        
         """
         raise NotImplementedError, 'KernelBase::function'
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point result):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """
         """
         raise NotImplementedError, 'KernelBase::gradient'
-
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """
-        """
-        raise NotImplementedError, 'KernelBase::laplacian'
 
     cpdef double radius(self):
         """
@@ -96,10 +91,10 @@ cdef class KernelBase:
         raise NotImplementedError, 'KernelBase::_fac'
 
     def py_function(self, Point pa, Point pb, double h):
-        return self.function(pa, pb, h)
+        return self.function(pa.data, pb.data, h)
 
     def py_gradient(self, Point pa, Point pb, double h, Point grad):
-        self.gradient(pa, pb, h, grad)
+        grad.set_from_cPoint(self.gradient(pa.data, pb.data, h))
 
     cpdef double __gradient(self, Point pa, Point pb, double h):
         raise NotImplementedError, 'KernelBase::__gradient'
@@ -119,14 +114,14 @@ cdef class KernelBase:
         self.function_cache.resize(n)
         self.gradient_cache.resize(n)
 
-        cdef numpy.ndarray fc = numpy.zeros(n, dtype=float)
-        cdef numpy.ndarray gc = numpy.zeros(n, dtype=float)
+        cdef numpy.ndarray[ndim=1,dtype=numpy.float] fc = numpy.zeros(n, dtype=float)
+        cdef numpy.ndarray[ndim=1,dtype=numpy.float] gc = numpy.zeros(n, dtype=float)
 
-        cdef Point pa = Point(0,0,0)
-        cdef Point pb
+        cdef cPoint pa = cPoint_new(0,0,0)
+        cdef cPoint pb = cPoint_new(0,0,0)
 
         for i in range(n):
-            pb = Point(self.distances[i])
+            pb.x = self.distances[i]
             w = self.py_function(pa, pb, h)
             grad = self.__gradient(pa, pb, h)
 
@@ -199,18 +194,17 @@ cdef class KernelBase:
 
         """
         h = 0.01
-        p2 = Point()
+        cdef cPoint p2 = cPoint_new(0,0,0)
         dim = 0
 
-        if x is not None: setattr(p2, 'x', x); dim += 1
-        if y is not None: setattr(p2, 'y', y); dim += 1
-        if z is not None: setattr(p2, 'z', z); dim += 1
+        if x is not None: p2.x = x; dim += 1
+        if y is not None: p2.y = y; dim += 1
+        if z is not None: p2.z = z; dim += 1
 
         msg = 'Point dimension = %d, Kernel dimension = %d'%(dim, self.dim)
         assert dim == self.dim, 'Incompatible dimensions' + msg
 
-        p1 = Point(0,0,0)
-        return self.function(p1, p2, h)
+        return self.function(cPoint_new(0,0,0), p2, h)
 
     def _gradient(self, x=None, y=None, z=None, res=None):
         """ Wrapper for the gradient evaluation amenable to a call
@@ -225,19 +219,18 @@ cdef class KernelBase:
 
         """
         h = 0.01
-        p1 = Point()
+        cdef cPoint p1 = cPoint_new(0,0,0)
         dim = 0
 
         assert res is not None, 'Nowhere to add the solution!'
-        if x is not None: setattr(p1, 'x', x); dim += 1
-        if y is not None: setattr(p1, 'y', y); dim += 1
-        if z is not None: setattr(p1, 'z', z); dim += 1
+        if x is not None: p1.x = x; dim += 1
+        if y is not None: p1.y = y; dim += 1
+        if z is not None: p1.z = z; dim += 1
 
         msg = 'Point dimension = %d, Kernel dimension = %d'%(dim, self.dim)
         assert dim == self.dim, 'Incompatible dimensions' + msg
         
-        grad = Point()
-        self.gradient(Point(), p1, h, grad)
+        cdef cPoint grad = self.gradient(cPoint_new(0,0,0), p1, h)
 
         res = res + grad
         return res.x, res.y, res.z
@@ -266,11 +259,11 @@ cdef class Poly6Kernel(KernelBase):
     This class represents a polynomial kernel with support 1.0
     from mueller et. al 2003
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         """
-        cdef double mag_sqr_r = Point_distance2(pa, pb)
+        cdef double mag_sqr_r = cPoint_distance2(pa, pb)
         cdef double ret = 0.0
         if mag_sqr_r > h*h:
             return 0.0
@@ -278,13 +271,14 @@ cdef class Poly6Kernel(KernelBase):
         ret /= h**6
         return ret * h_dim(h, self.dim) * self.fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
-        cdef Point r = Point_sub(pa, pb)
+        cdef cPoint grad
+        cdef cPoint r = cPoint_sub(pa, pb)
         cdef double part = 0.0
-        cdef double mag_square_r = r.norm()
+        cdef double mag_square_r = cPoint_norm(r)
         cdef double fac
         if mag_square_r <= h*h:
             fac = h_dim(h, self.dim) * self.fac
@@ -292,19 +286,8 @@ cdef class Poly6Kernel(KernelBase):
         grad.x = r.x * part
         grad.y = r.y * part
         grad.z = r.z * part
+        return grad
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacian of the kernel centered at `pa`, at the
-        point `pb`.
-        """
-        cdef Point r = Point_sub(pb, pa)
-        cdef double mag_square_r = r.norm()
-        cdef double h_sqr = h*h
-        cdef double const1 = 315.0/(64.0*PI*(h**9))
-        cdef double ret = (-6.0)*const1*(h_sqr-mag_square_r)
-        ret = ret * (3.0*h_sqr - 7.0*mag_square_r)
-        return ret
-    
     cdef double _fac(self, double h):
         if self.dim == 3:
             return 315.0/(64.0*PI*h*h*h)
@@ -324,7 +307,7 @@ cdef class CubicSplineKernel(KernelBase):
     Astronomy and Astrophysics, 1992, Vol 30, pp 543-574.
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
@@ -349,10 +332,11 @@ cdef class CubicSplineKernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
+        cdef cPoint grad
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
                               (pa.z-pb.z)*(pa.z-pb.z))
@@ -385,6 +369,7 @@ cdef class CubicSplineKernel(KernelBase):
             grad.x = rx * (val * fac)
             grad.y = ry * (val * fac)
             grad.z = rz * (val * fac)
+        return grad
 
     cpdef double __gradient(self, Point pa, Point pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
@@ -432,12 +417,12 @@ cdef class QuinticSplineKernel(KernelBase):
     Physics, 136, 214-226
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -463,13 +448,14 @@ cdef class QuinticSplineKernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
+        cdef cPoint grad
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val
         cdef double power
@@ -501,13 +487,8 @@ cdef class QuinticSplineKernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacian of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        raise NotImplementedError
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -535,12 +516,12 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
     Physics, 136, 214-226
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -556,13 +537,14 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
+        cdef cPoint grad
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val
         cdef double power
@@ -583,13 +565,8 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """Evaluate the laplacian of the kernel centered at `pa`, at the
-        point `pb`
-        """
-        raise NotImplementedError
-    
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
         cdef int dim = self.dim
@@ -632,13 +609,13 @@ cdef class HarmonicKernel(KernelBase):
                         0.617013, 0.790450, 0.977949, 1.178511,
                         1.391322, 1.615708]
 
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
         """
         cdef double fac = self.facs[self.n -1]*(h**(-self.dim))
-        #cdef Point r = Point_sub(pa, pb)
+        #cdef cPoint r = cPoint_sub(pa, pb)
         cdef double rab = sqrt((pa.x - pb.x)**2 + (pa.y - pb.y)**2 + (pa.z - pb.z)**2)
         cdef double q = rab/h
         cdef double val, tmp
@@ -655,14 +632,15 @@ cdef class HarmonicKernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
 
         """
+        cdef cPoint grad
         cdef double fac = self.facs[self.n -1]*(h**(-self.dim))
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val, tmp1, tmp2, tmp3, tmp4, power
         cdef double n = self.n
@@ -689,6 +667,7 @@ cdef class HarmonicKernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
     
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
@@ -708,13 +687,13 @@ cdef class M6SplineKernel(KernelBase):
     hydrodynamics studies.” Journal of Computational Physics 227, no. 19
     (October 1, 2008): 8523-8540
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
         
@@ -732,14 +711,14 @@ cdef class M6SplineKernel(KernelBase):
 
         return val*fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
 
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val
         
@@ -755,9 +734,7 @@ cdef class M6SplineKernel(KernelBase):
         else:
             val = 0
 
-        grad.x = r.x * (val * fac)
-        grad.y = r.y * (val * fac)
-        grad.z = r.z * (val * fac)
+        return cPoint_scale(r, val * fac)
 
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
@@ -779,13 +756,13 @@ cdef class GaussianKernel(KernelBase):
     """ Gaussian  Kernel
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
 
@@ -793,17 +770,18 @@ cdef class GaussianKernel(KernelBase):
 
         return val
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
 
         """
+        cdef cPoint grad
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
                               (pa.y-pb.y)*(pa.y-pb.y) + 
                               (pa.z-pb.z)*(pa.z-pb.z))
 
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
+        cdef cPoint r = cPoint_sub(pa, pb)
         cdef double q = rab/h
         cdef double val = 0.0
 
@@ -813,6 +791,7 @@ cdef class GaussianKernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
     
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
@@ -836,13 +815,13 @@ cdef class W8Kernel(KernelBase):
     Methods in Engineering: "Truncation error in mesh-free particle methods", 
     N. J. Quinlan, M. Basa and M. Lastiwka
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.
         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val
         cdef double *a = [0.603764, -0.580823, 0.209206, -0.0334338, 0.002]
@@ -860,14 +839,15 @@ cdef class W8Kernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
 
         """
+        cdef cPoint grad
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val
         cdef double *a = [-0.580823, 0.209206, -0.0334338, 0.002]
@@ -884,6 +864,7 @@ cdef class W8Kernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
     
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
@@ -910,12 +891,12 @@ cdef class W10Kernel(KernelBase):
     """W10 Kernel
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """ Evaluate the strength of the kernel centered at `pa` at
         the point `pb`.         
         """
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef double rab = Point_distance(pa, pb)
+        cdef double rab = cPoint_distance(pa, pb)
         cdef double q = rab/h
         cdef double val, power
         cdef int i
@@ -932,13 +913,14 @@ cdef class W10Kernel(KernelBase):
 
         return val * fac
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """Evaluate the gradient of the kernel centered at `pa`, at the
         point `pb`.
         """
+        cdef cPoint grad
         cdef double fac = self.fac * h_dim(h, self.dim)
-        cdef Point r = Point_sub(pa, pb)
-        cdef double rab = r.length()
+        cdef cPoint r = cPoint_sub(pa, pb)
+        cdef double rab = cPoint_length(r)
         cdef double q = rab/h
         cdef double val
         cdef double power
@@ -957,6 +939,7 @@ cdef class W10Kernel(KernelBase):
         grad.x = r.x * (val * fac)
         grad.y = r.y * (val * fac)
         grad.z = r.z * (val * fac)
+        return grad
 
     cdef double _fac(self, double h):
         """ Return the normalizing factor given the smoothing length. """
@@ -1002,10 +985,10 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
     1. [becker07] Weakly Compressible SPH for free surface flows.
 
     """
-    cdef double function(self, Point pa, Point pb, double h):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
         """
         """
-        cdef double dist = Point_distance(pa, pb)
+        cdef double dist = cPoint_distance(pa, pb)
         cdef double q = dist/h
         cdef double temp = 0.0
 
@@ -1018,10 +1001,11 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
 
         return temp
 
-    cdef void gradient(self, Point pa, Point pb, double h, Point grad):
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
         """
         """
-        cdef double dist = Point_distance(pa, pb)
+        cdef cPoint grad
+        cdef double dist = cPoint_distance(pa, pb)
         cdef double q = dist/h
         cdef double temp = 0.0
         
@@ -1038,12 +1022,8 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
         grad.x = temp*(pa.x-pb.x)
         grad.y = temp*(pa.y-pb.y)
         grad.z = temp*(pa.z-pb.z)
+        return grad
 
-    cdef double laplacian(self, Point pa, Point pb, double h):
-        """
-        """
-        raise NotImplementedError
-    
     cpdef double radius(self):
         return 2.0
 

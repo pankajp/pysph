@@ -1,4 +1,4 @@
-from pysph.base.point cimport Point_new, Point_sub
+from pysph.base.point cimport cPoint_sub, cPoint, cPoint_dot
 from pysph.base.carray cimport DoubleArray 
 
 ###############################################################################
@@ -16,7 +16,7 @@ cdef class SPHRho(SPHFunctionParticle):
         self.id = 'sphrho'
         self.tag = "density"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
+    cdef void eval(self, int k, int source_pid, int dest_pid,
                    KernelBase kernel, double *nr, double *dnr):
         """ Compute the contribution from source_pid on dest_pid. """
 
@@ -78,13 +78,12 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         dest_pid.
         """
 
-        cdef Point vel, grad, grada, gradb
+        cdef cPoint vel, grad, grada, gradb
 
         cdef double ha = self.d_h.data[dest_pid]
         cdef double hb = self.s_h.data[source_pid]
 
         cdef double hab = 0.5 * (ha + hb)
-
 
         cdef DoubleArray xgc, ygc, zgc
 
@@ -96,24 +95,20 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
             
-        vel = Point_new(0,0,0)
-
-        grad = Point_new(0,0,0)
-        grada = Point_new(0,0,0)
-        gradb = Point_new(0,0,0)
-
         vel.x = self.d_u.data[dest_pid] - self.s_u.data[source_pid]
         vel.y = self.d_v.data[dest_pid] - self.s_v.data[source_pid]
         vel.z = self.d_w.data[dest_pid] - self.s_w.data[source_pid]
 
         if self.hks:
-            kernel.gradient(self._dst, self._src, ha, grada)
-            kernel.gradient(self._dst, self._src, hb, gradb)
+            grada = kernel.gradient(self._dst, self._src, ha)
+            gradb = kernel.gradient(self._dst, self._src, hb)
 
-            grad = (grada + gradb) * 0.5
+            grad.set((grada.x + gradb.x)*0.5,
+                     (grada.y + gradb.y)*0.5,
+                     (grada.z + gradb.z)*0.5)
 
         else:            
-            kernel.gradient(self._dst, self._src, hab, grad)
+            grad = kernel.gradient(self._dst, self._src, hab)
 
         if self.rkpm_first_order_correction:
             pass
@@ -121,6 +116,6 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        nr[0] += vel.dot(grad)*self.s_m.data[source_pid]
+        nr[0] += cPoint_dot(vel, grad)*self.s_m.data[source_pid]
 
 #############################################################################

@@ -4,7 +4,8 @@
 #Author: Kunal Puri <kunal.r.puri@gmail.com>
 #Copyright (c) 2010, Prabhu Ramachandran
 
-from pysph.base.point cimport Point, Point_sub
+from pysph.base.point cimport Point, cPoint_sub, cPoint, cPoint_new, \
+            cPoint_norm, cPoint_scale
 from pysph.base.carray cimport DoubleArray
 
 cimport numpy
@@ -25,9 +26,8 @@ cdef class KernelBase:
     cdef public double constant_h
     cdef public double distances_dx
 
-    cdef double function(self, Point pa, Point pb, double h)
-    cdef void gradient(self, Point pa, Point pb, double h, Point result)
-    cdef double laplacian(self, Point pa, Point pb, double h)
+    cdef double function(self, cPoint pa, cPoint pb, double h)
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h)
     cdef double _fac(self, double h)
     cpdef double radius(self)
     cpdef int dimension(self)

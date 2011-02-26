@@ -25,14 +25,32 @@ cdef class Point:
     # Declared in the .pxd file.
     #cdef public double x, y, z
     
+    property x:
+        def __get__(self):
+            return self.data.x
+        def __set__(self, double x):
+            self.data.x = x
+    
+    property y:
+        def __get__(self):
+            return self.data.y
+        def __set__(self, double y):
+            self.data.y = y
+    
+    property z:
+        def __get__(self):
+            return self.data.z
+        def __set__(self, double z):
+            self.data.z = z
+    
     ######################################################################
     # `object` interface.
     ######################################################################
     def __init__(self, double x=0.0, double y=0.0, double z=0.0):
         """Constructor for a Point."""
-        self.x = x
-        self.y = y
-        self.z = z
+        self.data.x = x
+        self.data.y = y
+        self.data.z = z
 
     def __reduce__(self):
         """
@@ -119,7 +137,12 @@ cdef class Point:
         self.x = x
         self.y = y
         self.z = z
-
+    
+    cdef set_from_cPoint(self, cPoint value):
+        self.data.x = value.x
+        self.data.y = value.y
+        self.data.z = value.z
+    
     cpdef numpy.ndarray asarray(self):
         """Return a numpy array with the coordinates."""
         cdef numpy.ndarray[DTYPE_t, ndim=1] r = numpy.empty(3)
@@ -152,6 +175,9 @@ cdef class Point:
         return sqrt((p.x-self.x)*(p.x-self.x)+
                     (p.y-self.y)*(p.y-self.y)+
                     (p.z-self.z)*(p.z-self.z))
+    
+    cdef cPoint to_cPoint(self):
+        return self.data
     
     def normalize(self):
         """ Normalize the point """
