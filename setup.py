@@ -102,7 +102,11 @@ sph = [
                   ["source/pysph/sph/funcs/energy_funcs.pyx"], 
                   include_dirs=inc_dirs),
 
-         Extension("pysph.sph.funcs.viscosity_funcs",
+        Extension("pysph.sph.funcs.eval_funcs",
+                  ["source/pysph/sph/funcs/eval_funcs.pyx"], 
+                  include_dirs=inc_dirs),
+
+        Extension("pysph.sph.funcs.viscosity_funcs",
                    ["source/pysph/sph/funcs/viscosity_funcs.pyx"], 
                    include_dirs=inc_dirs),
 

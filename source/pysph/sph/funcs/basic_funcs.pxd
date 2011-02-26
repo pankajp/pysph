@@ -31,29 +31,28 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
     cdef DoubleArray s_prop
 
 cdef class SPHGradient(SPHFunctionParticle):
-    """
-    SPH Gradient Approximation.
-    """
+    """ SPH Gradient Approximation """
     cdef public str prop_name
     cdef DoubleArray d_prop
     cdef DoubleArray s_prop
 
 cdef class SPHLaplacian(SPHFunctionParticle):
     """ SPH Laplacian estimation """
-    
     cdef public str prop_name
     cdef DoubleArray d_prop
     cdef DoubleArray s_prop
 
 cdef class CountNeighbors(SPHFunctionParticle):
     """ Count Neighbors.  """
-
+    pass
 
 cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """
+    pass
 
 cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """
+    pass
 
 cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
     """ Kernel Gradient Correction terms """		
@@ -61,10 +60,12 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
     cdef public str dbeta2dx, dbeta2dy	 
 
 cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
-    """ Kernel Gradient Correction terms """		
+    """ Kernel Gradient Correction terms """
+    pass		
     
 cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
-    """ Kernel Gradient Correction terms """		
+    """ Kernel Gradient Correction terms """
+    pass		
 
 cdef class SPHFunction(SPHFunctionParticle):
     pass

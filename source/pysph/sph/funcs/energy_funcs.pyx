@@ -74,7 +74,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        dot = grad.dot(vab)
+        dot = cPoint_dot(grad, vab)
         tmp = 0.5*mb*(pa/(rhoa*rhoa) + pb/(rhob*rhob))
 
         nr[0] += tmp*dot
@@ -184,7 +184,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
                 self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
             prod  = (-alpha*cab*mu + beta*mu*mu)/(rhoab)
-            nr[0] += 0.5 * mb * prod * vab.dot(grad)
+            nr[0] += 0.5 * mb * prod * cPoint_dot(grad, vab)
         else:
             pass
 ##############################################################################
@@ -298,7 +298,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         tmp += piab
         
-        tmp = vab.dot(grad) * tmp
+        tmp = cPoint_dot(grad, vab) * tmp
 
         nr[0] += 0.5*mb*tmp
         
@@ -379,7 +379,7 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         
         xab = cPoint_sub(self._dst, self._src)
         
-        dot = vab.dot(xab)
+        dot = cPoint_dot(xab, vab)
 
         tmp = 0.0
         if dot < 0:
@@ -424,6 +424,6 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        nr[0] += tmp * xab.dot(grad)
+        nr[0] += tmp * cPoint_dot(grad, xab)
 
 ###############################################################################

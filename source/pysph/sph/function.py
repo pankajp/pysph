@@ -535,6 +535,9 @@ class MoveCircleY(Function):
 ############################################################################    
 class XSPHDensityRate(Function):
     """ XSPHDensityRate """
+    def __init__(self, hks=False):
+        Function.__init__(self, xsph.XSPHDensityRate)
+
     def get_func(self, source, dest):
         func = xsph.XSPHDensityRate(source=source, dest=dest)
         func.tag = "density"

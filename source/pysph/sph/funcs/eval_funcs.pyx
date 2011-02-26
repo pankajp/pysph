@@ -58,7 +58,7 @@ cdef class SPHEval(SPHFunctionPoint):
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef double w = kernel.function(pnt, self._src.data, h)
+        cdef double w = kernel.function(pnt, self._src, h)
 
         nr[0] += w*mb*fb/rhob
 ###########################################################################
@@ -128,7 +128,7 @@ cdef class SPHSimpleDerivativeEval(SPHFunctionPoint):
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef cPoint grad = kernel.gradient(pnt, self._src.data, h)
+        cdef cPoint grad = kernel.gradient(pnt, self._src, h)
         tmp = mb*fb/rhob
 
         nr[0] += tmp*grad.x
@@ -200,7 +200,7 @@ cdef class CSPMEval(SPHFunctionPoint):
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef double tmp = kernel.function(pnt, self._src.data, h)*mb/rhob
+        cdef double tmp = kernel.function(pnt, self._src, h)*mb/rhob
 
         nr[0] += tmp*fb
         dnr[0] += tmp
@@ -270,7 +270,7 @@ cdef class CSPMDerivativeEval(SPHFunctionPoint):
         self._src.y = self.s_y.data[source_pid]
         self._src.z = self.s_z.data[source_pid]
 
-        cdef cPoint grad = kernel.gradient(pnt, self._src.data, h)
+        cdef cPoint grad = kernel.gradient(pnt, self._src, h)
         cdef double tmp = grad.x*mb/rhob
 
         nr[0] += tmp*fb

@@ -46,7 +46,7 @@ funcs_eqn = [
              IdealGasEquation(gamma=1.4),
              TaitEquation(co=1.0, ro=1.0, gamma=7.0),
              GravityForce(gx=0.0, gy=-9.81, gz=0.0),
-#             VectorForce(force=Point(1,1,1)),             
+             VectorForce(force=Point(1,1,1)),
              MoveCircleX(),
              MoveCircleY(),
              NeighborCount(),

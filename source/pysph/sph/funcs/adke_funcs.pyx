@@ -1,12 +1,12 @@
 """ File to hold the functions required for the ADKE procedure of Sigalotti """
 
-from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub
+from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
 
 ###############################################################################
 # `PilotRho` class.
 ###############################################################################
 cdef class PilotRho(SPHFunctionParticle):
-    """ Compute the pillot estimate of density for the ADKE algorithm """
+    """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, double h0=1.0, **kwargs):
@@ -31,7 +31,6 @@ cdef class PilotRho(SPHFunctionParticle):
         h0 is a constant that is set upon instance creation.
 
         """
-
         cdef double h = self.h0
 
         cdef double mb = self.s_m.data[source_pid]
@@ -60,7 +59,7 @@ cdef class PilotRho(SPHFunctionParticle):
 # `SPHDivergence` class.
 ###############################################################################
 cdef class SPHVelocityDivergence(SPHFunctionParticle):
-    """ Compute the pillot estimate of density for the ADKE algorithm """
+    """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  setup_arrays=True, **kwargs):
@@ -105,9 +104,9 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
 
-        vba = cPoint_new(self.s_u.data[source_pid] - self.d_u.data[dest_pid],
-                        self.s_v.data[source_pid] - self.d_v.data[dest_pid],
-                        self.s_w.data[source_pid] - self.d_w.data[dest_pid])
+        vba = cPoint(self.s_u.data[source_pid] - self.d_u.data[dest_pid],
+                    self.s_v.data[source_pid] - self.d_v.data[dest_pid],
+                    self.s_w.data[source_pid] - self.d_w.data[dest_pid])
 
         if self.hks:
             grada = kernel.gradient(self._dst, self._src, ha)
@@ -126,4 +125,4 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        nr[0] += (1.0/rhoa) * mb * vba.dot(grad)
+        nr[0] += (1.0/rhoa) * mb * cPoint_dot(grad, vba)

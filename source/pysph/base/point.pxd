@@ -11,10 +11,7 @@ cdef struct cPoint:
     double x, y, z
 
 cdef inline cPoint cPoint_new(double x, double y, double z):
-    cdef cPoint p
-    p.x = x
-    p.y = y
-    p.z = z
+    cdef cPoint p = cPoint(x,y,z)
     return p
 
 cdef inline cPoint cPoint_sub(cPoint pa, cPoint pb):
@@ -24,7 +21,7 @@ cdef inline cPoint cPoint_add(cPoint pa, cPoint pb):
     return cPoint_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
 
 cdef inline double cPoint_dot(cPoint pa, cPoint pb):
-    return sqrt(pa.x*pb.x + pa.y*pb.y + pa.z*pb.z)
+    return pa.x*pb.x + pa.y*pb.y + pa.z*pb.z
 
 cdef inline double cPoint_norm(cPoint p):
     return p.x*p.x + p.y*p.y + p.z*p.z

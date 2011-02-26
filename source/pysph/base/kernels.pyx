@@ -117,8 +117,8 @@ cdef class KernelBase:
         cdef numpy.ndarray[ndim=1,dtype=numpy.float] fc = numpy.zeros(n, dtype=float)
         cdef numpy.ndarray[ndim=1,dtype=numpy.float] gc = numpy.zeros(n, dtype=float)
 
-        cdef cPoint pa = cPoint_new(0,0,0)
-        cdef cPoint pb = cPoint_new(0,0,0)
+        cdef cPoint pa = cPoint(0,0,0)
+        cdef cPoint pb = cPoint(0,0,0)
 
         for i in range(n):
             pb.x = self.distances[i]
@@ -194,7 +194,7 @@ cdef class KernelBase:
 
         """
         h = 0.01
-        cdef cPoint p2 = cPoint_new(0,0,0)
+        cdef cPoint p2 = cPoint(0,0,0)
         dim = 0
 
         if x is not None: p2.x = x; dim += 1
@@ -204,7 +204,7 @@ cdef class KernelBase:
         msg = 'Point dimension = %d, Kernel dimension = %d'%(dim, self.dim)
         assert dim == self.dim, 'Incompatible dimensions' + msg
 
-        return self.function(cPoint_new(0,0,0), p2, h)
+        return self.function(cPoint(0,0,0), p2, h)
 
     def _gradient(self, x=None, y=None, z=None, res=None):
         """ Wrapper for the gradient evaluation amenable to a call
@@ -219,7 +219,7 @@ cdef class KernelBase:
 
         """
         h = 0.01
-        cdef cPoint p1 = cPoint_new(0,0,0)
+        cdef cPoint p1 = cPoint(0,0,0)
         dim = 0
 
         assert res is not None, 'Nowhere to add the solution!'

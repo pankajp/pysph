@@ -55,18 +55,17 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
             
-        cdef cPoint norm = cPoint_new(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
-                     self.s_nz.data[source_pid])
+        cdef cPoint norm = cPoint(self.s_nx.data[source_pid], self.s_ny.data[source_pid],
+                                  self.s_nz.data[source_pid])
         
-        cdef cPoint tang = cPoint_new(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
-                     self.s_tz.data[source_pid])
+        cdef cPoint tang = cPoint(self.s_tx.data[source_pid], self.s_ty.data[source_pid],
+                                  self.s_tz.data[source_pid])
 
         cs = self.d_cs.data[dest_pid]
         
         cdef cPoint rab = cPoint_sub(self._dst, self._src)
         x = cPoint_dot(rab, tang)
         y = cPoint_dot(rab, norm)
-
         force = 0.0
 
         q = y/h

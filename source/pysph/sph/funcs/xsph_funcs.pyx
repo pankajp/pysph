@@ -1,4 +1,4 @@
-from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub
+from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
 from pysph.base.carray cimport DoubleArray
 
 ###############################################################################
@@ -35,13 +35,13 @@ cdef class XSPHCorrection(SPHFunctionParticle):
         cdef double rhoab = 0.5*(self.s_rho.data[source_pid] + \
                                      self.d_rho.data[dest_pid])
 
-        cdef cPoint Va = cPoint_new(self.d_u.data[dest_pid],
-                              self.d_v.data[dest_pid],
-                              self.d_w.data[dest_pid])
+        cdef cPoint Va = cPoint(self.d_u.data[dest_pid],
+                                self.d_v.data[dest_pid],
+                                self.d_w.data[dest_pid])
 
-        cdef cPoint Vb = cPoint_new(self.s_u.data[source_pid],
-                              self.s_v.data[source_pid],
-                              self.s_w.data[source_pid])
+        cdef cPoint Vb = cPoint(self.s_u.data[source_pid],
+                                self.s_v.data[source_pid],
+                                self.s_w.data[source_pid])
 
         cdef cPoint Vba = cPoint_sub(Vb, Va)
 
@@ -158,7 +158,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        temp = Vab.dot(grad)
+        temp = cPoint_dot(grad, Vab)
         
         nr[0] += temp*mb
 ###############################################################################

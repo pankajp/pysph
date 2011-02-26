@@ -1,7 +1,8 @@
 cdef extern from "math.h":
     double sqrt(double)
 
-from pysph.base.point cimport cPoint_sub, cPoint_new, cPoint, cPoint_dot
+from pysph.base.point cimport cPoint_sub, cPoint_new, cPoint, cPoint_dot, \
+        cPoint_norm
 ################################################################################
 # `MonaghanArtificialVsicosity` class.
 ################################################################################
@@ -52,10 +53,10 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         self._dst.y = self.d_y.data[dest_pid]
         self._dst.z = self.d_z.data[dest_pid]
         
-        va = cPoint_new(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
+        va = cPoint(self.d_u.data[dest_pid], self.d_v.data[dest_pid],
                    self.d_w.data[dest_pid])
 
-        vb = cPoint_new(self.s_u.data[source_pid], self.s_v.data[source_pid],
+        vb = cPoint(self.s_u.data[source_pid], self.s_v.data[source_pid],
                    self.s_w.data[source_pid])
 
         ca = self.d_cs.data[dest_pid]
@@ -82,7 +83,7 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
             rhoab = 0.5 * (rhoa + rhob)
 
             mu = hab*dot
-            mu /= (rab.norm() + eta*eta*hab*hab)
+            mu /= (cPoint_norm(rab) + eta*eta*hab*hab)
             
             piab = -alpha*cab*mu + beta*mu*mu
             piab /= rhoab
@@ -90,9 +91,9 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         tmp = piab
         tmp *= -mb
 
-        grad = cPoint_new(0,0,0)
-        grada = cPoint_new(0,0,0)
-        gradb = cPoint_new(0,0,0)
+        grad = cPoint(0,0,0)
+        grada = cPoint(0,0,0)
+        gradb = cPoint(0,0,0)
 
         if self.hks:
             grada = kernel.gradient(self._dst, self._src, ha)
@@ -169,13 +170,13 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         cdef cPoint rab, va, vb, vab
         cdef double dot
 
-        va = cPoint_new(self.d_u.data[dest_pid], 
-                       self.d_v.data[dest_pid],
-                       self.d_w.data[dest_pid])
+        va = cPoint(self.d_u.data[dest_pid], 
+                   self.d_v.data[dest_pid],
+                   self.d_w.data[dest_pid])
         
-        vb = cPoint_new(self.s_u.data[source_pid],
-                       self.s_v.data[source_pid],
-                       self.s_w.data[source_pid])
+        vb = cPoint(self.s_u.data[source_pid],
+                   self.s_v.data[source_pid],
+                   self.s_w.data[source_pid])
         
         vab = cPoint_sub(va,vb)
         
@@ -206,10 +207,10 @@ cdef class MorrisViscosity(SPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, grad)
 
-        dot = rab.dot(grad)
+        dot = cPoint_dot(grad, rab)
             
         temp = mb*(mua + mub)*dot/(rhoa*rhob)
-        temp /= (rab.norm() + 0.01*hab*hab)
+        temp /= (cPoint_norm(rab) + 0.01*hab*hab)
 
         nr[0] += temp*vab.x
         nr[1] += temp*vab.y

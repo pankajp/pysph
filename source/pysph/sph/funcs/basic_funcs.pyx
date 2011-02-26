@@ -223,13 +223,13 @@ cdef class SPHGradient(SPHFunctionParticle):
         name after intialization and then setup the arrays.
         
         """
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
-                                     *args, **kwargs)
-
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sphgrad'
         self.prop_name = prop_name
+        
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -243,7 +243,7 @@ cdef class SPHGradient(SPHFunctionParticle):
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an SPH intterpolation of the property `prop_name` 
+        Perform an SPH interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -299,13 +299,12 @@ cdef class SPHGradient(SPHFunctionParticle):
 ###############################################################################
 cdef class SPHLaplacian(SPHFunctionParticle):
     """ Estimation of the laplacian of a function.  The expression is
-     taken from the papeer: 
+     taken from the paper: 
 
      "Accuracy of SPH viscous flow models",
      David I. Graham and Jason P. Huges, IJNME, 2008, 56, pp 1261-1269.
 
      """
-
     #Defined in the .pxd file
     #cdef str prop_name
     #cdef DoubleArray s_prop
@@ -326,27 +325,26 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         invoking setup_arrays.
         
         """
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
-                                     *args, **kwargs)
-
         assert prop_name != '', 'You must provide a property name '
 
         self.id = 'sphlaplacian'
         self.prop_name = prop_name
+        
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+                                     *args, **kwargs)
                
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
         #Setup the basic properties like m, x rho etc.
         SPHFunctionParticle.setup_arrays(self)
-
         self.s_prop = self.source.get_carray(self.prop_name)
         self.d_prop = self.dest.get_carray(self.prop_name)
 
     cdef void eval(self, int k, int source_pid, int dest_pid, 
                    KernelBase kernel, double *nr, double *dnr):
         """ 
-        Perform an SPH intterpolation of the property `prop_name` 
+        Perform an SPH interpolation of the property `prop_name` 
 
         The expression used is:
         
@@ -360,7 +358,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         cdef double ha = self.d_h.data[dest_pid]
         cdef double hb = self.s_h.data[source_pid]
 
-        cdef double hab = 0.5 * (ha + hb)        
+        cdef double hab = 0.5 * (ha + hb)
 
         h = 0.5*(self.s_h.data[source_pid] +
                  self.d_h.data[dest_pid])
