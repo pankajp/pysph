@@ -1,3 +1,4 @@
+#cython: cdivision=True
 """ 
 Module to implement various SPH kernels in multiple dimensions 
 """

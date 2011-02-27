@@ -1,3 +1,4 @@
+#cython: cdivision=True
 """ Implementations for the basic SPH functions """
 
 from pysph.base.point cimport cPoint_new, cPoint_sub

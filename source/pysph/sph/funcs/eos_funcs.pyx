@@ -1,3 +1,4 @@
+#cython: cdivision=True
 #base imports
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.kernels cimport KernelBase

@@ -1,3 +1,4 @@
+#cython: cdivision=True
 """ File to hold the functions required for the ADKE procedure of Sigalotti """
 
 from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot

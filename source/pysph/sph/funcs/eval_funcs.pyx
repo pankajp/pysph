@@ -1,3 +1,4 @@
+#cython: cdivision=True
 """ Implementations for the various sph functions. """
 
 

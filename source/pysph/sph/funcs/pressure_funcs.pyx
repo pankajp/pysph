@@ -1,3 +1,4 @@
+#cython: cdivision=True
 from pysph.base.point cimport cPoint_new, cPoint_sub, cPoint_add
 
 cdef extern from "math.h":
