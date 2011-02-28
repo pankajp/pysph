@@ -4,6 +4,7 @@
 
 #include "nnps.H"
 #include<cstdlib>
+#include <math.h>
 
 using namespace std;
 
@@ -40,7 +41,7 @@ int main(int argc, char* argv[]){
 
   vector<double> x(np, 0.0);
   vector<double> y(np, 0.0);
-
+  
   srand(time(0));
 
   for (long i = 0; i < np; ++i)
@@ -56,9 +57,21 @@ int main(int argc, char* argv[]){
   xp = &x;
   yp = &y;
 
-  double sx = 0.4/2;
-  double sy = 0.4/2;
-  radius = sx;
+  // h ~ 2*vol_per_particle
+  // rad = 2*h
+
+  int dim = 2;
+  double volume = 4.0;
+  double nd = pow(volume/(float)np, 1.0/dim);
+  double rad = 6*nd;
+
+  double sx = rad;
+  double sy = rad;
+  radius = rad;
+
+  cout << "Search Radius " << rad 
+       << " Cell size: " << sx << endl;
+    
 
   bin_manager = new nnps::BinManager(&x,&y,sx,sy);
 
@@ -77,7 +90,7 @@ int main(int argc, char* argv[]){
   
   cout << "Np: " << np << " ( " << (float)np/1e6 << " million) " 
        << "  Number of bins: " << nbins << "  Particles/bin (avg): " << avg
-       << endl << "Max bin size: " << np_max << endl; 
+       << endl << "Max bin size: " << np_max << " particles" << endl; 
 
   delete bin_manager;
   delete nps;

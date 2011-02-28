@@ -79,9 +79,17 @@ int main(int argc, char* argv[]){
   xp = &x;
   yp = &y;
 
-  double sx = 0.4/2;
-  double sy = 0.4/2;
-  radius = sx;
+  // h ~ 2*vol_per_particle
+  // rad = 2*h
+
+  int dim = 2;
+  double volume = 4.0;
+  double nd = pow(volume/(float)np, 1.0/dim);
+  double rad = 6*nd;
+
+  double sx = rad;
+  double sy = rad;
+  radius = rad;
 
   bin_manager = new nnps::BinManager(&x,&y,sx,sy);
   bin_manager->bin_particles();

@@ -9,11 +9,12 @@ using namespace std;
 
 int main(int argc, char* argv[]){
   
-  long np = 10000;
+  long np = 1000000;
   if (argc > 1)
       np = atol(argv[1]);
 
-  cout << np/1e6 << " million particles " << endl;
+  cout << "Brute force neighbor search for " 
+       << np/1e6 << " million particles " << endl;
   
   vector<double> x(np, 0.0);
   vector<double> y(np, 0.0);
@@ -30,8 +31,15 @@ int main(int argc, char* argv[]){
 
     }
 
-  double sx = 0.4/2;
-  double radius = sx;
+  // h ~ 2*vol_per_particle
+  // rad = 2*h => rad ~ 4*vol_per_particle
+
+  int dim = 2;
+  double volume = 4.0;
+  double nd = pow(volume/(float)np, 1.0/dim);
+  double rad = 6*nd;
+
+  double radius = rad;
 
   double xi, yi, xj, yj;
   double dist;

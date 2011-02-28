@@ -1,4 +1,4 @@
-CPPFLAGS = -O3 -Wall -pg
+CPPFLAGS = -O3 -Wall -ggdb
 
 nnps : 
 	g++ nnps.C nnps.cpp $(CPPFLAGS) -o nnps

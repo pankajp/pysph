@@ -11,7 +11,6 @@ from libcpp.map cimport map
 
 cdef list Ns = [100, 1e4, 1e6]
 
-
 cdef extern from 'cPoint.h':
     cdef struct cIntPoint:
         int x, y, z

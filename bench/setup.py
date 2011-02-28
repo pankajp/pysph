@@ -13,7 +13,9 @@ import numpy
 
 def get_spcl_extn(extn):
     """ special-case extensions with specific requirements """
-    if extn.name == 'cpp_vs_pyx':
+    cpp_extensions = 'cpp_extensions', 'nnps_brute_force'
+
+    if extn.name in cpp_extensions:
         extn.language = 'c++'
         extn.sources.append('cPoint.cpp')
     return extn
