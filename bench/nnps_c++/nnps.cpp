@@ -21,16 +21,16 @@ void nnps_neighbor_search(void)
 {  
   double xi, yi;
 
-  vector<size_t> nbrs = vector<size_t>(0);
-
   for (size_t id = 0; id < xp->size(); id++)
     {
       xi = xp->at(id);
       yi = yp->at(id);
+       
+      vector<size_t>* nbrs = new vector<size_t>(0);
+       
+      nps->get_nearest_particles(xi, yi, radius, nbrs);
 
-      nps->get_nearest_particles(xi, yi, radius, &nbrs);
-
-      nbr_cache.push_back(&nbrs);
+      nbr_cache.push_back(nbrs);
     }
 }
 
@@ -100,5 +100,12 @@ int main(int argc, char* argv[]){
 
   delete bin_manager;
   delete nps;
+   
+  vector< vector<size_t>* >::iterator iter;
+  
+  for (iter = nbr_cache.begin(); iter != nbr_cache.end(); iter++)
+    delete (*iter);
+
+  return 0;
 
 }
