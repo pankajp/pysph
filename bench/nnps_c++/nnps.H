@@ -1,7 +1,7 @@
 // ==================================================================
 // $Id$
 //
-// Defines the basic Bin used to index points
+// Defines the basic Bin used to index voxels
 // ==================================================================
 
 #ifndef NNPS_H
@@ -17,7 +17,7 @@
 
 namespace nnps {
 
-  struct Point
+  struct Voxel
 
   {
     //public
@@ -26,7 +26,7 @@ namespace nnps {
     
   };
 
-  bool operator < (Point, Point);
+  bool operator < (Voxel, Voxel);
 
   /*!
 
@@ -47,11 +47,14 @@ namespace nnps {
 
     */
 
-    Bin (Point point);
+    Bin (Voxel voxel);
 
     Bin() {}
 
     ~Bin() {}
+
+    /* Get the size of the voxel */
+    std::size_t get_size(void);
 
     /* print information */
     void print_stats(void);
@@ -62,8 +65,8 @@ namespace nnps {
     /* The expected size for the indices */
     int np;
 
-    /* The Point index */
-    Point point;
+    /* The Voxel index */
+    Voxel voxel;    
 
   };
 // >>>>>>>>>>>>>>> End of class Bin >>>>>>>>>>>>>>>>
@@ -82,7 +85,7 @@ namespace nnps {
   public:
 
     /* the map holding the bins */
-    std::map<Point, Bin*> bins;
+    std::map<Voxel, Bin*> bins;
 
     /* The data arrays */
     std::vector<double> *x, *y;
@@ -125,7 +128,7 @@ namespace nnps {
 
     void clear()
     {
-      std::map<Point, nnps::Bin*>::iterator iter;
+      std::map<Voxel, nnps::Bin*>::iterator iter;
       for (iter = this->bins.begin(); iter != this->bins.end(); iter++)
 	{
 	  delete iter->second;
@@ -162,6 +165,12 @@ namespace nnps {
     /* Print information about the bin manager */    
     void get_stats(long*, long*);
 
+    /* get the cell sizes */
+    void get_sizes(double*, double*);
+
+    /* get particle position */
+    void get_position(double*, double*, std::size_t);
+
   };
   // >>>>>>>>>>>>>>> End of class BinManager >>>>>>>>>>>>>>>>
 
@@ -182,7 +191,7 @@ namespace nnps {
     BinManager* bin_manager;
 
     /*  a vector for the adjacent cells */
-    std::vector<Point> cell_list;
+    std::vector<Voxel> cell_list;
 
     /* a vector for the nearest particles  */
     std::vector<std::size_t> neighbors;
@@ -200,7 +209,8 @@ namespace nnps {
     
     /* function to get nearest particles */
     void get_nearest_particles(const double xp, const double yp, 
-			       const double radius);
+			       const double radius,
+			       std::vector<std::size_t> *nbrs);
     
     /* get adjacent cells */
     void get_adjacent_cells(const double xp, const double yp);

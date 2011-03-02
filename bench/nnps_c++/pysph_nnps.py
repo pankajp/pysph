@@ -94,14 +94,16 @@ if __name__ == '__main__':
 
     t = time.time()
     particles = bin_particles(pa)
-    t = time.time() - t
+    bt = time.time() - t
 
-    print "Time for binning: %f s" %(t)
+    print "Time for binning: %f s" %(bt)
 
     t = time.time()
     cache_neighbors(particles)
-    t = time.time() - t
+    ct = time.time() - t
 
-    print "Time for caching neighbors: %f s" %(t)
+    print "Time for caching neighbors: %f s" %(ct)
+
+    print "\nTotal time %fs"%(bt + ct)
 
     get_stats(particles)

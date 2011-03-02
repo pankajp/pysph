@@ -41,17 +41,22 @@ void verify_neighbors(void){
   
   // Get neighbors using NNPS
 
-  nps->get_nearest_particles(x, y, radius);
+  vector<size_t> inbrs(0);
 
-  vector<size_t> nnps_nbrs = nps->neighbors;
+  nps->get_nearest_particles(x, y, radius, &inbrs);
 
-  assert (nnps_nbrs.size() == nbrs.size());
+  //vector<size_t> nnps_nbrs = nps->neighbors;
 
-  sort( nnps_nbrs.begin(), nnps_nbrs.end() );
+  //assert (nnps_nbrs.size() == nbrs.size());
+
+  assert (inbrs.size() == nbrs.size());
+
+  //sort( nnps_nbrs.begin(), nnps_nbrs.end() );
+
+  sort( inbrs.begin(), inbrs.end() );  
 
   for (size_t k = 0; k < nbrs.size(); k++)
-    assert (nbrs[k] == nnps_nbrs[k]);
-
+    assert (nbrs[k] == inbrs[k]);
 }
 
 int main(int argc, char* argv[]){

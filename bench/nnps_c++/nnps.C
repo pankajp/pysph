@@ -11,7 +11,7 @@ namespace nnps {
   
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  bool operator < (Point p1, Point p2)
+  bool operator < (Voxel p1, Voxel p2)
   {
     if (p1.x < p2.x)
       return true;
@@ -41,17 +41,22 @@ namespace nnps {
       }
   }
 
-  Bin:: Bin(Point point){
-    this->point = point;
+  Bin:: Bin(Voxel voxel){
+    this->voxel = voxel;
   }  
-
+  
   void Bin:: print_stats(void)
   {
-    std::cout << "Bin (" << this->point.x << ", " 
-	      << this->point.y << ", " << this->point.z << ")";
+    std::cout << "Bin (" << this->voxel.x << ", " 
+	      << this->voxel.y << ", " << this->voxel.z << ")";
     
     std::cout << "\t Number of particles: " << this->indices.size() <<std::endl;
   }    
+
+  std::size_t Bin:: get_size(void)
+  {
+    return this->indices.size();
+  }
     
   // >>>>>>>>>>>>>> End of Bin definitions >>>>>>>>>>>>>
 
@@ -59,9 +64,9 @@ namespace nnps {
 			  std::vector<double>* y,
 			  double sx, double sy){
     
-    this-> x = x;
-    this-> y = y;
-    
+    this->x = x;
+    this->y = y;
+
     assert(this->x->size() == this->y->size());
 
     this->np = this->x->size();
@@ -105,7 +110,7 @@ namespace nnps {
 
     this->clear();
 
-    std::map<Point, nnps::Bin*>::const_iterator iter;
+    std::map<Voxel, nnps::Bin*>::const_iterator iter;
 
     for ( std::size_t i = 0; i < this->np; i++ )
       {
@@ -113,15 +118,15 @@ namespace nnps {
 	iy = floor(this->y->at(i)/this->sx);
 	iz = 0;
       
-	Point point = {ix, iy, iz};
+	Voxel voxel = {ix, iy, iz};
 
-	iter = this->bins.find(point);
+	iter = this->bins.find(voxel);
 
 	if (iter == this->bins.end())
 	  {
-	    Bin *bin = new Bin(point);
+	    Bin *bin = new Bin(voxel);
 	    bin->indices.push_back(i);
-	    this->bins[point] = bin;
+	    this->bins[voxel] = bin;
 	  }
 	else
 	    (*iter).second->indices.push_back(i);
@@ -153,7 +158,7 @@ namespace nnps {
   }
 
   void BinManager:: get_stats(long* n_bins, long* np_max){
-    std::map<Point, Bin*>::iterator iter;
+    std::map<Voxel, Bin*>::iterator iter;
 
     size_t nbins = 0;
     size_t max_np = 0;
@@ -171,6 +176,19 @@ namespace nnps {
     
     (*np_max) = max_np;
     (*n_bins) = nbins;
+  }
+
+  void BinManager:: get_sizes(double* sx, double* sy)
+  {
+    (*sx) = this->sx;
+    (*sy) = this->sy;
+  }
+
+  void BinManager:: get_position(double* xp, double* yp, std::size_t i)
+  {
+    
+    (*xp) = this->x->at(i);
+    (*yp) = this->y->at(i);
   }
 
 // >>>>>>>>>>>>>> End of BinManager definitions >>>>>>>>>>>>>
@@ -197,8 +215,8 @@ namespace nnps {
       {
 	for (j = iy-1; j <= iy + 1; j++)
 	  {
-	    Point point = {i, j, 0};
-	    this->cell_list[count] = point;
+	    Voxel voxel = {i, j, 0};
+	    this->cell_list[count] = voxel;
 
 	    count++;
 	    
@@ -207,12 +225,13 @@ namespace nnps {
   }
 
   void NNPS:: get_nearest_particles(const double xp, const double yp, 
-				     const double radius){
+				    const double radius, 
+				    std::vector<std::size_t> *nbrs){
 
     this->neighbors.clear();
     this->get_adjacent_cells(xp, yp);
     
-    std::map<Point, nnps::Bin*>::iterator iter;
+    std::map<Voxel, nnps::Bin*>::iterator iter;
     std::vector<std::size_t> indices;
 
     std::vector<double> *x = this->bin_manager->x;
@@ -221,13 +240,15 @@ namespace nnps {
     long index;
     double xj, yj, dist;
 
-    Point point;
+    Voxel voxel;
+
+    nbrs->clear();
 
     for ( std::size_t i = 0; i < this->cell_list.size(); ++i )
       {
-	point = this->cell_list[i];
+	voxel = this->cell_list[i];
 
-	iter = this->bin_manager->bins.find(point);
+	iter = this->bin_manager->bins.find(voxel);
 	
 	if (iter == this->bin_manager->bins.end())
 	  continue;
@@ -245,7 +266,9 @@ namespace nnps {
 
 	    if (dist < radius*radius)
 	      {
-		this->neighbors.push_back(index);
+		//this->neighbors.push_back(index);
+		nbrs->push_back(index);
+		
 	      }
 	  }
       }
