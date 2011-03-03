@@ -77,13 +77,8 @@ class ParallelCellManagerTestCase(unittest.TestCase):
         cm = self.cm
         cm.initialize()
 
-        origin = cm.origin
         cell_size = cm.cell_size
         factor = cm.factor
-
-        self.assertAlmostEqual(origin.x, 0.0, 10)
-        self.assertAlmostEqual(origin.y, 0.0, 10)
-        self.assertAlmostEqual(origin.z, 0.0, 10)
 
         self.assertAlmostEqual(cell_size, 0.5, 10)
         self.assertEqual(factor, 1)
@@ -94,8 +89,6 @@ class ParallelCellManagerTestCase(unittest.TestCase):
         cm = self.cm
 
         cm.update_global_properties()
-
-        cm.setup_origin()
 
         cm.compute_block_size(0)
 
@@ -144,8 +137,6 @@ class ParallelCellManagerTestCase(unittest.TestCase):
         pa = cm.arrays_to_bin[0]
 
         cm.update_global_properties()
-
-        cm.setup_origin()
 
         cm.compute_block_size(0)
 

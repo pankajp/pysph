@@ -16,7 +16,8 @@ cimport mpi4py.MPI as MPI
 
 # local imports
 from pysph.base.point import Point, IntPoint
-from pysph.base.point cimport cPoint, IntPoint, cPoint_new, IntPoint_new, Point_new
+from pysph.base.point cimport cPoint, IntPoint, cPoint_new, IntPoint_new, \
+            Point_new, IntPoint_from_cIntPoint
 from pysph.base import cell
 from pysph.base.cell cimport construct_immediate_neighbor_list, find_cell_id
 from pysph.base.cell cimport CellManager, Cell
@@ -151,7 +152,6 @@ cdef class ProcessorMap:
     """
 
     #Defined in the .pxd file
-    #cdef public Point origin
     #cdef public dict local_block_map
     #cdef public dict block_map
     #cdef public dict cell_map
@@ -160,10 +160,8 @@ cdef class ProcessorMap:
     #cdef public double block_size
 
     def __init__(self, parallel_controller,
-                 Point origin=Point(0, 0, 0), double block_size=0.3, 
-                 *args, **kwargs):
+                 double block_size=0.3, *args, **kwargs):
         self.parallel_controller = parallel_controller
-        self.origin = Point()
         self.local_block_map = {}
         self.block_map = {}
         self.cell_map = {}
@@ -177,7 +175,6 @@ cdef class ProcessorMap:
     def __reduce__(self):
         """ Implemented to facilitate pickling of extension types. """
         d = {}
-        d['origin'] = self.origin
         d['local_block_map'] = self.local_block_map
         d['block_map'] = self.block_map
         d['cell_map'] = self.cell_map
@@ -190,11 +187,6 @@ cdef class ProcessorMap:
 
     def __setstate__(self, d):
         """ Implemented to facilitate pickling of extension types. """
-        self.origin = Point()
-        org = d['origin']
-        self.origin.x = org.x
-        self.origin.y = org.y
-        self.origin.z = org.z
         self.local_block_map = {}
         self.local_block_map.update(d['local_block_map'])
         self.block_map = {}
@@ -230,19 +222,19 @@ cdef class ProcessorMap:
         cdef dict block_map = {}
         cdef Point centroid = Point()
         cdef Cell cell
-        cdef IntPoint cid, bid
+        cdef IntPoint cid, bid = IntPoint_new(0,0,0)
 
         self.cell_map.clear()
         
         for cid, cell in cells_dict.iteritems():
             cell.get_centroid(centroid)
-            bid = find_cell_id(self.origin.data, centroid.data, self.block_size)
-            block_map.setdefault(bid, pid)
+            bid.data = find_cell_id(centroid.data, self.block_size)
+            block_map[bid.copy()] = pid
 
             if self.cell_map.has_key(bid):
                 self.cell_map[bid].add(cid)
             else:
-                self.cell_map[bid] = set([cid])
+                self.cell_map[bid.copy()] = set([cid])
         
         self.block_map = block_map
         self.local_block_map = copy.deepcopy(block_map)
@@ -467,7 +459,7 @@ cdef class ProcessorMap:
         cdef list nids = []
         cdef list empty_list = []
         cdef int i, j, num_local_bins, len_nids
-        cdef IntPoint nid
+        cdef IntPoint nid, bid
         cdef int n_pid
 
         # for each block in local_pm
@@ -475,7 +467,7 @@ cdef class ProcessorMap:
             nids[:] = empty_list
             
             # construct list of neighbor block ids in the proc_map.
-            construct_immediate_neighbor_list(bid, nids, False)
+            construct_immediate_neighbor_list(bid.data, nids, False)
             len_nids = len(nids)
             for i in range(len_nids):
                 nid = nids[i]
@@ -489,7 +481,6 @@ cdef class ProcessorMap:
 
     def __str__(self):
         rep = '\nProcessor Map At proc : %d\n'%(self.pid)
-        rep += 'Origin : %s\n'%(self.origin)
         rep += 'Bin size : %s\n'%(self.block_size)
         rep += 'Region neighbors : %s'%(self.nbr_procs)
         return rep 
@@ -502,8 +493,7 @@ cdef class ParallelCellManager(CellManager):
     Cell manager for parallel invocations.
     """
     def __init__(self, arrays_to_bin=[], min_cell_size=-1.0,
-                 max_cell_size=0.5, origin=Point(0, 0, 0),
-                 initialize=True, max_radius_scale=2.0,
+                 max_cell_size=0.5, initialize=True, max_radius_scale=2.0,
                  parallel_controller=None, dimension=3, load_balancing=True,
                  min_block_size=0.0,
                  solver=None,
@@ -514,7 +504,6 @@ cdef class ParallelCellManager(CellManager):
         cell.CellManager.__init__(self, arrays_to_bin=arrays_to_bin,
                                   min_cell_size=min_cell_size,
                                   max_cell_size=max_cell_size,
-                                  origin=origin,
                                   initialize=False,
                                   max_radius_scale=max_radius_scale)
 
@@ -577,7 +566,6 @@ cdef class ParallelCellManager(CellManager):
         ----------- 
 
         Find the global/local bounds on data (x, y, z, h)
-        setup the origin
         setup the processor map
             
         """
@@ -590,10 +578,6 @@ cdef class ParallelCellManager(CellManager):
         # exchange bounds and interaction radii (h) information.
 
         self.update_global_properties()
-
-        # now setup the origin and cell size to use.
-
-        self.setup_origin()
 
         # find the block size and cell size to use
 
@@ -670,21 +654,6 @@ cdef class ParallelCellManager(CellManager):
         logger.info('(%d) min_h : %f, max_h : %f'%(pc.rank, self.glb_min_h,
                                                    self.glb_max_h))
 
-    def setup_origin(self):
-        """ Setup the origin from the global bounds.
-
-        Notes:
-        ------
-        
-        The origin is set as: bounds_min - max_range
-
-        """
-        self.origin = Point()
-
-        pc = self.parallel_controller
-        logger.info('(%d) Origin : %s'%(pc.rank,
-                                        str(self.origin)))
-
     cpdef double compute_cell_size(self, double min_size=0, double max_size=0):
         """ Setup the cell size to use from the 'h' values.
         
@@ -739,10 +708,6 @@ cdef class ParallelCellManager(CellManager):
         """
         proc_map = self.proc_map
         
-        proc_map.origin.x = self.origin.x
-        proc_map.origin.y = self.origin.y
-        proc_map.origin.z = self.origin.z
-
         proc_map.pid = self.parallel_controller.rank
         
         cell_size = self.cell_size
@@ -766,8 +731,8 @@ cdef class ParallelCellManager(CellManager):
         cdef double xc = self.local_bounds_min[0] + 0.5 * cell_size
         cdef double yc = self.local_bounds_min[1] + 0.5 * cell_size
         cdef double zc = self.local_bounds_min[2] + 0.5 * cell_size
-
-        id = find_cell_id(self.origin.data, cPoint_new(xc, yc, zc), cell_size)
+        cdef IntPoint id = IntPoint_new(0,0,0)
+        id.data = find_cell_id(cPoint_new(xc, yc, zc), cell_size)
 
         cell = Cell(id=id, cell_manager=self, cell_size=cell_size,
                     jump_tolerance=INT_INF())
@@ -962,6 +927,7 @@ cdef class ParallelCellManager(CellManager):
         cdef Cell cell
         cdef ProcessorMap proc_map = self.proc_map
         cdef int pid
+        cdef IntPoint block_id = IntPoint_new(0,0,0)
         
         #find the new configuration of the cells
 
@@ -988,7 +954,7 @@ cdef class ParallelCellManager(CellManager):
 
             #find the block id to which the newly created cell belongs
             cell.get_centroid(centroid)
-            block_id = find_cell_id(proc_map.origin.data, centroid.data, proc_map.block_size)
+            block_id.data = find_cell_id(centroid.data, proc_map.block_size)
             
             # get the pid corresponding to the block_id
 
@@ -999,7 +965,7 @@ cdef class ParallelCellManager(CellManager):
                 if new_block_cells.has_key(block_id):
                     new_block_cells[block_id].append(cell)
                 else:
-                    new_block_cells[block_id] = [cell]
+                    new_block_cells[block_id.copy()] = [cell]
             else:
                 # find to which remote processor the block belongs to and add
 
@@ -1007,7 +973,7 @@ cdef class ParallelCellManager(CellManager):
                     if remote_block_cells.has_key(block_id):
                         remote_block_cells[block_id].append(cell)
                     else:
-                        remote_block_cells[block_id] = [cell]
+                        remote_block_cells[block_id.copy()] = [cell]
 
         return new_block_cells, remote_block_cells
 
@@ -1407,7 +1373,7 @@ cdef class ParallelCellManager(CellManager):
         cdef MPI.Comm comm = self.parallel_controller.comm
         cdef ProcessorMap proc_map = self.proc_map
         cdef list nbr_procs = proc_map.nbr_procs
-
+        cdef IntPoint bid
         cdef int pid, i, si, ei, dest, num_arrays
 
         cdef dict proc_data, blocks_to_send
@@ -1444,7 +1410,7 @@ cdef class ParallelCellManager(CellManager):
 
         for bid in local_block_map:
             block_neighbors = []
-            construct_immediate_neighbor_list(bid, block_neighbors, False)
+            construct_immediate_neighbor_list(bid.data, block_neighbors, False)
             for nid in block_neighbors:
                 
                 if global_block_map.has_key(nid):
@@ -1550,7 +1516,7 @@ cdef class ParallelCellManager(CellManager):
 
         for bid in local_block_map:
             block_neighbors = []
-            construct_immediate_neighbor_list(bid, block_neighbors, False)
+            construct_immediate_neighbor_list(bid.data, block_neighbors, False)
             for nid in block_neighbors:
                 
                 pid = global_block_map.get(nid, -1)
@@ -1610,13 +1576,13 @@ cdef class ParallelCellManager(CellManager):
     cpdef list get_cells_in_block(self, IntPoint bid):
         """ return the list of cells in the cells_dict located in block bid """
         cdef list ret = []
-        cdef IntPoint p = IntPoint()
-        for i in range(bid.x*self.factor, (bid.x+1)*self.factor):
-            p.x = i
-            for j in range(bid.y*self.factor, (bid.y+1)*self.factor):
-                p.y = j
-                for k in range(bid.z*self.factor, (bid.z+1)*self.factor):
-                    p.z = k
+        cdef IntPoint p = IntPoint_new(0,0,0)
+        for i in range(bid.data.x*self.factor, (bid.data.x+1)*self.factor):
+            p.data.x = i
+            for j in range(bid.data.y*self.factor, (bid.data.y+1)*self.factor):
+                p.data.y = j
+                for k in range(bid.data.z*self.factor, (bid.data.z+1)*self.factor):
+                    p.data.z = k
                     if p in self.cells_dict:
                         ret.append(p.copy())
         return ret
@@ -1721,16 +1687,16 @@ cdef class ParallelCellManager(CellManager):
         block1 = IntPoint()
         block2 = IntPoint()
         
-        cent1.x = self.origin.data.x + (<double>myid.x + 0.5)*self.cell_size
-        cent1.y = self.origin.data.y + (<double>myid.y + 0.5)*self.cell_size
-        cent1.z = self.origin.data.z + (<double>myid.z + 0.5)*self.cell_size
+        cent1.x = (<double>myid.x + 0.5)*self.cell_size
+        cent1.y = (<double>myid.y + 0.5)*self.cell_size
+        cent1.z = (<double>myid.z + 0.5)*self.cell_size
 
-        cent2.x = self.origin.data.x + (<double>newid.x + 0.5)*self.cell_size
-        cent2.y = self.origin.data.y + (<double>newid.y + 0.5)*self.cell_size
-        cent2.z = self.origin.data.z + (<double>newid.z + 0.5)*self.cell_size
+        cent2.x = (<double>newid.x + 0.5)*self.cell_size
+        cent2.y = (<double>newid.y + 0.5)*self.cell_size
+        cent2.z = (<double>newid.z + 0.5)*self.cell_size
 
-        block1 = find_cell_id(pmap.origin.data, cent1, pmap.block_size)
-        block2 = find_cell_id(pmap.origin.data, cent2, pmap.block_size)
+        block1 = find_cell_id(cent1, pmap.block_size)
+        block2 = find_cell_id(cent2, pmap.block_size)
 
         pdiff = block1.diff(block2)        
         

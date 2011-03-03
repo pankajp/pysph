@@ -64,7 +64,7 @@ cdef class Line:
 
         Parameters:
         -----------
-        origin -- The origon for the line
+        origin -- The origin for the line
         length -- The length of the line
         angle -- The inclination with the positive x axis
         

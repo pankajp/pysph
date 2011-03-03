@@ -91,10 +91,47 @@ cdef inline double Point_distance2(Point pa, Point pb):
 cdef inline Point Point_from_cPoint(cPoint p):
     return Point_new(p.x, p.y, p.z)
 
+
+
+
+cdef struct cIntPoint:
+    int x, y, z
+
+cdef inline cIntPoint cIntPoint_new(int x, int y, int z):
+    cdef cIntPoint p = cIntPoint(x,y,z)
+    return p
+
+cdef inline cIntPoint cIntPoint_sub(cIntPoint pa, cIntPoint pb):
+    return cIntPoint_new(pa.x-pb.x, pa.y-pb.y, pa.z-pb.z)
+
+cdef inline cIntPoint cIntPoint_add(cIntPoint pa, cIntPoint pb):
+    return cIntPoint_new(pa.x+pb.x, pa.y+pb.y, pa.z+pb.z)
+
+cdef inline long cIntPoint_dot(cIntPoint pa, cIntPoint pb):
+    return pa.x*pb.x + pa.y*pb.y + pa.z*pb.z
+
+cdef inline long cIntPoint_norm(cIntPoint p):
+    return p.x*p.x + p.y*p.y + p.z*p.z
+
+cdef inline double cIntPoint_length(cIntPoint pa):
+    return sqrt(cIntPoint_norm(pa))
+
+cdef inline long cIntPoint_distance2(cIntPoint pa, cIntPoint pb):
+    return ((pa.x-pb.x)*(pa.x-pb.x) +
+            (pa.y-pb.y)*(pa.y-pb.y) + 
+            (pa.z-pb.z)*(pa.z-pb.z))
+
+cdef inline double cIntPoint_distance(cIntPoint pa, cIntPoint pb):
+    return sqrt(cIntPoint_distance2(pa, pb))
+
+cdef inline cIntPoint cIntPoint_scale(cIntPoint p, int k):
+    return cIntPoint_new(p.x*k, p.y*k, p.z*k)
+
+cdef inline bint cIntPoint_is_equal(cIntPoint pa, cIntPoint pb):
+    return (pa.x == pb.x and pa.y == pb.y and pa.z == pb.z)
+
 cdef class IntPoint:
-    cdef readonly int x
-    cdef readonly int y
-    cdef readonly int z
+    cdef cIntPoint data
 
     cpdef numpy.ndarray asarray(self)
     cdef bint is_equal(self, IntPoint)
@@ -110,7 +147,10 @@ cdef inline IntPoint IntPoint_add(IntPoint pa, IntPoint pb):
 
 cdef inline IntPoint IntPoint_new(int x, int y, int z):
     cdef IntPoint p = IntPoint.__new__(IntPoint)
-    p.x = x
-    p.y = y
-    p.z = z
+    p.data.x = x
+    p.data.y = y
+    p.data.z = z
     return p
+
+cdef inline IntPoint IntPoint_from_cIntPoint(cIntPoint p):
+    return IntPoint_new(p.x, p.y, p.z)

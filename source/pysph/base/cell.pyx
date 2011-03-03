@@ -32,8 +32,10 @@ def INT_INF():
 def py_real_to_int(real_val, step):
     return real_to_int(real_val, step)
 
-def py_find_cell_id(Point origin, Point pnt, double cell_size):
-    return find_cell_id(origin.data, pnt.data, cell_size)
+def py_find_cell_id(Point pnt, double cell_size):
+    cdef IntPoint p = IntPoint_new(0,0,0)
+    p.data = find_cell_id(pnt.data, cell_size)
+    return p
 
 cdef inline int real_to_int(double real_val, double step):
     """ Return the bin index to which the given position belongs.
@@ -58,36 +60,36 @@ cdef inline int real_to_int(double real_val, double step):
 
     return ret_val
 
-cdef inline IntPoint find_cell_id(cPoint origin, cPoint pnt, double cell_size):
+cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size):
     """ Find the cell index for the corresponding point 
 
     Parameters:
     -----------
-    origin -- a cell's origin
     pnt -- the point for which the index is sought
     cell_size -- the cell size to use
     id -- output parameter holding the cell index 
 
     Algorithm:
     ----------
-    performs a box sort based on the point, cell origin and cell size
+    performs a box sort based on the point and cell size
 
     Notes:
     ------
     Uses the function  `real_to_int`
     
     """
-    return IntPoint_new(real_to_int(pnt.x-origin.x, cell_size),
-                        real_to_int(pnt.y-origin.y, cell_size),
-                        real_to_int(pnt.z-origin.z, cell_size))
+    cdef cIntPoint p = cIntPoint(real_to_int(pnt.x, cell_size),
+                        real_to_int(pnt.y, cell_size),
+                        real_to_int(pnt.z, cell_size))
+    return p
 
-def py_construct_immediate_neighbor_list(cell_id, neighbor_list,
+def py_construct_immediate_neighbor_list(IntPoint cell_id, neighbor_list,
                                          include_self=True, distance=1):
     """ Construct a list of cell ids neighboring the given cell."""
-    construct_immediate_neighbor_list(cell_id, neighbor_list, include_self,
+    construct_immediate_neighbor_list(cell_id.data, neighbor_list, include_self,
                                       distance)
 
-cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
+cdef inline void construct_immediate_neighbor_list(cIntPoint cell_id, list
                neighbor_list, bint include_self=True, int distance=1): 
     """Return the 27 nearest neighbors for a given cell when distance = 1"""
     cdef list cell_list = []
@@ -95,7 +97,7 @@ cdef inline void construct_immediate_neighbor_list(IntPoint cell_id, list
     for i in range(-distance, distance+1):
         for j in range(-distance, distance+1):
             for k in range(-distance, distance+1):
-                cell_list.append(IntPoint(cell_id.x+i, cell_id.y+j,
+                cell_list.append(IntPoint_new(cell_id.x+i, cell_id.y+j,
                                           cell_id.z+k))
     if not include_self:
         del cell_list[((distance*2+1)*(distance*2+1)*(distance*2+1)-1)/2]
@@ -129,12 +131,12 @@ cdef inline construct_face_neighbor_list(IntPoint cell_id, list neighbor_list,
         neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z+1))
         neighbor_list.append(IntPoint(cell_id.x, cell_id.y, cell_id.z-1))
                                       
-def py_cell_encloses_sphere(IntPoint id, Point world_origin, double cell_size,
+def py_cell_encloses_sphere(IntPoint id, double cell_size,
                             Point pnt, double radius):
     """Check if sphere of `radius` center 'pnt' is enclosed by a cell."""
-    return cell_encloses_sphere(id, world_origin.data, cell_size, pnt.data, radius)
+    return cell_encloses_sphere(id, cell_size, pnt.data, radius)
 
-cdef inline bint cell_encloses_sphere(IntPoint id, cPoint world_origin,
+cdef inline bint cell_encloses_sphere(IntPoint id,
                                 double cell_size, cPoint pnt, double radius):
     """
     Checks if sphere of `radius` centered at 'pnt' is completely 
@@ -143,7 +145,6 @@ cdef inline bint cell_encloses_sphere(IntPoint id, cPoint world_origin,
     Parameters:
     -----------
     id -- id of the cell.
-    world_origin -- origin with respect to which this 'id' was calculated.
     cell_size -- size of the sides of the cells.
     pnt -- center of sphere.
     radius -- radius of sphere.
@@ -164,16 +165,16 @@ cdef inline bint cell_encloses_sphere(IntPoint id, cPoint world_origin,
     cdef int i,j,k
     
     # find the first point of the cell.
-    cell_vertex.x = world_origin.x + id.x*cell_size
-    cell_vertex.y = world_origin.y + id.y*cell_size
-    cell_vertex.z = world_origin.z + id.z*cell_size
+    cell_vertex.x = id.x*cell_size
+    cell_vertex.y = id.y*cell_size
+    cell_vertex.z = id.z*cell_size
     
     for i in range(0,2):
         for j in range(0,2):
             for k in range(0,2):
-                cell_vertex.set(world_origin.x + (id.x+i)*cell_size,
-                                world_origin.y + (id.y+j)*cell_size,
-                                world_origin.z + (id.z+k)*cell_size,
+                cell_vertex.set((id.x+i)*cell_size,
+                                (id.y+j)*cell_size,
+                                (id.z+k)*cell_size,
                                 )
                 distance = cPoint_distance2(cell_vertex, pnt)
                 if distance > radius*radius:
@@ -201,7 +202,7 @@ cdef class Cell:
 
     Notes:
     ------
-    The cell defines an origin with respect to which it has an extent 
+    The cell defines an origin with respect to which it has an extent
     defined to be it's `size`. Indices of particles corresponding to 
     ParticleArrays in `arrays_to_bin` are maintained in `index_lists`, one
     for each particle array.
@@ -218,7 +219,6 @@ cdef class Cell:
     #cdef public double cell_size
     #cdef public CellManager cell_manager
     #cdef public list arrays_to_bin
-    #cdef public Point origin
 
     #cdef public int jump_tolerance
     #cdef public list index_lists
@@ -226,11 +226,7 @@ cdef class Cell:
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
                  cell_size=0.1, int jump_tolerance=1):
 
-        self.id = IntPoint_new(0,0,0)
-
-        self.id.x = id.x
-        self.id.y = id.y
-        self.id.z = id.z
+        self.id = IntPoint_new(id.x, id.y, id.z)
 
         self.cell_size = cell_size
 
@@ -242,8 +238,6 @@ cdef class Cell:
 
         self.arrays_to_bin = []
 
-        self.origin = Point(0., 0., 0.)
-        
         self.set_cell_manager(cell_manager)
     
     def __str__(self):
@@ -268,9 +262,6 @@ cdef class Cell:
             self.coord_x = self.cell_manager.coord_x
             self.coord_y = self.cell_manager.coord_y
             self.coord_z = self.cell_manager.coord_z
-            self.origin.x = self.cell_manager.origin.x
-            self.origin.y = self.cell_manager.origin.y
-            self.origin.z = self.cell_manager.origin.z
             self._init_index_lists()
                          
     cpdef get_centroid(self, Point centroid):
@@ -282,9 +273,9 @@ cdef class Cell:
         origin plus half the cell size in that direction
 
         """
-        centroid.data.x = self.origin.data.x + (<double>self.id.x + 0.5)*self.cell_size
-        centroid.data.y = self.origin.data.y + (<double>self.id.y + 0.5)*self.cell_size
-        centroid.data.z = self.origin.data.z + (<double>self.id.z + 0.5)*self.cell_size
+        centroid.data.x = (<double>self.id.x + 0.5)*self.cell_size
+        centroid.data.y = (<double>self.id.y + 0.5)*self.cell_size
+        centroid.data.z = (<double>self.id.z + 0.5)*self.cell_size
 
     cpdef Cell get_new_sibling(self, IntPoint id):
         """Return a new cell with the given id
@@ -334,7 +325,7 @@ cdef class Cell:
         cdef long *indices
         cdef long num_particles
         cdef cPoint pnt
-        cdef IntPoint id
+        cdef IntPoint id = IntPoint_new(0,0,0)
         cdef Cell cell
         cdef IntPoint pdiff
         cdef str msg
@@ -374,15 +365,14 @@ cdef class Cell:
 
                     # find the cell containing this point
 
-                    id = find_cell_id(self.origin.data, pnt, self.cell_size)
+                    id.data = find_cell_id(pnt, self.cell_size)
 
                     # has the particle moved too far??
 
                     #self.check_jump_tolerance(myid=self.id, newid=id)
-                    self.cell_manager.check_jump_tolerance(myid=self.id,
-                                                           newid=id)
+                    self.cell_manager.check_jump_tolerance(self.id.data, id.data)
                     
-                    if id.is_equal(self.id):
+                    if cIntPoint_is_equal(self.id.data, id.data):
                         continue
 
                     to_remove.append(j)
@@ -649,7 +639,6 @@ cdef class CellManager:
     # again. 
 
     #Defined in the .pxd file
-    #cdef public Point origin
     #cdef public double cell_size
     #cdef public bint is_dirty    
     #cdef public dict array_indices
@@ -661,15 +650,9 @@ cdef class CellManager:
     #cdef public str coord_x, coord_y, coord_z
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=-1.0,
-                 double max_cell_size=0.5, Point origin=Point(0,0,0),
+                 double max_cell_size=0.5,
                  bint initialize=True, double max_radius_scale=2.0):
         
-        self.origin = Point()
-
-        self.origin.x = origin.x
-        self.origin.y = origin.y
-        self.origin.z = origin.z
-
         self.max_radius_scale = max_radius_scale
         self.min_cell_size = min_cell_size
         self.max_cell_size = max_cell_size
@@ -694,11 +677,11 @@ cdef class CellManager:
         if initialize == True:
             self.initialize()
     
-    def is_boundary_cell(self, cid):
+    def is_boundary_cell(self, IntPoint cid):
         """ Returns true if this cell is a boundary cell, false otherwise. """
         cdef int dim = self.dimension
         cdef list nbr_list = []
-        construct_immediate_neighbor_list(cid, nbr_list)
+        construct_immediate_neighbor_list(cid.data, nbr_list)
         
         for id in nbr_list:
             if not self.cells_dict.has_key(id):
@@ -958,7 +941,7 @@ cdef class CellManager:
         
         Algorithm::
         -----------
-        create a cell at origon
+        create a cell at origin
         set the jump_tolerance to infinity
         add all particle indices to this cell
 
@@ -1027,12 +1010,12 @@ cdef class CellManager:
         return cells corresponding to these cell ids
         
     	"""
-        cdef IntPoint cell_id = IntPoint()
+        cdef cIntPoint cell_id
         cdef IntPoint id
         cdef list neighbor_list = list()
         cdef int i
 
-        cell_id = find_cell_id(self.origin.data, pnt, self.cell_size)
+        cell_id = find_cell_id(pnt, self.cell_size)
 
         # construct ids of all neighbors around cell_id, this
         # will include the cell also.
@@ -1079,29 +1062,29 @@ cdef class CellManager:
         cdef int max_y, min_y, j
         cdef int max_z, min_z, k
 
-        cdef IntPoint max_cell = IntPoint()
-        cdef IntPoint min_cell = IntPoint()
+        cdef cIntPoint max_cell
+        cdef cIntPoint min_cell
         cdef IntPoint diff
-        cdef IntPoint id = IntPoint()
+        cdef cIntPoint id
         cdef cPoint tmp_pt
-        cdef IntPoint curr_id = IntPoint()
+        cdef IntPoint curr_id
 
         cdef Cell cell
 
         # find the cell within which this point is located.
-        curr_id = find_cell_id(self.origin.data, pnt, self.cell_size)
+        curr_id = find_cell_id(pnt, self.cell_size)
 
         tmp_pt.x = pnt.x - radius
         tmp_pt.y = pnt.y - radius
         tmp_pt.z = pnt.z - radius
 
-        min_cell = find_cell_id(self.origin.data, tmp_pt, self.cell_size)
+        min_cell = find_cell_id(tmp_pt, self.cell_size)
 
         tmp_pt.x = pnt.x + radius
         tmp_pt.y = pnt.y + radius
         tmp_pt.z = pnt.z + radius
 
-        max_cell = find_cell_id(self.origin.data, tmp_pt, self.cell_size)
+        max_cell = find_cell_id(tmp_pt, self.cell_size)
 
         diff = max_cell.diff(min_cell)
         diff.x += 1
@@ -1136,7 +1119,7 @@ cdef class CellManager:
         
         for i in range(len(self.cells_dict)):
             cell = cells_list[i]
-            cell.jump_tolerance = 1       
+            cell.jump_tolerance = 1
     
     cpdef insert_particles(self, int parray_id, LongArray indices):
         """Insert particles"""
@@ -1147,7 +1130,7 @@ cdef class CellManager:
         cdef int i
         cdef DoubleArray x, y, z
         cdef double cell_size = self.cell_size
-        cdef IntPoint id = IntPoint()
+        cdef IntPoint id = IntPoint_new(0,0,0)
         cdef cPoint pnt
         cdef LongArray cell_indices, la
         cdef Cell cell
@@ -1171,13 +1154,13 @@ cdef class CellManager:
             pnt.z = z.data[indices.data[i]]
 
             # find the cell to which this particle belongs to 
-            id = find_cell_id(self.origin.data, pnt, cell_size)
+            id.data = find_cell_id(pnt, cell_size)
             if PyDict_Contains(particles_for_cells, id) == 1:
                 cell_indices = <LongArray>PyDict_GetItem(particles_for_cells,
                                                          id)
             else:
                 cell_indices = LongArray()
-                particles_for_cells[id] = cell_indices
+                particles_for_cells[id.copy()] = cell_indices
 
             cell_indices.append(indices.data[i])
 
@@ -1223,10 +1206,10 @@ cdef class CellManager:
             ret += pa.get_number_of_particles()
         return ret
     
-    def check_jump_tolerance(self, IntPoint myid, IntPoint newid):
+    cdef check_jump_tolerance(self, cIntPoint myid, cIntPoint newid):
         """ Check if the particle has moved more than the jump tolerance """
 
-        cdef IntPoint pdiff = myid.diff(newid)
+        cdef cIntPoint pdiff = cIntPoint_sub(myid, newid)
 
         if (abs(pdiff.x) > self.jump_tolerance or abs(pdiff.y) >
             self.jump_tolerance or abs(pdiff.z) >
