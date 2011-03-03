@@ -35,23 +35,22 @@ class TestModuleFunctions(unittest.TestCase):
 
     def test_find_cell_id(self):
         """Tests the find_cell_id function."""
-        origin = Point(0, 0, 0)
         pnt = Point(0, 0, 1)
         out = IntPoint(0, 0, 0)
 
-        out = py_find_cell_id(origin, pnt, 1.0)
+        out = py_find_cell_id(pnt, 1.0)
         self.assertEqual(out.x, 0)
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
         pnt.x = -2
-        out = py_find_cell_id(origin, pnt, 1.0)
+        out = py_find_cell_id(pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
         pnt.y = -1
-        out = py_find_cell_id(origin, pnt, 1.0)
+        out = py_find_cell_id(pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, -2)
         self.assertEqual(out.z, 1)
@@ -70,7 +69,6 @@ class TestCell(unittest.TestCase):
 
         self.assertEqual(cell.cell_size == 0.1, True)
         self.assertEqual(cell.cell_manager == None, True)
-        self.assertEqual(cell.origin == Point(0., 0, 0), True)
         self.assertEqual(cell.jump_tolerance, 1)
         self.assertEqual(cell.arrays_to_bin == [], True)
 
@@ -81,7 +79,6 @@ class TestCell(unittest.TestCase):
         cell = Cell(IntPoint(0, 0, 0), cell_manager=cell_manager, cell_size=0.1)
 
         self.assertEqual(cell.arrays_to_bin == [], True)
-        self.assertEqual(cell.origin, cell_manager.origin, True)
         self.assertEqual(cell.coord_x, cell_manager.coord_x, True)
         self.assertEqual(cell.coord_y, cell_manager.coord_y, True)
         self.assertEqual(cell.coord_z, cell_manager.coord_z, True)
@@ -318,7 +315,6 @@ class TestCellManager(unittest.TestCase):
         cm = CellManager(initialize=False)
         
         # Some checks that should hold prior to cell_manager initialization.
-        self.assertEqual(cm.origin, Point(0, 0, 0))
         self.assertEqual(len(cm.array_indices), 0)
         self.assertEqual(len(cm.arrays_to_bin), 0)
         self.assertEqual(cm.min_cell_size, -1.0)

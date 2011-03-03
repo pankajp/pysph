@@ -33,7 +33,6 @@ class PrintNeighborInformation:
 
         cell_manager = particles.cell_manager
         cell_size = cell_manager.cell_size
-        origin = cell_manager.origin
 
         for i in range(num_locs):
             loc = locators[i]
@@ -54,7 +53,7 @@ class PrintNeighborInformation:
                 particle_idx = particle_indices[j]
                 
                 pnt = base.Point(x[j], y[j], z[j])
-                cid = py_find_cell_id(origin, pnt, cell_size)
+                cid = py_find_cell_id(pnt, cell_size)
 
                 idx = temp.get_carray("idx")
 

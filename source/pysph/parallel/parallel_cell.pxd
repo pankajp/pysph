@@ -19,7 +19,6 @@ cdef class ParallelCellManager(CellManager)
 # `ProcessorMap` class.
 ###############################################################################
 cdef class ProcessorMap:
-    cdef public Point origin
     cdef public dict local_block_map
     cdef public dict block_map
     cdef public dict load_per_proc

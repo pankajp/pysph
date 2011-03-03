@@ -7,11 +7,11 @@ from pysph.base.particle_array cimport ParticleArray
 cdef class CellManager
 
 cdef inline int real_to_int(double val, double step)
-cdef inline IntPoint find_cell_id(cPoint origin, cPoint pnt, double cell_size)
-cdef inline void construct_immediate_neighbor_list(IntPoint pnt, list
+cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size)
+cdef inline void construct_immediate_neighbor_list(cIntPoint pnt, list
                neighbor_list, bint include_self=*, int distance=*)
 
-cdef inline bint cell_encloses_sphere(IntPoint id, cPoint world_origin,
+cdef inline bint cell_encloses_sphere(IntPoint id,
                           double cell_size, cPoint pnt, double radius)
 
 cdef class Cell:
@@ -24,7 +24,6 @@ cdef class Cell:
     cdef readonly str coord_x
     cdef readonly str coord_y
     cdef readonly str coord_z
-    cdef public Point origin
 
     cdef public int jump_tolerance
     cdef public list index_lists
@@ -54,7 +53,6 @@ cdef class CellManager:
     """
     Class to manager all cells.
     """
-    cdef public Point origin
     cdef public double cell_size
     cdef public bint is_dirty    
     cdef public dict array_indices
@@ -83,6 +81,7 @@ cdef class CellManager:
     cpdef _rebuild_array_indices(self)
     cpdef _setup_cells_dict(self)
     cpdef set_jump_tolerance(self, int jump_tolerance)
+    cdef check_jump_tolerance(self, cIntPoint myid, cIntPoint newid)
     cpdef list delete_empty_cells(self)
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef Cell get_new_cell(self, IntPoint id)
