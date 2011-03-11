@@ -2,8 +2,9 @@
 Declaration file for cython parallel cell module.
 """
 
+from libcpp.vector cimport vector
 
-from pysph.base.point cimport Point, IntPoint
+from pysph.base.point cimport Point, IntPoint, cIntPoint
 from pysph.base.cell cimport CellManager, Cell
 cimport mpi4py.MPI as MPI
 

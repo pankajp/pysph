@@ -86,22 +86,35 @@ cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size):
 def py_construct_immediate_neighbor_list(IntPoint cell_id, neighbor_list,
                                          include_self=True, distance=1):
     """ Construct a list of cell ids neighboring the given cell."""
-    construct_immediate_neighbor_list(cell_id.data, neighbor_list, include_self,
-                                      distance)
+    cdef vector[cIntPoint] v = construct_immediate_neighbor_list(cell_id.data,
+                                    include_self, distance)
+    cdef int i
+    for i in range(v.size()):
+        neighbor_list.append(IntPoint_from_cIntPoint(v[i]))
 
-cdef inline void construct_immediate_neighbor_list(cIntPoint cell_id, list
-               neighbor_list, bint include_self=True, int distance=1): 
+cdef inline vector[cIntPoint] construct_immediate_neighbor_list(cIntPoint cell_id,
+            bint include_self=True, int distance=1):
     """Return the 27 nearest neighbors for a given cell when distance = 1"""
-    cdef list cell_list = []
+    #cdef list cell_list = []
+    cdef vector[cIntPoint] ret
+    cdef int n = ((distance*2+1)*(distance*2+1)*(distance*2+1)-1)
+    ret.reserve(n)
+    cdef cIntPoint p
     cdef int i,j,k
     for i in range(-distance, distance+1):
+        p.x = cell_id.x + i
         for j in range(-distance, distance+1):
+            p.y = cell_id.y + j
             for k in range(-distance, distance+1):
-                cell_list.append(IntPoint_new(cell_id.x+i, cell_id.y+j,
-                                          cell_id.z+k))
+                p.z = cell_id.z + k
+                #cell_list.append(IntPoint_new(cell_id.x+i, cell_id.y+j,
+                #                          cell_id.z+k))
+                ret.push_back(p)
     if not include_self:
-        del cell_list[((distance*2+1)*(distance*2+1)*(distance*2+1)-1)/2]
-    neighbor_list.extend(cell_list)
+        ret[n//2] = ret[n-1]
+        ret.pop_back()
+    #neighbor_list.extend(cell_list)
+    return ret
 
 def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
     """ Construct a list of cell ids, which share a face(3d) or 
@@ -679,14 +692,14 @@ cdef class CellManager:
     
     def is_boundary_cell(self, IntPoint cid):
         """ Returns true if this cell is a boundary cell, false otherwise. """
-        cdef int dim = self.dimension
-        cdef list nbr_list = []
-        construct_immediate_neighbor_list(cid.data, nbr_list)
-        
-        for id in nbr_list:
-            if not self.cells_dict.has_key(id):
-                nbr_list.pop(id)
-        if len(nbr_list) < 3**dim - 1:
+        cdef IntPoint p=IntPoint_new(0,0,0)
+        cdef vector[cIntPoint] v = construct_immediate_neighbor_list(cid.data)
+        cdef int j=0, i
+        for i in range(v.size()):
+            p.data = v[i]
+            if self.cells_dict.has_key(p):
+                j += 1
+        if j < 3**self.dimension:
             return True
         else:
             return False
@@ -991,8 +1004,7 @@ cdef class CellManager:
             parr  = self.arrays_to_bin[i]
             self.array_indices[parr.name] = i
 
-    cdef int get_potential_cells(self, cPoint pnt, double radius,
-                                 list cell_list) except -1:
+    cdef int get_potential_cells(self, cPoint pnt, double radius, list cell_list):
         """
         Gets cell that will potentially contain neighbors for the given point.
     
@@ -1010,22 +1022,19 @@ cdef class CellManager:
         return cells corresponding to these cell ids
         
     	"""
-        cdef cIntPoint cell_id
-        cdef IntPoint id
-        cdef list neighbor_list = list()
+        cdef IntPoint cell_id = IntPoint_new(0,0,0)
         cdef int i
-
-        cell_id = find_cell_id(pnt, self.cell_size)
+        cdef Cell cell
 
         # construct ids of all neighbors around cell_id, this
         # will include the cell also.
-        construct_immediate_neighbor_list(cell_id, neighbor_list,
-                                          True, 
-                                          <int>ceil(radius/self.cell_size))
+        cdef vector[cIntPoint] v = construct_immediate_neighbor_list(
+                                        find_cell_id(pnt, self.cell_size),
+                                        True, <int>ceil(radius/self.cell_size))
 
-        for i in range(len(neighbor_list)):
-            id = neighbor_list[i]
-            cell = self.cells_dict.get(id)
+        for i in range(v.size()):
+            cell_id.data = v[i]
+            cell = self.cells_dict.get(cell_id)
             if cell is not None:
                 cell_list.append(cell)
         
@@ -1037,7 +1046,7 @@ cdef class CellManager:
         Finds all cells within the given radius of pnt.
 
     	**Parameters**
-         
+        
          - pnt - point around which cells are to be searched for.
          - radius - search radius
          - cell_list - output parameter to add the found cells to.

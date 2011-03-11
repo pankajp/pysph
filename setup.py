@@ -28,7 +28,7 @@ mpi_inc_dirs = []
 mpi_compile_args = []
 mpi_link_args = []
 
-USE_CPP = False
+USE_CPP = True
 HAS_MPI4PY = True
 try:
     import mpi4py

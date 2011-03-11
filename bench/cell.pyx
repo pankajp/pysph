@@ -1,12 +1,14 @@
 """module to test the timings of cell operations"""
 
+from libcpp.vector cimport vector
+
 cimport numpy
 import numpy
 
 cimport pysph.base.cell as cell
 import pysph.base.cell as cell
 
-from pysph.base.point cimport Point_new, Point_add, Point_sub, IntPoint
+from pysph.base.point cimport Point_new, Point_add, Point_sub, IntPoint, cIntPoint
 
 from time import time
 
@@ -18,7 +20,7 @@ cpdef dict construct_immediate_neighbor_list(Ns=Ns):
     cdef double t, t1, t2
     
     cdef IntPoint cell_id = IntPoint(9,10,11)
-    cdef list neighbor_list = []
+    cdef vector[cIntPoint] neighbor_list
     cdef bint include_self = True
     ret = {}
     
@@ -27,11 +29,10 @@ cpdef dict construct_immediate_neighbor_list(Ns=Ns):
         for N in Ns:
             t = time()
             for i in range(N):
-                neighbor_list = []
-                cell.construct_immediate_neighbor_list(cell_id,
-                                neighbor_list, include_self)
+                neighbor_list = cell.construct_immediate_neighbor_list(
+						cell_id.data, include_self)
             t = time()-t
-            assert len(neighbor_list) == (26 + include_self)
+            assert neighbor_list.size() == (26 + include_self)
             ret['cell immediate_nbr_list %d%s' %(N,s)] = t/N
     
     return ret

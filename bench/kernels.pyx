@@ -28,7 +28,7 @@ cpdef dict kernel():
     """kernel function evaluation bench"""
     cdef double t, t2
     cdef dict ret = {}
-    cdef double fx, fy, fz
+    cdef double fx, fy, fz, val
     cdef KernelBase kernel
     cdef int tmp
     cdef long i
@@ -62,7 +62,7 @@ cpdef dict gradient():
     cdef int tmp
     cdef long i
     cdef int dim
-    cdef Point p, p2
+    cdef Point p=Point(), p2
     for dim from 1<=dim<=3:
         fx = fy = fz = 0
         for tmp from 1 <= tmp <= dim:
