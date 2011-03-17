@@ -1,5 +1,6 @@
 syntax: glob
 *.c
+*.cpp
 *.pyc
 *.so
 *.o

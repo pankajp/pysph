@@ -106,13 +106,13 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self._dst.z = self.d_z.data[dest_pid]
 
         vba = cPoint(self.s_u.data[source_pid] - self.d_u.data[dest_pid],
-                    self.s_v.data[source_pid] - self.d_v.data[dest_pid],
-                    self.s_w.data[source_pid] - self.d_w.data[dest_pid])
+                     self.s_v.data[source_pid] - self.d_v.data[dest_pid],
+                     self.s_w.data[source_pid] - self.d_w.data[dest_pid])
 
         if self.hks:
             grada = kernel.gradient(self._dst, self._src, ha)
             gradb = kernel.gradient(self._dst, self._src, hb)
-
+            
             grad.set((grada.x + gradb.x)*0.5,
                      (grada.y + gradb.y)*0.5,
                      (grada.z + gradb.z)*0.5)
@@ -124,6 +124,6 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
 
         nr[0] += (1.0/rhoa) * mb * cPoint_dot(grad, vba)

@@ -1,4 +1,3 @@
-#cython cdivision=True
 # standard imports
 import logging
 logger = logging.getLogger()
@@ -53,13 +52,7 @@ cdef inline int real_to_int(double real_val, double step):
     real_val = -0.5, step = 1.0 --> real_val = -1
     
     """
-    cdef int ret_val
-
-    #if real_val < 0.0:
-    #    ret_val =  <int>(real_val/step) - 1
-    #else:
-    #    ret_val =  <int>(real_val/step)
-    ret_val = <int>floor( real_val/step )
+    cdef int ret_val = <int>floor( real_val/step )
 
     return ret_val
 
@@ -82,31 +75,42 @@ cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size):
     
     """
     cdef cIntPoint p = cIntPoint(real_to_int(pnt.x, cell_size),
-                                 real_to_int(pnt.y, cell_size),
-                                 real_to_int(pnt.z, cell_size))
+                        real_to_int(pnt.y, cell_size),
+                        real_to_int(pnt.z, cell_size))
     return p
 
 def py_construct_immediate_neighbor_list(IntPoint cell_id, neighbor_list,
                                          include_self=True, distance=1):
     """ Construct a list of cell ids neighboring the given cell."""
-    construct_immediate_neighbor_list(cell_id.data, neighbor_list, include_self,
-                                      distance)
+    cdef vector[cIntPoint] v = construct_immediate_neighbor_list(cell_id.data,
+                                    include_self, distance)
+    cdef int i
+    for i in range(v.size()):
+        neighbor_list.append(IntPoint_from_cIntPoint(v[i]))
 
-cdef inline void construct_immediate_neighbor_list(cIntPoint cell_id, list
-               neighbor_list, bint include_self=True, int distance=1): 
+cdef inline vector[cIntPoint] construct_immediate_neighbor_list(cIntPoint cell_id,
+            bint include_self=True, int distance=1):
     """Return the 27 nearest neighbors for a given cell when distance = 1"""
-    cdef list cell_list = []
+    #cdef list cell_list = []
+    cdef vector[cIntPoint] ret
+    cdef int n = ((distance*2+1)*(distance*2+1)*(distance*2+1)-1)
+    ret.reserve(n)
+    cdef cIntPoint p
     cdef int i,j,k
     for i in range(-distance, distance+1):
+        p.x = cell_id.x + i
         for j in range(-distance, distance+1):
+            p.y = cell_id.y + j
             for k in range(-distance, distance+1):
-                PyList_Append( cell_list, IntPoint_new(cell_id.x+i,
-                                                       cell_id.y+j,
-                                                       cell_id.z+k))
-
+                p.z = cell_id.z + k
+                #cell_list.append(IntPoint_new(cell_id.x+i, cell_id.y+j,
+                #                          cell_id.z+k))
+                ret.push_back(p)
     if not include_self:
-        del cell_list[((distance*2+1)*(distance*2+1)*(distance*2+1)-1)/2]
-    neighbor_list.extend(cell_list)
+        ret[n//2] = ret[n-1]
+        ret.pop_back()
+    #neighbor_list.extend(cell_list)
+    return ret
 
 def py_construct_face_neighbor_list(cell_id, neighbor_list, include_self=True):
     """ Construct a list of cell ids, which share a face(3d) or 
@@ -192,7 +196,7 @@ cdef inline bint cell_encloses_sphere(IntPoint id,
 # `Cell` class.
 ###############################################################################
 cdef class Cell:
-    
+
     # Defined in the .pxd file
 
     # cdef public CellManager cell_manager
@@ -239,8 +243,7 @@ cdef class Cell:
 
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
                  cell_size=0.1, int jump_tolerance=1):
-        """ Constructor.
-        """
+
         self.id = IntPoint_new(id.x, id.y, id.z)
 
         self.cell_size = cell_size
@@ -264,13 +267,6 @@ cdef class Cell:
                     self.get_number_of_particles())
 
     cpdef set_cell_manager(self, CellManager cell_manager):
-        """ Set the cell manager and related data.
-
-        The "related data" refers to the particle arrays being binned
-        and the corresponding index lists
-
-        """
-        
         self.cell_manager = cell_manager
 
         if self.index_lists is None:
@@ -281,13 +277,12 @@ cdef class Cell:
             self.index_lists[:] =[]
         else:
             self.arrays_to_bin[:] = self.cell_manager.arrays_to_bin
+            self.num_arrays = len(self.arrays_to_bin)
             self.coord_x = self.cell_manager.coord_x
             self.coord_y = self.cell_manager.coord_y
             self.coord_z = self.cell_manager.coord_z
             self._init_index_lists()
-
-        self.num_arrays = len(self.arrays_to_bin)
-                         
+            
     cpdef get_centroid(self, Point centroid):
         """ Get the centroid of the cell.
 
@@ -357,8 +352,8 @@ cdef class Cell:
         
         for i in range(self.num_arrays):
             
-            #parray = self.arrays_to_bin[i]
-            parray = <ParticleArray>PyList_GetItem( self.arrays_to_bin, i )
+            parray = self.arrays_to_bin[i]
+            #parray = <ParticleArray>PyList_GetItem( self.arrays_to_bin, i )
             
             # do nothing if the particle array has not changed
 
@@ -371,10 +366,6 @@ cdef class Cell:
             ya = parray.get_carray(self.coord_y)
             za = parray.get_carray(self.coord_z)
             
-            #x = xa.get_data_ptr()
-            #y = ya.get_data_ptr()
-            #z = za.get_data_ptr()
-
             index_array = self.index_lists[i]
 
             to_remove.reset()
@@ -416,11 +407,6 @@ cdef class Cell:
                         cell = self.get_new_sibling( id )
                         data[id.copy()] = cell
 
-                    #cell = data.get(id)
-                    #if cell is None:
-                    #    cell = self.get_new_sibling(id)
-                    #    data[id.copy()] = cell
-                        
                     cell_index_array = cell.index_lists[i]
                     cell_index_array.append( particle_id )
 
@@ -439,11 +425,11 @@ cdef class Cell:
         arrays exist. 
         
         """
-        cdef int i, num_arrays
-        cdef long num_particles = 0
         cdef LongArray arr
+        cdef int i
 
-        num_arrays = len(self.index_lists)
+        cdef int num_arrays = self.num_arrays
+        cdef long num_particles = 0
         
         for i in range(num_arrays):
             arr = self.index_lists[i]
@@ -473,10 +459,10 @@ cdef class Cell:
         particles in the particle array.
 
         """
-        cdef LongArray source_array, dest_array
+        cdef LongArray dest_array, source_array
         cdef ParticleArray parr
         cdef int i, j, id, np
-        
+
         cdef int num_arrays = self.num_arrays
         
         for i in range(num_arrays):
@@ -488,13 +474,13 @@ cdef class Cell:
 
             for j from 0 <= j < source_array.length:
                 id = source_array.get(j)
-                self.check_particle_id( id, np )
+                self.check_particle_id(id, np)
                 dest_array.append(id)
 
         return 0
 
     cpdef int clear(self) except -1:
-        """ Clear the index_lists """
+        """Clear the index_lists"""
         self.index_lists[:] = []   
         return 0
 
@@ -514,7 +500,8 @@ cdef class Cell:
         index_array.extend(indices.get_npy_array())
         
     cpdef get_particle_ids(self, list particle_id_list):
-        """ Get the particle indices corresponding to arrays_to_bin  
+        """
+        Get the particle indices corresponding to arrays_to_bin  
 
         Parameters:
         -----------
@@ -523,17 +510,15 @@ cdef class Cell:
         """
 
         cdef LongArray source, dest
+        cdef int i = 0
 
         cdef int num_arrays = self.num_arrays
-        cdef int i = 0
 
         if len(particle_id_list) == 0:
             for i in range(num_arrays):
-                #particle_id_list.append(LongArray())
                 PyList_Append( particle_id_list, LongArray() )
         
         for i in range(num_arrays):
-
             dest = particle_id_list[i]
             source = self.index_lists[i]
 
@@ -555,13 +540,12 @@ cdef class Cell:
             
         """
         cdef LongArray source, dest
-
-        cdef int num_arrays = len(self.arrays_to_bin)
         cdef int i = 0
+
+        cdef int num_arrays = self.num_arrays
 
         if len(particle_id_list) == 0:
             for i in range(num_arrays):
-                #particle_id_list.append(LongArray(0))
                 PyList_Append( particle_id_list, LongArray() )
                 
         if particle_counts.length == 0:
@@ -577,12 +561,12 @@ cdef class Cell:
             particle_counts.data[i] += source.length
      
     cpdef clear_indices(self, int parray_id):
-        """ Clear the particles ids of parray_id stored in the cells. """
+        """Clear the particles ids of parray_id stored in the cells."""
         cdef LongArray index_array = self.index_lists[parray_id]
         index_array.reset()
 
     cdef _init_index_lists(self):
-        """ Initialize the index_lists.
+        """initialize the index_lists.
 
         An empty LongArray is created for each ParticleArray in 
         `arrays_to_bin`
@@ -594,15 +578,14 @@ cdef class Cell:
         if self.cell_manager is None:
             return
 
-        num_arrays = len(self.arrays_to_bin)
+        num_arrays = self.num_arrays
         self.index_lists[:] = []
         
         for i in range(num_arrays):
             self.index_lists.append(LongArray())
 
-    def check_particle_id( self, int id, int num_particles ):
+    def check_particle_id(self, int id, int num_particles):
         """ Sanity check on the particle index """
-
         if id >= num_particles or id < 0:
             msg = 'trying to add invalid particle\n'
             msg += 'num_particles : %d\n'%(num_particles)
@@ -716,14 +699,14 @@ cdef class CellManager:
     
     def is_boundary_cell(self, IntPoint cid):
         """ Returns true if this cell is a boundary cell, false otherwise. """
-        cdef int dim = self.dimension
-        cdef list nbr_list = []
-        construct_immediate_neighbor_list(cid.data, nbr_list)
-        
-        for id in nbr_list:
-            if not self.cells_dict.has_key(id):
-                nbr_list.pop(id)
-        if len(nbr_list) < 3**dim - 1:
+        cdef IntPoint p=IntPoint_new(0,0,0)
+        cdef vector[cIntPoint] v = construct_immediate_neighbor_list(cid.data)
+        cdef int j=0, i
+        for i in range(v.size()):
+            p.data = v[i]
+            if self.cells_dict.has_key(p):
+                j += 1
+        if j < 3**self.dimension:
             return True
         else:
             return False
@@ -1028,8 +1011,7 @@ cdef class CellManager:
             parr  = self.arrays_to_bin[i]
             self.array_indices[parr.name] = i
 
-    cdef int get_potential_cells(self, cPoint pnt, double radius,
-                                 list cell_list) except -1:
+    cdef int get_potential_cells(self, cPoint pnt, double radius, list cell_list):
         """
         Gets cell that will potentially contain neighbors for the given point.
     
@@ -1047,22 +1029,19 @@ cdef class CellManager:
         return cells corresponding to these cell ids
         
     	"""
-        cdef cIntPoint cell_id
-        cdef IntPoint id
-        cdef list neighbor_list = list()
+        cdef IntPoint cell_id = IntPoint_new(0,0,0)
         cdef int i
-
-        cell_id = find_cell_id(pnt, self.cell_size)
+        cdef Cell cell
 
         # construct ids of all neighbors around cell_id, this
         # will include the cell also.
-        construct_immediate_neighbor_list(cell_id, neighbor_list,
-                                          True, 
-                                          <int>ceil(radius/self.cell_size))
+        cdef vector[cIntPoint] v = construct_immediate_neighbor_list(
+                                        find_cell_id(pnt, self.cell_size),
+                                        True, <int>ceil(radius/self.cell_size))
 
-        for i in range(len(neighbor_list)):
-            id = neighbor_list[i]
-            cell = self.cells_dict.get(id)
+        for i in range(v.size()):
+            cell_id.data = v[i]
+            cell = self.cells_dict.get(cell_id)
             if cell is not None:
                 cell_list.append(cell)
         
@@ -1074,7 +1053,7 @@ cdef class CellManager:
         Finds all cells within the given radius of pnt.
 
     	**Parameters**
-         
+        
          - pnt - point around which cells are to be searched for.
          - radius - search radius
          - cell_list - output parameter to add the found cells to.
@@ -1253,6 +1232,7 @@ cdef class CellManager:
             self.jump_tolerance):
             
             msg = 'Particle moved by more than one cell width\n'
+            #msg += 'Point (%f, %f, %f)\n'%(pnt.x, pnt.y, pnt.z)
             msg += 'self id : (%d, %d, %d)\n'%(myid.x, myid.y,
                                                myid.z)
             msg += 'new id  : (%d, %d, %d)\n'%(newid.x, newid.y, newid.z)

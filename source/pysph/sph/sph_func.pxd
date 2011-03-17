@@ -68,7 +68,7 @@ cdef class SPHFunctionParticle:
     cdef double rkpm_first_order_gradient_correction(self, int dest_pid)
 
     cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
-                                                   cPoint grad)
+                                                   cPoint* grad)
 
 ################################################################################
 # `SPHFunctionPoint` class.

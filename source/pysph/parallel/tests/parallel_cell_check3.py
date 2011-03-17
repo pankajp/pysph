@@ -55,10 +55,6 @@ cm = cm = parallel.ParallelCellManager(arrays_to_bin=[pa,],
 
 cm.update_global_properties()
 
-# setup the origin
-
-cm.setup_origin()
-
 # compute block size
 
 cm.compute_block_size(0.5)
@@ -108,10 +104,7 @@ index_array.sort()
 for i in range(25):
     assert index_array[i] == i       
 
-# test origin and the block size for the processor map
-
-origin = proc_map.origin
-assert (origin.x, origin.y, origin.z) == (0,0,0)
+# test the block size for the processor map
 
 assert proc_map.block_size == 0.5
 

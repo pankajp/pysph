@@ -191,7 +191,7 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
             
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
@@ -283,7 +283,7 @@ cdef class SPHGradient(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
             
         temp = (self.s_prop[source_pid] -  self.d_prop[dest_pid])
         
@@ -396,7 +396,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
         
         dot = cPoint_dot(rab, grad)
         tmp = 2*mb*(fa-fb)/(rhob*cPoint_length(rab))

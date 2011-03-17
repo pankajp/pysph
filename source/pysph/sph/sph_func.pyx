@@ -170,7 +170,7 @@ cdef class SPHFunctionParticle:
         return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
 
     cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
-                                                   cPoint grad):
+                                                   cPoint* grad):
         """ Correct the gradient of the kernel """
 
         cdef double x, y, z

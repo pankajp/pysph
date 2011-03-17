@@ -1,3 +1,5 @@
+from libcpp.vector cimport vector
+
 from pysph.base.point cimport *
 from pysph.base.carray cimport *
 
@@ -8,18 +10,16 @@ cdef class CellManager
 
 cdef inline int real_to_int(double val, double step)
 cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size)
-cdef inline void construct_immediate_neighbor_list(cIntPoint pnt, list
-               neighbor_list, bint include_self=*, int distance=*)
-
+cdef inline vector[cIntPoint] construct_immediate_neighbor_list(cIntPoint cell_id,
+            bint include_self=*, int distance=*)
 cdef inline bint cell_encloses_sphere(IntPoint id,
                           double cell_size, cPoint pnt, double radius)
 
 cdef class Cell:
-    
-    # Data attributes
-    cdef public CellManager cell_manager
+    # Member variables.
     cdef public IntPoint id
     cdef public double cell_size
+    cdef public CellManager cell_manager
     cdef public list arrays_to_bin
     
     cdef readonly str coord_x
@@ -28,8 +28,7 @@ cdef class Cell:
 
     cdef public int jump_tolerance
     cdef public list index_lists
-
-    cdef public int num_arrays
+    cdef int num_arrays
     
     # Member functions.
     cpdef int add_particles(self, Cell cell) except -1

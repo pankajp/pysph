@@ -13,7 +13,7 @@ import numpy
 
 def get_spcl_extn(extn):
     """ special-case extensions with specific requirements """
-    cpp_extensions = 'cpp_vs_pyx', 'cpp_extensions', 'nnps_brute_force'
+    cpp_extensions = 'sph_funcs', 'nnps', 'cell', 'cpp_vs_pyx', 'cpp_extensions', 'nnps_brute_force'
 
     if extn.name in cpp_extensions:
         extn.language = 'c++'

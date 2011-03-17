@@ -456,21 +456,20 @@ cdef class ProcessorMap:
         cdef set nb = set([pid])
         cdef dict local_block_map = self.local_block_map
         cdef dict block_map = self.block_map
-        cdef list nids = []
+        cdef vector[cIntPoint] nids
         cdef list empty_list = []
-        cdef int i, j, num_local_bins, len_nids
-        cdef IntPoint nid, bid
+        cdef int i, j, num_local_bins
+        cdef IntPoint bid, nid=IntPoint_new(0,0,0)
         cdef int n_pid
 
         # for each block in local_pm
         for bid in local_block_map:
-            nids[:] = empty_list
+            nids.clear()
             
             # construct list of neighbor block ids in the proc_map.
-            construct_immediate_neighbor_list(bid.data, nids, False)
-            len_nids = len(nids)
-            for i in range(len_nids):
-                nid = nids[i]
+            nids = construct_immediate_neighbor_list(bid.data, False)
+            for i in range(nids.size()):
+                nid.data = nids[i]
 
                 # if block exists, collect the occupying processor id
                 n_pid = block_map.get(nid, -1)
@@ -1373,7 +1372,7 @@ cdef class ParallelCellManager(CellManager):
         cdef MPI.Comm comm = self.parallel_controller.comm
         cdef ProcessorMap proc_map = self.proc_map
         cdef list nbr_procs = proc_map.nbr_procs
-        cdef IntPoint bid
+        cdef IntPoint bid, nid=IntPoint_new(0,0,0)
         cdef int pid, i, si, ei, dest, num_arrays
 
         cdef dict proc_data, blocks_to_send
@@ -1382,7 +1381,7 @@ cdef class ParallelCellManager(CellManager):
 
         cdef list parray_list, pid_index_info, indices
         cdef str prop
-
+        cdef vector[cIntPoint] block_neighbors
         cdef ParticleArray d_parr, s_parr
         
         num_arrays = len(self.arrays_to_bin)
@@ -1409,10 +1408,9 @@ cdef class ParallelCellManager(CellManager):
         # get the list of blocks to send to each processor id
 
         for bid in local_block_map:
-            block_neighbors = []
-            construct_immediate_neighbor_list(bid.data, block_neighbors, False)
-            for nid in block_neighbors:
-                
+            block_neighbors = construct_immediate_neighbor_list(bid.data, False)
+            for i in range(block_neighbors.size()):
+                nid.data = block_neighbors[i]
                 if global_block_map.has_key(nid):
                     pid = global_block_map.get(nid)
                     if not pid == self.pid:
@@ -1492,11 +1490,11 @@ cdef class ParallelCellManager(CellManager):
 
         cdef int num_arrays = len(self.arrays_to_bin)
         cdef int i, j, pid, dest, num_nbrs
-        cdef IntPoint bid, nid
+        cdef IntPoint bid, nid=IntPoint_new(0,0,0)
 
         cdef list parray_list = []
         cdef list index_lists = [] 
-        cdef list block_neighbors = []
+        cdef vector[cIntPoint] block_neighbors
         cdef list cell_list, pid_index_info
         cdef list nbr_procs = proc_map.nbr_procs
 
@@ -1515,10 +1513,9 @@ cdef class ParallelCellManager(CellManager):
         # get the list of blocks to send to each processor id
 
         for bid in local_block_map:
-            block_neighbors = []
-            construct_immediate_neighbor_list(bid.data, block_neighbors, False)
-            for nid in block_neighbors:
-                
+            block_neighbors = construct_immediate_neighbor_list(bid.data, False)
+            for i in range(block_neighbors.size()):
+                nid.data = block_neighbors[i]
                 pid = global_block_map.get(nid, -1)
                 if pid > -1 and not pid == self.pid:
                     if pid not in blocks_to_send:

@@ -157,7 +157,7 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
             pass
 
         if self.bonnet_and_lok_correction:
-            self.bonnet_and_lok_gradient_correction(dest_pid, grad)
+            self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
 
         temp = cPoint_dot(grad, Vab)
         

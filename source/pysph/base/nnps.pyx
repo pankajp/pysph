@@ -60,7 +60,7 @@ logger = logging.getLogger()
 from pysph.base.carray cimport LongArray, DoubleArray
 from pysph.base.point cimport Point
 from pysph.base.particle_array cimport ParticleArray
-from pysph.base.cell cimport CellManager, Cell
+from pysph.base.cell cimport CellManager, Cell, find_cell_id
 from pysph.base.polygon_array cimport PolygonArray
 
 cimport numpy
@@ -206,7 +206,6 @@ cdef class NbrParticleLocatorBase:
         # now extract the exact points from the cell_list
         self._get_nearest_particles_from_cell_list(pnt, radius, cell_list,
                                        output_array, exclude_index)
-        
         return 0
 
     cdef int _get_nearest_particles_from_cell_list(self, cPoint pnt,
@@ -611,13 +610,13 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         for each source particle
             get nearest particles from rev_loc -> rev_cache
             for each index in rev_cache
-                retreive from the cache the destination index_cache
+                retrieve from the cache the destination index_cache
                 add source to index_cache if not present
 
         
         Notes:
         ------
-        index_cache refers to the cache to beused
+        index_cache refers to the cache to be used
         rev_cache is used only internally like _rev_loc                    
         
         """
