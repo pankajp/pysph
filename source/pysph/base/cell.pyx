@@ -1040,8 +1040,8 @@ cdef class CellManager:
         cdef cIntPoint max_cell
         cdef cIntPoint min_cell
 
-        cdef IntPoint curr_id, diff
-        cdef cIntPoint id
+        cdef cIntPoint curr_id, diff
+        cdef IntPoint id = IntPoint_new(0,0,0)
         cdef cPoint tmp_pt
 
         cdef Cell cell
@@ -1062,7 +1062,7 @@ cdef class CellManager:
 
         max_cell = find_cell_id(tmp_pt, self.cell_size)
 
-        diff = max_cell.diff(min_cell)
+        diff = cIntPoint_sub(max_cell, min_cell)
         diff.x += 1
         diff.y += 1
         diff.z += 1
@@ -1070,13 +1070,13 @@ cdef class CellManager:
         for i in range(diff.x):
             for j from 0 <= j < diff.y:
                 for k from 0 <= k < diff.z:
-                    id.x = min_cell.x + i
-                    id.y = min_cell.y + j
-                    id.z = min_cell.z + k
+                    id.data.x = min_cell.x + i
+                    id.data.y = min_cell.y + j
+                    id.data.z = min_cell.z + k
 
-                    if PyDict_Contains( self.cells_dict, id ):
-                        cell = <Cell>PyDict_GetItem( self.cells_dict, id )
-                        PyList_Append( cell_list, cell )
+                    if PyDict_Contains(self.cells_dict, id):
+                        cell = <Cell>PyDict_GetItem(self.cells_dict, id)
+                        PyList_Append(cell_list, cell)
         return 0
   
     cpdef insert_particles(self, int parray_id, LongArray indices):
