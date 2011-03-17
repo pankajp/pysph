@@ -12,17 +12,9 @@ from pysph.base.kernels cimport KernelBase
 ##############################################################################
 cdef class NbrParticleLocatorBase:
     """Base class for all neighbor particle locators. """
-    cdef public ParticleArray source
     cdef public CellManager cell_manager
+    cdef public ParticleArray source
     cdef public int source_index
-
-    cdef public dict kernel_function_evaluation
-    cdef public dict kernel_gradient_evaluation
-
-    cdef public list function_cache
-    cdef public list xgradient_cache
-    cdef public list ygradient_cache
-    cdef public list zgradient_cache
 
     cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
                                             LongArray output_array, 
@@ -37,6 +29,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
     Particle locator, where all particle interactions have the destination
     point in a fixed particle array. This implementation assumes all particles
     to have the same interaction radius.
+    
     """
     cdef public ParticleArray dest
     cdef readonly double radius_scale
@@ -107,4 +100,3 @@ cdef class NNPSManager:
 
     cdef int update(self) except -1
     
-    cpdef cache_neighbors(self, KernelBase kernel)

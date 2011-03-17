@@ -185,8 +185,8 @@ cdef class SPHBase:
             loc = self.nnps_manager.get_neighbor_particle_locator(
                 src, self.dest, self.kernel.radius())
 
-            func.kernel_function_evaluation = loc.kernel_function_evaluation
-            func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
+            #func.kernel_function_evaluation = loc.kernel_function_evaluation
+            #func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
 
             logger.info("""SPHBase:setup_internals: calc %s using 
                         locator (src: %s) (dst: %s) %s """

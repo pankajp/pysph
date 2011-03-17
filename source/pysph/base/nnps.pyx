@@ -66,6 +66,8 @@ from pysph.base.polygon_array cimport PolygonArray
 cimport numpy
 import numpy as np
 
+from cpython.list cimport *
+
 cdef inline double square(double dx, double dy, double dz):
     return dx*dx + dy*dy + dz*dz
 
@@ -131,15 +133,21 @@ cpdef numpy.ndarray get_adjacency_matrix_pa(ParticleArray parray,
 # `NbrParticleLocatorBase` class.
 ###############################################################################
 cdef class NbrParticleLocatorBase:
+
+    # Defined in the .pxd file
+    # cdef public CellManager cell_manager
+    # cdef public ParticleArray source
+    # cdef public int source_index
+
     """
     Nearest neighbor locator for a source particle array. 
     The main use is to return nearest particles for a query point.
 
     Members:
     --------
-    
+
+    cell_manager -- CellManager to manage the binning
     source -- particle array in which neighbors will be searched for.
-    cell_manager -- cell manager for the source
     source_index -- index of the source particle array in the cell manager.
 
     """
@@ -157,20 +165,12 @@ cdef class NbrParticleLocatorBase:
         An error is raised if the source is not available in the cell manager 
 
         """
-        self.source = source
         self.cell_manager = cell_manager
+        self.source = source
         self.source_index = -1
 
-        self.kernel_function_evaluation = {}
-        self.kernel_gradient_evaluation = {}
-
-        self.function_cache = []
-        self.xgradient_cache = []
-        self.ygradient_cache = []
-        self.zgradient_cache = []
-
         if self.cell_manager is not None:
-            # find the index of source in cell_manager.
+
             self.source_index = cell_manager.array_indices.get(source.name)
             if self.source_index is None:
                 msg = 'Source %s does not exist'%(self.source.name)
@@ -179,8 +179,8 @@ cdef class NbrParticleLocatorBase:
     cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
                                             LongArray output_array, 
                                             long exclude_index=-1) except -1: 
-        """
-        Return source indices that are within a certain radius from a point.
+
+        """ Get the nearest particles to a given point
 
         Parameters:
         
@@ -197,20 +197,25 @@ cdef class NbrParticleLocatorBase:
         """
         cdef list cell_list = list()
 
-        # make sure cell manager is updated.
+        # make sure cell manager is updated. That is, perform the binning
+
         self.cell_manager.update()
         
         # get the potential cell_list from the cell manager
+
         self.cell_manager.get_potential_cells(pnt, radius, cell_list)
         
         # now extract the exact points from the cell_list
+
         self._get_nearest_particles_from_cell_list(pnt, radius, cell_list,
-                                       output_array, exclude_index)
+                                                   output_array, exclude_index)
         return 0
 
-    cdef int _get_nearest_particles_from_cell_list(self, cPoint pnt,
-                    double radius, list cell_list,
-                    LongArray output_array, long exclude_index=-1) except -1: 
+    cdef int _get_nearest_particles_from_cell_list(
+        self, cPoint pnt,
+        double radius, list cell_list, LongArray output_array,
+        long exclude_index=-1) except -1:
+        
         """ Extract nearest neighbors from a cell_list
         
         Parameters:
@@ -236,16 +241,20 @@ cdef class NbrParticleLocatorBase:
         `source_index` is setup at construction of this class.
 
         """
-        cdef Cell cell
-        cdef int i
         cdef DoubleArray xa, ya, za
-        cdef str xc, yc, zc
-        cdef double *x, *y, *z
         cdef LongArray src_indices
-        cdef cPoint pnt1
+        cdef Cell cell
+
+        cdef str xc, yc, zc
         cdef long idx
+        cdef int i, j
+
+        cdef cPoint src, dst
+
+        cdef double radius2 = radius*radius
+
+        cdef int ncells = PyList_Size( cell_list )
         
-        # get the coordinate arrays.
         xc = self.cell_manager.coord_x
         yc = self.cell_manager.coord_y
         zc = self.cell_manager.coord_z
@@ -254,38 +263,39 @@ cdef class NbrParticleLocatorBase:
         ya = self.source.get_carray(yc)
         za = self.source.get_carray(zc)
         
-        x = xa.data
-        y = ya.data
-        z = za.data
+        dst.x = pnt.x; dst.y = pnt.y; dst.z = pnt.z
         
         if exclude_index >= 0:
-            for cell in cell_list:
-                # find neighbors from the cell
+            for j in range( ncells ):
+                cell = cell_list[j]
                 src_indices = cell.index_lists[self.source_index]
                 
                 for i in range(src_indices.length):
                     idx = src_indices.data[i]
-                    pnt1.x = x[idx]
-                    pnt1.y = y[idx]
-                    pnt1.z = z[idx]
-    
-                    if cPoint_distance2(pnt1, pnt) <= radius*radius:
+
+                    src.x = xa.data[idx]
+                    src.y = ya.data[idx]
+                    src.z = za.data[idx]
+
+                    if cPoint_distance2(src, dst) < radius2:
                         if idx != exclude_index:
                             output_array.append(idx)
+    
         else:
-            # no exclude_index
-            for cell in cell_list:
-                # find neighbors from the cell
+            for j in range( ncells ):
+                cell = cell_list[j]
                 src_indices = cell.index_lists[self.source_index]
                 
                 for i in range(src_indices.length):
                     idx = src_indices.data[i]
-                    pnt1.x = x[idx]
-                    pnt1.y = y[idx]
-                    pnt1.z = z[idx]
-    
-                    if cPoint_distance2(pnt1, pnt) <= radius*radius:
+
+                    src.x = xa.data[idx]
+                    src.y = ya.data[idx]
+                    src.z = za.data[idx]
+
+                    if cPoint_distance2(src, dst) < radius2:
                         output_array.append(idx)
+                    
         return 0
     
     ######################################################################
@@ -313,6 +323,14 @@ cdef class NbrParticleLocatorBase:
 # `FixedDestNbrParticleLocator` class.
 ###############################################################################
 cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
+
+    # Defined in the .pxd file
+    # cdef public ParticleArray dest
+    # cdef readonly double radius_scale
+    # cdef public int dest_index
+    # cdef public DoubleArray d_h, d_x, d_y, d_z
+
+
     """
     Nearest neighbor locator between a destination and a source particle
     array. The query points will be the destination particle positions.
@@ -320,12 +338,11 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     Data Members:
     -------------    
-    dest - the query point particle array
+    dest - The ParticleArray which provides as the query points.
     radius_scale - kernel support radius factor `kfac`
     dest_index - destination index in the cell manager
-    h -- destination interaction radius
+
     d_h, d_x,d_y,d_z -- destination particles properties
-    caching_enabled -- flag to turn caching on 
     particle_cache -- a cache object. one LongArray for each particle in dest
     is_dirty -- flag to recompute the cache
 
@@ -351,17 +368,20 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
         NbrParticleLocatorBase.__init__(self, source, cell_manager)
         self.dest = dest
-        self.h = h
         self.radius_scale = radius_scale
+        self.h = h
+
         self.dest_index = -1
-        
-        self.particle_cache = []
+                
+        self.particle_cache = list()
         self.is_dirty = True
 
         self.d_h = None
         self.d_x = None
         self.d_y = None
         self.d_z = None
+
+        # find the dest index in the CellManager
         
         if self.cell_manager is not None:
             self.dest_index = cell_manager.array_indices.get(dest.name)
@@ -374,14 +394,6 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
             self.d_x = self.dest.get_carray(self.cell_manager.coord_x)
             self.d_y = self.dest.get_carray(self.cell_manager.coord_y)
             self.d_z = self.dest.get_carray(self.cell_manager.coord_z)
-
-        nrp = dest.num_real_particles
-
-        for i in range(nrp):
-            self.function_cache.append(DoubleArray())
-            self.xgradient_cache.append(DoubleArray())
-            self.ygradient_cache.append(DoubleArray())
-            self.zgradient_cache.append(DoubleArray())
 
     cdef LongArray get_nearest_particles(self, long dest_p_index, 
                                    bint exclude_self=False):
@@ -408,15 +420,18 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         exclude_self argument is deprecated (lot slower)
         The last index in returned array is guaranteed to be self particle if
         src and dest arrays are same. This can be used to exclude it.
+        
         """
         cdef LongArray index_array, output_array
         cdef int i
         cdef long *data
 
-        # update internal data.
+        # update internal data. Calculate the particle cache
+        
         self.update()
         
         # return data from cache.
+
         output_array = index_array = self.particle_cache[dest_p_index]
         
         if self.dest is self.source:
@@ -449,8 +464,9 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         This is a convenience internal method and works only for constant h
 
         """
-        cdef cPoint pnt
         cdef long exclude_index = -1
+        cdef cPoint pnt
+        
         pnt.x = self.d_x.data[dest_p_index]
         pnt.y = self.d_y.data[dest_p_index]
         pnt.z = self.d_z.data[dest_p_index]
@@ -462,10 +478,10 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
                 exclude_index = dest_p_index
 
         return NbrParticleLocatorBase.get_nearest_particles_to_point(
-        self, pnt, eff_radius, output_array, exclude_index)
+            self, pnt, eff_radius, output_array, exclude_index)
 
     cdef void update_status(self):
-        """Updates the dirty flag."""
+        """ Set to dirty if either source or destination is dirty."""
         if not self.is_dirty:
             self.is_dirty = self.source.is_dirty or self.dest.is_dirty
 
@@ -484,14 +500,14 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         cdef int ret = 0
 
         if self.is_dirty:
-            # make sure the cache list and number of particles are the same
-            # and resize if necessary.
-            num_particles = self.dest.get_number_of_particles()
 
+            # resize the cache if necessary
+            
+            num_particles = self.dest.get_number_of_particles()
             if len(self.particle_cache) != num_particles:
                 self.particle_cache = []
                 for i in range(num_particles):
-                    self.particle_cache.append(LongArray())
+                    PyList_Append( self.particle_cache, LongArray() )
 
             ret = self._update_cache()
             
@@ -501,6 +517,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     cdef int _update_cache(self) except -1:
         """Update `particle_cache` by appending to each LongArray """
+
         cdef long num_particles, i, j
         cdef LongArray index_cache
 
@@ -537,16 +554,17 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 
     def py_get_nearest_particles(self, long dest_p_index,
                                  bint exclude_self=False):
-        """
-        Gets particles in source, that are nearest to the particle dest_p_index
-        in dest.
 
-        **Parameters**
+        """ Return nearese neighbors for a particle
 
-         - dest_p_index - id of the particle in dest whose neighbors are to be
-           found. 
-         - exclude_self - indicates if dest_p_index be excluded from
-           output_array.
+        Parameters:
+        ------------
+
+        dest_p_index -- id of the particle in dest whose neighbors are to be
+        found. 
+
+        exclude_self -- indicates if dest_p_index be excluded from
+        output_array.
         
         """
         return self.get_nearest_particles(dest_p_index, exclude_self)
@@ -556,9 +574,15 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
 # `VarHNbrParticleLocator` class.
 ###############################################################################
 cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
-    """
-    Neighbor Particle Locator to handle queries where particles may
-    have different interaction radii.
+
+    # Defined in the .pxd file
+    # cdef FixedDestNbrParticleLocator _rev_locator
+
+    """ A particle locator in which the interaction radii for
+    particles may be varying and symmetric interactions are
+    required. That is, if particle a is a neighbor of particle b then
+    particle b must be a neighbor for particle a.
+    
     """
     def __init__(self, ParticleArray source, ParticleArray dest,
                  double radius_scale, CellManager cell_manager=None,
@@ -590,7 +614,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         self.update()
 
     cdef int update(self) except -1:
-        """Computes contents of the cache. 
+        """ Compute contents of the cache. 
         
         Notes:
         ------
@@ -620,6 +644,7 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         rev_cache is used only internally like _rev_loc                    
         
         """
+        
         cdef long num_d_particles, num_s_particles, i, j, k
         cdef LongArray index_cache
         cdef LongArray rev_cache = LongArray()
@@ -637,9 +662,8 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
         self._rev_locator._update_cache()
         
         for j in range(num_s_particles):
-            rev_cache.reset()
-            self._rev_locator.get_nearest_particles_nocache(j,
-                                            rev_cache, False)
+            rev_cache = self._rev_locator.particle_cache[j]
+
             for k in range(rev_cache.length):
                 index_cache = self.particle_cache[rev_cache.data[k]]
                 if index_cache.index(j) < 0:
@@ -650,6 +674,12 @@ cdef class VarHNbrParticleLocator(FixedDestNbrParticleLocator):
 # `NNPSManager` class.
 ###############################################################################
 cdef class NNPSManager:
+
+    # Defined in the .pxd file
+    # cdef public CellManager cell_manager
+    # cdef public dict particle_locator_cache
+    # cdef public bint variable_h
+
     """ Class to provide management of all nearest neighbor search related
     functionality.
 
@@ -665,12 +695,6 @@ cdef class NNPSManager:
 
     """
 
-    #Defined in the .pxd file
-    #cdef public CellManager cell_manager
-    #cdef public bint variable_h
-    #cdef public str h
-    #cdef public dict particle_locator_cache
-
     def __init__(self, CellManager cell_manager=None,
                  bint variable_h=False, str h='h'):
         self.cell_manager = cell_manager
@@ -685,7 +709,7 @@ cdef class NNPSManager:
     cpdef NbrParticleLocatorBase get_neighbor_particle_locator(
         self, ParticleArray source, ParticleArray dest=None, double
         radius_scale=1.0):
-        """Returns an appropriate neighbor particle locator. 
+        """ Return an appropriate neighbor particle locator. 
 
         Notes:
         ------
@@ -700,13 +724,6 @@ cdef class NNPSManager:
             self.add_interaction(source, dest, radius_scale)
             return self.get_cached_locator(source.name, dest.name, radius_scale)
     
-    cpdef NbrPolygonLocatorBase get_neighbor_polygon_locator(self,
-            PolygonArray source, ParticleArray dest=None,
-            double radius_scale=1.0):
-        """Returns an appropriate neighbor polygon locator. """
-        msg = 'NNPSManager::get_neighbor_polygon_locator'
-        raise NotImplementedError, msg
-
     cdef int update(self) except -1:
         """ Update the status of the neighbor locators. 
         
@@ -725,46 +742,24 @@ cdef class NNPSManager:
 
         """
 
-        # update the status of the caches.
         # Calls update_status on each CachedParticleLocators being maintained.
-        cdef int i, num_caches
-        cdef list cache_list = self.particle_locator_cache.values()
-        num_caches = len(cache_list)
+
         cdef FixedDestNbrParticleLocator loc
+        cdef int i, num_caches
+        
+        #cdef list cache_list = self.particle_locator_cache.values()
+
+        cdef list cache_list = PyDict_Values( self.particle_locator_cache )
+        num_caches = PyList_Size( cache_list )
 
         for i in range(num_caches):
             loc = cache_list[i]
             loc.update_status()
 
-        # update the status of the cell manager.
-        # this may or may not update the cell manager. That depends on how the
-        # cell managers update_status is implemented.
+        # update the cell manager
+        
         self.cell_manager.update_status()
 
-        for loc in cache_list:
-            dest = loc.dest
-            nrp = dest.num_real_particles
-
-            diff = nrp -  len(loc.function_cache)
-            if diff > 0:
-                for i in range(diff):
-                    loc.function_cache.append(DoubleArray())
-
-            diff = nrp - len(loc.xgradient_cache)
-            if diff > 0:
-                for i in range(diff):
-                    loc.xgradient_cache.append(DoubleArray())
-
-            diff = nrp - len(loc.ygradient_cache)
-            if diff > 0:
-                for i in range(diff):
-                    loc.ygradient_cache.append(DoubleArray())
-
-            diff = nrp - len(loc.zgradient_cache)
-            if diff > 0:
-                for i in range(diff):
-                    loc.zgradient_cache.append(DoubleArray())
-    
     cpdef add_interaction(self, ParticleArray source, ParticleArray dest,
                           double radius_scale):
         """ Add an interaction between a source and desti particle array
@@ -783,7 +778,6 @@ cdef class NNPSManager:
         
         loc = self.particle_locator_cache.get(t)
         if loc is None:
-            # create a new cache object and insert into dict.
             if not self.variable_h:
                 loc = FixedDestNbrParticleLocator(source, dest, radius_scale,
                                    cell_manager=self.cell_manager, h=self.h)
@@ -797,65 +791,13 @@ cdef class NNPSManager:
         """Returns a cached object if it exists, else returns None."""
         return self.particle_locator_cache.get((source_name,dest_name,radius))
 
-    cpdef cache_neighbors(self, KernelBase kernel):
-        cdef dict locator_cache = self.particle_locator_cache
-        cdef NbrParticleLocatorBase loc
-        cdef ParticleArray dest, source
-        cdef long nrp, i, j, nnbrs
-        cdef double h, w
-        cdef LongArray nbrs
-        cdef DoubleArray fci, xgci, ygci, zgci
+    cpdef NbrPolygonLocatorBase get_neighbor_polygon_locator(
+        self,PolygonArray source, ParticleArray dest=None,
+        double radius_scale=1.0):
 
-        cdef DoubleArray xd, yd, zd, xs, ys, zs, hs, hd
-
-        cdef cPoint _dst, _src, grad
-
-        for loc in locator_cache.values():
-            dest = loc.dest
-            source = loc.source
-            
-            nrp = dest.num_real_particles
-
-            xd = dest.get_carray('x')
-            yd = dest.get_carray('y')
-            zd = dest.get_carray('z')
-            hd = dest.get_carray('h')
-          
-            xs = source.get_carray('x')
-            ys = source.get_carray('y')
-            zs = source.get_carray('z')
-            hs = source.get_carray('h')
-
-            for i in range(nrp):
-                nbrs = loc.py_get_nearest_particles(i, exclude_self=False)
-                nnbrs = nbrs.length
-
-                _dst.set(xd.data[i], yd.data[i], zd.data[i])
-
-                fci = loc.function_cache[i]
-                xgci = loc.xgradient_cache[i]
-                ygci = loc.ygradient_cache[i]
-                zgci = loc.zgradient_cache[i]
-
-                fci.resize(nnbrs)
-                xgci.resize(nnbrs)
-                ygci.resize(nnbrs)
-                zgci.resize(nnbrs)
-
-                for j in range(nnbrs):
-                    s_id = nbrs.data[j]
-                    
-                    _src.set(xs.data[s_id],ys.data[s_id],zs.data[s_id])
-                    
-                    h = 0.5 * (hd[i] + hs[s_id])
-                    
-                    w = kernel.function(_dst, _src, h)
-                    grad = kernel.gradient(_dst, _src, h)
-                    
-                    fci.data[j] = w
-                    xgci.data[j] = grad.x
-                    ygci.data[j] = grad.y
-                    zgci.data[j] = grad.z
+        """Returns an appropriate neighbor polygon locator. """
+        msg = 'NNPSManager::get_neighbor_polygon_locator'
+        raise NotImplementedError, msg
 
     ######################################################################
     # python wrappers.
