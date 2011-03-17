@@ -10,8 +10,11 @@ cdef class CellManager
 
 cdef inline int real_to_int(double val, double step)
 cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size)
-cdef inline vector[cIntPoint] construct_immediate_neighbor_list(cIntPoint cell_id,
-            bint include_self=*, int distance=*)
+
+cdef inline vector[cIntPoint] construct_immediate_neighbor_list(
+    cIntPoint cell_id,
+    bint include_self=*, int distance=*)
+
 cdef inline bint cell_encloses_sphere(IntPoint id,
                           double cell_size, cPoint pnt, double radius)
 
@@ -42,7 +45,9 @@ cdef class Cell:
     cpdef int clear(self) except -1
     cpdef Cell get_new_sibling(self, IntPoint id)
     cpdef get_particle_ids(self, list particle_id_list)
-    cpdef get_particle_counts_ids(self, list particle_list, LongArray particle_counts)
+    cpdef get_particle_counts_ids(self, list particle_list,
+                                  LongArray particle_counts)
+
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef clear_indices(self, int parray_id)
 
@@ -52,9 +57,8 @@ cdef class Cell:
 
 
 cdef class CellManager:
-    """
-    Class to manager all cells.
-    """
+    
+    # Data attributes
     cdef public double cell_size
     cdef public bint is_dirty    
     cdef public dict array_indices
@@ -67,6 +71,8 @@ cdef class CellManager:
     cdef public bint initialized
     
     cdef public str coord_x, coord_y, coord_z
+
+    cdef int num_arrays
 
     cpdef int update(self) except -1
     cpdef int update_status(self) except -1
@@ -88,7 +94,8 @@ cdef class CellManager:
     cpdef insert_particles(self, int parray_id, LongArray indices)
     cpdef Cell get_new_cell(self, IntPoint id)
     
-    cdef int get_potential_cells(self, cPoint pnt, double radius, list cell_list) except -1
+    cdef int get_potential_cells(self, cPoint pnt, double radius,
+                                 list cell_list) except -1
 
     cdef int _get_cells_within_radius(self, cPoint pnt, double radius,
                                       list cell_list) except -1

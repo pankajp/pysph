@@ -317,7 +317,7 @@ class TestCellManager(unittest.TestCase):
         self.assertEqual(len(cm.array_indices), 0)
         self.assertEqual(len(cm.arrays_to_bin), 0)
         self.assertEqual(cm.min_cell_size, -1.0)
-        self.assertEqual(cm.max_cell_size, 0.5)
+        self.assertEqual(cm.max_cell_size, 1000)
         self.assertEqual(cm.jump_tolerance, 1)
         self.assertEqual(cm.coord_x, 'x')
         self.assertEqual(cm.coord_y, 'y')
@@ -339,15 +339,16 @@ class TestCellManager(unittest.TestCase):
         cm = CellManager(arrays_to_bin=pas, initialize=False)
         self.assertEqual(cm.cell_size, 0.0)
         cm.initialize()
-        self.assertEqual(cm.cell_size, 2*fac)
+        self.assertAlmostEqual(cm.cell_size, 2.0, 10)
         
         cm = CellManager(arrays_to_bin=pas, min_cell_size=3.0)
         self.assertEqual(cm.cell_size, 3.0)
         
         pas[0].h = numpy.linspace(0.2, 2, len(pas[0].h))
         cm = CellManager(arrays_to_bin=pas, min_cell_size=-0.1)
-        self.assertEqual(cm.cell_size, 2*fac*0.2)
-        
+
+        val = max(pas[0].h)
+        self.assertEqual(cm.cell_size, fac*val)
     
     def test_rebuild_array_indices(self):
         """Tests the _rebuild_array_indices function."""
