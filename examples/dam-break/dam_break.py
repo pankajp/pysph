@@ -289,11 +289,28 @@ s.add_operation(solver.SPHSummationODE(
 #momentum equation
 s.add_operation(solver.SPHSummationODE(
         
-        sph.MomentumEquation(alpha=alpha, beta=0.0),
-        on_types=[Fluid], from_types=[Fluid, Solid],  
-        updates=['u','v'], id='mom')
+         sph.MomentumEquation(alpha=alpha, beta=0.0),
+         on_types=[Fluid], from_types=[Fluid, Solid],  
+         updates=['u','v'], id='mom')
                     
-                )
+                 )
+
+#s.add_operation(solver.SPHSummationODE(
+    
+#    sph.SPHPressureGradient(),
+#    on_types=[Fluid], from_types=[Fluid,Solid],
+#    updates=['u','v'], id='pgrad')
+
+#                )
+
+#s.add_operation(solver.SPHSummationODE(
+
+#    sph.MonaghanArtificialVsicosity(alpha=alpha, beta=0.0),
+#    on_types=[Fluid], from_types=[Fluid,Solid],
+#    updates=['u','v'], id='avisc')
+
+#                )
+
 
 #Gravity force
 s.add_operation(solver.SPHSimpleODE(
@@ -309,8 +326,10 @@ s.add_operation(solver.SPHSimpleODE(
 s.to_step([Fluid])
 s.set_xsph(eps=eps)
 
+dt = 1.25e-4
+
 s.set_final_time(3.0)
-s.set_time_step(1.25e-4)
+s.set_time_step(dt)
 
 app.set_solver(s)
 

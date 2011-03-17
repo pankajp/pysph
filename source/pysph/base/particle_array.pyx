@@ -90,6 +90,9 @@ cpdef bint is_remote_real(long tag):
 cpdef bint is_remote_dummy(long tag):
     return tag == RemoteDummy
 
+cpdef bint is_ghost_particle(long tag):
+    return tag == GhostParticle
+
 cpdef long get_local_real_tag():
     return LocalReal
 
@@ -104,6 +107,9 @@ cpdef long get_remote_dummy_tag():
 
 cpdef long get_dummy_tag():
     return Dummy
+
+cpdef long get_ghost_particle_tag():
+    return GhostParticle
 
 cdef class ParticleArray:
     """

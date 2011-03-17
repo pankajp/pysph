@@ -23,6 +23,7 @@ cdef enum ParticleTag:
     LocalDummy
     RemoteReal
     RemoteDummy
+    GhostParticle
 
 cpdef bint is_local_real(long tag)
 cpdef bint is_local_dummy(long tag)

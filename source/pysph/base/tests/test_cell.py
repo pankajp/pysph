@@ -35,7 +35,7 @@ class TestModuleFunctions(unittest.TestCase):
 
     def test_find_cell_id(self):
         """Tests the find_cell_id function."""
-        pnt = Point(0, 0, 1)
+        pnt = Point(0, 0, 1.01)
         out = IntPoint(0, 0, 0)
 
         out = py_find_cell_id(pnt, 1.0)
@@ -43,13 +43,13 @@ class TestModuleFunctions(unittest.TestCase):
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
-        pnt.x = -2
+        pnt.x = -2.01
         out = py_find_cell_id(pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, 0)
         self.assertEqual(out.z, 1)
 
-        pnt.y = -1
+        pnt.y = -1.01
         out = py_find_cell_id(pnt, 1.0)
         self.assertEqual(out.x, -3)
         self.assertEqual(out.y, -2)
