@@ -596,8 +596,7 @@ cdef class Cell:
         """
 
         cdef numpy.ndarray[numpy.float64_t, ndim=1] x, y, z
-        cdef numpy.ndarray[numpy.int64_t, ndim=1] tag
-        cdef numpy.ndarray[numpy.int64_t, ndim=1] copied_cell_indices
+        cdef numpy.ndarray tag, copied_cell_indices
 
         cdef ParticleArray pa, pa_copy
         cdef LongArray indices
@@ -613,7 +612,7 @@ cdef class Cell:
 
             pa_copy = pa.extract_particles(indices)
 
-            diff = cid.diff(self.cid)
+            diff = cid.diff(self.id)
 
             tag = pa_copy.get('tag')
             x = pa_copy.get('x')
@@ -632,10 +631,9 @@ cdef class Cell:
             start_index = pa.get_number_of_particles()
             end_index = start_index + ncopies
 
-            pa.append(pa_copy)
+            pa.append_parray(pa_copy)
 
-            copied_cell_indices = numpy.arange(start_index, end_index,
-                                               dtype=numpy.int64)
+            copied_cell_indices = numpy.arange(start_index, end_index)
 
             copied_cell.index_lists[i].reset()
             copied_cell.index_lists[i].resize(ncopies)
@@ -879,6 +877,10 @@ cdef class CellManager:
         """
         if min_size <= 0:
             min_h, max_h = self._compute_minmax_h()
+
+            self.min_h = min_h
+            self.max_h = max_h
+            
             self.cell_size = self.max_radius_scale * max_h
         else:
             self.cell_size = min_size
@@ -1250,7 +1252,7 @@ cdef class CellManager:
         cdef Cell ghost_cell
 
         cdef IntPoint ghost_cid = IntPoint_new(0,0,0)
-        cdef IntPoint centroid = IntPoint_new(0,0,0)
+        cdef Point centroid = Point(0,0,0)
 
         cdef list cells = PyDict_Values( self.cells_dict )
         cdef int ncells = PyList_Size( cells )
@@ -1264,7 +1266,7 @@ cdef class CellManager:
 
         for i in range(ncells):
             cell = cells[i]
-            cid = cell.cid
+            cid = cell.id
 
             cell.get_centroid(centroid)
 

@@ -13,6 +13,8 @@ from pysph.base.carray import DoubleArray, LongArray
 from pysph.base.tests.common_data import *
 import numpy
 
+import pysph.base.api as base
+
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
     1e-16."""
@@ -58,7 +60,7 @@ class TestModuleFunctions(unittest.TestCase):
 
 class TestCell(unittest.TestCase):
     """Tests for the Cell base class."""
-    
+
     def test_constructor(self):
         cell = Cell(IntPoint(0, 0, 0), cell_manager=None, cell_size=0.1)
         
@@ -285,7 +287,108 @@ class TestCell(unittest.TestCase):
         
         self.assertRaises(RuntimeError, cell1.py_add_particles, cell2)
         self.assertRaises(RuntimeError, cell1.py_add_particles, cell3)
-    
+
+
+class CellTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        self.np = 25
+
+        self.x1 = x1 = numpy.array([-0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,]
+                                   )
+        
+        self.y1 = y1 = numpy.array([-0.125, -0.125, -0.125, -0.125, -0.125,
+                                    0.125, 0.125, 0.125, 0.125, 0.125,
+                                    0.375, 0.375, 0.375, 0.375, 0.375,
+                                    0.625, 0.625, 0.625, 0.625, 0.625,
+                                    0.875, 0.875, 0.875, 0.875, 0.875]
+                                   )
+
+        self.z1 = z1 = numpy.zeros_like(x1)
+
+        self.h1 = h1 = numpy.ones_like(x1) * 0.1
+
+        self.x2 = x2 = numpy.array([-0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,
+                                    -0.125, 0.125, 0.375, 0.625, 0.875,]
+                                   )
+        
+        self.y2 = y2 = numpy.array([-0.125, -0.125, -0.125, -0.125, -0.125,
+                                    0.125, 0.125, 0.125, 0.125, 0.125,
+                                    0.375, 0.375, 0.375, 0.375, 0.375,
+                                    0.625, 0.625, 0.625, 0.625, 0.625,
+                                    0.875, 0.875, 0.875, 0.875, 0.875]
+                                   )
+       
+        self.z2 = z2 = numpy.zeros_like(x2)
+        
+        self.h2 = h2 = numpy.ones_like(x2) * 0.15
+
+        self.pa1 = pa1 = base.get_particle_array(name='test1',
+                                                 x=x1, y=y1, z=z1, h=h1)
+
+        self.pa2 = pa2 = base.get_particle_array(name='test2',
+                                                 x=x2, y=y2, z=z2, h=h2)
+
+        self.periodic_domain = periodic_domain = PeriodicDomain(xmin=-0.5,
+                                                                xmax=1.0)
+
+        self.cm = CellManager(arrays_to_bin=[pa1, pa2],
+                              periodic_domain=None)
+
+    def test_constructor(self):
+
+        cm = self.cm
+
+        self.assertAlmostEqual(cm.cell_size, 0.3, 10)
+
+        cells = cm.cells_dict
+
+        self.assertEqual(len(cells), 16)
+
+        point = IntPoint
+
+        cids = [point(-1,-1,0), point(0,-1,0), point(1,-1,0), point(2,-1,0),
+                point(-1,0,0), point(0,0,0), point(1,0,0), point(2,0,0),
+                point(-1,1,0), point(0,1,0), point(1,1,0), point(2,1,0),
+                point(-1,2,0), point(0,2,0), point(1,2,0), point(2,2,0)]
+
+        for cid in cids:
+            self.assertTrue(cid in cells)
+
+    def test_cell_copy(self):
+
+        cm = self.cm
+
+        pa1 = cm.arrays_to_bin[0]
+        pa2 = cm.arrays_to_bin[1]
+
+        ghost_cid = IntPoint(-100,-100,-100)
+
+        # copy cell (2,0,0)
+
+        cell = cm.cells_dict[IntPoint(2,0,0)]
+
+        self.assertEqual(cell.get_number_of_particles(), 4)
+
+        for i in range(2):
+            indices = cell.index_lists[i]
+            self.assertEqual(indices.length, 2)
+
+        original_length1 = pa1.get_number_of_particles()
+        original_length2 = pa2.get_number_of_particles()
+
+        copy_cell = cell.copy(ghost_cid)
+
+        self.assertEqual(pa1.get_number_of_particles(), original_length1+2)
+
 
 ###############################################################################
 # `TestCellManager` class.

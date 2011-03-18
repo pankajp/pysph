@@ -79,6 +79,8 @@ cdef class CellManager:
 
     cdef int num_arrays
 
+    cdef double min_h, max_h
+
     cpdef int update(self) except -1
     cpdef int update_status(self) except -1
     cpdef initialize(self)
@@ -115,3 +117,7 @@ cdef class PeriodicDomain:
     cdef public double xmin, xmax
     cdef public double ymin, ymax
     cdef public double zmin, zmax
+
+    cdef public double xtranslate
+    cdef public double ytranslate
+    cdef public double ztranslate

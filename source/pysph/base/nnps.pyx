@@ -67,6 +67,7 @@ cimport numpy
 import numpy as np
 
 from cpython.list cimport *
+from cpython.dict cimport *
 
 cdef inline double square(double dx, double dy, double dz):
     return dx*dx + dy*dy + dz*dz
