@@ -7,6 +7,8 @@ from pysph.base.point cimport *
 from pysph.base.carray cimport *
 from pysph.base.particle_array cimport ParticleArray
 
+from pysph.base.particle_array cimport GhostParticle
+
 # python c-api imports
 from cpython cimport *
 
@@ -354,7 +356,6 @@ cdef class Cell:
         for i in range(self.num_arrays):
             
             parray = self.arrays_to_bin[i]
-            #parray = <ParticleArray>PyList_GetItem( self.arrays_to_bin, i )
             
             # do nothing if the particle array has not changed
 
@@ -410,8 +411,6 @@ cdef class Cell:
 
                     cell_index_array = cell.index_lists[i]
                     cell_index_array.append( particle_id )
-
-                    #cell_index_array.append(indices[j])
 
             # now remove all escaped and invalid particles.
 
@@ -560,6 +559,89 @@ cdef class Cell:
 
             dest.extend(source.get_npy_array())
             particle_counts.data[i] += source.length
+
+    cpdef Cell copy(self, IntPoint cid, int particle_tag = GhostParticle):
+        """ Copy all particles in the cell with the specified tag
+
+        Parameters:
+        -----------
+
+        cid -- The cell index to copy the particles to
+
+        tag -- The tag to assign the copied particles.
+
+        Note:
+        -----
+
+        The positions of the copied particles are modified based on
+        the new cell id. That is, for a displacement of 2 cell units
+        in the 'x' direction, the copied particles will have their x's
+        shifted by 2*cell_size from this cell.
+
+        The copied particle array is then appended to the existing
+        particle array and the indices appended to the copied
+        cell. Setting the indices for the copied cell is done as:
+
+        pa = self.arrays_to_bin[i]
+        pa_copy = pa.extract_particles(self.index_lists[i])
+
+        ... pa_copy.x += ...
+            pa.copy.y += ...
+
+        start_index = pa.get_number_of_particles()
+        end_index = start_index + pa_copy.get_number_of_particles()
+
+        copied_cell.index_lists[i].set_data(arange(start_index, end_index))
+
+        """
+
+        cdef numpy.ndarray[numpy.float64_t, ndim=1] x, y, z
+        cdef numpy.ndarray[numpy.int64_t, ndim=1] tag
+        cdef numpy.ndarray[numpy.int64_t, ndim=1] copied_cell_indices
+
+        cdef ParticleArray pa, pa_copy
+        cdef LongArray indices
+        cdef IntPoint diff
+
+        cdef int i, ncopies, start_index, end_index
+        
+        cdef Cell copied_cell = self.get_new_sibling( cid )
+
+        for i in range(self.num_arrays):
+            indices = self.index_lists[i]
+            pa = self.arrays_to_bin[i]
+
+            pa_copy = pa.extract_particles(indices)
+
+            diff = cid.diff(self.cid)
+
+            tag = pa_copy.get('tag')
+            x = pa_copy.get('x')
+            y = pa_copy.get('y')
+            z = pa_copy.get('z')
+
+            x += diff.x * self.cell_size
+            y += diff.y * self.cell_size
+            z += diff.z * self.cell_size
+            tag[:] = particle_tag
+
+            pa_copy.set(x=x, y=y, z=z, tag=tag)
+
+            ncopies = pa_copy.get_number_of_particles()
+
+            start_index = pa.get_number_of_particles()
+            end_index = start_index + ncopies
+
+            pa.append(pa_copy)
+
+            copied_cell_indices = numpy.arange(start_index, end_index,
+                                               dtype=numpy.int64)
+
+            copied_cell.index_lists[i].reset()
+            copied_cell.index_lists[i].resize(ncopies)
+            copied_cell.index_lists[i].set_data(copied_cell_indices)
+
+        return copied_cell
      
     cpdef clear_indices(self, int parray_id):
         """Clear the particles ids of parray_id stored in the cells."""
@@ -662,6 +744,7 @@ cdef class CellManager:
     #cdef public str coord_x, coord_y, coord_z
     #cdef public int num_arrays
     #cdef public double max_radius_scale
+    #cdef public PeriodicDomain periodic_domain
 
     """Cell Manager class
 
@@ -696,10 +779,13 @@ cdef class CellManager:
     max_radius_scale -- Scale factor to determine the particle
     neighbors. Defaults to 2.0 (Cubic spline kernel)
 
+    periodic_domain -- A periodic domain specified by limits in each
+    coordinate direction.
+
     """
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=-1.0,
-                 double max_cell_size=1000,
+                 double max_cell_size=1000, PeriodicDomain periodic_domain=None,
                  bint initialize=True, double max_radius_scale=2.0):
         
         self.max_radius_scale = max_radius_scale
@@ -720,6 +806,8 @@ cdef class CellManager:
 
         self.jump_tolerance = 1
         self.cell_size = 0
+
+        self.periodic_domain = periodic_domain
         
         self.is_dirty = True
 
@@ -826,6 +914,11 @@ cdef class CellManager:
                 parray.set_dirty(False)
 
             self.is_dirty = False
+
+            # create ghost cells
+
+            if self.periodic_domain:
+                self.create_ghost_cells()
 
         return 0
 
@@ -1144,6 +1237,104 @@ cdef class CellManager:
         
         return cells_created
 
+    cpdef create_ghost_cells(self):
+        """ Replicate cells for periodicity """
+
+        cdef cPoint ghost_pnt
+        cdef IntPoint cid
+        cdef Cell cell
+
+        cdef dict ghost_cells = dict()
+        cdef int i, nghost_cells
+        cdef list ghost_cids
+        cdef Cell ghost_cell
+
+        cdef IntPoint ghost_cid = IntPoint_new(0,0,0)
+        cdef IntPoint centroid = IntPoint_new(0,0,0)
+
+        cdef list cells = PyDict_Values( self.cells_dict )
+        cdef int ncells = PyList_Size( cells )
+
+        cdef PeriodicDomain domain = self.periodic_domain
+
+        cdef double dist = self.max_radius_scale  * self.max_h
+        cdef double half_cell_size = 0.5 * self.cell_size
+
+        nghost_cells = 0
+
+        for i in range(ncells):
+            cell = cells[i]
+            cid = cell.cid
+
+            cell.get_centroid(centroid)
+
+            # Check for X periodicity at left end
+
+            if ( (centroid.data.x - half_cell_size) <= domain.xmin ):
+
+                ghost_pnt.x = centroid.x + domain.xtranslate
+                ghost_pnt.y = centroid.y
+                ghost_pnt.z = centroid.z
+                
+                ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
+
+                ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                nghost_cells += 1
+
+                if ( (centroid.data.x + half_cell_size - domain.xmin) < dist ):
+
+                    ghost_cid.data.x += 1
+                    if PyDict_Contains( self.cells, cid ):
+                        cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
+                        ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                        nghost_cells += 1
+
+            # check for X periodicity at right end
+
+            if ( (centroid.data.x + half_cell_size) >= domain.xmax ):
+
+                ghost_pnt.x = centroid.x - domain.xtranslate
+                ghost_pnt.y = centroid.y
+                ghost_pnt.z = centroid.z
+
+                ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
+
+                ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                nghost_cells += 1
+
+                if ((domain.xmax - (centroid.data.x - half_cell_size)) < dist):
+
+                    ghost_cid.data.x -= 1
+                    if PyDict_Contains( self.cells, cid ):
+                        cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
+                        ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                        nghost_cells += 1
+                        
+
+        ghost_cids = PyDict_Keys( ghost_cells )
+        for i in range(nghost_cells):
+
+            ghost_cid = ghost_cids[i]
+            ghost_cell = <Cell>PyDict_GetItem( ghost_cells, ghost_cid )
+            
+            if PyDict_Contains( self.cells, ghost_cid ):
+                cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
+                cell.add_particles( ghost_cell )
+            else:
+                self.cells_dict[ghost_cid] = ghost_cell
+
+    cpdef remove_ghost_particles(self):
+        """ Remove all particles with tag GhostParticle """
+
+        cdef ParticleArray pa
+        cdef int i
+
+        for i in range(self.num_arrays):
+            pa = self.arrays_to_bin[i]
+            pa.remove_tagged_particles(GhostParticle)
+
+        self.delete_empty_cells()
+
     cpdef add_array_to_bin(self, ParticleArray parr):
         """ Add an array to the CellManager (before initialization)"""
         if self.initialized == True:
@@ -1333,3 +1524,21 @@ cdef class CellManager:
     def py_get_number_of_particles(self):
         return self.get_number_of_particles()
 
+
+cdef class PeriodicDomain:
+
+    def __init__(self, double xmin=-1000, double xmax=1000, double ymin=-1000,
+                 double ymax=1000, double zmin=-1000, double zmax=1000):
+        self.xmin = xmin
+        self.xmax = xmax
+
+        self.ymin = ymin
+        self.ymax = ymax
+
+        self.zmin = zmin
+        self.zmax = zmax
+
+        self.xtranslate = xmax - xmin
+        self.ytranslate = ymax - ymin
+        self.ztranslate = zmax - zmin
+                 

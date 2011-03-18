@@ -5,8 +5,9 @@ from pysph.base.carray cimport *
 
 from pysph.base.particle_array cimport ParticleArray
 
-# forward declaration for CellManager
+# forward declarations
 cdef class CellManager
+cdef class PeriodicDomain
 
 cdef inline int real_to_int(double val, double step)
 cdef inline cIntPoint find_cell_id(cPoint pnt, double cell_size)
@@ -54,6 +55,7 @@ cdef class Cell:
     cdef _init_index_lists(self)
     cpdef set_cell_manager(self, CellManager cell_manager)
     cpdef Cell get_new_sibling(self, IntPoint id)
+    cpdef Cell copy(self, IntPoint cid, int particle_tag=*)
 
 
 cdef class CellManager:
@@ -69,6 +71,9 @@ cdef class CellManager:
     cdef public int jump_tolerance
 
     cdef public bint initialized
+
+    # Periodicity
+    cdef public PeriodicDomain periodic_domain
     
     cdef public str coord_x, coord_y, coord_z
 
@@ -101,3 +106,12 @@ cdef class CellManager:
                                       list cell_list) except -1
     cdef void _reset_jump_tolerance(self)
     cpdef long get_number_of_particles(self)
+
+    cpdef create_ghost_cells(self)
+    cpdef remove_ghost_particles(self)
+
+
+cdef class PeriodicDomain:
+    cdef public double xmin, xmax
+    cdef public double ymin, ymax
+    cdef public double zmin, zmax
