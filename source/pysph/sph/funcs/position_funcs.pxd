@@ -5,10 +5,7 @@
 # Copyright (c) 2009, Prabhu Ramachandran
 
 #sph imports
-from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.sph.sph_func cimport SPHFunction
 
-cdef class PostionStepping(SPHFunctionParticle):
-    """
-    SPH function to compute pressure gradient.
-    """
+cdef class PostionStepping(SPHFunction):
     pass

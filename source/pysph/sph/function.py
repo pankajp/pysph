@@ -10,60 +10,7 @@ import funcs.viscosity_funcs as viscosity
 import funcs.xsph_funcs as xsph
 import funcs.adke_funcs as adke
 
-class Function(object):
-    """ Base class that defines an sph function (sph.funcs) and it's
-    associated parameter values.
-
-    Methods:
-    --------
-
-    get_func -- Return a particular instance of SPHFunctionParticle
-    with an appropriate source and destincation particle araay.
-
-    Example:
-    --------
-
-    The sph function MonaghanArtificialVsicosity (defined in
-    sph.funcs.viscosity_funcs) requires the parameter values 'alpha',
-    'beta', 'gamma' and 'eta' to define the artificial viscosity. This
-    function may be created as:
-
-    avisc = MonaghanArtificialVsicosity(hks=False, alpha, beta, gamma, eta)
-    avisc_func = avisc.get_funcs(source, dest)
-
-    Thus, Function provides us a means to create functions at will
-    between source and destination particle arrays with specified
-    parameter values.
-
-    """
-    def __init__(self, sph_func=None, hks=False, *args, **kwargs):
-        """ Base class Constructor
-
-        Parameters:
-        -----------
-
-        sph_func -- the SPHFunctionParticle class type. Defaults to None
-        *args -- optional positional arguments.
-        **kwargs -- optional keyword arguments.
-
-        Notes:
-        ------
-
-        """
-        self.sph_func = sph_func
-        self.args = args
-        self.kwargs = kwargs
-        self.hks = hks
-
-    def get_func(self, source, dest):
-        """ Return a SPHFunctionParticle instance with source and dest """
-        if self.sph_func is None:
-            raise NotImplementedError, 'Function(sph_func=None).get_func()'
-
-        func = self.sph_func(source, dest, hks=self.hks,
-                             *self.args, **self.kwargs)
-        
-        return func
+from sph_func import Function
 
 ############################################################################
 # SPHInterpolation
@@ -550,7 +497,3 @@ class NeighborCount(Function):
     """ Compute the number of neighbors """
     def __init__(self):
         Function.__init__(self, basic.CountNeighbors)
-
-class SPHFunction(Function):
-    def __init__(self):
-        Function.__init__(self, basic.SPHFunction)

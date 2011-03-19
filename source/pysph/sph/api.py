@@ -1,7 +1,7 @@
 """API module to simplify import of common names from pysph.sph package"""
 
 #Import from calc
-from sph_calc import SPHCalc, SPHEquation, SPHBase
+from sph_calc import SPHCalc
 
 #Import update smoothing and conduction
 from update_smoothing import UpdateSmoothingADKE, TestUpdateSmoothingADKE
@@ -13,7 +13,7 @@ from update_misc_props import UpdateDivergence
 
 #Import basic functions
 from function import SPHInterpolation, SPHGradient, SPHSimpleGradient, \
-     Laplacian, NeighborCount, SPHFunction, Function
+     Laplacian, NeighborCount, Function
 
 #Import boundary functions
 from function import MonaghanBoundaryForce, LennardJonesForce, \

@@ -6,25 +6,25 @@
 # Copyright (c) 2009, Prabhu Ramachandran
 
 #sph imports
-from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.sph.sph_func cimport SPHFunction
 
 #base imports 
 from pysph.base.particle_array cimport ParticleArray
 from pysph.base.kernels cimport KernelBase
 from pysph.base.point cimport Point, cPoint, cPoint_length
 
-cdef class GravityForce(SPHFunctionParticle):
+cdef class GravityForce(SPHFunction):
     """ MonaghanBoundaryForce """
 
     cdef public double gx, gy, gz
     
-cdef class VectorForce(SPHFunctionParticle):
+cdef class VectorForce(SPHFunction):
     """ MonaghanBoundaryForce """
 
     cdef public Point force
 
-cdef class MoveCircleX(SPHFunctionParticle):
+cdef class MoveCircleX(SPHFunction):
     """ Count Neighbors.  """
 
-cdef class MoveCircleY(SPHFunctionParticle):
+cdef class MoveCircleY(SPHFunction):
     """ Count Neighbors.  """

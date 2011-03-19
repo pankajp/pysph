@@ -4,7 +4,7 @@ import numpy
 #############################################################################
 # `GravityForce` class.
 #############################################################################
-cdef class GravityForce(SPHFunctionParticle):
+cdef class GravityForce(SPHFunction):
     """ Class to compute the gravity force on a particle """ 
 
     #Defined in the .pxd file
@@ -14,7 +14,7 @@ cdef class GravityForce(SPHFunctionParticle):
                  bint setup_arrays=True, double gx = 0.0, 
                  double gy = 0.0, double gz = 0.0, hks=False):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunction.__init__(self, source, dest, setup_arrays)
 
         self.id = 'gravityforce'
         self.tag = "velocity"
@@ -23,13 +23,13 @@ cdef class GravityForce(SPHFunctionParticle):
         self.gy = gy
         self.gz = gz        
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_single(self, size_t dest_pid,
+                          KernelBase kernel, double *result):
         """ Perform the gravity force computation """
 
-        nr[0] = self.gx
-        nr[1] = self.gy
-        nr[2] = self.gz
+        result[0] = self.gx
+        result[1] = self.gy
+        result[2] = self.gz
 
 ##############################################################################
 
@@ -37,7 +37,7 @@ cdef class GravityForce(SPHFunctionParticle):
 #############################################################################
 # `Vector` class.
 #############################################################################
-cdef class VectorForce(SPHFunctionParticle):
+cdef class VectorForce(SPHFunction):
     """ Class to compute the vector force on a particle """ 
 
     #Defined in the .pxd file
@@ -46,23 +46,23 @@ cdef class VectorForce(SPHFunctionParticle):
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, Point force=Point(), hks=False):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunction.__init__(self, source, dest, setup_arrays)
 
         self.id = 'vectorforce'
         self.force = force
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_single(self, size_t dest_pid,
+                          KernelBase kernel, double *result):
         """ Perform the force computation """
 
-        nr[0] = self.force.data.x
-        nr[1] = self.force.data.y
-        nr[2] = self.force.data.z
+        result[0] = self.force.data.x
+        result[1] = self.force.data.y
+        result[2] = self.force.data.z
 
 ################################################################################
 # `MoveCircleX` class.
 ################################################################################
-cdef class MoveCircleX(SPHFunctionParticle):
+cdef class MoveCircleX(SPHFunction):
     """ Force the x coordinate of a particle to move on a circle.  """
 
     #Defined in the .pxd file
@@ -70,35 +70,32 @@ cdef class MoveCircleX(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
+        SPHFunction.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
 
         self.id = 'circlex'
         self.tag = "position"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-
-        self._dst.x = self.d_x.data[dest_pid]
-        self._dst.y = self.d_y.data[dest_pid]
-        self._dst.z = self.d_z.data[dest_pid]
-        
-        angle = numpy.arccos(self._dst.x/cPoint_length(self._dst))
+    cdef void eval_single(self, size_t dest_pid,
+                          KernelBase kernel, double *result):
+        cdef cPoint p = cPoint(self.d_x.data[dest_pid],
+                           self.d_y.data[dest_pid], self.d_z.data[dest_pid])
+        angle = numpy.arccos(p.x/cPoint_length(p))
 
         fx = -numpy.sin(angle)
         
-        if self._dst.y < 0:
+        if p.y < 0:
             fx *= -1
 
-        nr[0] = fx
-        nr[1] = 0
+        result[0] = fx
+        result[1] = 0
 
 ###########################################################################
 
 ################################################################################
 # `MoveCircleY` class.
 ################################################################################
-cdef class MoveCircleY(SPHFunctionParticle):
+cdef class MoveCircleY(SPHFunction):
     """ Force the y coordinate of a particle to move on a circle.  """
 
     #Defined in the .pxd file
@@ -106,23 +103,20 @@ cdef class MoveCircleY(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        SPHFunction.__init__(self, source, dest, setup_arrays = True)
 
         self.id = 'circley'
         self.tag = "position"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-
-        self._dst.x = self.d_x.data[dest_pid]
-        self._dst.y = self.d_y.data[dest_pid]
-        self._dst.z = self.d_z.data[dest_pid]
-        
-        angle = numpy.arccos(self._dst.x/cPoint_length(self._dst))
+    cdef void eval_single(self, size_t dest_pid,
+                          KernelBase kernel, double *result):
+        cdef cPoint p = cPoint(self.d_x.data[dest_pid],
+                           self.d_y.data[dest_pid], self.d_z.data[dest_pid])
+        angle = numpy.arccos(p.x/cPoint_length(p))
 
         fy = numpy.cos(angle)
         
-        nr[0] = 0
-        nr[1] = fy
+        result[0] = 0
+        result[1] = fy
 
 ###########################################################################

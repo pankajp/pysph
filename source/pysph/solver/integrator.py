@@ -14,11 +14,11 @@ class Integrator(object):
     (d) Predictor Corrector Integrator
     (e) Leap Frog Integrator
 
-    The integrator operates on a list of SPHBase objects which define the 
+    The integrator operates on a list of SPHCalc objects which define the 
     interaction between a single destination particle array and a list of 
     source particle arrays.
 
-    An instance of SPHBase is called a `calc` and thus, the integrator
+    An instance of SPHCalc is called a `calc` and thus, the integrator
     operates on a list of calcs.
 
     A calc can be integrating or non integrating depending on the
@@ -44,7 +44,7 @@ class Integrator(object):
 
     calcs:
     ------
-    The list of SPHBase operations (calcs) that is used for stepping.
+    The list of SPHCalc operations (calcs) that is used for stepping.
 
     icalcs:
     -------

@@ -6,21 +6,21 @@ from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
 ###############################################################################
 # `PilotRho` class.
 ###############################################################################
-cdef class PilotRho(SPHFunctionParticle):
+cdef class PilotRho(CSPHFunctionParticle):
     """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, double h0=1.0, **kwargs):
         
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays,
                                      **kwargs)
         self.h0 = h0
 
         self.id = "pilotrho"
         self.tag = "adke"
     
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
+                            KernelBase kernel, double *nr, double* dnr):
         """ Compute the contribution from source_pid on dest_pid.
 
         The expression used is:
@@ -71,8 +71,8 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self.id = "vdivergence"
         self.tag = "vdivergence"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                       KernelBase kernel, double *nr):
         """ Compute the contribution from source_pid on dest_pid.
 
         The expression used is:

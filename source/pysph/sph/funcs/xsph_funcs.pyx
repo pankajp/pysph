@@ -5,7 +5,7 @@ from pysph.base.carray cimport DoubleArray
 ###############################################################################
 # `XSPHCorrection' class.
 ###############################################################################
-cdef class XSPHCorrection(SPHFunctionParticle):
+cdef class XSPHCorrection(CSPHFunctionParticle):
     """ Basic XSPH """
 
     #Defined in the .pxd file
@@ -13,15 +13,15 @@ cdef class XSPHCorrection(SPHFunctionParticle):
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, double eps = 0.5, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays,
                                      **kwargs)
         self.eps = eps
 
         self.id = 'xsph'
         self.tag = "position"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
+                            KernelBase kernel, double *nr, double *dnr):
         """
         The expression used is:
 
@@ -109,8 +109,8 @@ cdef class XSPHDensityRate(SPHFunctionParticle):
         self.d_vbar = self.dest.get_carray('vbar')
         self.d_wbar = self.dest.get_carray('wbar')
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                       KernelBase kernel, double *nr):
         """
         Perform an SPH interpolation of the property `prop_name`
 

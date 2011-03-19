@@ -20,8 +20,8 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         self.id = 'energyeqn'
         self.tag = "energy"
     
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
@@ -106,8 +106,8 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
         self.id = 'energyavisc'
         self.tag = "energy"
     
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
@@ -218,8 +218,8 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.id = 'energyequation'
         self.tag = "energy"
         
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
     
     
         cdef cPoint vab, rab
@@ -347,8 +347,8 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         self.s_e = self.source.get_carray("e")
         self.d_e = self.dest.get_carray("e")
         
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
     
     
         cdef cPoint vab, xab

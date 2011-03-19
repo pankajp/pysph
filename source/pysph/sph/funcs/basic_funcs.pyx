@@ -9,7 +9,7 @@ cdef extern from "math.h":
 ################################################################################
 # `SPH` class.
 ################################################################################
-cdef class SPH(SPHFunctionParticle):
+cdef class SPH(CSPHFunctionParticle):
     """ Basic SPH Interpolation.  """
 
     #Defined in the .pxd file
@@ -32,7 +32,7 @@ cdef class SPH(SPHFunctionParticle):
         invoking setup_arrays.
         
         """
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
         assert prop_name != '', 'You must provide a property name '
 
@@ -48,8 +48,8 @@ cdef class SPH(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
+                            KernelBase kernel, double *nr, double *dnr):
 
         """ 
         Perform an SPH interpolation of the property `prop_name` 
@@ -146,8 +146,8 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                       KernelBase kernel, double *nr):
         """ 
         Perform an SPH interpolation of the property `prop_name` 
 
@@ -241,8 +241,8 @@ cdef class SPHGradient(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """ 
         Perform an SPH interpolation of the property `prop_name` 
 
@@ -342,8 +342,8 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         self.s_prop = self.source.get_carray(self.prop_name)
         self.d_prop = self.dest.get_carray(self.prop_name)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """ 
         Perform an SPH interpolation of the property `prop_name` 
 
@@ -419,16 +419,16 @@ cdef class CountNeighbors(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
         self.id = 'nbrs'
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-    
-        nr[0] += 1
+    cdef void eval_single(self, size_t dest_pid,
+                          KernelBase kernel, double *result):
+        result[0] += self.nbr_locator.get_nearest_particles(dest_pid).length
+
 ###########################################################################
 
 ################################################################################
 # `KernelGradientCorrectionTerms` class.
 ################################################################################
-cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
+cdef class BonnetAndLokKernelGradientCorrectionTerms(CSPHFunctionParticle):
     """ Evaluate the matrix terms eq(45) in "Variational and
     momentum preservation aspects of Smooth Particle Hydrodynamic
     formulations", Computer Methods in Applied Mechanical Engineering,
@@ -446,10 +446,10 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
         """ Constructor """
 
         self.id = 'kgc'
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
+                            KernelBase kernel, double *nr, double *dnr):
         cdef cPoint grada, gradb, grad
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -505,7 +505,7 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(SPHFunctionParticle):
 ################################################################################
 # `FirstOrderCorrectionMatrix` class.
 ################################################################################
-cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
+cdef class FirstOrderCorrectionMatrix(CSPHFunctionParticle):
     """ Kernel correction terms (Eq 14) in "Correction and
     Stabilization of smooth particle hydrodynamics methods with
     applications in metal forming simulations" by Javier Bonnet and
@@ -519,10 +519,10 @@ cdef class FirstOrderCorrectionMatrix(SPHFunctionParticle):
         """ Constructor """
 
         self.id = 'liu-correction'
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
+                            KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -591,8 +591,8 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
         self.rkpm_d_dbeta2dx = self.dest.get_carray("rkpm_dbeta2dx")
         self.rkpm_d_dbeta2dy = self.dest.get_carray("rkpm_dbeta2dy")
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -648,7 +648,7 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
 ################################################################################
 # `FirstOrderCorrectionMatrixGradient` class.
 ################################################################################
-cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
+cdef class FirstOrderCorrectionMatrixGradient(CSPHFunctionParticle):
     """ Kernel correction terms (Eq 15) in "Correction and
     Stabilization of smooth particle hydrodynamics methods with
     applications in metal forming simulations" by Javier Bonnet and
@@ -656,8 +656,8 @@ cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
 
     """
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,  
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
+                            KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -701,7 +701,7 @@ cdef class FirstOrderCorrectionMatrixGradient(SPHFunctionParticle):
 ################################################################################
 # `FirstOrderCorrectionVectorGradient` class.
 ################################################################################
-cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
+cdef class FirstOrderCorrectionVectorGradient(CSPHFunctionParticle):
     """ Kernel correction terms (Eq 15) in "Correction and
     Stabilization of smooth particle hydrodynamics methods with
     applications in metal forming simulations" by Javier Bonnet and
@@ -710,8 +710,8 @@ cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
     """
 
     #Defined in the .pxd file
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
+                            KernelBase kernel, double *nr, double *dnr):
 
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -747,9 +747,3 @@ cdef class FirstOrderCorrectionVectorGradient(SPHFunctionParticle):
         dnr[0] += -Vb*rab.y*grad.y - Vb*w
 
 ##########################################################################
-
-cdef class SPHFunction(SPHFunctionParticle):
-
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-        pass

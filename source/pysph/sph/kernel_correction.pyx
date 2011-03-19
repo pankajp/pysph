@@ -1,7 +1,7 @@
 """ Funcitons to handle the kernel correction """
 
 from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
-from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.sph.sph_func cimport SPHFunctionParticle, CSPHFunctionParticle
 from pysph.base.carray cimport LongArray
 from pysph.base.nnps cimport FixedDestNbrParticleLocator
 
@@ -96,7 +96,8 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
         calc = self.calc
         cdef ParticleArray dest = calc.dest
         
-        cdef SPHFunctionParticle func, cfunc
+        cdef SPHFunctionParticle func
+        cdef CSPHFunctionParticle cfunc
         cdef FixedDestNbrParticleLocator loc
         cdef ParticleArray src
 
@@ -141,7 +142,7 @@ cdef class BonnetAndLokKernelCorrection(KernelCorrection):
 
                     for k from 0 <= k < nbrs.length:
                         s_idx = nbrs.get(k)
-                        cfunc.eval(k, s_idx, i, calc.kernel, &nr[0], &dnr[0])
+                        cfunc.eval_nbr_csph(s_idx, i, calc.kernel, &nr[0], &dnr[0])
 
                 m11 = nr[0]; m12 = nr[1]; m13 = nr[2]
                 m22 = dnr[0]; m23 = dnr[1]; m33 = dnr[2]

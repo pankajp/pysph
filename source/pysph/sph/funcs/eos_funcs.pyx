@@ -19,8 +19,8 @@ cdef class IdealGasEquation(SPHFunctionParticle):
         self.id = 'idealgas'
         self.tag = "state"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         
         ::math::
@@ -72,8 +72,8 @@ cdef class TaitEquation(SPHFunctionParticle):
         self.id = 'tait'
         self.tag = "state"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         
         ::math::

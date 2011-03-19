@@ -1,7 +1,7 @@
 """
 General purpose code for SPH computations.
 
-This module provides the SPHBase class, which does the actual SPH summation.
+This module provides the SPHCalc class, which does the actual SPH summation.
     
 """
 
@@ -20,7 +20,7 @@ from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
 from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator
 from pysph.base.nnps cimport NbrParticleLocatorBase
 
-from pysph.sph.sph_func cimport SPHFunctionParticle
+from pysph.sph.sph_func cimport SPHFunction
 from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTerms,\
     FirstOrderCorrectionMatrix, FirstOrderCorrectionTermAlpha, \
     FirstOrderCorrectionMatrixGradient, FirstOrderCorrectionVectorGradient
@@ -31,9 +31,9 @@ from pysph.base.carray cimport IntArray, DoubleArray
 cdef int log_level = logger.level
 
 ###############################################################################
-# `SPHBase` class.
+# `SPHCalc` class.
 ###############################################################################
-cdef class SPHBase:
+cdef class SPHCalc:
     """ A general purpose summation object
     
     Members:
@@ -42,7 +42,7 @@ cdef class SPHBase:
     dest -- the destination particles array
     func -- the function to use between the source and destination
     nbr_loc -- a list of neighbor locator for each (source, dest)
-    kernel -- the multi-dimensional kernel to use
+    kernel -- the kernel to use
     nnps_manager -- the NNPSManager for the neighbor locator
 
     Notes:
@@ -77,9 +77,6 @@ cdef class SPHBase:
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
                   kernel_correction=-1, int dim = 1, str snum=""):
-
-        """ Constructor """
-
         self.nbr_info = nbr_info
         self.particles = particles
         self.sources = sources
@@ -118,7 +115,7 @@ cdef class SPHBase:
 
         # check if the data is sane.
 
-        logger.info("SPHBase:check_internals: calc %s"%(self.id))
+        logger.info("SPHCalc:check_internals: calc %s"%(self.id))
 
         if (len(self.sources) == 0 or self.nnps_manager is None
             or self.dest is None or self.kernel is None or len(self.funcs)
@@ -152,20 +149,21 @@ cdef class SPHBase:
 
         for i in range(len(self.funcs)):
             if funcs[i].source != self.sources[i]:
-                msg = 'SPHFunctionParticle.source not same as'
-                msg += ' SPHBase.sources[%d]'%(i)
+                msg = 'SPHFunction.source not same as'
+                msg += ' SPHCalc.sources[%d]'%(i)
                 raise ValueError, msg
 
-            if funcs[i].dest != self.dest:
-                msg = 'SPHFunctionParticle.dest not same as'
-                msg += ' SPHBase.dest'
-                raise ValueError, msg
+            # not valid for SPHFunction
+            #if funcs[i].dest != self.dest:
+            #    msg = 'SPHFunction.dest not same as'
+            #    msg += ' SPHCalc.dest'
+            #    raise ValueError, msg
 
     cdef setup_internals(self):
         """ Set the update update arrays and neighbor locators """
 
         cdef FixedDestNbrParticleLocator loc
-        cdef SPHFunctionParticle func
+        cdef SPHFunction func
         cdef int nsrcs = self.nsrcs
         cdef ParticleArray src
         cdef int i
@@ -173,22 +171,18 @@ cdef class SPHBase:
         self.nbr_locators[:] = []
 
         # set the calc's tag from the function tags. Check ensures all are same
-
         self.tag = self.funcs[0].tag
 
         # set the neighbor locators
-
         for i in range(nsrcs):
             src = self.sources[i]
             func = self.funcs[i]
 
             loc = self.nnps_manager.get_neighbor_particle_locator(
                 src, self.dest, self.kernel.radius())
+            func.nbr_locator = loc
 
-            #func.kernel_function_evaluation = loc.kernel_function_evaluation
-            #func.kernel_gradient_evaluation = loc.kernel_gradient_evaluation
-
-            logger.info("""SPHBase:setup_internals: calc %s using 
+            logger.info("""SPHCalc:setup_internals: calc %s using 
                         locator (src: %s) (dst: %s) %s """
                         %(self.id, src.name, self.dest.name, loc))
             
@@ -212,7 +206,7 @@ cdef class SPHBase:
                      output3, bint exclude_self=False):
         """
         Similar to the sph1 function, except that this can handle
-        SPHFunctionParticle that compute 3 output fields.
+        SPHFunction that compute 3 output fields.
 
         **Parameters**
         
@@ -224,143 +218,14 @@ cdef class SPHBase:
 
         """
 
-        cdef size_t np = self.dest.get_number_of_particles()
-        cdef long dest_pid, source_pid
-        cdef double nr[3], dnr[3]
-        cdef size_t i
-        cdef SPHFunctionParticle func
-        global log_level
-        log_level = logger.level
-
-        # get the tag array pointer
-
-        cdef LongArray tag_arr = self.dest.get_carray('tag')
-        cdef long* tag = tag_arr.get_data_ptr()
+        cdef SPHFunction func
 
         if self.kernel_correction != -1 and self.nbr_info:
             self.correction_manager.set_correction_terms(self)
         
         for func in self.funcs:
-            func.setup_iter_data()
-
-        # loop over all particles
-
-        for i from 0 <= i < np:
-
-            dnr[0] = dnr[1] = dnr[2] = 0.0
-            nr[0] = nr[1] = nr[2] = 0.0
-
-            if tag[i] == LocalReal:
-
-                self.eval(i, &nr[0], &dnr[0], exclude_self)
-
-            if dnr[0] == 0.0:
-                output1.data[i] = nr[0]
-            else:
-                output1.data[i] = nr[0]/dnr[0]
-
-            if dnr[1] == 0.0:
-                output2.data[i] = nr[1]
-            else:
-                output2.data[i] = nr[1]/dnr[1]
-
-            if dnr[2] == 0.0:
-                output3.data[i] = nr[2]
-            else:
-                output3.data[i] = nr[2]/dnr[2]
-
-    cdef eval(self, size_t i, double* nr, double* dnr,
-              bint exclude_self):
-        raise NotImplementedError, 'SPHBase::eval'                       
-
-#############################################################################
-
-cdef class SPHCalc(SPHBase):
-    
-    cdef eval(self, size_t i, double* nr, double* dnr, 
-              bint exclude_self):
-    
-        cdef ParticleArray src, pae
-        cdef SPHFunctionParticle func
-        cdef FixedDestNbrParticleLocator loc
-        cdef int k
-        cdef int j, nnbrs
-        cdef LongArray nbrs
-
-        for j in range(self.nsrcs):
-            
-            src = self.sources[j]
-            func = self.funcs[j]
-            loc  = self.nbr_locators[j]
-
-            nbrs = loc.get_nearest_particles(i)
-            nnbrs = nbrs.length
-            if exclude_self:
-                if src is self.dest:
-                    # this works because nbrs has self particle in last position
-                    nnbrs -= 1
-
-            #func.function_cache = loc.function_cache
-            #func.xgradient_cache = loc.xgradient_cache
-            #func.ygradient_cache = loc.ygradient_cache
-            #func.zgradient_cache = loc.zgradient_cache
-
-            for k from 0 <= k < nnbrs:
-                func.eval(k, nbrs.data[k], i, self.kernel, &nr[0], &dnr[0])
-
-            if log_level < 30:
-
-                logger.info("""SPHCalc:eval: calc %s, dest %s, source %s"""
-                            %(self.id, self.dest.name, src.name))
-
-                logger.info("SPHCalc:eval Neighbor indices for particle %d %s"
-                            %(i, nbrs.get_npy_array()))
-
-                pae = src.extract_particles(nbrs, ['idx'])
-                logger.info("""SPHCalc:eval: Neighbors for particle %d : %s"""
-                            %(i, pae.get('idx')))
-
-#############################################################################
-
-cdef class SPHEquation(SPHBase):
-
-    cpdef check_internals(self):
-        """ Check for inconsistencies and set the neighbor locator. """
-
-        # check if the data is sane.
-
-        logger.info("SPHEquation:check_internals: calc %s"%(self.id))
-
-        if (self.nnps_manager is None or self.dest is None \
-                or self.kernel is None or len(self.funcs)  == 0):
-            logger.warn('invalid input to setup_internals')
-            logger.info('sources : %s'%(self.sources))
-            logger.info('nnps_manager : %s'%(self.nnps_manager))
-            logger.info('dest : %s'%(self.dest))
-            logger.info('kernel : %s'%(self.kernel))
-            logger.info('sph_funcs : %s'%(self.funcs)) 
-            
-            return
-
-        # ensure that all the funcs are of the same class
-
-        funcs = self.funcs
-        for i in range(len(self.funcs)-1):
-            if type(funcs[i]) != type(funcs[i+1]):
-                msg = 'All sph_funcs should be of same type'
-                raise ValueError, msg
-            
-        # check that the function src and dsts are the same as the calc's
-
-            if funcs[i].dest != self.dest:
-                msg = 'SPHFunctionParticle.dest not same as'
-                msg += ' SPHBase.dest'
-                raise ValueError, msg
-
-    cdef eval(self, size_t i, double* nr, double* dnr, 
-              bint exclude_self):
-    
-        cdef SPHFunctionParticle func = self.funcs[0]
-        func.eval(-1,-1, i, self.kernel, &nr[0], &dnr[0])
+            func.nbr_locator = self.nnps_manager.get_neighbor_particle_locator(
+                func.source, self.dest, self.kernel.radius())
+            func.eval(self.kernel, output1, output2, output3)
 
 #############################################################################

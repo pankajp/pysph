@@ -8,7 +8,7 @@ from pysph.base import kernels
 from pysph.base.carray import DoubleArray
 from pysph.base.particle_array import ParticleArray
 from pysph.base.api import get_particle_array, Particles
-from pysph.sph.sph_calc import SPHCalc, SPHEquation
+from pysph.sph.sph_calc import SPHCalc
 from pysph.base.kernels import KernelBase
 from pysph.sph.function import *
 import numpy
@@ -49,7 +49,6 @@ funcs_eqn = [
              MoveCircleX(),
              MoveCircleY(),
              NeighborCount(),
-             SPHFunction()
             ]
 
 
@@ -126,7 +125,7 @@ def create_t_func_eqn(func):
             particles = Particles(arrays=[pa, pb])
             for func_getter in funcs_eqn:
                 func = func_getter.get_func(pa, pb)
-                calc = SPHEquation(particles, [pa], pb, kernel, [func], ['tmp'])
+                calc = SPHCalc(particles, [pa], pb, kernel, [func], ['tmp'])
                 t = get_time()
                 calc.sph('tmp')
                 t = get_time() - t

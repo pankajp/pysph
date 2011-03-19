@@ -24,10 +24,8 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self.id = 'pgrad'
         self.tag = "velocity"
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-        """
-        """
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                   KernelBase kernel, double *nr):
         cdef double mb = self.s_m.data[source_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
         cdef double rhob = self.s_rho.data[source_pid]
@@ -108,8 +106,8 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.id = 'momentumequation'
         self.tag = "velocity"
         
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                       KernelBase kernel, double *nr):
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
         cdef double dot, tmp
         cdef double ca, cb, mu, piab, alpha, beta, eta

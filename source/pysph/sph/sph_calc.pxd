@@ -14,7 +14,7 @@ from pysph.sph.sph_func cimport SPHFunctionParticle
 
 from pysph.sph.kernel_correction cimport KernelCorrectionManager
 
-cdef class SPHBase:
+cdef class SPHCalc:
     """ A general purpose class for SPH calculations. """
     cdef public ParticleArray dest
 
@@ -57,15 +57,5 @@ cdef class SPHBase:
     cpdef sph_array(self, DoubleArray output1, DoubleArray output2,
                     DoubleArray output3, bint exclude_self=*)
 
-    cdef eval(self, size_t i, double* nr, double* dnr, bint exclude_self)
     cdef setup_internals(self)
     cpdef check_internals(self)
-    #cdef evaluate_rkpm_first_order_correction_terms(self, bint exclude_self=*)
-    
-cdef class SPHCalc(SPHBase):
-    """ """
-    pass
-
-cdef class SPHEquation(SPHBase):
-    """ """
-    pass

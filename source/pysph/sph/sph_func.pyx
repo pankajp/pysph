@@ -1,42 +1,93 @@
 #include for malloc
-from libc.stdlib cimport *
-
+from libc.stdlib cimport * 
 cimport numpy
+
+
+class Function(object):
+    """ Base class that defines an sph function (sph.funcs) and it's
+    associated parameter values.
+
+    Methods:
+    --------
+
+    get_func -- Return a particular instance of SPHFunctionParticle
+    with an appropriate source and destination particle array.
+
+    Example:
+    --------
+
+    The sph function MonaghanArtificialVsicosity (defined in
+    sph.funcs.viscosity_funcs) requires the parameter values 'alpha',
+    'beta', 'gamma' and 'eta' to define the artificial viscosity. This
+    function may be created as:
+
+    avisc = MonaghanArtificialVsicosity(hks=False, alpha, beta, gamma, eta)
+    avisc_func = avisc.get_funcs(source, dest)
+
+    Thus, Function provides us a means to create functions at will
+    between source and destination particle arrays with specified
+    parameter values.
+
+    """
+    def __init__(self, sph_func=None, hks=False, *args, **kwargs):
+        """ Base class Constructor
+
+        Parameters:
+        -----------
+
+        sph_func -- the SPHFunctionParticle class type. Defaults to None
+        *args -- optional positional arguments.
+        **kwargs -- optional keyword arguments.
+
+        Notes:
+        ------
+
+        """
+        self.sph_func = sph_func
+        self.args = args
+        self.kwargs = kwargs
+        self.hks = hks
+
+    def get_func(self, source, dest):
+        """ Return a SPHFunctionParticle instance with source and dest """
+        if self.sph_func is None:
+            raise NotImplementedError, 'Function(sph_func=None).get_func()'
+
+        func = self.sph_func(source, dest, hks=self.hks,
+                             *self.args, **self.kwargs)
+        
+        return func
 
 ################################################################################
 # `SPHFunctionParticle` class.
 ################################################################################
-cdef class SPHFunctionParticle:
-    """
-    Base class to represent an interaction between two particles from two
-    possibly different particle arrays. 
+cdef class SPHFunction:
+    """ Base class to represent an operation on a particle array.
 
-    This class requires access to particle properties of possibly two different
-    entities. Since there is no particle class having all properties at one
-    place, names used for various properties and arrays corresponding to those
+    This class requires access to particle properties of a ParticleArray.
+    Since there is no particle class having all properties at one place,
+    names used for various properties and arrays corresponding to those
     properties are stored in this class for fast access to property values both
     at the source and destination.
     
     This class contains names, and arrays of common properties that will be
-    needed for any particle-particle interaction computation. The data within
+    needed for an operation. The data within
     these arrays, can be used as *array.data[pid]*, where pid in the particle
     index, "data" is the actual c-pointer to the data.
 
-    All source arrays are prefixed with a "s_". All destination arrays are
-    prefixed by a "d_". For example the mass property of the source will be in
-    the s_m array.
+    All arrays are prefixed with a "s_". Destination arrays prefixed by "d_"
+    are an alias for the same array prefixed with "s_". For example the mass
+    property of the source will be in the s_m array which is same as d_m.
 
     """
-    def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True, hks = False, *args, **kwargs):
-        """
-        Constructor.
-        """
+    def __init__(self, ParticleArray source, ParticleArray dest=None,
+                 bint setup_arrays=True, *args, **kwargs):
+        """ dest argument is unused. self.dest is set to source """
         self.name = ""
         self.id = ""
         self.tag = ""
         self.source = source
-        self.dest = dest
+        self.dest = source
 
         #Default properties
         self.x = 'x'
@@ -51,53 +102,9 @@ cdef class SPHFunctionParticle:
         self.p = 'p'
         self.e = 'e'
         self.cs = 'cs'
-
-        self.s_x = None
-        self.s_y = None
-        self.s_z = None
-        self.s_u = None
-        self.s_v = None
-        self.s_w = None
-        self.s_m = None
-        self.s_rho = None
-        self.s_h = None
-        self.s_p = None
-        self.s_e = None
-
-        self.d_x = None
-        self.d_y = None
-        self.d_z = None
-        self.d_u = None
-        self.d_v = None
-        self.d_w = None
-        self.d_m = None
-        self.d_rho = None
-        self.d_h = None
-        self.d_p = None
-        self.d_e = None
-
-        #kernel correction of Bonnet and Lok
-
-        self.bonnet_and_lok_correction = False
-
-        #flag for the rkpm first order kernel correction
-
-        self.rkpm_first_order_correction = False
-
-        # kernel function and gradient evaulation
-
-        self.kernel_function_evaluation = {}
-        self.kernel_gradient_evaluation = {}
-
-        # type of kernel symmetrization
-
-        self.hks = hks
-
-        self.function_cache = []
-        self.xgradient_cache = []
-        self.ygradient_cache = []
-        self.zgradient_cache = []
-
+        
+        self.num_outputs = 3
+        
         if setup_arrays:
             self.setup_arrays()
 
@@ -128,24 +135,112 @@ cdef class SPHFunctionParticle:
         self.d_p = self.dest.get_carray(self.p)
         self.d_e = self.dest.get_carray(self.e)
         self.d_cs = self.dest.get_carray(self.cs)
+    
+    cpdef eval(self, KernelBase kernel, DoubleArray output1, DoubleArray output2, DoubleArray output3):
+        """ Evaluate the store the results in the output arrays """
+        cdef double result[3]
+        
+        # get the tag array pointer
+        cdef LongArray tag_arr = self.dest.get_carray('tag')
+        cdef long * tag = tag_arr.get_data_ptr()
 
-    cdef void eval(self, int k, int source_pid, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
-
-        """ Computes the contribution of particle at source_pid on particle at
-        dest_pid.
-
+        self.setup_iter_data()
+        cdef size_t np = self.dest.get_number_of_particles()
+        
+        for i in range(np):
+            if tag[i] == LocalReal:
+                self.eval_single(i, kernel, result)
+                output1[i] = result[0]
+                output2[i] = result[1]
+                output3[i] = result[2]
+            else:
+                output1[i] = output2[i] = output3[i] = 0
+    
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel, double * result):
+        """ Evaluate the function on a single dest particle
+        
+        Implement this in a subclass to do the actual computation
         """
-        raise NotImplementedError, 'SPHFunctionParticle::eval'
-
-    cpdef int output_fields(self) except -1:
-        raise NotImplementedError, 'SPHFunctionParticle::output_fields'
+        raise NotImplementedError, 'SPHEquation.eval_single()'
+        
+    cpdef int output_fields(self) except - 1:
+        return self.num_outputs
     
     cpdef setup_iter_data(self):
-        """ setup operations performed in each iteration """
+        """ setup operations performed in each iteration
+        
+        Override this in a subclass to do any operations at every iteration
+        """
         pass
+
+################################################################################
+# `SPHFunctionParticle` class.
+################################################################################
+cdef class SPHFunctionParticle(SPHFunction):
+    """ Base class to represent an interaction between two particles from two
+    possibly different particle arrays.
+
+    This class requires access to particle properties of possibly two different
+    entities. Since there is no particle class having all properties at one
+    place, names used for various properties and arrays corresponding to those
+    properties are stored in this class for fast access to property values both
+    at the source and destination.
     
-    cdef double rkpm_first_order_kernel_correction(self, int dest_pid):
+    This class contains names, and arrays of common properties that will be
+    needed for any particle-particle interaction computation. The data within
+    these arrays, can be used as *array.data[pid]*, where pid in the particle
+    index, "data" is the actual c-pointer to the data.
+
+    All source arrays are prefixed with a "s_". All destination arrays are
+    prefixed by a "d_". For example the mass property of the source will be in
+    the s_m array.
+
+    """
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 bint setup_arrays=True, hks=False,
+                 exclude_self=False,
+                 FixedDestNbrParticleLocator nbr_locator=None,
+                 *args, **kwargs):
+        SPHFunction.__init__(self, source, setup_arrays=False, *args, **kwargs)
+        self.dest = dest
+        self.exclude_self = exclude_self
+        
+        #kernel correction of Bonnet and Lok
+        self.bonnet_and_lok_correction = False
+
+        #flag for the rkpm first order kernel correction
+        self.rkpm_first_order_correction = False
+
+        # type of kernel symmetrization
+        self.hks = hks
+
+        if setup_arrays:
+            self.setup_arrays()
+
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double * result):
+        """ Computes contribution of all neighbors on particle at dest_pid """
+        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
+        cdef size_t nnbrs = nbrs.length
+
+        if self.exclude_self:
+            if self.src is self.dest:
+                # this works because nbrs has self particle in last position
+                nnbrs -= 1
+        
+        result[0] = result[1] = result[2] = 0.0
+        for j in range(nnbrs):
+            self.eval_nbr(nbrs.data[j], dest_pid, kernel, result)
+    
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
+                   KernelBase kernel, double * result):
+        """ Computes contribution of particle at source_pid on dest_pid
+        
+        Implement this in a subclass to do the actual computation
+        """
+        raise NotImplementedError, 'SPHFunctionParticle.eval_nbr()'
+
+    cdef double rkpm_first_order_kernel_correction(self, size_t dest_pid):
         """ Return the first order correction term for an interaction """
 
         cdef double beta1, beta2, alpha
@@ -155,9 +250,9 @@ cdef class SPHFunctionParticle:
         beta2 = self.d_beta2.data[dest_pid]
         alpha = self.d_alpha.data[dest_pid]
 
-        return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
+        return alpha * (1.0 + beta1 * rab.x + beta2 * rab.y)
 
-    cdef double rkpm_first_order_gradient_correction(self, int dest_pid):
+    cdef double rkpm_first_order_gradient_correction(self, size_t dest_pid):
         """ Return the first order correction term for an interaction """
         
         cdef double beta1, beta2, alpha
@@ -167,10 +262,10 @@ cdef class SPHFunctionParticle:
         beta2 = self.d_beta2.data[dest_pid]
         alpha = self.d_alpha.data[dest_pid]
 
-        return alpha * (1.0 + beta1*rab.x + beta2*rab.y)
+        return alpha * (1.0 + beta1 * rab.x + beta2 * rab.y)
 
-    cdef double bonnet_and_lok_gradient_correction(self, int dest_pid,
-                                                   cPoint* grad):
+    cdef double bonnet_and_lok_gradient_correction(self, size_t dest_pid,
+                                                   cPoint * grad):
         """ Correct the gradient of the kernel """
 
         cdef double x, y, z
@@ -190,22 +285,50 @@ cdef class SPHFunctionParticle:
 
         x = grad.x; y = grad.y; z = grad.z
 
-        grad.x = l11*x + l12*y + l13*z
+        grad.x = l11 * x + l12 * y + l13 * z
+        grad.y = l21 * x + l22 * y + l23 * z
+        grad.z = l31 * x + l32 * y + l33 * z        
+
+################################################################################
+# `CSPHFunctionParticle` class.
+################################################################################
+cdef class CSPHFunctionParticle(SPHFunctionParticle):
+    """ `SPHFunctionParticle` class for use of corrected SPH (CSPH) operations
+    
+    In this case numerator and denominator are computed for each neighbor
+    particle and finally the numerator is divided with the denominator.
+    A more efficient way if multiple such funcs are needed may be to do these
+    operations in separate funcs so the results can be reused
+    """
+
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double * result):
+        """ Computes contribution of all neighbors on particle at dest_pid """
+        cdef double dnr[3] # denominator
+        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
+        cdef size_t nnbrs = nbrs.length
+        if self.exclude_self:
+            if self.src is self.dest:
+                # this works because nbrs has self particle in last position
+                nnbrs -= 1
         
-        grad.y = l21*x + l22*y + l23*z
-
-        grad.z = l31*x + l32*y + l33*z        
-
-    def py_eval(self, int k, int source_pid, int dest_pid,
-                KernelBase kernel):
-
-        cdef double nr[3], dnr[3]
-
-        nr[0] = 0.0; nr[1] = 0.0; nr[2] = 0.0
-        dnr[0] = 0.0; dnr[1] = 0.0; dnr[2] = 0.0
-        self.eval(k, source_pid,  dest_pid, kernel, &nr[0], &dnr[0])
-
-        return nr[0], dnr[0]
+        result[0] = result[1] = result[2] = 0.0
+        dnr[0] = dnr[1] = dnr[2] = 0.0
+        for j in range(nnbrs):
+            self.eval_nbr_csph(nbrs.data[j], dest_pid, kernel, result, dnr)
+        
+        for m in range(3):
+            if dnr[m] != 0.0:
+                result[m] /= dnr[m]
+    
+    cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
+                            KernelBase kernel, double * result, double * dnr):
+        """ Compute influence when denominator is separately affected by nbrs
+        
+        This is used in cases such as CSPH where the summation if weighted
+        by the kernel sum of all the neighboring particles
+        """
+        raise NotImplementedError, 'CSPHFunctionParticle.evaleval_nbr_csph()'
 
 ################################################################################
 # `SPHFunctionPoint` class.
@@ -222,7 +345,7 @@ cdef class SPHFunctionPoint:
     derived from SPHFunctionParticle.
 
     """
-    def __init__(self, ParticleArray array, bint setup_arrays=True, 
+    def __init__(self, ParticleArray array, bint setup_arrays=True,
                  *args, **kwargs):
 
         self.source = array
@@ -239,30 +362,6 @@ cdef class SPHFunctionPoint:
         self.u = 'u'
         self.v = 'v'
         self.w = 'w'
-
-        self.s_m = None
-        self.s_h = None
-        self.s_rho = None
-        self.s_p = None
-        self.s_e = None
-        self.s_x = None
-        self.s_y = None
-        self.s_z = None
-        self.s_u = None
-        self.s_v = None
-        self.s_w = None
-
-        self.d_m = None
-        self.d_h = None
-        self.d_rho = None
-        self.d_p = None
-        self.d_e = None
-        self.d_x = None
-        self.d_y = None
-        self.d_z = None
-        self.d_u = None
-        self.d_v = None
-        self.d_w = None
 
         if setup_arrays:
             self.setup_arrays()
@@ -282,9 +381,8 @@ cdef class SPHFunctionPoint:
         self.s_p = self.source.get_carray(self.p)
         self.s_e = self.source.get_carray(self.e)
 
-
-    cdef void eval(self, cPoint pnt, int dest_pid, 
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval(self, cPoint pnt, int dest_pid,
+                   KernelBase kernel, double * nr, double * dnr):
         """
         Computes the contribution of particle at source_pid on point pnt.
 
@@ -299,18 +397,18 @@ cdef class SPHFunctionPoint:
         """
         raise NotImplementedError, 'SPHFunctionPoint::eval'
 
-    cpdef py_eval(self, Point pnt, int dest_pid, 
+    cpdef py_eval(self, Point pnt, int dest_pid,
                   KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr):
         """
         Python wrapper for the eval function, to be used in tests.
         """
-        cdef double *_nr
-        cdef double *_dnr
+        cdef double * _nr
+        cdef double * _dnr
         cdef int i
         
-        _nr = <double*>malloc(sizeof(double)*self.output_fields())
-        _dnr = <double*>malloc(sizeof(double)*self.output_fields())
+        _nr = < double *> malloc(sizeof(double) * self.output_fields())
+        _dnr = < double *> malloc(sizeof(double) * self.output_fields())
 
         self.eval(pnt.data, dest_pid, kernel, _nr, _dnr)
 
@@ -318,10 +416,10 @@ cdef class SPHFunctionPoint:
             nr[i] += _nr[i]
             dnr[i] += _dnr[i]
 
-        free(<void*>_nr)
-        free(<void*>_dnr)
+        free(< void *> _nr)
+        free(< void *> _dnr)
 
-    cpdef int output_fields(self) except -1:
+    cpdef int output_fields(self) except - 1:
         """
         Returns the number of output fields, this SPHFunctionPoint will write
         to. This does not depend on the dimension of the simulation, it just

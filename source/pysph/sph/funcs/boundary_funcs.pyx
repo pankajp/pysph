@@ -37,8 +37,8 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self.s_ny = self.source.get_carray("ny")
         self.s_nz = self.source.get_carray("nz")
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """ Perform the boundary force computation """
 
         cdef double x, y, nforce, tforce, force
@@ -117,8 +117,8 @@ cdef class BeckerBoundaryForce(SPHFunctionParticle):
 
         self.sound_speed = sound_speed
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 
@@ -202,8 +202,8 @@ cdef class LennardJonesForce(SPHFunctionParticle):
         self.p1 = p1
         self.p2 = p2
 
-    cdef void eval(self, int k, int source_pid, int dest_pid,
-                   KernelBase kernel, double *nr, double *dnr):
+    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
+                       KernelBase kernel, double *nr):
         """
         Compute the contribution of particle at source_pid on particle at
         dest_pid. 

@@ -34,10 +34,11 @@ class SPHOperation(object):
 
     Data Members:
     --------------
-    function -- The function to use for evaluating the RHS in an SPH operation.
+    function -- The function (:class:`sph_func.Function`) to use for evaluating
+            the RHS in an SPH operation.
     from_types -- The accepted neighbor tags
     on_types -- The accepted self tags
-     updates -- The property the operation updates
+    updates -- The property the operation updates
     id -- A unique id for this operation
 
 
@@ -154,7 +155,7 @@ class SPHSimpleODE(SPHOperation):
                 snum = calc_data[i]['snum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHEquation(
+                calc = sph.SPHCalc(
                     particles=particles, sources=srcs, dest=dest, 
                     kernel=kernel, funcs=funcs, updates=self.updates,
                     integrates=True, dnum=dnum, nbr_info=False, id=id,
@@ -284,7 +285,7 @@ class SPHAssignment(SPHOperation):
                 snum = calc_data[i]['snum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHEquation(
+                calc = sph.SPHCalc(
                     particles=particles, sources=srcs,
                     dest=dest, kernel=kernel, 
                     funcs=funcs, updates=self.updates, 

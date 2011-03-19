@@ -94,15 +94,6 @@ class TestSPHFunctionParticle(unittest.TestCase):
         self.assertEqual(f.d_z, parrs[0].get_carray('z'))
         self.assertEqual(f.d_w, parrs[0].get_carray('w'))
 
-    def test_output_fields(self):
-        """
-        Tests the output_fields function.
-        """
-        parrs= generate_sample_dataset_1()
-        f = SPHFunctionParticle(parrs[0], parrs[0])
-
-        self.assertRaises(NotImplementedError, f.output_fields)
-
 
 ###############################################################################
 # `TestSPHFunctionPoint` class.
