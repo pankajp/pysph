@@ -1,5 +1,5 @@
 # This file (carray.pxd) has been generated automatically on
-# Mon Feb 14 16:36:03 2011
+# Mon Mar 21 07:30:07 2011
 # DO NOT modify this file
 # To make changes modify the source templates (carray_pxd.src) and regenerate
 """
@@ -28,7 +28,7 @@ The numpy array may however be copied and used in any manner.
 
 """
 # For malloc etc.
-from libc.stdlib cimport *
+from stdlib cimport *
 
 cimport numpy as np
 

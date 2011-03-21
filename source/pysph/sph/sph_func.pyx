@@ -136,7 +136,8 @@ cdef class SPHFunction:
         self.d_e = self.dest.get_carray(self.e)
         self.d_cs = self.dest.get_carray(self.cs)
     
-    cpdef eval(self, KernelBase kernel, DoubleArray output1, DoubleArray output2, DoubleArray output3):
+    cpdef eval(self, KernelBase kernel, DoubleArray output1,
+               DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
         cdef double result[3]
         
@@ -156,7 +157,8 @@ cdef class SPHFunction:
             else:
                 output1[i] = output2[i] = output3[i] = 0
     
-    cdef void eval_single(self, size_t dest_pid, KernelBase kernel, double * result):
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double * result):
         """ Evaluate the function on a single dest particle
         
         Implement this in a subclass to do the actual computation
@@ -237,6 +239,7 @@ cdef class SPHFunctionParticle(SPHFunction):
         """ Computes contribution of particle at source_pid on dest_pid
         
         Implement this in a subclass to do the actual computation
+
         """
         raise NotImplementedError, 'SPHFunctionParticle.eval_nbr()'
 

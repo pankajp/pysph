@@ -15,6 +15,9 @@ import numpy
 
 import pysph.base.api as base
 
+from pysph.base.particle_array import get_ghost_particle_tag
+GhostParticle = get_ghost_particle_tag()
+
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
     1e-16."""
@@ -337,15 +340,13 @@ class CellTestCase(unittest.TestCase):
         self.pa2 = pa2 = base.get_particle_array(name='test2',
                                                  x=x2, y=y2, z=z2, h=h2)
 
-        self.periodic_domain = periodic_domain = PeriodicDomain(xmin=-0.5,
+        self.periodic_domain = periodic_domain = PeriodicDomain(xmin=-0.2,
                                                                 xmax=1.0)
 
-        self.cm = CellManager(arrays_to_bin=[pa1, pa2],
-                              periodic_domain=None)
-
     def test_constructor(self):
-
-        cm = self.cm
+        
+        cm = CellManager(arrays_to_bin=[self.pa1, self.pa2],
+                         periodic_domain=None)
 
         self.assertAlmostEqual(cm.cell_size, 0.3, 10)
 
@@ -365,7 +366,8 @@ class CellTestCase(unittest.TestCase):
 
     def test_cell_copy(self):
 
-        cm = self.cm
+        cm = CellManager(arrays_to_bin=[self.pa1, self.pa2],
+                         periodic_domain=None)
 
         pa1 = cm.arrays_to_bin[0]
         pa2 = cm.arrays_to_bin[1]
@@ -389,6 +391,39 @@ class CellTestCase(unittest.TestCase):
 
         self.assertEqual(pa1.get_number_of_particles(), original_length1+2)
 
+        self.assertEqual(pa2.get_number_of_particles(), original_length2+2)
+
+        # Assert that the two particles added have the right tag
+
+        tag1 = pa1.get('tag', only_real_particles=False)
+        tag2 = pa2.get('tag', only_real_particles=False)
+
+        for i in range(original_length1, original_length1+2):
+            self.assertEqual(tag1[i], GhostParticle)
+
+        for i in range(original_length2, original_length2+2):
+            self.assertEqual(tag2[i], GhostParticle)
+
+    def test_create_ghost_cells(self):
+        cm = CellManager(arrays_to_bin=[self.pa1, self.pa2],
+                         periodic_domain=self.periodic_domain)
+
+        cells = cm.cells_dict
+
+        self.assertEqual(len(cells), 28)
+
+        # test deletion of ghost particles
+
+        cm.remove_ghost_particles()
+
+        self.assertEqual(self.pa1.get_number_of_particles(), 25)
+        self.assertEqual(self.pa2.get_number_of_particles(), 25)
+
+        # delete empty cells
+
+        cm.delete_empty_cells()
+
+        self.assertEqual(len(cells), 16)
 
 ###############################################################################
 # `TestCellManager` class.

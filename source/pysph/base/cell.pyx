@@ -245,7 +245,8 @@ cdef class Cell:
     """
 
     def __init__(self, IntPoint id, CellManager cell_manager=None, double
-                 cell_size=0.1, int jump_tolerance=1):
+                 cell_size=0.1, PeriodicDomain periodic_domain=None,
+                 int jump_tolerance=1):
 
         self.id = IntPoint_new(id.x, id.y, id.z)
 
@@ -258,6 +259,8 @@ cdef class Cell:
         self.jump_tolerance = jump_tolerance
 
         self.arrays_to_bin = []
+
+        self.periodic_domain = periodic_domain
 
         self.set_cell_manager(cell_manager)
     
@@ -309,7 +312,8 @@ cdef class Cell:
 
         cdef Cell cell = Cell(id=id, cell_manager=self.cell_manager,
                               cell_size=self.cell_size,
-                              jump_tolerance=self.jump_tolerance)
+                              jump_tolerance=self.jump_tolerance,
+                              periodic_domain=self.periodic_domain)
         return cell
 
     cpdef int update(self, dict data) except -1:
@@ -385,14 +389,23 @@ cdef class Cell:
                     pnt.y = ya.data[particle_id]
                     pnt.z = za.data[particle_id]
 
+                    if self.periodic_domain:
+
+                        if pnt.x >= self.periodic_domain.xmax:
+                            pnt.x -= self.periodic_domain.xtranslate
+
+                        if pnt.x <= self.periodic_domain.xmin:
+                            pnt.x += self.periodic_domain.xtranslate
+
                     # find the cell containing this point
 
                     id.data = find_cell_id(pnt, self.cell_size)
 
-                    # check for jump tolerance
-                    
-                    self.cell_manager.check_jump_tolerance(self.id.data,
-                                                           id.data)
+                    # check for jump tolerance if not periodic
+
+                    if not self.periodic_domain:
+                        self.cell_manager.check_jump_tolerance(self.id.data,
+                                                               id.data)
 
                     # do nothing if the particle is within this cell
                     
@@ -811,6 +824,8 @@ cdef class CellManager:
 
         self.initialized = False
 
+        self.ghost_cells = dict()
+
         if initialize == True:
             self.initialize()
 
@@ -901,10 +916,14 @@ cdef class CellManager:
         
         if self.is_dirty:
 
+            # delete ghost cells and particles from a previous step
+
+            self.remove_ghost_particles()
+
             # update the cells.
 
             self.cells_update()
-        
+
             # delete empty cells if any.
 
             self.delete_empty_cells()
@@ -1045,7 +1064,8 @@ cdef class CellManager:
         # create a leaf cell with all particles.
 
         cell = Cell(id=IntPoint(0, 0, 0), cell_manager=self,
-                    cell_size=self.cell_size, jump_tolerance=INT_MAX)
+                    cell_size=self.cell_size, jump_tolerance=INT_MAX,
+                    periodic_domain=self.periodic_domain)
         
         # now add all particles of all arrays to this cell.
 
@@ -1272,46 +1292,45 @@ cdef class CellManager:
 
             # Check for X periodicity at left end
 
+            ghost_pnt.y = centroid.y
+            ghost_pnt.z = centroid.z
+
             if ( (centroid.data.x - half_cell_size) <= domain.xmin ):
 
                 ghost_pnt.x = centroid.x + domain.xtranslate
-                ghost_pnt.y = centroid.y
-                ghost_pnt.z = centroid.z
-                
+               
                 ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
 
                 ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
                 nghost_cells += 1
 
-                if ( (centroid.data.x + half_cell_size - domain.xmin) < dist ):
+            elif ( ((centroid.data.x - half_cell_size) - domain.xmin) < dist ):
 
-                    ghost_cid.data.x += 1
-                    if PyDict_Contains( self.cells, cid ):
-                        cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
-                        ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
-                        nghost_cells += 1
+                ghost_pnt.x = centroid.x + domain.xtranslate
+
+                ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
+                ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                nghost_cells += 1
 
             # check for X periodicity at right end
 
             if ( (centroid.data.x + half_cell_size) >= domain.xmax ):
 
                 ghost_pnt.x = centroid.x - domain.xtranslate
-                ghost_pnt.y = centroid.y
-                ghost_pnt.z = centroid.z
 
                 ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
 
                 ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
                 nghost_cells += 1
 
-                if ((domain.xmax - (centroid.data.x - half_cell_size)) < dist):
+            elif ((domain.xmax - (centroid.data.x + half_cell_size)) < dist):
 
-                    ghost_cid.data.x -= 1
-                    if PyDict_Contains( self.cells, cid ):
-                        cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
-                        ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
-                        nghost_cells += 1
-                        
+                ghost_pnt.x = centroid.x - domain.xtranslate
+
+                ghost_cid.data = find_cell_id(ghost_pnt, self.cell_size)
+
+                ghost_cells[ghost_cid.copy()] = cell.copy(ghost_cid)
+                nghost_cells += 1
 
         ghost_cids = PyDict_Keys( ghost_cells )
         for i in range(nghost_cells):
@@ -1319,11 +1338,13 @@ cdef class CellManager:
             ghost_cid = ghost_cids[i]
             ghost_cell = <Cell>PyDict_GetItem( ghost_cells, ghost_cid )
             
-            if PyDict_Contains( self.cells, ghost_cid ):
-                cell = <Cell>PyDict_GetItem( self.cells, ghost_cid )
+            if PyDict_Contains( self.cells_dict, ghost_cid ):
+                cell = <Cell>PyDict_GetItem( self.cells_dict, ghost_cid )
                 cell.add_particles( ghost_cell )
             else:
                 self.cells_dict[ghost_cid] = ghost_cell
+
+        self.ghost_cells = ghost_cells
 
     cpdef remove_ghost_particles(self):
         """ Remove all particles with tag GhostParticle """
@@ -1331,11 +1352,18 @@ cdef class CellManager:
         cdef ParticleArray pa
         cdef int i
 
+        cdef IntPoint ghost_cid
+
+        cdef list ghost_cids = PyDict_Keys( self.ghost_cells )
+        cdef int nghost_cells = PyList_Size( ghost_cids )
+
         for i in range(self.num_arrays):
             pa = self.arrays_to_bin[i]
             pa.remove_tagged_particles(GhostParticle)
 
-        self.delete_empty_cells()
+        for i in range(nghost_cells):
+            ghost_cid = ghost_cids[i]
+            self.cells_dict.pop(ghost_cid)
 
     cpdef add_array_to_bin(self, ParticleArray parr):
         """ Add an array to the CellManager (before initialization)"""

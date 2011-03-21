@@ -33,6 +33,9 @@ cdef class Cell:
     cdef public int jump_tolerance
     cdef public list index_lists
     cdef int num_arrays
+
+    # Periodicity and ghost cells
+    cdef public PeriodicDomain periodic_domain
     
     # Member functions.
     cpdef int add_particles(self, Cell cell) except -1
@@ -72,8 +75,9 @@ cdef class CellManager:
 
     cdef public bint initialized
 
-    # Periodicity
+    # Periodicity and ghost cells
     cdef public PeriodicDomain periodic_domain
+    cdef public dict ghost_cells
     
     cdef public str coord_x, coord_y, coord_z
 
@@ -89,7 +93,6 @@ cdef class CellManager:
 
     cpdef double compute_cell_size(self, double min_size=*, double max_size=*)
     
-    # carried over from RootCell
     cpdef int cells_update(self) except -1
     
     cpdef _build_cell(self)
