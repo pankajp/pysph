@@ -93,7 +93,7 @@ class Particles(object):
     
     def __init__(self, arrays=[], in_parallel=False, variable_h=False,
                  load_balancing=True, update_particles=True,
-                 min_cell_size=-1):
+                 periodic_domain=None, min_cell_size=-1):
         
         """ Constructor
 
@@ -108,6 +108,7 @@ class Particles(object):
 
         load_balancing -- flag for dynamic load balancing.
 
+        periodic_domain -- the periodic domain for periodicity
 
         """
 
@@ -125,7 +126,8 @@ class Particles(object):
 
         if not in_parallel:
             self.cell_manager = CellManager(arrays_to_bin=arrays,
-                                            min_cell_size=min_cell_size)
+                                            min_cell_size=min_cell_size,
+                                            periodic_domain=periodic_domain)
         else:
             self.cell_manager = ParallelCellManager(
                 arrays_to_bin=arrays, load_balancing=load_balancing)

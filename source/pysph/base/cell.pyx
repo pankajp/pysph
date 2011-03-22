@@ -616,6 +616,7 @@ cdef class Cell:
         cdef IntPoint diff
 
         cdef int i, ncopies, start_index, end_index
+        cdef PeriodicDomain periodic_domain = self.periodic_domain 
         
         cdef Cell copied_cell = self.get_new_sibling( cid )
 
@@ -632,9 +633,21 @@ cdef class Cell:
             y = pa_copy.get('y')
             z = pa_copy.get('z')
 
-            x += diff.x * self.cell_size
-            y += diff.y * self.cell_size
-            z += diff.z * self.cell_size
+            if diff.data.x > 0:
+                x += periodic_domain.xtranslate
+            else:
+                x -= periodic_domain.xtranslate
+
+            if diff.data.y > 0:
+                y += periodic_domain.ytranslate
+            else:
+                y -= periodic_domain.ytranslate
+
+            if diff.data.z > 0:
+                z += periodic_domain.ztranslate
+            else:
+                z -= periodic_domain.ztranslate
+
             tag[:] = particle_tag
 
             pa_copy.set(x=x, y=y, z=z, tag=tag)
@@ -928,6 +941,11 @@ cdef class CellManager:
 
             self.delete_empty_cells()
 
+            # create ghost cells
+
+            if self.periodic_domain:
+                self.create_ghost_cells()
+
             # reset the dirty bit of all particle arrays.
 
             for i in range(num_arrays):
@@ -935,11 +953,6 @@ cdef class CellManager:
                 parray.set_dirty(False)
 
             self.is_dirty = False
-
-            # create ghost cells
-
-            if self.periodic_domain:
-                self.create_ghost_cells()
 
         return 0
 
@@ -1108,8 +1121,8 @@ cdef class CellManager:
         cdef Cell cell
         cdef unsigned int i
 
-        # construct ids of all neighbors around cell_id, this
-        # will include the cell also.
+        # construct ids of all neighbors around cell_id, including self
+
         cdef vector[cIntPoint] v = construct_immediate_neighbor_list(
                                         find_cell_id(pnt, self.cell_size),
                                         True, <int>ceil(radius/self.cell_size))
@@ -1121,10 +1134,6 @@ cdef class CellManager:
                 cell = <Cell>PyDict_GetItem( self.cells_dict, cell_id )
                 PyList_Append( cell_list, cell )
 
-            #cell = self.cells_dict.get(cell_id)
-            #if cell is not None:
-            #    cell_list.append(cell)
-        
         return 0
 
     cdef int _get_cells_within_radius(self, cPoint pnt, double radius,
@@ -1236,6 +1245,7 @@ cdef class CellManager:
             pnt.z = z.data[indices.data[i]]
 
             # find the cell to which this particle belongs to 
+
             id.data = find_cell_id(pnt, cell_size)
             if PyDict_Contains(particles_for_cells, id) == 1:
                 cell_indices = <LongArray>PyDict_GetItem(particles_for_cells,
@@ -1354,16 +1364,11 @@ cdef class CellManager:
 
         cdef IntPoint ghost_cid
 
-        cdef list ghost_cids = PyDict_Keys( self.ghost_cells )
-        cdef int nghost_cells = PyList_Size( ghost_cids )
-
         for i in range(self.num_arrays):
             pa = self.arrays_to_bin[i]
             pa.remove_tagged_particles(GhostParticle)
 
-        for i in range(nghost_cells):
-            ghost_cid = ghost_cids[i]
-            self.cells_dict.pop(ghost_cid)
+        self.ghost_cells = dict()
 
     cpdef add_array_to_bin(self, ParticleArray parr):
         """ Add an array to the CellManager (before initialization)"""
@@ -1568,7 +1573,22 @@ cdef class PeriodicDomain:
         self.zmin = zmin
         self.zmax = zmax
 
-        self.xtranslate = xmax - xmin
-        self.ytranslate = ymax - ymin
-        self.ztranslate = zmax - zmin
+        if (self.xmax - self.xmin) == 2000:
+            self.xtranslate = 0.0
+        else:
+            self.xtranslate = xmax - xmin
+
+        if (self.ymax - self.ymin) == 2000:
+            self.ytranslate = 0.0
+        else:            
+            self.ytranslate = ymax - ymin
+
+        if (self.zmax - self.zmin) == 2000:
+            self.ztranslate = 0.0
+        else:            
+            self.ztranslate = zmax - zmin
+
+
+
+        
                  

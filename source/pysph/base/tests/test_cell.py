@@ -419,12 +419,6 @@ class CellTestCase(unittest.TestCase):
         self.assertEqual(self.pa1.get_number_of_particles(), 25)
         self.assertEqual(self.pa2.get_number_of_particles(), 25)
 
-        # delete empty cells
-
-        cm.delete_empty_cells()
-
-        self.assertEqual(len(cells), 16)
-
 ###############################################################################
 # `TestCellManager` class.
 ###############################################################################

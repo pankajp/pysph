@@ -2,7 +2,7 @@
 
 from carray import LongArray, DoubleArray, IntArray
 
-from cell import Cell, CellManager
+from cell import Cell, CellManager, PeriodicDomain
 
 from kernels import KernelBase, CubicSplineKernel, \
         HarmonicKernel, GaussianKernel, M6SplineKernel, W8Kernel, W10Kernel,\

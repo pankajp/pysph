@@ -77,6 +77,7 @@ cdef class SPHCalc:
                   list updates, integrates=False, dnum=0, nbr_info=True,
                   str id = "", bint kernel_gradient_correction=False,
                   kernel_correction=-1, int dim = 1, str snum=""):
+
         self.nbr_info = nbr_info
         self.particles = particles
         self.sources = sources
