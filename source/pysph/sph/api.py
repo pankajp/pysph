@@ -2,6 +2,7 @@
 
 #Import from calc
 from sph_calc import SPHCalc
+from sph_func import SPHFunction, SPHFunctionParticle, CSPHFunctionParticle
 
 #Import update smoothing and conduction
 from update_smoothing import UpdateSmoothingADKE, TestUpdateSmoothingADKE
@@ -12,40 +13,41 @@ from update_misc_props import UpdateDivergence
 ############################################################################
 
 #Import basic functions
-from function import SPHInterpolation, SPHGradient, SPHSimpleGradient, \
-     Laplacian, NeighborCount, Function
+from funcs.basic_funcs import SPHGradient, \
+     SPHLaplacian, CountNeighbors, SPH as SPHInterpolation
 
 #Import boundary functions
-from function import MonaghanBoundaryForce, LennardJonesForce, \
+from funcs.boundary_funcs import MonaghanBoundaryForce, LennardJonesForce, \
      BeckerBoundaryForce
 
 #Import density functions
-from function import SPHRho, SPHDensityRate
+from funcs.density_funcs import SPHRho, SPHDensityRate
 
 #Import Energy functions
-from function import EnergyEquation, EnergyEquationAVisc,\
+from funcs.energy_funcs import EnergyEquation, EnergyEquationAVisc,\
      EnergyEquationNoVisc, ArtificialHeat
 
 #Import viscosity functions
-from function import MonaghanArtificialVsicosity, MorrisViscosity
+from funcs.viscosity_funcs import MonaghanArtificialVsicosity, MorrisViscosity
 
 #Import pressure functions
-from function import SPHPressureGradient, MomentumEquation
+from funcs.pressure_funcs import SPHPressureGradient, MomentumEquation
 
 #Positon Steppers
-from function import PositionStepping
+from funcs.position_funcs import PositionStepping
 
 #Import XSPH functions
-from function import XSPHDensityRate, XSPHCorrection
+from funcs.xsph_funcs import XSPHDensityRate, XSPHCorrection
 
 #Import Equation of state functions
-from function import IdealGasEquation, TaitEquation
+from funcs.eos_funcs import IdealGasEquation, TaitEquation
 
 #Import external force functions
-from function import GravityForce, VectorForce, MoveCircleX, MoveCircleY
+from funcs.external_force import GravityForce, VectorForce, MoveCircleX, MoveCircleY
 
 #Import ADKE functions
-from function import ADKEPilotRho, VelocityDivergence
+from funcs.adke_funcs import PilotRho as ADKEPilotRho, \
+    SPHVelocityDivergence as VelocityDivergence
 
 ############################################################################
 

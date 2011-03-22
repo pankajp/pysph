@@ -6,7 +6,7 @@ from utils import PBar, savez_compressed, savez
 import pysph.base.api as base
 
 from pysph.sph.kernel_correction import KernelCorrectionManager
-from pysph.sph.function import XSPHCorrection, PositionStepping
+import pysph.sph.api as sph
 
 from sph_equation import SPHSummationODE, SPHSimpleODE
 
@@ -100,7 +100,7 @@ class Solver(object):
         id = 'step'
 
         self.add_operation(SPHSimpleODE(
-                PositionStepping(), on_types=types, updates=updates, id=id)
+                sph.PositionStepping, on_types=types, updates=updates, id=id)
                            )
 
     def add_operation(self, operation, before=False, id=None):
@@ -334,7 +334,7 @@ class Solver(object):
                            
         self.add_operation(SPHSummationODE(
 
-            XSPHCorrection(eps=eps), from_types=[Fluids],
+            sph.XSPHCorrection.withargs(eps=eps), from_types=[Fluids],
             on_types=types,  updates=updates, id=id )
 
                            )

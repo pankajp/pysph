@@ -7,5 +7,5 @@
 #sph imports
 from pysph.sph.sph_func cimport SPHFunction
 
-cdef class PostionStepping(SPHFunction):
+cdef class PositionStepping(SPHFunction):
     pass

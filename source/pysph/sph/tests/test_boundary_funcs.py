@@ -74,7 +74,7 @@ class BoundaryForceTestCase(unittest.TestCase):
 
         self.solver.add_operation(solver.SPHSummationODE(
                 
-                sph.MonaghanBoundaryForce(delp=dp),
+                sph.MonaghanBoundaryForce.withargs(delp=dp),
                 from_types = [Solid], on_types=[Fluid],
                 updates=['u','v'], id='boundary')
                                   

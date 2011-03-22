@@ -50,14 +50,14 @@ class SolverTestCase(unittest.TestCase):
         
         self.visc = solver.SPHSummationODE(
 
-            sph.MorrisViscosity(), on_types=[Fluids],
+            sph.MorrisViscosity, on_types=[Fluids],
             from_types = [Fluids, Solids], updates=['u','v'], id='visc'
             
             )
 
         self.summation_density = solver.SPHAssignment(
 
-            sph.SPHRho(), on_types=[Fluids, Solids],
+            sph.SPHRho, on_types=[Fluids, Solids],
             updates=['rho'], id='sd'
 
             )
@@ -70,14 +70,14 @@ class SolverTestCase(unittest.TestCase):
 
         s.add_operation(solver.SPHAssignment(
                 
-                sph.TaitEquation(1,1), on_types = [Fluids, Solids],
+                sph.TaitEquation.withargs(1,1), on_types = [Fluids, Solids],
                 updates=['p','cs'], id = 'eos')
 
                              )
                 
         s.add_operation(solver.SPHSummationODE(
                 
-                sph.SPHDensityRate(), on_types=[Fluids, Solids],
+                sph.SPHDensityRate, on_types=[Fluids, Solids],
                 from_types=[Fluids, Solids], updates=['rho'], id='density_rate')
                              
                              )
@@ -85,14 +85,14 @@ class SolverTestCase(unittest.TestCase):
 
         s.add_operation(solver.SPHSummationODE(
                 
-                sph.SPHPressureGradient(), on_types=[Fluids],
+                sph.SPHPressureGradient, on_types=[Fluids],
                 from_types=[Fluids, Solids], updates=['u','v'], id='pgrad')
 
                              )
 
         s.add_operation(solver.SPHSummationODE(
 
-                sph.MonaghanArtificialVsicosity(), on_types=[Fluids],
+                sph.MonaghanArtificialVsicosity, on_types=[Fluids],
                 from_types=[Fluids, Solids], updates=['u','v'], id='avisc')
 
                              )
@@ -221,7 +221,7 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(op.updates, ['x','y'])
 
-        self.assertEqual(type(op.function), sph.PositionStepping)
+        self.assertEqual(op.function.get_func_class(), sph.PositionStepping)
 
     def test_xsph(self):
         """ Test for adding the XSPH function """
@@ -242,7 +242,7 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(op.updates, ['x','y'])
 
-        self.assertEqual(type(op.function), sph.XSPHCorrection)
+        self.assertEqual(op.function.get_func_class(), sph.XSPHCorrection)
 
     def test_setup_integrator(self):
         """ Test the setting up of the integrator """

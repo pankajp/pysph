@@ -3,16 +3,37 @@ from libc.stdlib cimport *
 cimport numpy
 
 
+def get_all_funcs():
+    ''' function to gather all implemented funcs in pysph.sph.funcs package '''
+    import os
+    import pysph.sph.funcs as funcs_pkg
+    funcs = {}
+    for funcs_dir in funcs_pkg.__path__:
+        search_modules = [os.path.splitext(i) for i in os.listdir(funcs_dir)]
+        pass
+        search_modules = [i[0] for i in search_modules if i[1][:3]=='.py']
+        for mod_name in search_modules:
+            mod_name = 'pysph.sph.funcs.'+mod_name
+            mod = __import__(mod_name, fromlist=True)
+            for name,value in mod.__dict__.iteritems():
+                if type(value) == type and issubclass(value, SPHFunction) and (
+                        not name.startswith('SPHFunction')):
+                    funcs['%s.%s'%(mod_name,name)] = value
+    return funcs
+
+
 class Function(object):
-    """ Base class that defines an sph function (sph.funcs) and it's
-    associated parameter values.
+    """ Class that defines an sph function (sph.funcs) and it's
+    associated parameter values
 
     Methods:
     --------
 
     get_func -- Return a particular instance of SPHFunctionParticle
-    with an appropriate source and destination particle array.
-
+    	with an appropriate source and destination particle array
+    
+    get_func_class --  get the class for which func will be created
+    
     Example:
     --------
 
@@ -21,41 +42,42 @@ class Function(object):
     'beta', 'gamma' and 'eta' to define the artificial viscosity. This
     function may be created as:
 
-    avisc = MonaghanArtificialVsicosity(hks=False, alpha, beta, gamma, eta)
-    avisc_func = avisc.get_funcs(source, dest)
-
-    Thus, Function provides us a means to create functions at will
-    between source and destination particle arrays with specified
-    parameter values.
+        avisc = Function(MonaghanArtificialVsicosity, hks=False, alpha, beta ..)
+        avisc_func = avisc.get_funcs(source, dest)
+    
+    or as an alternative may also be created as follows:
+    
+        avisc = MonaghanArtificialVsicosity.withargs(hks=False, alpha, beta, ..)
+        avisc_func = avisc.get_funcs(source, dest)
+    
+    Function provides a convenient way to create funcs between multiple
+    source and destination particle arrays with specified
+    parameter values
 
     """
-    def __init__(self, sph_func=None, hks=False, *args, **kwargs):
-        """ Base class Constructor
+    def __init__(self, sph_func, hks=False, *args, **kwargs):
+        """ Constructor
 
         Parameters:
         -----------
 
-        sph_func -- the SPHFunctionParticle class type. Defaults to None
-        *args -- optional positional arguments.
-        **kwargs -- optional keyword arguments.
-
-        Notes:
-        ------
+        sph_func -- the SPHFunction class type
+        *args, **kwargs -- optional positional and keyword arguments
 
         """
         self.sph_func = sph_func
         self.args = args
         self.kwargs = kwargs
         self.hks = hks
-
+    
+    def get_func_class(self):
+        """ get the class for which func will be created """
+        return self.sph_func
+    
     def get_func(self, source, dest):
         """ Return a SPHFunctionParticle instance with source and dest """
-        if self.sph_func is None:
-            raise NotImplementedError, 'Function(sph_func=None).get_func()'
-
         func = self.sph_func(source, dest, hks=self.hks,
                              *self.args, **self.kwargs)
-        
         return func
 
 ################################################################################
@@ -78,6 +100,8 @@ cdef class SPHFunction:
     All arrays are prefixed with a "s_". Destination arrays prefixed by "d_"
     are an alias for the same array prefixed with "s_". For example the mass
     property of the source will be in the s_m array which is same as d_m.
+    This is not true for subclasses of :class:`SPHFunctionParticle` which
+    can have different source and destination pairs
 
     """
     def __init__(self, ParticleArray source, ParticleArray dest=None,
@@ -107,7 +131,25 @@ cdef class SPHFunction:
         
         if setup_arrays:
             self.setup_arrays()
-
+    
+    # convenience methods to be able to use class instead of Function object
+    # for default construction (testing) and class.withargs(*) as an alias for
+    # explicitly creating Function objects
+    @classmethod
+    def withargs(cls, *args, **kwargs):
+        """ Return a :class:`Function` object for this class with arguments """
+        return Function(cls, *args, **kwargs)
+    
+    @classmethod
+    def get_func(cls, source, dest):
+        """ Construct an instance of this class with default arguments
+        This method enables this class to act like a :class:`Function` instance"""
+        return Function(cls).get_func(source, dest)
+    
+    @classmethod
+    def get_func_class(cls):
+        return cls
+    
     cpdef setup_arrays(self):
         """ Gets the various property arrays from the particle arrays. """
         self.s_x = self.source.get_carray(self.x)
@@ -163,8 +205,8 @@ cdef class SPHFunction:
         
         Implement this in a subclass to do the actual computation
         """
-        raise NotImplementedError, 'SPHEquation.eval_single()'
-        
+        raise NotImplementedError, 'SPHFunction.eval_single()'
+    	
     cpdef int output_fields(self) except - 1:
         return self.num_outputs
     

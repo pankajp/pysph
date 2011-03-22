@@ -49,7 +49,7 @@ class SPHOperationTestCase(unittest.TestCase):
     def test_from_solid_on_fluid(self):
         """ Test for construction of the SPHOperation """
 
-        function = sph.SPHRho()
+        function = sph.SPHRho
         operation = solver.SPHOperation(
 
             function, on_types=[Fluid], updates=['rho'], id = 'sd',
@@ -98,7 +98,7 @@ class SPHSimpleODETestCase(SPHOperationTestCase):
 
     def test_calc(self):
         
-        function = sph.GravityForce(gy=-9.81)
+        function = sph.GravityForce.withargs(gy=-9.81)
         operation = solver.SPHSimpleODE(
             
             function=function, on_types=[Solid,Fluid],

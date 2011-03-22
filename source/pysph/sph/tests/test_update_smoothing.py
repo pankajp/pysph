@@ -57,7 +57,7 @@ class UpdateSmoothingTestCase(unittest.TestCase):
 
         # smootingn length update operation
 
-        adke = solver.SPHSummation(sph.ADKEPilotRho(h0=h0),
+        adke = solver.SPHSummation(sph.ADKEPilotRho.withargs(h0=h0),
                                    from_types=[Fluid],
                                    on_types=[Fluid],
                                    updates=["h"],

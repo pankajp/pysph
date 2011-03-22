@@ -17,7 +17,7 @@ cdef class SPH(CSPHFunctionParticle):
     #cdef DoubleArray s_prop, d_prop
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 str prop_name='', **kwargs):
+                 str prop_name='rho', **kwargs):
         """ Constructor for SPH
 
         Parameters:
@@ -25,19 +25,10 @@ cdef class SPH(CSPHFunctionParticle):
         source -- The source particle array.
         dest -- The destination particle array.
 
-        Notes:
-        ------
-        By default, the arrays are not setup. This lets us initialize 
-        the function and then explicitly set the prop_name before
-        invoking setup_arrays.
-        
         """
-        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
-
-        assert prop_name != '', 'You must provide a property name '
-
-        self.id = 'sph'
         self.prop_name = prop_name
+        CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.id = 'sph'
         
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -115,27 +106,19 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
     #cdef DoubleArray s_prop, d_prop
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 str prop_name='',  *args, **kwargs):
+                 str prop_name='rho',  *args, **kwargs):
         """ Constructor for SPH
 
         Parameters:
         -----------
         source -- The source particle array.
         dest -- The destination particle array.
-
-        Note:
-        -----
-        By default, the arrays are not setup. This lets us set the prop
-        name after intialization and then setup the arrays.
         
         """
+        self.prop_name = prop_name
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
-
-        assert prop_name != '', 'You must provide a property name '
-
         self.id = 'sphd'
-        self.prop_name = prop_name
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -210,7 +193,7 @@ cdef class SPHGradient(SPHFunctionParticle):
     #cdef DoubleArray s_prop, d_prop
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 str prop_name='',  *args, **kwargs):
+                 str prop_name='rho',  *args, **kwargs):
         """ Constructor for SPH
 
         Parameters:
@@ -224,13 +207,10 @@ cdef class SPHGradient(SPHFunctionParticle):
         name after intialization and then setup the arrays.
         
         """
-        assert prop_name != '', 'You must provide a property name '
-
-        self.id = 'sphgrad'
         self.prop_name = prop_name
-        
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
+        self.id = 'sphgrad'
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -311,28 +291,19 @@ cdef class SPHLaplacian(SPHFunctionParticle):
     #cdef DoubleArray s_prop
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
-                 str prop_name='',  *args, **kwargs):
+                 str prop_name='rho',  *args, **kwargs):
         """ Constructor
 
         Parameters:
         -----------
         source -- The source particle array.
         dest -- The destination particle array.
-
-        Notes:
-        ------
-        By default, the arrays are not setup. This lets us initialize 
-        the function and then explicitly set the prop_name before
-        invoking setup_arrays.
         
         """
-        assert prop_name != '', 'You must provide a property name '
-
-        self.id = 'sphlaplacian'
         self.prop_name = prop_name
-        
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
+        self.id = 'sphlaplacian'
                
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -445,8 +416,8 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(CSPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'kgc'
         CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.id = 'kgc'
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double *dnr):
@@ -518,8 +489,8 @@ cdef class FirstOrderCorrectionMatrix(CSPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'liu-correction'
         CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.id = 'liu-correction'
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double *dnr):
@@ -571,9 +542,8 @@ cdef class FirstOrderCorrectionTermAlpha(SPHFunctionParticle):
                  *args, **kwargs):
         """ Constructor """
 
-        self.id = 'alpha-correction'
-
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
+        self.id = 'alpha-correction'
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
