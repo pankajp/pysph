@@ -32,8 +32,8 @@ cdef class PositionStepping(SPHFunction):
         for i in range(np):
             if tag[i] == LocalReal:
                 output1[i] = self.d_u.data[i]
-                output2[i] = self.d_u.data[i]
-                output3[i] = self.d_u.data[i]
+                output2[i] = self.d_v.data[i]
+                output3[i] = self.d_w.data[i]
             else:
                 output1[i] = output2[i] = output3[i] = 0
     
