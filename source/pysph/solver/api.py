@@ -1,8 +1,7 @@
 from integrator import EulerIntegrator, RK2Integrator, RK4Integrator,\
     PredictorCorrectorIntegrator, LeapFrogIntegrator
 
-from sph_equation import SPHSimpleODE, SPHSummationODE, SPHAssignment,\
-    SPHSummation, SPHOperation
+from sph_equation import SPHIntegration, SPHOperation
 
 from solver import Solver
 

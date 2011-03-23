@@ -268,7 +268,7 @@ s = solver.Solver(base.CubicSplineKernel(dim=2),
                   solver.PredictorCorrectorIntegrator)
 
 #Equation of state
-s.add_operation(solver.SPHAssignment(
+s.add_operation(solver.SPHOperation(
         
     sph.TaitEquation.withargs(hks=False, co=co, ro=ro),
     on_types=[Fluid, Solid], 
@@ -278,7 +278,7 @@ s.add_operation(solver.SPHAssignment(
                 )
 
 #Continuity equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
     sph.SPHDensityRate.withargs(hks=False),
     on_types=[Fluid, Solid], from_types=[Fluid, Solid], 
@@ -287,7 +287,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #momentum equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
     sph.MomentumEquation.withargs(alpha=alpha, beta=0.0, hks=False),
     on_types=[Fluid], from_types=[Fluid, Solid],  
@@ -295,7 +295,7 @@ s.add_operation(solver.SPHSummationODE(
                     
                  )
 
-#s.add_operation(solver.SPHSummationODE(
+#s.add_operation(solver.SPHIntegration(
     
 #    sph.SPHPressureGradient(),
 #    on_types=[Fluid], from_types=[Fluid,Solid],
@@ -303,7 +303,7 @@ s.add_operation(solver.SPHSummationODE(
 
 #                )
 
-#s.add_operation(solver.SPHSummationODE(
+#s.add_operation(solver.SPHIntegration(
 
 #    sph.MonaghanArtificialVsicosity(alpha=alpha, beta=0.0),
 #    on_types=[Fluid], from_types=[Fluid,Solid],
@@ -313,7 +313,7 @@ s.add_operation(solver.SPHSummationODE(
 
 
 #Gravity force
-s.add_operation(solver.SPHSimpleODE(
+s.add_operation(solver.SPHOperation(
         
     sph.GravityForce.withargs(gy=-9.81),
     on_types=[Fluid],

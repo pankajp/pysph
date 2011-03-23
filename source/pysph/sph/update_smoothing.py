@@ -9,11 +9,11 @@ for each particle array that must update it's smoothing length
 
 The smoothing lengths are ideally updated after every sub step of an
 integration step. That is, whenever the particles move and new
-neighbors need to be calculated. After the smooting lengths are
+neighbors need to be calculated. After the smoothing lengths are
 updated, we must recalculate the neighbors to reflect the modified
 smoothing lengths.
 
-The natural place to invoke the smootihng length calculation is in the
+The natural place to invoke the smoothing length calculation is in the
 Particle's update function which is called whenever particles move (at
 the end of a sub step)
 
@@ -139,7 +139,7 @@ class TestUpdateSmoothingADKE(UpdateSmoothing):
     """ Test function to update the smoothing lengths.:
 
     A dummy ADKEUpdateSmoothing wherin the pilot estimate is not requested.
-    The pilot estimate is taken from a default deinsity distribution.
+    The pilot estimate is taken from a default density distribution.
 
     """
 

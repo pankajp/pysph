@@ -23,7 +23,7 @@ import numpy, logging
 import pysph.sph.api as sph
 import pysph.solver.api as solver
 from pysph.base.carray import LongArray
-from pysph.base.particle_array import Particles, get_particle_array
+from pysph.base.api import Particles, get_particle_array
 from pysph.base.kernels import CubicSplineKernel
 
 comm = MPI.COMM_WORLD
@@ -59,14 +59,14 @@ if rank == 1:
 #create the particles in parallel without load balancing
 kernel = CubicSplineKernel(dim=1)
 pa = get_particle_array(x=x, h=h, m=m, fval=fval, rho=rho)
-particles = Particles(pa, kfac=kernel.radius(), in_parallel=True,
+particles = Particles([pa], in_parallel=True,
                       load_balancing=False)
 
 #make sure the particles need updating
 particles.update()
 
 #choose the function and the sph calc
-func = sph.SPHRho(pa)
+func = sph.SPHRho(pa, pa)
 calc = sph.SPHCalc(particles=particles, kernel=kernel, func=func,
                    updates=['rho'], integrates=False)
 

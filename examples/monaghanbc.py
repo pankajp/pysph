@@ -127,7 +127,7 @@ s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK4Integrator)
 
 
 #Tait equation
-s.add_operation(solver.SPHAssignment(
+s.add_operation(solver.SPHOperation(
         
         sph.TaitEquation.withargs(co=25.0, ro=1.0), 
         on_types=[Fluid], 
@@ -137,7 +137,7 @@ s.add_operation(solver.SPHAssignment(
                 )
 
 #continuity equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
             
             sph.SPHDensityRate.withargs(), from_types=[Fluid], 
             on_types=[Fluid],
@@ -146,7 +146,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #momentum equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
 
     sph.MomentumEquation.withargs(alpha=0.0, beta=0.0,),
     on_types=[Fluid], 
@@ -156,7 +156,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #gravity force
-s.add_operation(solver.SPHSimpleODE(
+s.add_operation(solver.SPHIntegration(
         
          sph.GravityForce.withargs(gy=-9.81),
          on_types=[Fluid],
@@ -165,7 +165,7 @@ s.add_operation(solver.SPHSimpleODE(
                  )
 
 #the boundary force
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.MonaghanBoundaryForce.withargs(delp=dx),
         on_types=[Fluid], from_types=[Solid], updates=['u','v'],
@@ -174,7 +174,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #xsph correction
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.XSPHCorrection.withargs(eps=0.1),
         from_types=[Fluid],
@@ -183,7 +183,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #Position stepping
-s.add_operation(solver.SPHSimpleODE(
+s.add_operation(solver.SPHIntegration(
 
         sph.PositionStepping.withargs(),
         on_types=[Fluid], 

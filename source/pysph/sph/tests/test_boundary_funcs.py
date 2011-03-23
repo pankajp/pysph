@@ -72,7 +72,7 @@ class BoundaryForceTestCase(unittest.TestCase):
         
         self.solver = solver.Solver(kernel, solver.EulerIntegrator)
 
-        self.solver.add_operation(solver.SPHSummationODE(
+        self.solver.add_operation(solver.SPHIntegration(
                 
                 sph.MonaghanBoundaryForce.withargs(delp=dp),
                 from_types = [Solid], on_types=[Fluid],

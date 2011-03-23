@@ -93,13 +93,13 @@ class SPHOperationTestCase(unittest.TestCase):
         self.assertEqual(func.source, self.solid)
 
 ############################################################################
-class SPHSimpleODETestCase(SPHOperationTestCase):
-    """ Test for the calc returned by SPHSimpleODE """
+class SPHIntegrationTestCase(SPHOperationTestCase):
+    """ Test for the calc returned by integrating SPHIntegration """
 
     def test_calc(self):
         
         function = sph.GravityForce.withargs(gy=-9.81)
-        operation = solver.SPHSimpleODE(
+        operation = solver.SPHIntegration(
             
             function=function, on_types=[Solid,Fluid],
             updates=['u', 'v'], id='gravity'

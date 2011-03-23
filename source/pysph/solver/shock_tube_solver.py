@@ -9,8 +9,7 @@ import pysph.sph.api as sph
 #from pysph.base.particle_array import get_particle_array
 
 from solver import Solver
-from sph_equation import SPHSummation, SPHAssignment, SPHSummationODE, \
-    SPHSimpleODE
+from sph_equation import SPHOperation, SPHIntegration
 
 Fluids = base.ParticleType.Fluid
 Solids = base.ParticleType.Solid
@@ -52,28 +51,28 @@ class ShockTubeSolver(Solver):
 
         #create the sph operation objects
 
-        self.add_operation(SPHSummation(
+        self.add_operation(SPHOperation(
             sph.SPHRho.withargs(), 
             from_types=[Fluids], on_types=[Fluids], 
             updates=['rho'], 
             id = 'density')
                            )
 
-        self.add_operation(SPHAssignment(
+        self.add_operation(SPHOperation(
             sph.IdealGasEquation.withargs(),
             on_types = [Fluids],
             updates=['p', 'cs'],
             id='eos')
                            )
 
-        self.add_operation(SPHSummationODE(
+        self.add_operation(SPHIntegration(
             sph.MomentumEquation.withargs(),
             from_types=[Fluids], on_types=[Fluids], 
             updates=['u'], 
             id='mom')
                            )
         
-        self.add_operation(SPHSummationODE(
+        self.add_operation(SPHIntegration(
             sph.EnergyEquation.withargs(hks=False),
             from_types=[Fluids],
             on_types=[Fluids], 

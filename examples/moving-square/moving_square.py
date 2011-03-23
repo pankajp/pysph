@@ -210,7 +210,7 @@ s = solver.Solver(base.CubicSplineKernel(dim=2),
 
 # Equation of state
 
-s.add_operation(solver.SPHAssignment(
+s.add_operation(solver.SPHOperation(
         
         sph.TaitEquation(co=co, ro=ro), 
         on_types=[Fluid], 
@@ -221,7 +221,7 @@ s.add_operation(solver.SPHAssignment(
 
 # Continuity equation
 
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.SPHDensityRate(), 
         on_types=[Fluid], from_types=[Fluid, DummyFluid], 
@@ -231,7 +231,7 @@ s.add_operation(solver.SPHSummationODE(
 
 # momentum equation
 
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.MomentumEquation(alpha=alpha, beta=0.0),
         on_types=[Fluid], from_types=[Fluid, DummyFluid],
@@ -241,7 +241,7 @@ s.add_operation(solver.SPHSummationODE(
 
 # monaghan boundary force
 
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.MonaghanBoundaryForce(delp=dx),
         on_types=[Fluid], from_types=[Solid], updates=['u','v'],

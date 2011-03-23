@@ -1,4 +1,4 @@
-""" Funcitons to handle the kernel correction """
+""" Functions to handle the kernel correction """
 
 from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
 from pysph.sph.sph_func cimport SPHFunctionParticle, CSPHFunctionParticle

@@ -271,7 +271,7 @@ s = solver.Solver(base.HarmonicKernel(dim=2, n=3),
                   solver.RK2Integrator)
 
 #Equation of state
-s.add_operation(solver.SPHAssignment(
+s.add_operation(solver.SPHOperation(
         
         sph.TaitEquation.withargs(co=co, ro=ro), 
         on_types=[Fluid, Solid], 
@@ -281,7 +281,7 @@ s.add_operation(solver.SPHAssignment(
                 )
 
 #Continuity equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.SPHDensityRate.withargs(), 
         on_types=[Fluid, Solid], from_types=[Fluid, Solid], 
@@ -290,7 +290,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #momentum equation
-s.add_operation(solver.SPHSummationODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.MomentumEquation.withargs(alpha=alpha, beta=0.0),
         on_types=[Fluid], from_types=[Fluid, Solid],  
@@ -299,7 +299,7 @@ s.add_operation(solver.SPHSummationODE(
                 )
 
 #Gravity force
-s.add_operation(solver.SPHSimpleODE(
+s.add_operation(solver.SPHIntegration(
         
         sph.GravityForce.withargs(gy=-9.81),
         on_types=[Fluid],

@@ -8,7 +8,7 @@ import pysph.base.api as base
 from pysph.sph.kernel_correction import KernelCorrectionManager
 import pysph.sph.api as sph
 
-from sph_equation import SPHSummationODE, SPHSimpleODE
+from sph_equation import SPHOperation, SPHIntegration
 
 import logging
 logger = logging.getLogger()
@@ -78,7 +78,7 @@ class Solver(object):
 
         self.setup_solver()
 
-    def to_step(self, types):
+    def to_step(self, types, update_smoothing_func=None):
         """ Specify an acceptable list of types to step
 
         Parameters:
@@ -91,15 +91,15 @@ class Solver(object):
         The types are defined in base/particle_types.py
 
         """
-        updates = ['x']
-        if self.dim > 1:
-            updates.append('y')
-            if self.dim > 2:
-                updates.append('z')
-                
+        updates = ['x','y','z'][:self.dim]
+        
         id = 'step'
-
-        self.add_operation(SPHSimpleODE(
+        
+#        self.add_operation(SPHOperation(
+#                sph.PositionStepping, on_types=types, updates=updates, id=id)
+#                           )
+        
+        self.add_operation(SPHIntegration(
                 sph.PositionStepping, on_types=types, updates=updates, id=id)
                            )
 
@@ -108,21 +108,14 @@ class Solver(object):
 
         Parameters:
         -----------
-        operation -- the operation to add
+        operation -- the operation (:class:`SPHOperation`) to add
         before -- flag to indicate insertion before an id. Defaults to False
         id -- The id where to insert the operation. Defaults to None
 
         Notes:
         ------
         An SPH operation typically represents a single equation written
-        in SPH form. The different types of operations are:
-        
-        (i) SPHSimpleODE
-        (ii) SPHSummationODE
-        (iii) SPHSummation
-        (iv) SPHAssignment
-        
-        and are defined in solver/sph_equation.py
+        in SPH form. SPHOperation is defined in solver/sph_equation.py
 
         The id for the operation must be unique. An error is raised if an
         operation with the same id exists.
@@ -332,10 +325,10 @@ class Solver(object):
         updates = self.operation_dict['step'].updates
 
                            
-        self.add_operation(SPHSummationODE(
+        self.add_operation(SPHIntegration(
 
             sph.XSPHCorrection.withargs(eps=eps, hks=hks), from_types=[Fluids],
-            on_types=types,  updates=updates, id=id )
+            on_types=types, updates=updates, id=id )
 
                            )
 

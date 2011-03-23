@@ -8,8 +8,7 @@ import pysph.base.api as base
 import pysph.sph.api as sph
 
 from solver import Solver
-from sph_equation import SPHSummation, SPHAssignment, SPHSummationODE, \
-    SPHSimpleODE
+from sph_equation import SPHOperation, SPHIntegration
 
 Fluids = base.ParticleType.Fluid
 Solids = base.ParticleType.Solid
@@ -57,7 +56,7 @@ class FluidSolver(Solver):
         
         #create the sph operation objects
 
-        self.add_operation(SPHAssignment(
+        self.add_operation(SPHOperation(
 
             sph.TaitEquation.withargs(co=100.0, ro=1.0),
             on_types=[Fluids],
@@ -65,7 +64,7 @@ class FluidSolver(Solver):
             id='eos')
                            )
 
-        self.add_operation(SPHSummationODE(
+        self.add_operation(SPHIntegration(
             sph.SPHDensityRate.withargs(hks=False),
             from_types=[Fluids], on_types=[Fluids],
             updates=['rho'],
@@ -73,7 +72,7 @@ class FluidSolver(Solver):
                            )
                                            
 
-        self.add_operation(SPHSummationODE(
+        self.add_operation(SPHIntegration(
             sph.MomentumEquation.withargs(alpha=0.01, beta=0.0, hks=False),
             from_types=[Fluids], on_types=[Fluids], 
             updates=['u','v'], 

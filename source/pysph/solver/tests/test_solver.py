@@ -48,14 +48,14 @@ class SolverTestCase(unittest.TestCase):
 
         # Create some replacement operations
         
-        self.visc = solver.SPHSummationODE(
+        self.visc = solver.SPHIntegration(
 
             sph.MorrisViscosity, on_types=[Fluids],
             from_types = [Fluids, Solids], updates=['u','v'], id='visc'
             
             )
 
-        self.summation_density = solver.SPHAssignment(
+        self.summation_density = solver.SPHOperation(
 
             sph.SPHRho, on_types=[Fluids, Solids],
             updates=['rho'], id='sd'
@@ -68,14 +68,14 @@ class SolverTestCase(unittest.TestCase):
 
         # Add the default operations
 
-        s.add_operation(solver.SPHAssignment(
+        s.add_operation(solver.SPHOperation(
                 
                 sph.TaitEquation.withargs(1,1), on_types = [Fluids, Solids],
                 updates=['p','cs'], id = 'eos')
 
                              )
                 
-        s.add_operation(solver.SPHSummationODE(
+        s.add_operation(solver.SPHIntegration(
                 
                 sph.SPHDensityRate, on_types=[Fluids, Solids],
                 from_types=[Fluids, Solids], updates=['rho'], id='density_rate')
@@ -83,14 +83,14 @@ class SolverTestCase(unittest.TestCase):
                              )
 
 
-        s.add_operation(solver.SPHSummationODE(
+        s.add_operation(solver.SPHIntegration(
                 
                 sph.SPHPressureGradient, on_types=[Fluids],
                 from_types=[Fluids, Solids], updates=['u','v'], id='pgrad')
 
                              )
 
-        s.add_operation(solver.SPHSummationODE(
+        s.add_operation(solver.SPHIntegration(
 
                 sph.MonaghanArtificialVsicosity, on_types=[Fluids],
                 from_types=[Fluids, Solids], updates=['u','v'], id='avisc')
