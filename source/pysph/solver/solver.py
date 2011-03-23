@@ -305,7 +305,7 @@ class Solver(object):
 
         self.setup_integrator(self.particles)
 
-    def set_xsph(self, eps):
+    def set_xsph(self, eps, hks=False):
         """ Set the XSPH operation if requested
 
         Parameters:
@@ -334,7 +334,7 @@ class Solver(object):
                            
         self.add_operation(SPHSummationODE(
 
-            sph.XSPHCorrection.withargs(eps=eps), from_types=[Fluids],
+            sph.XSPHCorrection.withargs(eps=eps, hks=hks), from_types=[Fluids],
             on_types=types,  updates=updates, id=id )
 
                            )
@@ -370,13 +370,6 @@ class Solver(object):
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
 
-    def set_kernel_symmetrization(self, hks):
-        """ Set the type of kernel symmetrization to use """
-
-        for equation_id in self.order:
-            operation = self.operation_dict[equation_id]
-            operation.function.hks = hks
-        
     def solve(self, show_progress=False):
         """ Solve the system
 

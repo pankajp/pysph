@@ -52,30 +52,33 @@ class ShockTubeSolver(Solver):
 
         #create the sph operation objects
 
-        self.add_operation(SPHSummation(sph.SPHRho(), 
-                                        from_types=[Fluids],
-                                        on_types=[Fluids], 
-                                        updates=['rho'], 
-                                        id = 'density')
+        self.add_operation(SPHSummation(
+            sph.SPHRho.withargs(), 
+            from_types=[Fluids], on_types=[Fluids], 
+            updates=['rho'], 
+            id = 'density')
                            )
 
-        self.add_operation(SPHAssignment(sph.IdealGasEquation(),
-                                         on_types = [Fluids],
-                                         updates=['p', 'cs'],
-                                         id='eos')
+        self.add_operation(SPHAssignment(
+            sph.IdealGasEquation.withargs(),
+            on_types = [Fluids],
+            updates=['p', 'cs'],
+            id='eos')
                            )
 
-        self.add_operation(SPHSummationODE(sph.MomentumEquation(),
-                                           from_types=[Fluids],
-                                           on_types=[Fluids], 
-                                           updates=['u'], 
-                                           id='mom')
+        self.add_operation(SPHSummationODE(
+            sph.MomentumEquation.withargs(),
+            from_types=[Fluids], on_types=[Fluids], 
+            updates=['u'], 
+            id='mom')
                            )
         
-        self.add_operation(SPHSummationODE(sph.EnergyEquation(),
-                                           from_types=[Fluids],
-                                           on_types=[Fluids], 
-                                           updates=['e'], id='enr')
+        self.add_operation(SPHSummationODE(
+            sph.EnergyEquation.withargs(hks=False),
+            from_types=[Fluids],
+            on_types=[Fluids], 
+            updates=['e'], id='enr')
+
                            )
 
         # Indicate that stepping is only needed for Fluids

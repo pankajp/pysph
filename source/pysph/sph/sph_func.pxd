@@ -41,7 +41,8 @@ cdef class SPHFunction:
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3)
 
-    cdef void eval_single(self, size_t dest_pid, KernelBase kernel, double *result)
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double *result)
 
 ################################################################################
 # `SPHFunctionParticle` class.

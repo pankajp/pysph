@@ -1,5 +1,6 @@
 #cython: cdivision=True
-from pysph.base.point cimport cPoint, cPoint_dot, cPoint_new, cPoint_sub
+from pysph.base.point cimport cPoint, cPoint_dot, cPoint_new, cPoint_sub,\
+     cPoint_norm
 
 cdef extern from "math.h":
     double sqrt(double)
@@ -165,7 +166,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
             rhoab = 0.5 * (rhoa + rhob)
 
-            mu = (h * test) / (rab.norm() + eta*eta*h*h)
+            mu = (h * test) / (cPoint_norm(rab) + eta*eta*h*h)
 
             if self.hks:
                 grada = kernel.gradient(self._dst, self._src, ha)
@@ -275,8 +276,8 @@ cdef class EnergyEquation(SPHFunctionParticle):
             rhoab = 0.5 * (rhoa + rhob)
 
             mu = hab*dot
-            mu /= (rab.norm() + eta*eta*hab*hab)
-            
+            mu /= (cPoint_norm(rab) + eta*eta*hab*hab)
+
             piab = -alpha*cab*mu + beta*mu*mu
             piab /= rhoab
 
@@ -405,7 +406,8 @@ cdef class ArtificialHeat(SPHFunctionParticle):
             qb = hb * (g1 * cb + g2 * hb * (fabs(divb) - divb))
 
             tmp = mb * (qa + qb) * eab
-            tmp /= (xab.norm() + eta*eta*hab*hab)
+            tmp /= (cPoint_norm(xab) + eta*eta*hab*hab)
+            
             tmp /= rhoab
 
         if self.hks:

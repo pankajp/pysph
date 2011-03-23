@@ -57,30 +57,30 @@ class FluidSolver(Solver):
         
         #create the sph operation objects
 
-        momentum = sph.MomentumEquation(alpha=0.01, beta=0.0)        
+        self.add_operation(SPHAssignment(
 
-        self.add_operation(SPHAssignment(sph.TaitEquation(co=100.0, ro=1.0),
-                                         on_types=[Fluids],
-                                         updates=['p', 'cs'],
-                                         id='eos')
+            sph.TaitEquation.withargs(co=100.0, ro=1.0),
+            on_types=[Fluids],
+            updates=['p', 'cs'],
+            id='eos')
                            )
 
-        self.add_operation(SPHSummationODE(sph.SPHDensityRate(),
-                                           from_types=[Fluids],
-                                           on_types=[Fluids],
-                                           updates=['rho'],
-                                           id='density')
+        self.add_operation(SPHSummationODE(
+            sph.SPHDensityRate.withargs(hks=False),
+            from_types=[Fluids], on_types=[Fluids],
+            updates=['rho'],
+            id='density')
                            )
                                            
 
-        self.add_operation(SPHSummationODE(momentum, 
-                                           from_types=[Fluids],
-                                           on_types=[Fluids], 
-                                           updates=['u','v'], 
-                                           id='mom')
+        self.add_operation(SPHSummationODE(
+            sph.MomentumEquation.withargs(alpha=0.01, beta=0.0, hks=False),
+            from_types=[Fluids], on_types=[Fluids], 
+            updates=['u','v'], 
+            id='mom')
                            )
 
         self.to_step([Fluids])
-        self.set_xsph(eps=0.1)
+        self.set_xsph(eps=0.1, hks=False)
 
 #############################################################################

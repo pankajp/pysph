@@ -120,7 +120,7 @@ s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK4Integrator)
 #Equation of state
 s.add_operation(solver.SPHAssignment(
         
-        sph.TaitEquation(co=25.0, ro=1.0), 
+        sph.TaitEquation.withargs(co=25.0, ro=1.0), 
         on_types=[Fluid, Solid], 
         updates=['p', 'cs'],
         id='eos')
@@ -130,7 +130,7 @@ s.add_operation(solver.SPHAssignment(
 #Continuity equation
 s.add_operation(solver.SPHSummationODE(
             
-            sph.SPHDensityRate(), 
+            sph.SPHDensityRate.withargs(), 
             from_types=[Fluid, Solid], on_types=[Fluid, Solid],
             updates=['rho'], id='density')
 
@@ -139,7 +139,7 @@ s.add_operation(solver.SPHSummationODE(
 #momentum equation, no viscosity
 s.add_operation(solver.SPHSummationODE(
 
-    sph.MomentumEquation(alpha=0.0, beta=0.0),
+    sph.MomentumEquation.withargs(alpha=0.0, beta=0.0),
     on_types=[Fluid], from_types=[Fluid, Solid],  
     updates=['u','v'], id='mom')
 
@@ -148,7 +148,7 @@ s.add_operation(solver.SPHSummationODE(
 #Gravity force
 s.add_operation(solver.SPHSimpleODE(
         
-         sph.GravityForce(gy=-9.81),
+         sph.GravityForce.withargs(gy=-9.81),
          on_types=[Fluid],
          updates=['u','v'],id='gravity')
                  
@@ -157,7 +157,7 @@ s.add_operation(solver.SPHSimpleODE(
 #XSPH correction
 s.add_operation(solver.SPHSummationODE(
         
-        sph.XSPHCorrection(eps=0.1), 
+        sph.XSPHCorrection.withargs(eps=0.1), 
         on_types=[Fluid],
         from_types=[Fluid],
         updates=['x','y'], id='xsph')
@@ -167,7 +167,7 @@ s.add_operation(solver.SPHSummationODE(
 #Position stepping
 s.add_operation(solver.SPHSimpleODE(
 
-        sph.PositionStepping(), 
+        sph.PositionStepping.withargs(), 
         on_types=[Fluid], 
         updates=['x','y'], id='step')
                 

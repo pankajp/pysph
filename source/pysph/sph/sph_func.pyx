@@ -55,7 +55,7 @@ class Function(object):
     parameter values
 
     """
-    def __init__(self, sph_func, hks=False, *args, **kwargs):
+    def __init__(self, sph_func, *args, **kwargs):
         """ Constructor
 
         Parameters:
@@ -65,10 +65,10 @@ class Function(object):
         *args, **kwargs -- optional positional and keyword arguments
 
         """
+
         self.sph_func = sph_func
         self.args = args
         self.kwargs = kwargs
-        self.hks = hks
     
     def get_func_class(self):
         """ get the class for which func will be created """
@@ -76,8 +76,7 @@ class Function(object):
     
     def get_func(self, source, dest):
         """ Return a SPHFunctionParticle instance with source and dest """
-        func = self.sph_func(source, dest, hks=self.hks,
-                             *self.args, **self.kwargs)
+        func = self.sph_func(source, dest, *self.args, **self.kwargs)
         return func
 
 ################################################################################
@@ -143,7 +142,10 @@ cdef class SPHFunction:
     @classmethod
     def get_func(cls, source, dest):
         """ Construct an instance of this class with default arguments
-        This method enables this class to act like a :class:`Function` instance"""
+        This method enables this class to act like a :class:`Function`
+        instance
+
+        """        
         return Function(cls).get_func(source, dest)
     
     @classmethod
@@ -182,16 +184,16 @@ cdef class SPHFunction:
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
         cdef double result[3]
+        cdef int i
         
         # get the tag array pointer
         cdef LongArray tag_arr = self.dest.get_carray('tag')
-        cdef long * tag = tag_arr.get_data_ptr()
 
         self.setup_iter_data()
         cdef size_t np = self.dest.get_number_of_particles()
-        
+
         for i in range(np):
-            if tag[i] == LocalReal:
+            if tag_arr.data[i] == LocalReal:
                 self.eval_single(i, kernel, result)
                 output1[i] = result[0]
                 output2[i] = result[1]
@@ -204,6 +206,7 @@ cdef class SPHFunction:
         """ Evaluate the function on a single dest particle
         
         Implement this in a subclass to do the actual computation
+
         """
         raise NotImplementedError, 'SPHFunction.eval_single()'
     	
@@ -245,7 +248,9 @@ cdef class SPHFunctionParticle(SPHFunction):
                  exclude_self=False,
                  FixedDestNbrParticleLocator nbr_locator=None,
                  *args, **kwargs):
+
         SPHFunction.__init__(self, source, setup_arrays=False, *args, **kwargs)
+
         self.dest = dest
         self.exclude_self = exclude_self
         

@@ -227,6 +227,7 @@ cdef class SPHCalc:
         for func in self.funcs:
             func.nbr_locator = self.nnps_manager.get_neighbor_particle_locator(
                 func.source, self.dest, self.kernel.radius())
+
             func.eval(self.kernel, output1, output2, output3)
 
 #############################################################################

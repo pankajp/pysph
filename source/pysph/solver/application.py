@@ -152,11 +152,6 @@ class Application(object):
                           default=None, 
                           help="Use XSPH correction with epsilon value")
 
-        # --hks
-        parser.add_option("--hks", action="store_true", dest="hks",
-                          default=False, help="""Hernquist and Katz kernel
-                          symmetrization.""")
-
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
@@ -284,8 +279,6 @@ class Application(object):
         if self.options.eps:
             solver.set_xsph(self.options.eps)
 
-        solver.set_kernel_symmetrization(self.options.hks)            
-        
         solver.setup_integrator(self.particles)
 
     def run(self):

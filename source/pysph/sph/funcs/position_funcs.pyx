@@ -20,7 +20,9 @@ cdef class PositionStepping(SPHFunction):
         self.id = 'positionstepper'
         self.tag = "position"
     
-    cpdef eval(self, KernelBase kernel, DoubleArray output1, DoubleArray output2, DoubleArray output3):
+    cpdef eval(self, KernelBase kernel, DoubleArray output1,
+               DoubleArray output2, DoubleArray output3):
+        
         # get the tag array pointer
         cdef LongArray tag_arr = self.dest.get_carray('tag')
         cdef long * tag = tag_arr.get_data_ptr()

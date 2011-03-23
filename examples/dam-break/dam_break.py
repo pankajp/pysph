@@ -270,28 +270,28 @@ s = solver.Solver(base.CubicSplineKernel(dim=2),
 #Equation of state
 s.add_operation(solver.SPHAssignment(
         
-        sph.TaitEquation(co=co, ro=ro), 
-        on_types=[Fluid, Solid], 
-        updates=['p', 'cs'],
-        id='eos')
-
+    sph.TaitEquation.withargs(hks=False, co=co, ro=ro),
+    on_types=[Fluid, Solid], 
+    updates=['p', 'cs'],
+    id='eos'),
+                
                 )
 
 #Continuity equation
 s.add_operation(solver.SPHSummationODE(
         
-        sph.SPHDensityRate(), 
-        on_types=[Fluid, Solid], from_types=[Fluid, Solid], 
-        updates=['rho'], id='density')
+    sph.SPHDensityRate.withargs(hks=False),
+    on_types=[Fluid, Solid], from_types=[Fluid, Solid], 
+    updates=['rho'], id='density')
                 
                 )
 
 #momentum equation
 s.add_operation(solver.SPHSummationODE(
         
-         sph.MomentumEquation(alpha=alpha, beta=0.0),
-         on_types=[Fluid], from_types=[Fluid, Solid],  
-         updates=['u','v'], id='mom')
+    sph.MomentumEquation.withargs(alpha=alpha, beta=0.0, hks=False),
+    on_types=[Fluid], from_types=[Fluid, Solid],  
+    updates=['u','v'], id='mom')
                     
                  )
 
@@ -315,9 +315,9 @@ s.add_operation(solver.SPHSummationODE(
 #Gravity force
 s.add_operation(solver.SPHSimpleODE(
         
-        sph.GravityForce(gy=-9.81),
-        on_types=[Fluid],
-        updates=['u','v'],id='gravity')
+    sph.GravityForce.withargs(gy=-9.81),
+    on_types=[Fluid],
+    updates=['u','v'],id='gravity')
                 
                 )
 
