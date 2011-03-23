@@ -70,6 +70,7 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self.id = 'densityrate'
         self.tag = "density"
 
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
         """ Compute the contribution of particle at source_pid on particle at

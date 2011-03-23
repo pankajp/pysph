@@ -9,9 +9,7 @@ app.process_command_line()
 particles = app.create_particles(False,
     solver.fluid_solver.get_circular_patch, name='fluid', type=0)
 
-# use a positive constant_h parameter for kenrel interpolation
-
-kernel = base.CubicSplineKernel(dim=2, constant_h=-0.05)
+kernel = base.CubicSplineKernel(dim=2)
 
 s = solver.FluidSolver(kernel,solver.EulerIntegrator)
 

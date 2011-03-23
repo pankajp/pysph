@@ -20,6 +20,7 @@ cdef class XSPHCorrection(CSPHFunctionParticle):
         self.id = 'xsph'
         self.tag = "position"
 
+
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):
         """
@@ -45,8 +46,6 @@ cdef class XSPHCorrection(CSPHFunctionParticle):
                                 self.s_w.data[source_pid])
 
         cdef cPoint Vba = cPoint_sub(Vb, Va)
-
-        #cdef DoubleArray fc = self.function_cache[dest_pid]
 
         cdef double mb = self.s_m.data[source_pid]
 

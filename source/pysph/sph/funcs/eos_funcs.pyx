@@ -1,42 +1,39 @@
 #cython: cdivision=True
 #base imports
-from pysph.base.particle_array cimport ParticleArray
+from pysph.base.particle_array cimport ParticleArray, LocalReal
+from pysph.base.carray cimport DoubleArray, LongArray
 from pysph.base.kernels cimport KernelBase
 
 cdef extern from "math.h":
     double pow(double x, double y)
     double sqrt(double x)
 
-cdef class IdealGasEquation(SPHFunctionParticle):
+cdef class IdealGasEquation(SPHFunction):
     """ Ideal gas equation of state """
     
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, double gamma = 1.4, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        SPHFunction.__init__(self, source, dest, setup_arrays)
         self.gamma = gamma
 
         self.id = 'idealgas'
         self.tag = "state"
 
-    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
-                       KernelBase kernel, double *nr):
-        """
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double* result):
         
-        ::math::
-
-        """
         cdef double Pa = self.d_p.data[dest_pid]
         cdef double ea = self.d_e.data[dest_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
         cdef double gamma = self.gamma
 
-        nr[0] = (gamma - 1.0)*rhoa*ea
-        nr[1] = sqrt(ea*(gamma-1))
-        
+        result[0] = (gamma-1.0)*rhoa*ea
+        result[1] = sqrt(ea*(gamma - 1.0))
+
 ##############################################################################
 
-cdef class TaitEquation(SPHFunctionParticle):
+cdef class TaitEquation(SPHFunction):
     """ Tait equation of state 
     
     The pressure is set as:
@@ -63,31 +60,28 @@ cdef class TaitEquation(SPHFunctionParticle):
                  bint setup_arrays=True, double co = 1.0,
                  double ro = 1000.0, double gamma=7.0, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
-                                     **kwargs)
+        SPHFunction.__init__(self, source, dest, setup_arrays,
+                             **kwargs)
         self.co = co
         self.ro = ro
         self.gamma = gamma
 
+        self.B = co*co*ro/gamma
+
         self.id = 'tait'
         self.tag = "state"
 
-    cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
-                       KernelBase kernel, double *nr):
-        """
-        
-        ::math::
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double* result):
 
-        """
-        cdef double rhoa, ratio, tmp, gamma2
+        cdef double gamma = self.gamma
 
-        rhoa = self.d_rho.data[dest_pid]
-        ratio = rhoa/self.ro
+        cdef double rhoa = self.d_rho.data[dest_pid]
+        cdef double ratio = rhoa/self.ro
+        cdef double gamma2 = 0.5*(gamma - 1.0)
+        cdef double tmp = pow(ratio, gamma)
 
-        gamma2 = 0.5*(self.gamma-1.0)
+        result[0] = (tmp-1.0)*self.B
+        result[1] = pow(ratio, gamma2)*self.co
 
-        tmp = pow(ratio, self.gamma)
-        
-        nr[0] = (tmp - 1.0)*self.co*self.co*self.ro/self.gamma
-        nr[1] = pow(ratio, gamma2)*self.co
 ##############################################################################

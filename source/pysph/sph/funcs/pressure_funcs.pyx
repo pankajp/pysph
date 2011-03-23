@@ -102,9 +102,11 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+        self.eta = eta
 
         self.id = 'momentumequation'
         self.tag = "velocity"
+
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -136,7 +138,6 @@ cdef class MomentumEquation(SPHFunctionParticle):
         rab.y = self._dst.y-self._src.y
         rab.z = self._dst.z-self._src.z
         
-        #vab = Point_sub(self.tmpva, self.tmpvb)
         vab.x = self.d_u.data[dest_pid]-self.s_u.data[source_pid]
         vab.y = self.d_v.data[dest_pid]-self.s_v.data[source_pid]
         vab.z = self.d_w.data[dest_pid]-self.s_w.data[source_pid]
