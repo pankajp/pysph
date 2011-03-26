@@ -30,7 +30,7 @@ class Particles(object):
     Indexing of the particles is performed by a CellManager and
     nearest neighbors are obtained via an instance of NNPSManager.
 
-    Pafticles is a collection of these data structures to provide a
+    Particles is a collection of these data structures to provide a
     single point access to
 
     (a) Hold all particle information
@@ -51,13 +51,10 @@ class Particles(object):
     correction_manager -- a kernel KernelCorrectionManager if kernel
     correction is used. Defaults to None
 
-    smoothing_update_function -- A function to update the smoothing
-    lengths at the start of a sub step.
-
     misc_prop_update_functions -- A list of functions to evaluate
-    properties at the begining of a sub step.
+    properties at the beginning of a sub step.
 
-    variable_h -- boolean indicating if variable smoothing lenghts are
+    variable_h -- boolean indicating if variable smoothing lengths are
     considered. Defaults to False
 
     in_parallel -- boolean indicating if running in parallel. Defaults to False
@@ -142,7 +139,6 @@ class Particles(object):
         # set defaults
         
         self.correction_manager = None        
-        self.smoothing_update_function = UpdateSmoothing()
         self.misc_prop_update_functions = []
 
         # call an update on the particles (i.e index)
@@ -171,13 +167,6 @@ class Particles(object):
         these are summation density, equation of state, smoothing
         length updates, evaluation of velocity divergence/vorticity
         etc. 
-        
-        The smoothing length is updated after new neighbors are
-        calculated. This only if variable_h is True. The function
-        'smoothing_update_function' must be properly implemented and
-        set. Note that neighbors should be recalculated with new
-        smoothing lengths. An example is the ADKE algorithm in
-        'sph.update_smoothing.py'
 
         All other properties may be updated by appending functions to
         the list 'misc_prop_update_functions'. These functions must
@@ -191,11 +180,6 @@ class Particles(object):
         err = self.nnps_manager.py_update()
         assert err != -1, 'NNPSManager update failed! '
 
-        # update smoothing lengths
-
-        if self.variable_h:
-            self.smoothing_update_function.update_smoothing_lengths()
-            
         # update any other properties (rho, p, cs, div etc.)
             
         self.evaluate_misc_properties()
@@ -231,19 +215,6 @@ class Particles(object):
 
         calcs = operation.get_calcs(self, kernel)
         self.misc_prop_update_functions.append(func(calcs))
-
-    def add_smoothing_update_function(self, func, operation, kernel, **kwargs):
-        """ Add a smoothing update function
-
-        Parameters:
-        -----------
-        func -- the smoothing update function to use.
-        operation -- the SPHOperation that returns appropriate calcs
-        kernel -- the kernel used for the calcs
-
-        """
-        calcs = operation.get_calcs(self, kernel)
-        self.smoothing_update_function = func(calcs=calcs, **kwargs)
 
     def get_named_particle_array(self, name):
         """ Return the named particle array if it exists """

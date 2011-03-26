@@ -47,7 +47,7 @@ from funcs.external_force import GravityForce, VectorForce, MoveCircleX, MoveCir
 
 #Import ADKE functions
 from funcs.adke_funcs import PilotRho as ADKEPilotRho, \
-    SPHVelocityDivergence as VelocityDivergence
+    SPHVelocityDivergence as VelocityDivergence, ADKESmoothingUpdate
 
 ############################################################################
 

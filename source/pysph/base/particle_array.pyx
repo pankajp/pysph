@@ -970,7 +970,7 @@ cdef class ParticleArray:
 
     cpdef int align_particles(self) except -1:
         """
-        Moves all 'LocalReal' particles to the begining of the array. 
+        Moves all 'LocalReal' particles to the beginning of the array. 
 
         This makes retrieving numpy slices of properties of 'LocalReal'
         particles possible. This facility will be required frequently.

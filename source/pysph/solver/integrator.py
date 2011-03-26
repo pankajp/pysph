@@ -1,4 +1,6 @@
 import logging
+from pysph.sph.sph_calc import SPHCalc
+from pysph.sph.funcs.arithmetic_funcs import PropertyGet
 logger = logging.getLogger()
 
 #############################################################################
@@ -66,7 +68,7 @@ class Integrator(object):
     The following example is applicable to the description of
     'initial_props', 'step_props' and 'k_props' to follow:
 
-    Consider a dam break simulation using an RK2 integratoe. The
+    Consider a dam break simulation using an RK2 integrator. The
     operations are
 
     (a) Tait equation (updates=['p','cs'])
@@ -78,7 +80,7 @@ class Integrator(object):
 
     initial_props:
     --------------
-    The initial property names for the LHS in the systemm of equations.
+    The initial property names for the LHS in the system of equations.
 
     The structure is a dictionary indexed by the calc id (which must
     be unique) with the value being a list of strings, one for each
@@ -192,6 +194,14 @@ class Integrator(object):
     The integrate step
     ===================
     This is the function to be called while integrating an SPH system.
+    
+    Notes:
+    ======
+    The position stepping calcs are evaluated after all the other calcs, and
+    smoothing length (h) updating calcs are evaluated in the defined sequence
+    but the updated smoothing length value is set only at the end of a step
+    (just before particles.update() calls) since it would invalidate the
+    neighbor locators
 
     """
 
@@ -260,10 +270,23 @@ class Integrator(object):
 
         calcs = self.calcs
 
+        # non-integrating calc which sets the new smoothing length
         self.pcalcs = [calc for calc in calcs if calc.tag == 'position']
         self.ncalcs = [calc for calc in calcs if not calc.tag == 'position']
         self.icalcs = [calc for calc in calcs if not calc.tag == 'position'
                        and calc.integrates==True]
+
+        self.hcalcs = []
+        for calc in calcs:
+            if calc.updates == ['h']:
+                calc.updates = ['_h_updated']
+                calc.dest.add_property({'name':'_h_updated'})
+                func = PropertyGet(calc.dest, prop_names=['_h_updated'])
+                self.hcalcs.append(SPHCalc(calc.particles, calc.sources, calc.dest,
+                    calc.kernel, [func], ['h'], False, calc.dnum, False,
+                    calc.id+'_do', False, -1, calc.dim, calc.snum))
+
+        self.calcs.extend(self.hcalcs)
 
         ncalcs = len(calcs)
 
@@ -583,6 +606,9 @@ class EulerIntegrator(Integrator):
         for calc in self.pcalcs:
             self.final_step(calc, dt)
 
+        for calc in self.hcalcs:
+            calc.sph('h')
+
         # update the particles to get the new neighbors
 
         self.particles.update(cache_neighbors=False)
@@ -645,10 +671,14 @@ class RK2Integrator(Integrator):
 
             self.cstep = 1
 
-            # eavl and step the position calcs
+            # eval and step the position calcs
             self.do_step(self.pcalcs, dt)
             
+            for calc in self.hcalcs:
+                calc.sph('h')
+            
             # update the particle positions
+
             self.particles.update()
 
         # eval the k2 arrays for the non position calcs
@@ -661,7 +691,11 @@ class RK2Integrator(Integrator):
         self.eval(self.pcalcs)
         
         for calc in self.pcalcs:
-            self.final_step(calc, dt)
+            if calc.integrates:
+                self.final_step(calc, dt)
+
+        for calc in self.hcalcs:
+            calc.sph('h')
 
         # reset the step counter and update the particles
 
@@ -738,6 +772,9 @@ class RK4Integrator(Integrator):
 
             self.do_step(self.pcalcs, 0.5*dt)
 
+            for calc in self.hcalcs:
+                calc.sph('h')
+
             # update the particles
 
             self.particles.update()
@@ -750,6 +787,9 @@ class RK4Integrator(Integrator):
 
             self.do_step(self.pcalcs, 0.5*dt)
 
+            for calc in self.hcalcs:
+                calc.sph('h')
+
             self.particles.update()
 
             ################ K3 #################################
@@ -759,6 +799,9 @@ class RK4Integrator(Integrator):
             self.cstep = 3
 
             self.do_step(self.pcalcs, dt)
+
+            for calc in self.hcalcs:
+                calc.sph('h')
 
             self.particles.update()
 
@@ -775,6 +818,9 @@ class RK4Integrator(Integrator):
         
         for calc in self.pcalcs:
             self.final_step(calc, dt)
+
+        for calc in self.hcalcs:
+            calc.sph('h')
 
         # reset the step counter and update the particles
 
@@ -837,6 +883,9 @@ class PredictorCorrectorIntegrator(Integrator):
 
         self.do_step(self.pcalcs, 0.5*dt)
 
+        for calc in self.hcalcs:
+            calc.sph('h')
+
         self.particles.update()
 
         self.cstep = 1
@@ -848,6 +897,9 @@ class PredictorCorrectorIntegrator(Integrator):
         self.cstep = 1
 
         self.do_step(self.pcalcs, 0.5*dt)
+
+        for calc in self.hcalcs:
+            calc.sph('h')
 
         self.particles.update()
 
@@ -862,6 +914,9 @@ class PredictorCorrectorIntegrator(Integrator):
 
         for calc in self.pcalcs:
             self.final_step(calc, dt)
+
+        for calc in self.hcalcs:
+            calc.sph('h')
 
         # Reset the step counter and update the particles
 
@@ -964,6 +1019,9 @@ class LeapFrogIntegrator(Integrator):
         # add correction for the positions
 
         self.add_correction_for_position(dt)
+
+        for calc in self.hcalcs:
+            calc.sph('h')
 
         # ensure all processors have reached this point, then update
 

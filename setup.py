@@ -117,6 +117,9 @@ sph = [
         Extension("pysph.sph.funcs.adke_funcs",
                   ["source/pysph/sph/funcs/adke_funcs.pyx"],),
 
+        Extension("pysph.sph.funcs.arithmetic_funcs",
+                  ["source/pysph/sph/funcs/arithmetic_funcs.pyx"],),
+
         ]
 
 parallel = [

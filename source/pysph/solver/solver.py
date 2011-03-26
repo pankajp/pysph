@@ -78,7 +78,7 @@ class Solver(object):
 
         self.setup_solver()
 
-    def to_step(self, types, update_smoothing_func=None):
+    def to_step(self, types):
         """ Specify an acceptable list of types to step
 
         Parameters:
@@ -94,10 +94,6 @@ class Solver(object):
         updates = ['x','y','z'][:self.dim]
         
         id = 'step'
-        
-#        self.add_operation(SPHOperation(
-#                sph.PositionStepping, on_types=types, updates=updates, id=id)
-#                           )
         
         self.add_operation(SPHIntegration(
                 sph.PositionStepping, on_types=types, updates=updates, id=id)
@@ -371,7 +367,7 @@ class Solver(object):
         Pre-stepping functions are those that need to be called before
         the integrator is called. 
 
-        Similarlly, post step functions are those that are called after
+        Similarly, post step functions are those that are called after
         the stepping within the integrator.
 
         """

@@ -117,7 +117,7 @@ class SPHOperation(object):
         return calc_data
 
     def get_calcs(self, particles, kernel):
-        """ Return a calc for an SPH equation of the form """   
+        """ Return calcs for the SPH equation, one for each dest """
         calcs = []
         calc_data = self.get_calc_data(particles)
 

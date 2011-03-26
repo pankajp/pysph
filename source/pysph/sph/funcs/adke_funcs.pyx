@@ -1,6 +1,8 @@
 #cython: cdivision=True
 """ File to hold the functions required for the ADKE procedure of Sigalotti """
 
+from libc.math cimport log, exp
+
 from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
 
 ###############################################################################
@@ -127,3 +129,61 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
             self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
 
         nr[0] += (1.0/rhoa) * mb * cPoint_dot(grad, vba)
+
+
+
+###############################################################################
+# `ADKESmoothingUpdate` class.
+###############################################################################
+cdef class ADKESmoothingUpdate(PilotRho):
+    """ Compute the pilot estimate of density for the ADKE algorithm """
+
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 bint setup_arrays=True, k=1.0, eps=0.0, double h0=1.0,
+                 **kwargs):
+        
+        PilotRho.__init__(self, source, dest,
+                 setup_arrays=setup_arrays, h0=h0, **kwargs)
+        self.k = k
+        self.eps = eps
+
+        self.id = "adke_smoothing"
+        self.tag = "adke"
+    
+    cpdef eval(self, KernelBase kernel, DoubleArray output1,
+               DoubleArray output2, DoubleArray output3):
+        """ Evaluate the store the results in the output arrays """
+        cdef double result, g, log_g=0.0
+        cdef int i
+
+        self.setup_iter_data()
+        cdef size_t np = self.dest.num_real_particles
+        # get the 'pilotrho'
+        for i in range(np):
+            self.eval_single(i, kernel, &result)
+            output1.data[i] = result
+            log_g += log(result)
+        log_g /= np
+        g = exp(log_g)
+        
+        for i in range(np):
+            output1.data[i] = self.h0 * self.k * (g/output1.data[i])**self.eps
+    
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double * result):
+        """ Computes contribution of all neighbors on particle at dest_pid """
+        cdef double dnr = 0.0 # denominator
+        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
+        cdef size_t nnbrs = nbrs.length
+        if self.exclude_self:
+            if self.src is self.dest:
+                # this works because nbrs has self particle in last position
+                nnbrs -= 1
+        
+        result[0] = 0.0
+        for j in range(nnbrs):
+            self.eval_nbr_csph(nbrs.data[j], dest_pid, kernel, result, &dnr)
+        
+        if dnr != 0.0:
+            result[0] /= dnr
+    
