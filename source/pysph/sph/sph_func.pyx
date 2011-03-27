@@ -195,9 +195,9 @@ cdef class SPHFunction:
         for i in range(np):
             if tag_arr.data[i] == LocalReal:
                 self.eval_single(i, kernel, result)
-                output1[i] = result[0]
-                output2[i] = result[1]
-                output3[i] = result[2]
+                output1[i] += result[0]
+                output2[i] += result[1]
+                output3[i] += result[2]
             else:
                 output1[i] = output2[i] = output3[i] = 0
     

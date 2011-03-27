@@ -970,9 +970,11 @@ class LeapFrogIntegrator(Integrator):
                 for j in range(calc.nupdates):
                     
                     update_prop = pos_calc_updates[j]
-                    k1_prop = self.k1_props['k1'][calc.id][j]
 
-                    #the current position
+                    #k1_prop = self.k1_props['k1'][calc.id][j]
+                    k1_prop = self.k_props[calc.id]['k1'][j]
+
+                    # the current position
 
                     current_arr = pos_calc_pa.get(update_prop)
 

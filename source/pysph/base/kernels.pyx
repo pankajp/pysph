@@ -339,8 +339,8 @@ cdef class CubicSplineKernel(KernelBase):
         """
         cdef cPoint grad
         cdef double rab = sqrt((pa.x-pb.x)*(pa.x-pb.x)+
-                              (pa.y-pb.y)*(pa.y-pb.y) + 
-                              (pa.z-pb.z)*(pa.z-pb.z))
+                               (pa.y-pb.y)*(pa.y-pb.y) + 
+                               (pa.z-pb.z)*(pa.z-pb.z))
 
         cdef double rx, ry, rz
         cdef double q = rab/h

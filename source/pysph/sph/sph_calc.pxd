@@ -59,3 +59,7 @@ cdef class SPHCalc:
 
     cdef setup_internals(self)
     cpdef check_internals(self)
+
+    cdef reset_output_arrays(self, DoubleArray output1, DoubleArray output2,
+                             DoubleArray output3)
+

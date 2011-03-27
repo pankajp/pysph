@@ -123,7 +123,10 @@ boundary.m[:] = 1.0
 
 particles = base.Particles(arrays=[fluid, boundary])
 app.particles = particles
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK4Integrator)
+
+#s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK4Integrator)
+s = solver.Solver(base.CubicSplineKernel(dim=2),
+                  solver.PredictorCorrectorIntegrator)
 
 
 #Tait equation

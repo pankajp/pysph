@@ -200,7 +200,8 @@ cdef class SPHCalc:
         cdef DoubleArray output1 = self.dest.get_carray(output_array1)
         cdef DoubleArray output2 = self.dest.get_carray(output_array2)
         cdef DoubleArray output3 = self.dest.get_carray(output_array3)
-        
+
+        self.reset_output_arrays(output1, output2, output3)
         self.sph_array(output1, output2, output3, exclude_self)
 
     cpdef sph_array(self, DoubleArray output1, DoubleArray output2, DoubleArray
@@ -229,5 +230,14 @@ cdef class SPHCalc:
                 func.source, self.dest, self.kernel.radius())
 
             func.eval(self.kernel, output1, output2, output3)
+
+    cdef reset_output_arrays(self, DoubleArray output1, DoubleArray output2,
+                             DoubleArray output3):
+
+        cdef int i
+        for i in range(output1.length):
+            output1.data[i] = 0.0
+            output2.data[i] = 0.0
+            output3.data[i] = 0.0
 
 #############################################################################

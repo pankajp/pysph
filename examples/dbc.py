@@ -112,9 +112,10 @@ fluid = base.get_particle_array(name="fluid", type=0, x=xf, y=yf,
 boundary = base.get_particle_array(name="boundary", type=1, x=xb, y=yb, 
                                    h=hb, m=mb, rho=rhob)
 
-particles = base.Particles(arrays=[fluid, boundary])
+particles = base.Particles(arrays=[boundary,fluid])
 app.particles = particles
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK4Integrator)
+
+s = solver.Solver(base.CubicSplineKernel(dim=2), solver.EulerIntegrator)
 
 
 #Equation of state
