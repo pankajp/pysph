@@ -206,9 +206,9 @@ class TestRK2Integrator(IntegratorTestCase):
         #self.print_pos('RK2 Integration', original_pos, new_pos)
 
         for i in range(4):
-            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 6)
-            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 6)            
-
+            self.assertAlmostEqual(new_pos[i][0], exact[i][0], 3)
+            self.assertAlmostEqual(new_pos[i][1], exact[i][1], 3)
+            
         
 # ##############################################################################
 

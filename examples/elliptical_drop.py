@@ -11,7 +11,7 @@ particles = app.create_particles(False,
 
 kernel = base.CubicSplineKernel(dim=2)
 
-s = solver.FluidSolver(kernel,solver.EulerIntegrator)
+s = solver.FluidSolver(kernel,solver.RK2Integrator)
 
 s.set_final_time(0.00076)
 s.set_time_step(1e-5)

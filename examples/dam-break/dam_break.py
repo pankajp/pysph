@@ -222,7 +222,7 @@ def get_boundary_particles():
     xb[idx:] = xsb; yb[idx:] = ysb
 
     hb = numpy.ones_like(xb)*h
-    mb = numpy.ones_like(xb)*dx*dy*ro
+    mb = numpy.ones_like(xb)*dx*dy*ro*0.5
     rhob = numpy.ones_like(xb) * ro
 
     cb = numpy.ones_like(xb)*co

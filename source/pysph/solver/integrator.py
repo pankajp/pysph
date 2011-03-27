@@ -667,12 +667,12 @@ class RK2Integrator(Integrator):
         while self.cstep != self.nsteps:
 
             # eval and step the non position calcs
-            self.do_step(self.ncalcs, dt)
+            self.do_step(self.ncalcs, 0.5*dt)
 
             self.cstep = 1
 
             # eval and step the position calcs
-            self.do_step(self.pcalcs, dt)
+            self.do_step(self.pcalcs, 0.5*dt)
             
             for calc in self.hcalcs:
                 calc.sph('h')
