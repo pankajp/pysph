@@ -322,13 +322,9 @@ cdef class ArtificialHeat(SPHFunctionParticle):
     """
     
     def __init__(self, ParticleArray source, dest,  bint setup_arrays=True,
-                 g1=0.5, g2=0.5, eta=0.1, **kwargs):
+                 eta=0.1, **kwargs):
 
-        SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
-                                     **kwargs)
-
-        self.g1 = g1
-        self.g2 = g2
+        SPHFunctionParticle.__init__(self, source, dest, setup_arrays, **kwargs)
         self.eta = eta
 
         self.id = 'aheat'
@@ -339,15 +335,17 @@ cdef class ArtificialHeat(SPHFunctionParticle):
 
         SPHFunctionParticle.setup_arrays(self)
 
+        msg = "Source array %s does not define prop q "%(self.source.name)
+        if not self.source.properties.has_key("q"):
+            raise RuntimeError , msg
+
+        msg = "Dest array %s does not define prop q "%(self.source.name)
+        if not self.dest.properties.has_key("q"):
+            raise RuntimeError , msg
+
         self.s_q = self.source.get_carray("q")
         self.d_q = self.dest.get_carray("q")
 
-        self.s_div = self.source.get_carray("div")
-        self.d_div = self.dest.get_carray("div")
-
-        self.s_e = self.source.get_carray("e")
-        self.d_e = self.dest.get_carray("e")
-        
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
     
@@ -357,6 +355,7 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         cdef double dot, tmp
         cdef double ca, cb, g1, g2, eta
         cdef double ea, eb, diva, divb
+        cdef double qa, qb
 
         cdef cPoint grad, grada, gradb
 
@@ -385,15 +384,10 @@ cdef class ArtificialHeat(SPHFunctionParticle):
 
         tmp = 0.0
         if dot < 0:
-            g1 = self.g1
-            g2 = self.g2
             eta = self.eta
 
             ca = self.d_cs.data[dest_pid]
             cb = self.s_cs.data[source_pid]
-
-            diva = self.d_div.data[dest_pid]
-            divb = self.s_div.data[source_pid]
 
             rhoab = 0.5 * (self.d_rho.data[dest_pid] + \
                            self.s_rho.data[source_pid])
@@ -401,9 +395,12 @@ cdef class ArtificialHeat(SPHFunctionParticle):
             mb = self.s_m.data[source_pid]
 
             eab = self.d_e.data[dest_pid] - self.s_e.data[source_pid]
+           
+            #qa = ha * (g1 * ca + g2 * ha * (fabs(diva) - diva))
+            #qb = hb * (g1 * cb + g2 * hb * (fabs(divb) - divb))
 
-            qa = ha * (g1 * ca + g2 * ha * (fabs(diva) - diva))
-            qb = hb * (g1 * cb + g2 * hb * (fabs(divb) - divb))
+            qa = self.d_q.data[dest_pid]
+            qb = self.s_q.data[source_pid]
 
             tmp = mb * (qa + qb) * eab
             tmp /= (cPoint_norm(xab) + eta*eta*hab*hab)

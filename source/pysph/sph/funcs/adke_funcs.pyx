@@ -59,8 +59,7 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
         if self.bonnet_and_lok_correction:
             dnr[0] += w*mb/rhob
 
-        nr[0] += w*self.s_m.data[source_pid]        
-
+        nr[0] += w*self.s_m.data[source_pid]
 
 ###############################################################################
 # `ADKESmoothingUpdate` class.
@@ -231,6 +230,7 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         g1 = self.g1
         g2 = self.g2
+                
 
         for i in range(np):
             self.eval_single(i, kernel, &div)
