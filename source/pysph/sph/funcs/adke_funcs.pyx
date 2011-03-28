@@ -5,10 +5,13 @@ from libc.math cimport log, exp
 
 from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
 
+cdef extern from "math.h":
+    double fabs (double)
+
 ###############################################################################
 # `PilotRho` class.
 ###############################################################################
-cdef class PilotRho(CSPHFunctionParticle):
+cdef class ADKEPilotRho(CSPHFunctionParticle):
     """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
@@ -19,7 +22,7 @@ cdef class PilotRho(CSPHFunctionParticle):
         self.h0 = h0
 
         self.id = "pilotrho"
-        self.tag = "adke"
+        self.tag = "pilotrho"
     
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double* dnr):
@@ -57,6 +60,73 @@ cdef class PilotRho(CSPHFunctionParticle):
             dnr[0] += w*mb/rhob
 
         nr[0] += w*self.s_m.data[source_pid]        
+
+
+###############################################################################
+# `ADKESmoothingUpdate` class.
+###############################################################################
+cdef class ADKESmoothingUpdate(ADKEPilotRho):
+    """ Compute the pilot estimate of density for the ADKE algorithm """
+
+    def __init__(self, ParticleArray source, ParticleArray dest,
+                 bint setup_arrays=True, k=1.0, eps=0.0, double h0=1.0,
+                 **kwargs):
+        
+        ADKEPilotRho.__init__(self, source, dest,
+                              setup_arrays=setup_arrays, h0=h0, **kwargs)
+        self.k = k
+        self.eps = eps
+
+        self.id = "adke_smoothing"
+        self.tag = "h"
+    
+    cpdef eval(self, KernelBase kernel, DoubleArray output1,
+               DoubleArray output2, DoubleArray output3):
+        """ Evaluate the store the results in the output arrays """
+        cdef double result, g, log_g=0.0
+        cdef int i
+
+        self.setup_iter_data()
+        cdef size_t np = self.dest.num_real_particles
+
+        cdef LongArray tag_arr = self.dest.get_carray('tag')
+        # get the 'pilotrho'
+
+        for i in range(np):
+            self.eval_single(i, kernel, &result)
+            output1.data[i] = result
+            log_g += log(result)
+
+        log_g /= np
+        g = exp(log_g)
+        
+        for i in range(np):
+            output1.data[i] = self.h0 * self.k * (g/output1.data[i])**self.eps
+
+        # set the destination's dirty bit since new neighbors are needed
+        
+        self.dest.set_dirty(True)
+    
+    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
+                          double * result):
+        """ Computes contribution of all neighbors on particle at dest_pid """
+
+        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
+        cdef size_t nnbrs = nbrs.length
+
+        cdef double dnr = 0.0
+        if self.exclude_self:
+            if self.src is self.dest:
+                # this works because nbrs has self particle in last position
+                nnbrs -= 1
+                
+        result[0] = 0.0
+        for j in range(nnbrs):
+            self.eval_nbr_csph(nbrs.data[j], dest_pid, kernel, result, &dnr)
+        
+        if dnr != 0.0:
+            result[0] /= dnr
+    
 
 ###############################################################################
 # `SPHDivergence` class.
@@ -130,60 +200,63 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 
         nr[0] += (1.0/rhoa) * mb * cPoint_dot(grad, vba)
 
-
-
 ###############################################################################
-# `ADKESmoothingUpdate` class.
+# `ADKEConductionCoeffUpdate` class.
 ###############################################################################
-cdef class ADKESmoothingUpdate(PilotRho):
+cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
     """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True, k=1.0, eps=0.0, double h0=1.0,
-                 **kwargs):
+                 bint setup_arrays=True, g1=0.0, g2=0.0, **kwargs):
         
-        PilotRho.__init__(self, source, dest,
-                 setup_arrays=setup_arrays, h0=h0, **kwargs)
-        self.k = k
-        self.eps = eps
+        SPHVelocityDivergence.__init__(self,source,dest,setup_arrays,**kwargs)
 
-        self.id = "adke_smoothing"
-        self.tag = "adke"
+        self.g1 = g1
+        self.g2 = g2
+
+        self.id = "adke_conduction"
+        self.tag = "q"
     
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
-        cdef double result, g, log_g=0.0
+
+        cdef double div, g1, g2, ca, ha
         cdef int i
 
         self.setup_iter_data()
         cdef size_t np = self.dest.num_real_particles
-        # get the 'pilotrho'
+
+        cdef LongArray tag_arr = self.dest.get_carray('tag')
+
+        g1 = self.g1
+        g2 = self.g2
+
         for i in range(np):
-            self.eval_single(i, kernel, &result)
-            output1.data[i] = result
-            log_g += log(result)
-        log_g /= np
-        g = exp(log_g)
-        
-        for i in range(np):
-            output1.data[i] = self.h0 * self.k * (g/output1.data[i])**self.eps
-    
+            self.eval_single(i, kernel, &div)
+
+            ca = self.d_cs.data[i]
+            ha = self.d_h.data[i]
+
+            abs_div = fabs(div)
+            
+            # set q_a = g1 h_a c_a + g2 h_a^2 [abs(div_a) - div_a]
+            
+            output1.data[i] = g1 * ca + ( g2 * ha * (abs_div - div) )
+            output1.data[i] *= ha
+
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double * result):
         """ Computes contribution of all neighbors on particle at dest_pid """
-        cdef double dnr = 0.0 # denominator
+
         cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
         cdef size_t nnbrs = nbrs.length
+
         if self.exclude_self:
             if self.src is self.dest:
-                # this works because nbrs has self particle in last position
                 nnbrs -= 1
-        
+                
         result[0] = 0.0
         for j in range(nnbrs):
-            self.eval_nbr_csph(nbrs.data[j], dest_pid, kernel, result, &dnr)
+            self.eval_nbr(nbrs.data[j], dest_pid, kernel, result)
         
-        if dnr != 0.0:
-            result[0] /= dnr
-    

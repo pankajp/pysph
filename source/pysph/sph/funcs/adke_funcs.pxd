@@ -13,20 +13,28 @@ from pysph.base.carray cimport DoubleArray, LongArray
 ###############################################################################
 # `PilotRho` class.
 ###############################################################################
-cdef class PilotRho(CSPHFunctionParticle):
+cdef class ADKEPilotRho(CSPHFunctionParticle):
     """ Compute the pilot estimate of density for the ADKE algorithm """
     cdef double h0
+
+###############################################################################
+# `ADKESmoothingUpdate` class.
+###############################################################################
+cdef class ADKESmoothingUpdate(ADKEPilotRho):
+    """ Compute the new smoothing length for the ADKE algorithm """
+    cdef double k, eps
+
 
 ###############################################################################
 # `SPHDivergence` class.
 ###############################################################################
 cdef class SPHVelocityDivergence(SPHFunctionParticle):
     """ Compute the pilot estimate of density for the ADKE algorithm """
-    pass
+    pass    
 
 ###############################################################################
-# `ADKESmoothingUpdate` class.
+# `ADKEConductionCoeffUpdate` class.
 ###############################################################################
-cdef class ADKESmoothingUpdate(PilotRho):
+cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
     """ Compute the new smoothing length for the ADKE algorithm """
-    cdef double k, eps
+    cdef double g1, g2

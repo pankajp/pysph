@@ -57,12 +57,11 @@ class UpdateSmoothingTestCase(unittest.TestCase):
 
         # smoothing length update operation
 
-        adke = solver.SPHOperation(sph.ADKESmoothingUpdate.withargs(
-                                            h0=h0, k=1.0, eps=0.0),
-                                   from_types=[Fluid],
-                                   on_types=[Fluid],
-                                   updates=["h"],
-                                   id="pilotrho")
+        adke = solver.SPHOperation(
+            sph.ADKESmoothingUpdate.withargs( h0=h0, k=1.0, eps=0.0 ),
+            from_types=[Fluid], on_types=[Fluid],
+            updates=["h"],
+            id="adke_smoothing")
 
         kernel = base.CubicSplineKernel(dim=1)
 
@@ -95,13 +94,13 @@ class UpdateSmoothingTestCase(unittest.TestCase):
         _nbrs = [3,4,5,6,7]
 
         self.assertEqual(len(nbrs), len(_nbrs))
+
         for i in range(len(nbrs)):
             self.assertEqual(nbrs[i], _nbrs[i])
         
         adke = solver.SPHOperation(TestUpdateSmoothing.withargs(
                                         h0=self.h0, k=1.0, eps=0.0),
-                                   from_types=[Fluid],
-                                   on_types=[Fluid],
+                                   from_types=[Fluid], on_types=[Fluid],
                                    updates=["h"],
                                    id="pilotrho")
 

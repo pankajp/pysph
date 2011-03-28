@@ -4,10 +4,6 @@
 from sph_calc import SPHCalc
 from sph_func import SPHFunction, SPHFunctionParticle, CSPHFunctionParticle
 
-#Import update smoothing and conduction
-from update_smoothing import UpdateSmoothingADKE, TestUpdateSmoothingADKE
-from update_misc_props import UpdateDivergence
-
 ############################################################################
 # IMPORT FUNCTIONS
 ############################################################################
@@ -46,8 +42,8 @@ from funcs.eos_funcs import IdealGasEquation, TaitEquation
 from funcs.external_force import GravityForce, VectorForce, MoveCircleX, MoveCircleY
 
 #Import ADKE functions
-from funcs.adke_funcs import PilotRho as ADKEPilotRho, \
-    SPHVelocityDivergence as VelocityDivergence, ADKESmoothingUpdate
+from funcs.adke_funcs import ADKEPilotRho, ADKESmoothingUpdate,\
+    SPHVelocityDivergence as VelocityDivergence, ADKEConductionCoeffUpdate
 
 ############################################################################
 
