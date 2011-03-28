@@ -3,8 +3,6 @@ from nnps import NNPSManager
 from particle_array import ParticleArray
 from particle_types import ParticleType
 
-from pysph.sph.update_smoothing import UpdateSmoothing
-
 Fluid = ParticleType.Fluid
 Solid = ParticleType.Solid
 
@@ -35,7 +33,6 @@ class Particles(object):
 
     (a) Hold all particle information
     (b) Update the indexing scheme when particles have moved.
-    (c) Update any variable at the start of an integration step/sub-step
     (d) Update remote particle properties in parallel runs.
     (e) Barrier synchronizations across processors
 
