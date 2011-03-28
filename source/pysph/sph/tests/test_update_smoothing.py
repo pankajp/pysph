@@ -80,6 +80,10 @@ class UpdateSmoothingTestCase(unittest.TestCase):
         In this test, the smoothing length of particle '5' is doubled
         and neighbors are queried.
 
+        This test essentially ensures that explicitly setting the
+        dirty flag of the particle array will ensure a new neighbor
+        querry (provided particles.update is called!)
+
         """
 
         particles = self.particles
@@ -97,26 +101,23 @@ class UpdateSmoothingTestCase(unittest.TestCase):
 
         for i in range(len(nbrs)):
             self.assertEqual(nbrs[i], _nbrs[i])
-        
-        adke = solver.SPHOperation(TestUpdateSmoothing.withargs(
-                                        h0=self.h0, k=1.0, eps=0.0),
-                                   from_types=[Fluid], on_types=[Fluid],
-                                   updates=["h"],
-                                   id="pilotrho")
 
-        kernel = base.CubicSplineKernel(dim=1)
-        calcs = adke.get_calcs(particles, kernel)
 
-        # update the particle smoothing lengths
-        for calc in calcs:
-            calc.sph('h')
-            calc.dest.set_dirty(True)
+        # artificially double the smoothing length of particle 5
+
+        h = pa.get('h')
+
+        h[5] *= 2
+
+        pa.set_dirty(True)
 
         # update the particles
+
         particles.update()
 
         nbrs = loc.py_get_nearest_particles(5)
         nbrs = nbrs.get_npy_array()
+        nbrs.sort()
 
         _nbrs = [1,2,3,4,5,6,7,8,9]
 
@@ -129,7 +130,7 @@ class UpdateSmoothingTestCase(unittest.TestCase):
 
         h0 = 1.0, k = 1.0, eps = 0.0
 
-        The smoothing lengths should remain unchanged.
+        The smoothing lengths should remain unchanged with these parameters.
 
         """
 
@@ -195,6 +196,7 @@ class TestUpdateSmoothing(sph.SPHFunctionParticle):
     def eval(self, kernel, output1, output2, output3):
         for i in range(output1.length):
             output1[i] = self.d_h[i]
+
         output1[5] *= 2
 
 class TestUpdateSmoothingSolver(unittest.TestCase):
@@ -213,18 +215,19 @@ class TestUpdateSmoothingSolver(unittest.TestCase):
 
         # smoothing length update operation
 
-        self.adke = solver.SPHOperation(TestUpdateSmoothing.withargs(
-                                            h0=self.h0, k=1.0, eps=0.0),
-                                        from_types=[Fluid],
-                                        on_types=[Fluid],
-                                        updates=["h"],
-                                        id="pilotrho")
+        self.adke = solver.SPHOperation(
+
+            TestUpdateSmoothing.withargs( h0=self.h0, k=1.0, eps=0.0 ),
+            from_types=[Fluid], on_types=[Fluid],
+            updates=["h"], id="pilotrho" )
 
         self.kernel = base.CubicSplineKernel(dim=1)
     
     def test_solve(self):
+
         for integrator in (solver.EulerIntegrator,solver.RK2Integrator,
                            solver.RK4Integrator):
+
             self.solver = solver.Solver(self.kernel, integrator)
             self.solver.add_operation(self.adke)
             self.solver.setup_solver()
@@ -232,7 +235,11 @@ class TestUpdateSmoothingSolver(unittest.TestCase):
             self.solver.set_time_step(1e-4)
             self.solver.set_final_time(1e-4)
             
+            # eval is called nstep number of times for each integrator
+            # and doubles the fifth particle's h each time
+            
             h_expect = self.pa.h[5] * 2**self.solver.integrator.nsteps
+
             self.solver.solve(False)
             self.assertAlmostEqual(self.pa.h[5], h_expect)
     
