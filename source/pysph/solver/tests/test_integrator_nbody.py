@@ -35,10 +35,10 @@ import numpy
 
 eps = 1e-3
 
-dt = 1e-4
-tf = dt*1000
+dt = 1e-3
+tf = dt*100
 
-np = 100
+np = 50
 
 x0 = numpy.random.random(np)*2.0 - 1.0
 y0 = numpy.random.random(np)*2.0 - 1.0
@@ -293,7 +293,132 @@ class IntegratorTestCase(unittest.TestCase):
 
             t += dt
 
-            print t
+    def test_rk2_integration(self):
+        """ Test the RK2Integrator of the system """
+
+        s = self.solver
+
+        s.switch_integrator( solver.RK2Integrator )
+        
+        x, y, z = x0.copy(), y0.copy(), z0.copy()
+
+        xrk2 = x.copy()
+        yrk2 = y.copy()
+        zrk2 = z.copy()
+
+        urk2 = numpy.zeros_like(x)
+        vrk2 = numpy.zeros_like(x)
+        wrk2 = numpy.zeros_like(x)
+        
+        t = 0.0
+
+        while t <= dt:
+
+            x_initial = x.copy()
+            y_initial = y.copy()
+            z_initial = z.copy()
+
+            u_initial = urk2.copy()
+            v_initial = vrk2.copy()
+            w_initial = wrk2.copy()
+
+            ax_k1 = numpy.zeros_like(x)
+            ay_k1 = numpy.zeros_like(x)
+            az_k1 = numpy.zeros_like(x)
+
+            u_k1 = numpy.zeros_like(x)
+            v_k1 = numpy.zeros_like(x)
+            w_k1 = numpy.zeros_like(x)
+
+            x_k1 = numpy.zeros_like(x)
+            y_k1 = numpy.zeros_like(x)
+            z_k1 = numpy.zeros_like(x)
+
+            ax_k2 = numpy.zeros_like(x)
+            ay_k2 = numpy.zeros_like(x)
+            az_k2 = numpy.zeros_like(x)
+
+            # RK2 K1 evaluation
+
+            for i in range(np):
+
+                for j in range(np):
+
+                    if not ( i == j ):
+
+                        dx = x[j] - x[i]
+                        dy = y[j] - y[i]
+                        dz = z[j] - z[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k1[i] += m[j]*invr3 * dx
+                        ay_k1[i] += m[j]*invr3 * dy
+                        az_k1[i] += m[j]*invr3 * dz
+            
+                # step the variables
+
+                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
+                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
+                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+
+                x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
+                y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
+                z_k1[i] = z_initial[i] + 0.5 * dt * w_k1[i]
+
+            # K2 evalluation
+
+            for i in range(np):
+
+                for j in range(np):
+
+                    if not ( i == j ):
+
+                        dx = x_k1[j] - x_k1[i]
+                        dy = y_k1[j] - y_k1[i]
+                        dz = z_k1[j] - z_k1[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k2[i] += m[j]*invr3 * dx
+                        ay_k2[i] += m[j]*invr3 * dy
+                        az_k2[i] += m[j]*invr3 * dz
+
+                # final step
+
+                urk2[i] = u_initial[i] + 0.5 * dt * (ax_k1[i] + ax_k2[i])
+                vrk2[i] = v_initial[i] + 0.5 * dt * (ay_k1[i] + ay_k2[i])
+                wrk2[i] = w_initial[i] + 0.5 * dt * (az_k1[i] + az_k2[i])
+
+                xrk2[i] = x_initial[i] + 0.5 * dt * (u_k1[i] + urk2[i])
+                yrk2[i] = y_initial[i] + 0.5 * dt * (v_k1[i] + vrk2[i])
+                zrk2[i] = z_initial[i] + 0.5 * dt * (w_k1[i] + wrk2[i])
+                
+            # compare with PySPH integration
+
+            s.integrator.integrate(dt)
+                
+            xp, yp, zp = get_particle_array_positions(self.parrays)
+            up, vp, wp = get_particle_array_veocities(self.parrays)
+
+            for i in range(np):
+                self.assertAlmostEqual( xp[i], xrk2[i], 10 )
+                self.assertAlmostEqual( yp[i], yrk2[i], 10 )
+                self.assertAlmostEqual( zp[i], zrk2[i], 10 )
+
+                self.assertAlmostEqual( up[i], urk2[i], 10 )
+                self.assertAlmostEqual( vp[i], vrk2[i], 10 )
+                self.assertAlmostEqual( wp[i], wrk2[i], 10 )
+
+            # copy the euler variables for the next step
+
+            x = xrk2.copy()
+            y = yrk2.copy()
+            z = zrk2.copy()
+
+            t += dt                
 
 if __name__ == '__main__':
     unittest.main()

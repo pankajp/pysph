@@ -655,6 +655,8 @@ class RK2Integrator(Integrator):
 
     def integrate(self, dt):
         
+        pa = self.arrays[0]
+
         # set the initial arrays
 
         self.set_initial_arrays()
@@ -670,17 +672,12 @@ class RK2Integrator(Integrator):
 
             # eval and step the position calcs
             self.do_step(self.pcalcs, 0.5*dt)
-            
-            #for calc in self.hcalcs:
-            #    calc.sph('h')
-            
-            # update the particle positions
 
             self.particles.update()
 
         # eval the k2 arrays for the non position calcs
         self.eval(self.ncalcs)
-        
+
         for calc in self.icalcs:
             self.final_step(calc, dt)
 
@@ -690,11 +687,6 @@ class RK2Integrator(Integrator):
         for calc in self.pcalcs:
             if calc.integrates:
                 self.final_step(calc, dt)
-
-        #for calc in self.hcalcs:
-        #    calc.sph('h')
-
-        # reset the step counter and update the particles
 
         self.cstep = 1
         self.particles.update()
