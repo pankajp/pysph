@@ -871,9 +871,6 @@ class PredictorCorrectorIntegrator(Integrator):
 
         self.do_step(self.pcalcs, 0.5*dt)
 
-        #for calc in self.hcalcs:
-        #    calc.sph('h')
-
         self.particles.update()
 
         self.cstep = 1
@@ -885,9 +882,6 @@ class PredictorCorrectorIntegrator(Integrator):
         self.cstep = 1
 
         self.do_step(self.pcalcs, 0.5*dt)
-
-        #for calc in self.hcalcs:
-        #    calc.sph('h')
 
         self.particles.update()
 
@@ -902,9 +896,6 @@ class PredictorCorrectorIntegrator(Integrator):
 
         for calc in self.pcalcs:
             self.final_step(calc, dt)
-
-        #for calc in self.hcalcs:
-        #    calc.sph('h')
 
         # Reset the step counter and update the particles
 

@@ -196,7 +196,7 @@ class IntegratorTestCase(unittest.TestCase):
                 self.assertEqual( func.dest.name, dst_name )
                 self.assertEqual( func.source.name, src_name )
 
-    def test_euler_integration(self):
+    def _test_euler_integration(self):
         """ Test the EulerIntegration of the system """
 
         s = self.solver
@@ -293,8 +293,8 @@ class IntegratorTestCase(unittest.TestCase):
 
             t += dt
 
-    def test_rk2_integration(self):
-        """ Test the RK2Integrator of the system """
+    def _test_rk2_integration(self):
+        """ Test RK2Integrator of the system """
 
         s = self.solver
 
@@ -312,7 +312,7 @@ class IntegratorTestCase(unittest.TestCase):
         
         t = 0.0
 
-        while t <= dt:
+        while t <= tf:
 
             x_initial = x.copy()
             y_initial = y.copy()
@@ -418,7 +418,312 @@ class IntegratorTestCase(unittest.TestCase):
             y = yrk2.copy()
             z = zrk2.copy()
 
-            t += dt                
+            t += dt
+
+    def _test_rk4_integration(self):
+        """ Test RK4Integrator of the system """
+
+        s = self.solver
+
+        s.switch_integrator( solver.RK4Integrator )
+        
+        x, y, z = x0.copy(), y0.copy(), z0.copy()
+
+        xrk4 = x.copy()
+        yrk4 = y.copy()
+        zrk4 = z.copy()
+
+        _zeros = numpy.zeros_like(x)
+
+        urk4 = _zeros.copy(); vrk4 = _zeros.copy(); wrk4 = _zeros.copy()
+
+        t = 0.0
+
+        while t <= tf:
+
+            x_initial = x.copy(); y_initial = y.copy()
+            z_initial = z.copy()
+
+            u_initial = urk4.copy(); v_initial = vrk4.copy()
+            w_initial = wrk4.copy()
+
+            ax_k1 = _zeros.copy(); ay_k1 = _zeros.copy(); az_k1 = _zeros.copy()
+            ax_k2 = _zeros.copy(); ay_k2 = _zeros.copy(); az_k2 = _zeros.copy()
+            ax_k3 = _zeros.copy(); ay_k3 = _zeros.copy(); az_k3 = _zeros.copy()
+            ax_k4 = _zeros.copy(); ay_k4 = _zeros.copy(); az_k4 = _zeros.copy()
+
+            u_k1 = _zeros.copy(); v_k1 = _zeros.copy(); w_k1 = _zeros.copy()
+            u_k2 = _zeros.copy(); v_k2 = _zeros.copy(); w_k2 = _zeros.copy()
+            u_k3 = _zeros.copy(); v_k3 = _zeros.copy(); w_k3 = _zeros.copy()
+
+            x_k1 = _zeros.copy(); y_k1 = _zeros.copy(); z_k1 = _zeros.copy()
+            x_k2 = _zeros.copy(); y_k2 = _zeros.copy(); z_k2 = _zeros.copy()
+            x_k3 = _zeros.copy(); y_k3 = _zeros.copy(); z_k3 = _zeros.copy()
+
+            # RK4 K1 evaluation
+
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x[j] - x[i]
+                        dy = y[j] - y[i]
+                        dz = z[j] - z[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k1[i] += m[j]*invr3 * dx
+                        ay_k1[i] += m[j]*invr3 * dy
+                        az_k1[i] += m[j]*invr3 * dz
+            
+                # step the variables
+
+                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
+                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
+                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+
+                x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
+                y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
+                z_k1[i] = z_initial[i] + 0.5 * dt * w_k1[i]
+
+            # K2 evalluation
+
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x_k1[j] - x_k1[i]
+                        dy = y_k1[j] - y_k1[i]
+                        dz = z_k1[j] - z_k1[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k2[i] += m[j]*invr3 * dx
+                        ay_k2[i] += m[j]*invr3 * dy
+                        az_k2[i] += m[j]*invr3 * dz
+
+                # step the variables
+
+                u_k2[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
+                v_k2[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
+                w_k2[i] = w_initial[i] + 0.5 * dt * az_k2[i]
+
+                x_k2[i] = x_initial[i] + 0.5 * dt * u_k2[i]
+                y_k2[i] = y_initial[i] + 0.5 * dt * v_k2[i]
+                z_k2[i] = z_initial[i] + 0.5 * dt * w_k2[i]
+
+            # K3 evalluation
+
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x_k2[j] - x_k2[i]
+                        dy = y_k2[j] - y_k2[i]
+                        dz = z_k2[j] - z_k2[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k3[i] += m[j]*invr3 * dx
+                        ay_k3[i] += m[j]*invr3 * dy
+                        az_k3[i] += m[j]*invr3 * dz
+
+                # step the variables
+
+                u_k3[i] = u_initial[i] + dt * ax_k3[i]
+                v_k3[i] = v_initial[i] + dt * ay_k3[i]
+                w_k3[i] = w_initial[i] + dt * az_k3[i]
+
+                x_k3[i] = x_initial[i] + dt * u_k3[i]
+                y_k3[i] = y_initial[i] + dt * v_k3[i]
+                z_k3[i] = z_initial[i] + dt * w_k3[i]
+
+            # K4
+
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x_k3[j] - x_k3[i]
+                        dy = y_k3[j] - y_k3[i]
+                        dz = z_k3[j] - z_k3[i]
+                        
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k4[i] += m[j]*invr3 * dx
+                        ay_k4[i] += m[j]*invr3 * dy
+                        az_k4[i] += m[j]*invr3 * dz
+
+                # final step
+
+                urk4[i] = u_initial[i] + (1.0/6.0) * dt * \
+                          (ax_k1[i] + 2*ax_k2[i] + 2*ax_k3[i] + ax_k4[i])
+                
+                vrk4[i] = v_initial[i] + (1.0/6.0) * dt * \
+                          (ay_k1[i] + 2*ay_k2[i] + 2*ay_k3[i] + ay_k4[i])
+                
+                wrk4[i] = w_initial[i] + (1.0/6.0) * dt * \
+                          (az_k1[i] + 2*az_k2[i] + 2*az_k3[i] + az_k4[i])
+
+
+                xrk4[i] = x_initial[i] + (1.0/6.0) * dt * \
+                          (u_k1[i] + 2*u_k2[i] + 2*u_k3[i] + urk4[i])
+
+                yrk4[i] = y_initial[i] + (1.0/6.0) * dt * \
+                          (v_k1[i] + 2*v_k2[i] + 2*v_k3[i] + vrk4[i])
+
+                zrk4[i] = z_initial[i] + (1.0/6.0) * dt * \
+                          (w_k1[i] + 2*w_k2[i] + 2*w_k3[i] + wrk4[i])
+
+            # compare with PySPH integration
+
+            s.integrator.integrate(dt)
+                
+            xp, yp, zp = get_particle_array_positions(self.parrays)
+            up, vp, wp = get_particle_array_veocities(self.parrays)
+
+            for i in range(np):
+                self.assertAlmostEqual( xp[i], xrk4[i], 10 )
+                self.assertAlmostEqual( yp[i], yrk4[i], 10 )
+                self.assertAlmostEqual( zp[i], zrk4[i], 10 )
+
+                self.assertAlmostEqual( up[i], urk4[i], 10 )
+                self.assertAlmostEqual( vp[i], vrk4[i], 10 )
+                self.assertAlmostEqual( wp[i], wrk4[i], 10 )
+
+            # copy the euler variables for the next step
+
+            x = xrk4.copy()
+            y = yrk4.copy()
+            z = zrk4.copy()
+
+            t += dt
+
+    def test_predictor_corrector_integrator(self):
+        """ Test PredictorCorrector integration of the system """
+
+        s = self.solver
+
+        s.switch_integrator( solver.PredictorCorrectorIntegrator )
+        
+        x, y, z = x0.copy(), y0.copy(), z0.copy()
+
+        xpc = x.copy()
+        ypc = y.copy()
+        zpc = z.copy()
+
+        _zeros = numpy.zeros_like(x)
+
+        upc = _zeros.copy(); vpc = _zeros.copy(); wpc = _zeros.copy()
+
+        t = 0.0
+
+        while t <= tf:
+
+            x_initial = x.copy(); y_initial = y.copy()
+            z_initial = z.copy()
+
+            u_initial = upc.copy(); v_initial = vpc.copy()
+            w_initial = wpc.copy()
+
+            ax_k1 = _zeros.copy(); ay_k1 = _zeros.copy(); az_k1 = _zeros.copy()
+            ax_k2 = _zeros.copy(); ay_k2 = _zeros.copy(); az_k2 = _zeros.copy()
+
+            u_k1 = _zeros.copy(); v_k1 = _zeros.copy(); w_k1 = _zeros.copy()
+            u_k2 = _zeros.copy(); v_k2 = _zeros.copy(); w_k2 = _zeros.copy()
+            
+            x_k1 = _zeros.copy(); y_k1 = _zeros.copy(); z_k1 = _zeros.copy()
+            x_k2 = _zeros.copy(); y_k2 = _zeros.copy(); z_k2 = _zeros.copy()
+
+            # K1
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x[j] - x[i]
+                        dy = y[j] - y[i]
+                        dz = z[j] - z[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k1[i] += m[j]*invr3 * dx
+                        ay_k1[i] += m[j]*invr3 * dy
+                        az_k1[i] += m[j]*invr3 * dz
+            
+                # step the variables
+
+                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
+                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
+                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+
+                x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
+                y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
+                z_k1[i] = z_initial[i] + 0.5 * dt * w_k1[i]
+
+            # K2
+            for i in range(np):
+                for j in range(np):
+                    if not ( i == j ):
+
+                        dx = x_k1[j] - x_k1[i]
+                        dy = y_k1[j] - y_k1[i]
+                        dz = z_k1[j] - z_k1[i]
+
+                        invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
+                        invr3 = invr*invr*invr
+
+                        ax_k2[i] += m[j]*invr3 * dx
+                        ay_k2[i] += m[j]*invr3 * dy
+                        az_k2[i] += m[j]*invr3 * dz
+
+                # step the variables
+
+                u_k2[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
+                v_k2[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
+                w_k2[i] = w_initial[i] + 0.5 * dt * az_k2[i]
+
+                x_k2[i] = x_initial[i] + 0.5 * dt * u_k2[i]
+                y_k2[i] = y_initial[i] + 0.5 * dt * v_k2[i]
+                z_k2[i] = z_initial[i] + 0.5 * dt * w_k2[i]
+
+                # Final step
+
+                upc[i] = 2*u_k2[i] - u_initial[i]
+                vpc[i] = 2*v_k2[i] - v_initial[i]
+                wpc[i] = 2*w_k2[i] - w_initial[i]
+
+                xpc[i] = 2*x_k2[i] - x_initial[i]
+                ypc[i] = 2*y_k2[i] - y_initial[i]
+                zpc[i] = 2*z_k2[i] - z_initial[i]
+
+            # compare with PySPH integration
+
+            s.integrator.integrate(dt)
+                
+            xp, yp, zp = get_particle_array_positions(self.parrays)
+            up, vp, wp = get_particle_array_veocities(self.parrays)
+
+            for i in range(np):
+                self.assertAlmostEqual( xp[i], xpc[i], 10 )
+                self.assertAlmostEqual( yp[i], ypc[i], 10 )
+                self.assertAlmostEqual( zp[i], zpc[i], 10 )
+
+                self.assertAlmostEqual( up[i], upc[i], 10 )
+                self.assertAlmostEqual( vp[i], vpc[i], 10 )
+                self.assertAlmostEqual( wp[i], wpc[i], 10 )
+
+            # copy the euler variables for the next step
+
+            x = xpc.copy()
+            y = ypc.copy()
+            z = zpc.copy()
+
+            t += dt
 
 if __name__ == '__main__':
     unittest.main()
