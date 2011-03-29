@@ -6,7 +6,7 @@
 # Copyright (c) 2009, Prabhu Ramachandran
 
 #sph imports
-from pysph.sph.sph_func cimport SPHFunction
+from pysph.sph.sph_func cimport SPHFunction, SPHFunctionParticle
 
 #base imports 
 from pysph.base.particle_array cimport ParticleArray
@@ -28,3 +28,6 @@ cdef class MoveCircleX(SPHFunction):
 
 cdef class MoveCircleY(SPHFunction):
     """ Count Neighbors.  """
+
+cdef class NBodyForce(SPHFunctionParticle):
+    cdef public double eps

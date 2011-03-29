@@ -39,7 +39,8 @@ from funcs.xsph_funcs import XSPHDensityRate, XSPHCorrection
 from funcs.eos_funcs import IdealGasEquation, TaitEquation
 
 #Import external force functions
-from funcs.external_force import GravityForce, VectorForce, MoveCircleX, MoveCircleY
+from funcs.external_force import GravityForce, VectorForce, MoveCircleX,\
+     MoveCircleY, NBodyForce
 
 #Import ADKE functions
 from funcs.adke_funcs import ADKEPilotRho, ADKESmoothingUpdate,\

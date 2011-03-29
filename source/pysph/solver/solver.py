@@ -57,9 +57,18 @@ class Solver(object):
     """
     
     def __init__(self, kernel, integrator_type):
+
         self.particles = None
         self.integrator_type = integrator_type
         self.kernel = kernel
+
+        self.initialize()
+        self.setup_solver()
+
+    def initialize(self):
+        """ Perform basic initializations """
+
+        self.particles = None
         self.operation_dict = {}
         self.order = []
         self.t = 0
@@ -68,7 +77,7 @@ class Solver(object):
         self.post_step_functions = []
         self.pfreq = 100
 
-        self.dim = kernel.dim
+        self.dim = self.kernel.dim
         self.kernel_correction = -1
 
         self.pid = None
@@ -76,7 +85,16 @@ class Solver(object):
 
         self.position_stepping_operations = {}
 
-        self.setup_solver()
+    def switch_integrator(self, integrator_type):
+        """ Change the integrator for the solver """
+
+        if self.particles == None:
+            raise RuntimeError, "There are no particles!"
+
+        self.integrator_type = integrator_type
+
+        # setup the new integrator
+        self.setup_integrator(self.particles)
 
     def to_step(self, types):
         """ Specify an acceptable list of types to step

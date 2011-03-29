@@ -351,7 +351,7 @@ class Integrator(object):
                 nupdates = len(updates)
 
                 pa = self.arrays[calc.dnum]
-            
+
                 for j in range(nupdates):
                     prop = updates[j]
 
@@ -569,7 +569,7 @@ class EulerIntegrator(Integrator):
 
         for i in range(nupdates):
             update_prop = updates[i]
-            
+
             initial_prop = self.initial_props[calc.id][i]
             k_prop = self.k_props[calc.id]['k1'][i]
 
@@ -577,7 +577,7 @@ class EulerIntegrator(Integrator):
             k1_arr = pa.get(k_prop)
             
             updated_array = initial_array + k1_arr * dt
-            
+
             pa.set(**{update_prop:updated_array})
             pa.set(**{initial_prop:updated_array})
 
@@ -592,7 +592,7 @@ class EulerIntegrator(Integrator):
         self.eval(self.ncalcs)
         
         # perform the final step for each integrating non position calc
-        
+
         for calc in self.icalcs:
             self.final_step(calc, dt)
 
