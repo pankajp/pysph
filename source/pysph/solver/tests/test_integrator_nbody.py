@@ -617,7 +617,7 @@ class IntegratorTestCase(unittest.TestCase):
 
             t += dt
 
-    def _test_predictor_corrector_integrator(self):
+    def test_predictor_corrector_integrator(self):
         """ Test PredictorCorrector integration of the system """
 
         s = self.solver
@@ -636,7 +636,7 @@ class IntegratorTestCase(unittest.TestCase):
 
         t = 0.0
 
-        while t <= tf:
+        while t<= tf:
 
             x_initial = x.copy(); y_initial = y.copy()
             z_initial = z.copy()
@@ -668,12 +668,16 @@ class IntegratorTestCase(unittest.TestCase):
                         ax_k1[i] += m[j]*invr3 * dx
                         ay_k1[i] += m[j]*invr3 * dy
                         az_k1[i] += m[j]*invr3 * dz
-            
+
+                u_k1[i] = upc[i]
+                v_k1[i] = vpc[i]
+                w_k1[i] = wpc[i]
+
                 # step the variables
 
-                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
-                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
-                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+                upc[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
+                vpc[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
+                wpc[i] = w_initial[i] + 0.5 * dt * az_k1[i]
 
                 x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
                 y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
@@ -695,11 +699,15 @@ class IntegratorTestCase(unittest.TestCase):
                         ay_k2[i] += m[j]*invr3 * dy
                         az_k2[i] += m[j]*invr3 * dz
 
+                u_k2[i] = upc[i]
+                v_k2[i] = vpc[i]
+                w_k2[i] = wpc[i]
+
                 # step the variables
 
-                u_k2[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
-                v_k2[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
-                w_k2[i] = w_initial[i] + 0.5 * dt * az_k2[i]
+                upc[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
+                vpc[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
+                wpc[i] = w_initial[i] + 0.5 * dt * az_k2[i]
 
                 x_k2[i] = x_initial[i] + 0.5 * dt * u_k2[i]
                 y_k2[i] = y_initial[i] + 0.5 * dt * v_k2[i]
@@ -707,9 +715,9 @@ class IntegratorTestCase(unittest.TestCase):
 
                 # Final step
 
-                upc[i] = 2*u_k2[i] - u_initial[i]
-                vpc[i] = 2*v_k2[i] - v_initial[i]
-                wpc[i] = 2*w_k2[i] - w_initial[i]
+                upc[i] = 2*upc[i] - u_initial[i]
+                vpc[i] = 2*vpc[i] - v_initial[i]
+                wpc[i] = 2*wpc[i] - w_initial[i]
 
                 xpc[i] = 2*x_k2[i] - x_initial[i]
                 ypc[i] = 2*y_k2[i] - y_initial[i]

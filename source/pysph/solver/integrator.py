@@ -659,8 +659,6 @@ class RK2Integrator(Integrator):
 
         # eavluate the k2 arrays
 
-        pa = self.arrays[1]
-
         self.eval(self.calcs)
 
         # step the integrating calcs
@@ -822,6 +820,7 @@ class PredictorCorrectorIntegrator(Integrator):
 
     def __init__(self, particles, calcs):
         Integrator.__init__(self, particles, calcs)
+        self.nsteps = 2
 
     def final_step(self, calc, dt):
         """ Perform the final step in the PC integration method """
@@ -829,11 +828,11 @@ class PredictorCorrectorIntegrator(Integrator):
         updates = calc.updates
         
         for j in range(calc.nupdates):
-            update_prop = updates[j]
             initial_prop = self.initial_props[calc.id][j]
+            update_prop = updates[j]
             
-            current_array = pa.get(update_prop)
             initial_array = pa.get(initial_prop)
+            current_array = pa.get(update_prop)
             
             updated_array = 2*current_array - initial_array
 
@@ -841,50 +840,29 @@ class PredictorCorrectorIntegrator(Integrator):
             pa.set(**{initial_prop:updated_array})
 
     def integrate(self, dt):
-        
+
         # set the initial arrays
 
         self.set_initial_arrays()
 
         ################### Predict #################################
-        
-        self.do_step(self.ncalcs,0.5*dt)
 
-        self.cstep = 1
-
-        self.do_step(self.pcalcs, 0.5*dt)
-
+        self.do_step(self.calcs, 0.5*dt)
         self.particles.update()
 
-        self.cstep = 1
-
         ################### Correct #################################
-        
-        self.do_step(self.ncalcs, 0.5*dt)
 
-        self.cstep = 1
-
-        self.do_step(self.pcalcs, 0.5*dt)
-
+        self.do_step(self.calcs, 0.5*dt)
         self.particles.update()
 
         ################### Step #################################        
         
-        # Step the non position calcs
+        for calc in self.calcs:
+            if calc.integrates:
+                self.final_step(calc, dt)
 
-        for calc in self.icalcs:
-            self.final_step(calc, dt)
-
-        # Step the position calcs
-
-        for calc in self.pcalcs:
-            self.final_step(calc, dt)
-
-        # Reset the step counter and update the particles
-
-        self.cstep = 1
         self.particles.update()
-
+        self.cstep = 1
 
 ##############################################################################
 #`LeapFrogIntegrator` class 

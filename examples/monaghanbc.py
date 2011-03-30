@@ -124,7 +124,7 @@ boundary.m[:] = 1.0
 particles = base.Particles(arrays=[fluid, boundary])
 app.particles = particles
 
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.RK2Integrator)
+s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.EulerIntegrator)
 
 #Tait equation
 s.add_operation(solver.SPHOperation(
@@ -192,7 +192,7 @@ s.add_operation(solver.SPHIntegration(
                 )
 
 s.set_final_time(1)
-s.set_time_step(3e-4)
+s.set_time_step(1e-4)
 
 app.set_solver(s)
 
