@@ -33,6 +33,8 @@ Fluids = base.ParticleType.Fluid
 import unittest
 import numpy
 
+zeros = numpy.zeros_like
+
 eps = 1e-3
 
 dt = 1e-3
@@ -196,7 +198,7 @@ class IntegratorTestCase(unittest.TestCase):
                 self.assertEqual( func.dest.name, dst_name )
                 self.assertEqual( func.source.name, src_name )
 
-    def _test_euler_integration(self):
+    def test_euler_integration(self):
         """ Test the EulerIntegration of the system """
 
         s = self.solver
@@ -231,16 +233,19 @@ class IntegratorTestCase(unittest.TestCase):
 
         while t <= tf:
 
+
+            ax_k1 = numpy.zeros_like(x)
+            ay_k1 = numpy.zeros_like(x)
+            az_k1 = numpy.zeros_like(x)
+
+            u_k1 = numpy.zeros_like(x)
+            v_k1 = numpy.zeros_like(x)
+            w_k1 = numpy.zeros_like(x)
+
             # Euler Integration
 
             for i in range(np):
-
-                ax = numpy.zeros_like(x)
-                ay = numpy.zeros_like(x)
-                az = numpy.zeros_like(x)
-
                 for j in range(np):
-
                     if not ( i == j ):
 
                         dx = x[j] - x[i]
@@ -250,24 +255,28 @@ class IntegratorTestCase(unittest.TestCase):
                         invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
                         invr3 = invr*invr*invr
                     
-                        ax[i] += m[j]*invr3 * dx
-                        ay[i] += m[j]*invr3 * dy
-                        az[i] += m[j]*invr3 * dz
+                        ax_k1[i] += m[j]*invr3 * dx
+                        ay_k1[i] += m[j]*invr3 * dy
+                        az_k1[i] += m[j]*invr3 * dz
 
                     else:
                         pass
+
+                u_k1[i] = ue[i]
+                v_k1[i] = ve[i]
+                w_k1[i] = we[i]
             
                 # step the velocities
 
-                ue[i] += ax[i] * dt
-                ve[i] += ay[i] * dt
-                we[i] += az[i] * dt
+                ue[i] += ax_k1[i] * dt
+                ve[i] += ay_k1[i] * dt
+                we[i] += az_k1[i] * dt
 
                 # step the positions
 
-                xe[i] += ue[i] * dt
-                ye[i] += ve[i] * dt
-                ze[i] += we[i] * dt
+                xe[i] += u_k1[i] * dt
+                ye[i] += v_k1[i] * dt
+                ze[i] += w_k1[i] * dt
 
             # compare with PySPH integration
 
@@ -293,8 +302,8 @@ class IntegratorTestCase(unittest.TestCase):
 
             t += dt
 
-    def _test_rk2_integration(self):
-        """ Test RK2Integrator of the system """
+    def test_rk2_integration(self):
+        """ Test RK2Integration of the system """
 
         s = self.solver
 
@@ -306,17 +315,17 @@ class IntegratorTestCase(unittest.TestCase):
         yrk2 = y.copy()
         zrk2 = z.copy()
 
-        urk2 = numpy.zeros_like(x)
-        vrk2 = numpy.zeros_like(x)
-        wrk2 = numpy.zeros_like(x)
+        _zeros = numpy.zeros_like(x)
+
+        urk2 = _zeros.copy(); vrk2 = _zeros.copy(); wrk2 = _zeros.copy()
         
         t = 0.0
 
         while t <= tf:
 
-            x_initial = x.copy()
-            y_initial = y.copy()
-            z_initial = z.copy()
+            x_initial = xrk2.copy()
+            y_initial = yrk2.copy()
+            z_initial = zrk2.copy()
 
             u_initial = urk2.copy()
             v_initial = vrk2.copy()
@@ -338,17 +347,19 @@ class IntegratorTestCase(unittest.TestCase):
             ay_k2 = numpy.zeros_like(x)
             az_k2 = numpy.zeros_like(x)
 
+            u_k2 = numpy.zeros_like(x)
+            v_k2 = numpy.zeros_like(x)
+            w_k2 = numpy.zeros_like(x)
+
             # RK2 K1 evaluation
 
             for i in range(np):
-
                 for j in range(np):
-
                     if not ( i == j ):
 
-                        dx = x[j] - x[i]
-                        dy = y[j] - y[i]
-                        dz = z[j] - z[i]
+                        dx = xrk2[j] - xrk2[i]
+                        dy = yrk2[j] - yrk2[i]
+                        dz = zrk2[j] - zrk2[i]
 
                         invr = 1.0/(numpy.sqrt(dx*dx + dy*dy + dz*dz ) + eps)
                         invr3 = invr*invr*invr
@@ -356,23 +367,24 @@ class IntegratorTestCase(unittest.TestCase):
                         ax_k1[i] += m[j]*invr3 * dx
                         ay_k1[i] += m[j]*invr3 * dy
                         az_k1[i] += m[j]*invr3 * dz
-            
+
+                u_k1[i] = urk2[i]
+                v_k1[i] = vrk2[i]
+                w_k1[i] = wrk2[i]
+
                 # step the variables
 
-                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
-                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
-                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+                urk2[i] = u_initial[i] + dt * ax_k1[i]
+                vrk2[i] = v_initial[i] + dt * ay_k1[i]
+                wrk2[i] = w_initial[i] + dt * az_k1[i]
 
-                x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
-                y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
-                z_k1[i] = z_initial[i] + 0.5 * dt * w_k1[i]
+                x_k1[i] = x_initial[i] + dt * u_k1[i]
+                y_k1[i] = y_initial[i] + dt * v_k1[i]
+                z_k1[i] = z_initial[i] + dt * w_k1[i]
 
             # K2 evalluation
-
             for i in range(np):
-
                 for j in range(np):
-
                     if not ( i == j ):
 
                         dx = x_k1[j] - x_k1[i]
@@ -386,15 +398,19 @@ class IntegratorTestCase(unittest.TestCase):
                         ay_k2[i] += m[j]*invr3 * dy
                         az_k2[i] += m[j]*invr3 * dz
 
-                # final step
+                u_k2[i] = urk2[i]
+                v_k2[i] = vrk2[i]
+                w_k2[i] = wrk2[i]
+
+                # final step for the variables
 
                 urk2[i] = u_initial[i] + 0.5 * dt * (ax_k1[i] + ax_k2[i])
                 vrk2[i] = v_initial[i] + 0.5 * dt * (ay_k1[i] + ay_k2[i])
                 wrk2[i] = w_initial[i] + 0.5 * dt * (az_k1[i] + az_k2[i])
 
-                xrk2[i] = x_initial[i] + 0.5 * dt * (u_k1[i] + urk2[i])
-                yrk2[i] = y_initial[i] + 0.5 * dt * (v_k1[i] + vrk2[i])
-                zrk2[i] = z_initial[i] + 0.5 * dt * (w_k1[i] + wrk2[i])
+                xrk2[i] = x_initial[i] + 0.5 * dt * (u_k1[i] + u_k2[i])
+                yrk2[i] = y_initial[i] + 0.5 * dt * (v_k1[i] + v_k2[i])
+                zrk2[i] = z_initial[i] + 0.5 * dt * (w_k1[i] + w_k2[i])
                 
             # compare with PySPH integration
 
@@ -412,13 +428,11 @@ class IntegratorTestCase(unittest.TestCase):
                 self.assertAlmostEqual( vp[i], vrk2[i], 10 )
                 self.assertAlmostEqual( wp[i], wrk2[i], 10 )
 
-            # copy the euler variables for the next step
+            t += dt
 
             x = xrk2.copy()
             y = yrk2.copy()
             z = zrk2.copy()
-
-            t += dt
 
     def _test_rk4_integration(self):
         """ Test RK4Integrator of the system """
@@ -603,7 +617,7 @@ class IntegratorTestCase(unittest.TestCase):
 
             t += dt
 
-    def test_predictor_corrector_integrator(self):
+    def _test_predictor_corrector_integrator(self):
         """ Test PredictorCorrector integration of the system """
 
         s = self.solver
