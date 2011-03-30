@@ -199,7 +199,7 @@ class IntegratorTestCase(unittest.TestCase):
                 self.assertEqual( func.source.name, src_name )
 
     def test_euler_integration(self):
-        """ Test the EulerIntegration of the system """
+        """ Test EulerIntegration of the system """
 
         s = self.solver
 
@@ -434,7 +434,7 @@ class IntegratorTestCase(unittest.TestCase):
             y = yrk2.copy()
             z = zrk2.copy()
 
-    def _test_rk4_integration(self):
+    def test_rk4_integration(self):
         """ Test RK4Integrator of the system """
 
         s = self.solver
@@ -469,6 +469,7 @@ class IntegratorTestCase(unittest.TestCase):
             u_k1 = _zeros.copy(); v_k1 = _zeros.copy(); w_k1 = _zeros.copy()
             u_k2 = _zeros.copy(); v_k2 = _zeros.copy(); w_k2 = _zeros.copy()
             u_k3 = _zeros.copy(); v_k3 = _zeros.copy(); w_k3 = _zeros.copy()
+            u_k4 = _zeros.copy(); v_k4 = _zeros.copy(); w_k4 = _zeros.copy()
 
             x_k1 = _zeros.copy(); y_k1 = _zeros.copy(); z_k1 = _zeros.copy()
             x_k2 = _zeros.copy(); y_k2 = _zeros.copy(); z_k2 = _zeros.copy()
@@ -490,12 +491,16 @@ class IntegratorTestCase(unittest.TestCase):
                         ax_k1[i] += m[j]*invr3 * dx
                         ay_k1[i] += m[j]*invr3 * dy
                         az_k1[i] += m[j]*invr3 * dz
-            
+
+                u_k1[i] = urk4[i]
+                v_k1[i] = vrk4[i]
+                w_k1[i] = wrk4[i]
+
                 # step the variables
 
-                u_k1[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
-                v_k1[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
-                w_k1[i] = w_initial[i] + 0.5 * dt * az_k1[i]
+                urk4[i] = u_initial[i] + 0.5 * dt * ax_k1[i]
+                vrk4[i] = v_initial[i] + 0.5 * dt * ay_k1[i]
+                wrk4[i] = w_initial[i] + 0.5 * dt * az_k1[i]
 
                 x_k1[i] = x_initial[i] + 0.5 * dt * u_k1[i]
                 y_k1[i] = y_initial[i] + 0.5 * dt * v_k1[i]
@@ -518,11 +523,15 @@ class IntegratorTestCase(unittest.TestCase):
                         ay_k2[i] += m[j]*invr3 * dy
                         az_k2[i] += m[j]*invr3 * dz
 
+                u_k2[i] = urk4[i]
+                v_k2[i] = vrk4[i]
+                w_k2[i] = wrk4[i]
+
                 # step the variables
 
-                u_k2[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
-                v_k2[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
-                w_k2[i] = w_initial[i] + 0.5 * dt * az_k2[i]
+                urk4[i] = u_initial[i] + 0.5 * dt * ax_k2[i]
+                vrk4[i] = v_initial[i] + 0.5 * dt * ay_k2[i]
+                wrk4[i] = w_initial[i] + 0.5 * dt * az_k2[i]
 
                 x_k2[i] = x_initial[i] + 0.5 * dt * u_k2[i]
                 y_k2[i] = y_initial[i] + 0.5 * dt * v_k2[i]
@@ -545,11 +554,15 @@ class IntegratorTestCase(unittest.TestCase):
                         ay_k3[i] += m[j]*invr3 * dy
                         az_k3[i] += m[j]*invr3 * dz
 
+                u_k3[i] = urk4[i]
+                v_k3[i] = vrk4[i]
+                w_k3[i] = wrk4[i]
+
                 # step the variables
 
-                u_k3[i] = u_initial[i] + dt * ax_k3[i]
-                v_k3[i] = v_initial[i] + dt * ay_k3[i]
-                w_k3[i] = w_initial[i] + dt * az_k3[i]
+                urk4[i] = u_initial[i] + dt * ax_k3[i]
+                vrk4[i] = v_initial[i] + dt * ay_k3[i]
+                wrk4[i] = w_initial[i] + dt * az_k3[i]
 
                 x_k3[i] = x_initial[i] + dt * u_k3[i]
                 y_k3[i] = y_initial[i] + dt * v_k3[i]
@@ -572,6 +585,10 @@ class IntegratorTestCase(unittest.TestCase):
                         ay_k4[i] += m[j]*invr3 * dy
                         az_k4[i] += m[j]*invr3 * dz
 
+                u_k4[i] = urk4[i]
+                v_k4[i] = vrk4[i]
+                w_k4[i] = wrk4[i]
+
                 # final step
 
                 urk4[i] = u_initial[i] + (1.0/6.0) * dt * \
@@ -585,13 +602,13 @@ class IntegratorTestCase(unittest.TestCase):
 
 
                 xrk4[i] = x_initial[i] + (1.0/6.0) * dt * \
-                          (u_k1[i] + 2*u_k2[i] + 2*u_k3[i] + urk4[i])
+                          (u_k1[i] + 2*u_k2[i] + 2*u_k3[i] + u_k4[i])
 
                 yrk4[i] = y_initial[i] + (1.0/6.0) * dt * \
-                          (v_k1[i] + 2*v_k2[i] + 2*v_k3[i] + vrk4[i])
+                          (v_k1[i] + 2*v_k2[i] + 2*v_k3[i] + v_k4[i])
 
                 zrk4[i] = z_initial[i] + (1.0/6.0) * dt * \
-                          (w_k1[i] + 2*w_k2[i] + 2*w_k3[i] + wrk4[i])
+                          (w_k1[i] + 2*w_k2[i] + 2*w_k3[i] + w_k4[i])
 
             # compare with PySPH integration
 

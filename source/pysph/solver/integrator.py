@@ -698,10 +698,11 @@ class RK4Integrator(Integrator):
         pa = self.arrays[calc.dnum]
         updates = calc.updates
         
-        for j in range(len(updates)):
-            update_prop = updates[j]
-
+        
+        for j in range(calc.nupdates):
             initial_prop = self.initial_props[calc.id][j]
+            update_prop = updates[j]
+            
             k1_prop = self.k_props[calc.id]['k1'][j]
             k2_prop = self.k_props[calc.id]['k2'][j]
             k3_prop = self.k_props[calc.id]['k3'][j]
@@ -725,71 +726,30 @@ class RK4Integrator(Integrator):
 
         self.set_initial_arrays()
 
-        # evaluate the k arrays
+        ################ K1 #################################w
 
-        while self.cstep != self.nsteps:
+        self.do_step(self.calcs, 0.5*dt)
+        self.particles.update()
+
+        ################ K2 #################################
+
+        self.do_step(self.calcs, 0.5*dt)
+        self.particles.update()
+
+        ################ K3 #################################
+
+        self.do_step(self.calcs, dt)
+        self.particles.update()
+
+        ################ K4 #################################
+
+        self.eval(self.calcs)
+
+        # step the variables
         
-            ################ K1 #################################w
-            
-            # Eval and step the k1 arrays for non position calcs
-
-            self.do_step(self.ncalcs, 0.5*dt)
-
-            self.cstep = 1
-            
-            # Eval and step the position calcs
-
-            self.do_step(self.pcalcs, 0.5*dt)
-
-            #for calc in self.hcalcs:
-            #    calc.sph('h')
-
-            # update the particles
-
-            self.particles.update()
-
-            ################ K2 #################################
-            
-            self.do_step(self.ncalcs, 0.5*dt)
-            
-            self.cstep = 2
-
-            self.do_step(self.pcalcs, 0.5*dt)
-
-            #for calc in self.hcalcs:
-            #    calc.sph('h')
-
-            self.particles.update()
-
-            ################ K3 #################################
-            
-            self.do_step(self.ncalcs, dt)
-            
-            self.cstep = 3
-
-            self.do_step(self.pcalcs, dt)
-
-            #for calc in self.hcalcs:
-            #    calc.sph('h')
-
-            self.particles.update()
-
-        # eval the k4 arrays for the non position calcs
-
-        self.eval(self.ncalcs)
-        
-        for calc in self.icalcs:
-            self.final_step(calc, dt)
-
-        # now eval and step the position calcs
-
-        self.eval(self.pcalcs)
-        
-        for calc in self.pcalcs:
-            self.final_step(calc, dt)
-
-        #for calc in self.hcalcs:
-        #    calc.sph('h')
+        for calc in self.calcs:
+            if calc.integrates:
+                self.final_step(calc, dt)
 
         # reset the step counter and update the particles
 
