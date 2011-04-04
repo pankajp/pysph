@@ -278,7 +278,7 @@ class IntegratorTestCase(unittest.TestCase):
                 ye[i] += v_k1[i] * dt
                 ze[i] += w_k1[i] * dt
 
-            # compare with PySPH integration
+           # compare with PySPH integration
 
             s.integrator.integrate(dt)
                 

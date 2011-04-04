@@ -473,6 +473,16 @@ class Solver(object):
                 savez(_fname, dt=self.dt, cell_size=cell_size, 
                       np = pa.num_real_particles, **props)
 
+    def get_particle_array_props(self):
+        """ Return properties of each particle array in a dict """
+        particle_props = {}
+
+        particles = self.particles
+        for array in particles.arrays:
+            particle_props[array.name] = array.properties
+
+        return particle_props
+
     def setup_solver(self):
         """ Implement the basic solvers here 
 
