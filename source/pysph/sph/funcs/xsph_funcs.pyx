@@ -20,6 +20,8 @@ cdef class XSPHCorrection(CSPHFunctionParticle):
         self.id = 'xsph'
         self.tag = "position"
 
+        self.src_reads.extend( ['u','v','w'] )
+        self.dst_reads.extend( ['u','v','w','rho'] )
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):

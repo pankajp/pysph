@@ -20,6 +20,7 @@ cdef class PositionStepping(SPHFunction):
         self.id = 'positionstepper'
         self.tag = "position"
 
+        self.dst_reads.extend( ['u','v','w'] )
     
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):

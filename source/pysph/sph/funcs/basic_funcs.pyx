@@ -29,7 +29,7 @@ cdef class SPH(CSPHFunctionParticle):
         self.prop_name = prop_name
         CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
         self.id = 'sph'
-        
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -38,6 +38,9 @@ cdef class SPH(CSPHFunctionParticle):
 
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
+
+        self.src_reads.append(self.prop_name)
+        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):
@@ -128,6 +131,9 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
 
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
+
+        self.src_reads.append(self.prop_name)
+        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -221,6 +227,9 @@ cdef class SPHGradient(SPHFunctionParticle):
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
 
+        self.src_reads.append(self.prop_name)
+        self.dst_reads.append(self.prop_name)
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
         """ 
@@ -304,7 +313,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
         self.id = 'sphlaplacian'
-               
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -312,6 +321,9 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         SPHFunctionParticle.setup_arrays(self)
         self.s_prop = self.source.get_carray(self.prop_name)
         self.d_prop = self.dest.get_carray(self.prop_name)
+
+        self.src_reads.append(self.prop_name)
+        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):

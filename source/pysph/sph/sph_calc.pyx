@@ -160,6 +160,11 @@ cdef class SPHCalc:
             #    msg += ' SPHCalc.dest'
             #    raise ValueError, msg
 
+        func = self.funcs[0]
+
+        self.src_reads = func.src_reads
+        self.dst_reads = func.dst_reads
+
     cdef setup_internals(self):
         """ Set the update update arrays and neighbor locators """
 

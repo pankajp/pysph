@@ -20,6 +20,9 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
                                      **kwargs)
         self.id = 'energyeqn'
         self.tag = "energy"
+
+        self.src_reads.extend( ['u','v','w','p'] )
+        self.dst_reads.extend( ['u','v','w','p'] )
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -106,6 +109,9 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         self.id = 'energyavisc'
         self.tag = "energy"
+
+        self.src_reads.extend( ['u','v','w','p','cs'] )
+        self.dst_reads.extend( ['u','v','w','p','cs'] )
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -218,6 +224,9 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         self.id = 'energyequation'
         self.tag = "energy"
+
+        self.src_reads.extend( ['u','v','w','p','cs'] )
+        self.dst_reads.extend( ['u','v','w','p','cs'] )
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -330,6 +339,9 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         self.id = 'aheat'
         self.tag = "energy"
 
+        self.src_reads.extend( ['u','v','w','p','cs','e'] )
+        self.dst_reads.extend( ['u','v','w','p','cs','e'] )
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -345,6 +357,9 @@ cdef class ArtificialHeat(SPHFunctionParticle):
 
         self.s_q = self.source.get_carray("q")
         self.d_q = self.dest.get_carray("q")
+
+        self.src_reads.append('q')
+        self.dst_reads.append('q')                             
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):

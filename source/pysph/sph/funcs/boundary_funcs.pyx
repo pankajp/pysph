@@ -37,6 +37,8 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self.s_ny = self.source.get_carray("ny")
         self.s_nz = self.source.get_carray("nz")
 
+        self.src_reads.extend( ['tx','ty','tz','nx','ny','nz','cs'] )
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
         """ Perform the boundary force computation """

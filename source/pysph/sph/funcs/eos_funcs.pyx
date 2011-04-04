@@ -20,6 +20,8 @@ cdef class IdealGasEquation(SPHFunction):
         self.id = 'idealgas'
         self.tag = "state"
 
+        self.dst_reads.extend( ['e','rho', 'p'] )
+
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):
         
@@ -70,6 +72,8 @@ cdef class TaitEquation(SPHFunction):
 
         self.id = 'tait'
         self.tag = "state"
+
+        self.dst_reads.append('rho')
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):

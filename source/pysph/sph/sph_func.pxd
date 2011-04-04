@@ -20,6 +20,12 @@ cdef class SPHFunction:
     cdef public str h, m, rho, p, e, x, y, z, u, v, w
     cdef public str tmpx, tmpy, tmpz, type
     cdef public str cs
+
+    # Lists on a per-function basis indicating which particle
+    # arrays from the source and destination arrays are read.
+    
+    cdef public list src_reads
+    cdef public list dst_reads
     
     cdef public DoubleArray s_h, s_m, s_rho
     cdef public DoubleArray s_x, s_y, s_z

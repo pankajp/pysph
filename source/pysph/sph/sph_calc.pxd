@@ -28,6 +28,9 @@ cdef class SPHCalc:
     cdef public list nbr_locators
     cdef public list sources
 
+    cdef public list src_reads
+    cdef public list dst_reads
+
     #kernel correction
     cdef public KernelCorrectionManager correction_manager
 

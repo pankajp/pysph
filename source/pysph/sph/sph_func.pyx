@@ -127,6 +127,9 @@ cdef class SPHFunction:
         self.cs = 'cs'
         
         self.num_outputs = 3
+
+        self.src_reads = ['x','y','z','h','tag','m', 'rho']
+        self.dst_reads = ['x','y','z','h','tag']
         
         if setup_arrays:
             self.setup_arrays()

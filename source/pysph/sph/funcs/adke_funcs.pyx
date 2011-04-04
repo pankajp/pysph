@@ -23,7 +23,7 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
 
         self.id = "pilotrho"
         self.tag = "pilotrho"
-    
+
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double* dnr):
         """ Compute the contribution from source_pid on dest_pid.
@@ -78,7 +78,7 @@ cdef class ADKESmoothingUpdate(ADKEPilotRho):
 
         self.id = "adke_smoothing"
         self.tag = "h"
-    
+
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
@@ -89,7 +89,6 @@ cdef class ADKESmoothingUpdate(ADKEPilotRho):
         cdef size_t np = self.dest.num_real_particles
 
         cdef LongArray tag_arr = self.dest.get_carray('tag')
-        # get the 'pilotrho'
 
         for i in range(np):
             self.eval_single(i, kernel, &result)
@@ -142,6 +141,9 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self.id = "vdivergence"
         self.tag = "vdivergence"
 
+        self.src_reads.extend( ['u','v','w'] )
+        self.dst_reads.extend( ['u','v','w'] )
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
         """ Compute the contribution from source_pid on dest_pid.
@@ -153,7 +155,6 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         <\nabla\,\cdot v>_a = \frac{1}{\rho_a}\sum_{b=1}^{b=N} m_b\,
         (v_b-v_a)\cdot\,\nabla_a\,W_{ab}
 
-        h0 is a constant that is set upon instance creation.
 
         """
 
@@ -215,7 +216,9 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         self.id = "adke_conduction"
         self.tag = "q"
-    
+
+        self.dst_reads.append('cs')
+
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """

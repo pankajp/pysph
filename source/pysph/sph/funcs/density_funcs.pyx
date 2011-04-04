@@ -70,6 +70,8 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self.id = 'densityrate'
         self.tag = "density"
 
+        self.src_reads.extend( ['u','v','w'] )
+        self.dst_reads.extend( ['u','v','w'] )
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
