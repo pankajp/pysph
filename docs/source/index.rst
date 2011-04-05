@@ -10,6 +10,7 @@ Welcome to PySPH's documentation!
    :maxdepth: 3 
 
    install.rst
+   overview.rst
    getting_started.rst
 
 
