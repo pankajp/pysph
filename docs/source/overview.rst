@@ -1,6 +1,6 @@
 An Overview of PySPH
 =======================
-PySPH is a framework for Smoothed Particle Hydrodynamics (`SPH <http://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics>`_) 
+PySPH is a framework for Smoothed Particle Hydrodynamics (:doc:`sph`) 
 in `Python <http://www.python.org>`_. The framework allows us to define arbitrary collections
 of partcles and forces acting on them. The corresponding initial value problem is then integrated
 in time to obtain the desired solution. The best way to understand this is to consider an example.
@@ -11,6 +11,7 @@ Consider a system of points which is governed by the following equations:
  .. math::
 
 	\frac{D\vec{v_i}}{Dt} = \sum_{j=1}^{N} \frac{m_j}{|x_j - x_i|^3} (\vec{x_j} - \vec{x_i})\,\, \forall i \neq j
+
 	\frac{Dx_i}{Dt} = \vec{v_i}
 
 Thus, given the initial positions and velocities of the particles, we can numerically integrate the system to some 
@@ -114,6 +115,3 @@ We achieve this by using the statement::
 
 Once the operations are defined, we tell the solver to setup the integrator, setup time stepping information
 and solve the system. Look at the examples for more information on using PySPH to solve your problems!
-
-
-
