@@ -196,6 +196,4 @@ s.set_time_step(1e-4)
 
 app.set_solver(s)
 
-print len(fluid.properties)
-
 app.run()

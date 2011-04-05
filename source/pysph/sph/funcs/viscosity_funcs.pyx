@@ -33,6 +33,8 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         self.src_reads.extend( ['u','v','w','cs'] )
         self.dst_reads.extend( ['u','v','w','cs','rho'] )
 
+        self.cl_kernel_src_file = "viscosity_funcs.cl"
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
         cdef cPoint va, vb, vab, rab
@@ -143,6 +145,8 @@ cdef class MorrisViscosity(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w'] )
         self.dst_reads.extend( ['u','v','w','rho'] )
+
+        self.cl_kernel_src_file = "viscosity_funcs.cl"
 
     cpdef setup_arrays(self):
         """

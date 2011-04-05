@@ -30,6 +30,8 @@ cdef class SPH(CSPHFunctionParticle):
         CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
         self.id = 'sph'
 
+        self.cl_kernel_src_file = "basic_funcs.cl"
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -122,6 +124,8 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
         self.id = 'sphd'
+
+        self.cl_kernel_src_file = "basic_funcs.cl"
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
@@ -218,6 +222,8 @@ cdef class SPHGradient(SPHFunctionParticle):
                                      *args, **kwargs)
         self.id = 'sphgrad'
 
+        self.cl_kernel_src_file = "basic_funcs.cl"
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -313,6 +319,8 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True,
                                      *args, **kwargs)
         self.id = 'sphlaplacian'
+
+        self.cl_kernel_src_file = "basic_funcs.cl"
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """

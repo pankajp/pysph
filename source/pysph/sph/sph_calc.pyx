@@ -11,9 +11,16 @@ from libc.stdlib cimport *
 cimport numpy
 import numpy
 
+from os import path
+
 # logging import
 import logging
 logger=logging.getLogger()
+
+try:
+    import pyopencl as cl
+except ImportError:
+    pass
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
@@ -108,6 +115,16 @@ cdef class SPHCalc:
 
         self.tag = ""
 
+        self.src_reads = []
+        self.dst_reads = []
+        self.dst_writes = []
+        self.initial_props = []
+
+        self.context = object()
+        self.queue = object()
+        self.cl_kernel = object()
+        self.cl_kernel_src_file = ''
+
         self.check_internals()
         self.setup_internals()
 
@@ -165,6 +182,15 @@ cdef class SPHCalc:
         self.src_reads = func.src_reads
         self.dst_reads = func.dst_reads
 
+        src = path.join( path.abspath('.'), 'funcs/' )
+        src = path.join( src, func.cl_kernel_src_file )
+
+        if not path.isfile(src):
+            #raise RuntimeWarning, "Kernel file does not exist!"
+            pass
+
+        self.cl_kernel_src_file = src
+
     cdef setup_internals(self):
         """ Set the update update arrays and neighbor locators """
 
@@ -193,6 +219,15 @@ cdef class SPHCalc:
                         %(self.id, src.name, self.dest.name, loc))
             
             self.nbr_locators.append(loc)
+
+    def setupCL(self, context, queue, options):
+        self.context = context
+        self.queue = queue
+
+        cl_kernel_src = open(self.cl_kernel_src_file, 'r').read()
+
+        program = cl.Program(self.context, cl_kernel_src).build(options=options)
+        self.cl_kernel = program.all_kernels()[0]
             
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 

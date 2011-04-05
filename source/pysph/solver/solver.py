@@ -1,7 +1,7 @@
 """ An implementation of a general solver base class """
 
 import os
-from utils import PBar, savez_compressed, savez
+from utils import PBar, savez_compressed, savez, get_cl_devices
 
 import pysph.base.api as base
 
@@ -12,6 +12,12 @@ from sph_equation import SPHOperation, SPHIntegration
 
 import logging
 logger = logging.getLogger()
+
+HAS_CL = True
+try:
+    import pyopencl as cl
+except ImportError:
+    HAS_CL=False
 
 Fluids = base.ParticleType.Fluid
 
@@ -496,5 +502,95 @@ class Solver(object):
         """
         pass
 
+    def setupCL(self):
+        """ Setup the OpenCL context and other initializations """
+
+        integrator = self.integrator
+        if not integrator.setup_done:
+            raise RuntimeWarning, 'Integrator not setup! '
+
+        if HAS_CL:
+            devices = get_cl_devices()
+
+            gpu_device = devices['GPU'][0]
+
+            if len(devices['GPU']) > 0:
+                self.HAS_GPU = True
+
+                self.cl_context = cl.Context(devices=[gpu_device,])
+                self.queue = cl.CommandQueue(self.cl_context,
+                                             devices=[gpu_device,])
+
+                pa_props = self.get_pa_props()
+
+                for calc in integrator.calcs:
+                    
+                    # set the context and command queue for all calcs
+
+                    calc.setupCL(self.cl_context, self.queue)
+
+                # request allocate memory on the device
+                
+                self.cl_device_allocate(pa_props)
+
+    def get_pa_props(self):
+        """ Return a dictionary with various read, write and
+        read/write properties for the particle arrays in the solver.
+
+        The read properties are defined by the calc functions. The
+        write properties are defined by the integrator.
+
+        The dictionary is keyed on particle array name.
+
+        """
+
+        integrator = self.integrator
+        if not integrator.setup_done:
+            raise RuntimeWarning, 'Integrator not setup! Returning'
+
+        pa_props = {}
+
+        for calc in integrator.calcs:
+            
+            # set the particle array props that need allocating
+
+            dst = calc.dest
+            src = calc.source
+
+            dst_props = pa_props.get(dst.name, None)
+            src_props = pa_props.get(src.name, None)
+
+            if not dst_props:
+                dst_props = {'read':set(),'write':set(),'rwrite':set()}
+            if not src_props:
+                src_props = {'read':set(),'write':set(),'rwrite':set()}
+
+            for prop in calc.dst_reads:
+                dst_props['read'].add(prop)
+
+            for prop in calc.src_reads:
+                src_props['read'].add(prop)                        
+
+            for prop in calc.dst_writes:
+                dst_props['write'].add(prop)
+                
+            for prop in calc.initial_props:
+                dst_props['rwrite'].add(prop)                
+            
+        return pa_props
+
+    def cl_device_allocate(self, pa_props):
+        """ Allocate memory on the device for each particle array.
+
+        Parameters:
+        -----------
+
+        pa_props -- A dictionary of props for each particle array.
+
+        """
+        for prop_name in pa_props:
+            read_props = pa_props['read']
+            write_props = pa_props['write']
+            rwrite_props = pa_props['rwrite']
 
 ############################################################################

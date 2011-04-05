@@ -304,6 +304,7 @@ class Integrator(object):
 
                 if calc.integrates:             
                     pa.add_property({'name':prop_initial})
+                    calc.initial_props.append(prop_initial)
 
                 # set the step array and initial array
 
@@ -321,6 +322,8 @@ class Integrator(object):
                         
                         k_name = k_num + '_' + prop + str(i) + str(j)
                         pa.add_property({'name':k_name})
+
+                        calc.dst_writes.append(k_name)
 
                         self.k_props[calc.id][k_num].append(k_name)
 

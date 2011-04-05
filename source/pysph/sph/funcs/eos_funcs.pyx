@@ -22,6 +22,8 @@ cdef class IdealGasEquation(SPHFunction):
 
         self.dst_reads.extend( ['e','rho', 'p'] )
 
+        self.cl_kernel_src_file = "eos_funcs.cl"
+
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):
         
@@ -74,6 +76,8 @@ cdef class TaitEquation(SPHFunction):
         self.tag = "state"
 
         self.dst_reads.append('rho')
+
+        self.cl_kernel_src_file = "eos_funcs.cl"
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):

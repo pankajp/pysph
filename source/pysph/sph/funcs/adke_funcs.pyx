@@ -24,6 +24,8 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
         self.id = "pilotrho"
         self.tag = "pilotrho"
 
+        self.cl_kernel_src_file = "adke_funcs.cl"
+
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double* dnr):
         """ Compute the contribution from source_pid on dest_pid.
@@ -78,6 +80,8 @@ cdef class ADKESmoothingUpdate(ADKEPilotRho):
 
         self.id = "adke_smoothing"
         self.tag = "h"
+
+        self.cl_kernel_src_file = "adke_funcs.cl"
 
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
@@ -143,6 +147,8 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w'] )
         self.dst_reads.extend( ['u','v','w'] )
+
+        self.cl_kernel_src_file = "adke_funcs.cl"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -217,11 +223,20 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
         self.id = "adke_conduction"
         self.tag = "q"
 
+        self.cl_kernel_src_file = "adke_funcs.cl"
+
         self.dst_reads.append('cs')
 
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
-        """ Evaluate the store the results in the output arrays """
+        """ Evaluate the store the results in the output arrays Note
+        that this function will not work if two or more particle
+        arrays contribute as a source. This is because the divergence
+        is calculated per source and then the conduction coefficient
+        set. We must calculate the divergence from all the
+        arrays involved and then perform the array wide operations.
+
+        """
 
         cdef double div, g1, g2, ca, ha
         cdef int i
@@ -232,8 +247,7 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
         cdef LongArray tag_arr = self.dest.get_carray('tag')
 
         g1 = self.g1
-        g2 = self.g2
-                
+        g2 = self.g2                
 
         for i in range(np):
             self.eval_single(i, kernel, &div)

@@ -15,7 +15,7 @@ from particle_generator import DensityComputationMode, MassComputationMode, \
     ParticleGenerator
 
 from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
-    get_pickled_data
+    get_pickled_data, get_cl_devices
 
 from application import Application
 

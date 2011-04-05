@@ -24,7 +24,9 @@ cdef class GravityForce(SPHFunction):
 
         self.gx = gx
         self.gy = gy
-        self.gz = gz        
+        self.gz = gz
+
+        self.cl_kernel_src_file = "external_force.cl"
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
@@ -53,6 +55,8 @@ cdef class VectorForce(SPHFunction):
 
         self.id = 'vectorforce'
         self.force = force
+
+        self.cl_kernel_src_file = "external_force.cl"
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):

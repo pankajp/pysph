@@ -101,7 +101,7 @@ __kernel void summation_density(__global const float4* dst,
   
   unsigned int work_dim = get_work_dim();
 
- unsigned int gid;
+  unsigned int gid;
 
   Size local_size, num_groups, local_id, group_id;
 

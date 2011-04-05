@@ -28,8 +28,19 @@ cdef class SPHCalc:
     cdef public list nbr_locators
     cdef public list sources
 
+    # properties read of the source and destination arrays
     cdef public list src_reads
     cdef public list dst_reads
+
+    # properties written to the destination arrays
+    cdef public list dst_writes
+    cdef public list initial_props
+
+    # OpenCL context, kernel and command queue
+    cdef public object context
+    cdef public object queue
+    cdef public object cl_kernel
+    cdef public str cl_kernel_src_file
 
     #kernel correction
     cdef public KernelCorrectionManager correction_manager

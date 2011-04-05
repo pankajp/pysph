@@ -23,6 +23,8 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w','p'] )
         self.dst_reads.extend( ['u','v','w','p'] )
+
+        self.cl_kernel_src_file = "energy_funcs.cl"
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -112,6 +114,8 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w','p','cs'] )
         self.dst_reads.extend( ['u','v','w','p','cs'] )
+
+        self.cl_kernel_src_file = "energy_funcs.cl"
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -227,6 +231,8 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w','p','cs'] )
         self.dst_reads.extend( ['u','v','w','p','cs'] )
+
+        self.cl_kernel_src_file = "energy_funcs.cl"
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
