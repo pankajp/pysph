@@ -4,7 +4,7 @@ from carray import LongArray, DoubleArray, IntArray
 
 from cell import Cell, CellManager, PeriodicDomain
 
-from kernels import KernelBase, CubicSplineKernel, \
+from kernels import KernelBase, DummyKernel, CubicSplineKernel, \
         HarmonicKernel, GaussianKernel, M6SplineKernel, W8Kernel, W10Kernel,\
         QuinticSplineKernel, WendlandQuinticSplineKernel, Poly6Kernel
 

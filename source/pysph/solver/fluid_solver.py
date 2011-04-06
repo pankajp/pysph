@@ -79,7 +79,7 @@ class FluidSolver(Solver):
             id='mom')
                            )
 
-        self.to_step([Fluids])
-        self.set_xsph(eps=0.1, hks=False)
+        self.add_operation_step([Fluids])
+        self.add_operation_xsph(eps=0.1, hks=False)
 
 #############################################################################

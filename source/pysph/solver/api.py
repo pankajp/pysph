@@ -14,12 +14,14 @@ from basic_generators import LineGenerator, CuboidGenerator, RectangleGenerator
 from particle_generator import DensityComputationMode, MassComputationMode, \
     ParticleGenerator
 
-from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
-    get_pickled_data, get_cl_devices
-
 from application import Application
 
 
 from post_step_functions import PrintNeighborInformation
 
 from plot import ParticleInformation
+
+from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
+    get_pickled_data
+
+from cl_utils import get_cl_devices, HAS_CL

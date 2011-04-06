@@ -26,9 +26,9 @@ class SolverTestCase(unittest.TestCase):
     (b) replace_operation
     (c) remove operation
     (d) set_order
-    (e) to_step
+    (e) add_operation_step
     (f) setup_integrator
-    (g) set_xsph
+    (g) add_operation_xsph
     
     """
     def setUp(self):
@@ -42,7 +42,10 @@ class SolverTestCase(unittest.TestCase):
         """
         self.kernel = kernel = base.CubicSplineKernel(dim = 2)
 
-        self.solver = s = solver.Solver(kernel, solver.EulerIntegrator)
+        self.solver = s = solver.Solver(dim=2,
+                                        integrator_type=solver.EulerIntegrator)
+
+        s.default_kernel = kernel
 
         self.particles = base.Particles(arrays=[base.get_particle_array()])
 
@@ -104,7 +107,7 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(s.particles, None)
         
-        self.assertEqual(s.kernel, self.kernel)
+        self.assertEqual(s.default_kernel, self.kernel)
 
         self.assertEqual(s.operation_dict, {})
         
@@ -208,14 +211,14 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(order, ['eos','density_rate','pgrad', 'visc'])
 
-    def test_to_step(self):
+    def test_step_operation(self):
         """ Test the stepping functions """
 
         self.setup_solver()
         
         s = self.solver
 
-        s.to_step(types=[Fluids])
+        s.add_operation_step(types=[Fluids])
 
         op = s.operation_dict['step']
 
@@ -223,16 +226,16 @@ class SolverTestCase(unittest.TestCase):
 
         self.assertEqual(op.function.get_func_class(), sph.PositionStepping)
 
-    def test_xsph(self):
+    def test_xsph_operation(self):
         """ Test for adding the XSPH function """
 
         self.setup_solver()
 
         s = self.solver
 
-        s.to_step(types=[Fluids])
+        s.add_operation_step(types=[Fluids])
 
-        s.set_xsph(eps = 0.5)
+        s.add_operation_xsph(eps = 0.5)
 
         op = s.operation_dict['xsph']
 
@@ -251,9 +254,9 @@ class SolverTestCase(unittest.TestCase):
         
         s = self.solver
 
-        s.to_step(types=[Fluids])
+        s.add_operation_step(types=[Fluids])
 
-        s.set_xsph(eps = 0.5)
+        s.add_operation_xsph(eps = 0.5)
         
         s.setup_integrator(self.particles)
 

@@ -35,7 +35,7 @@ pa = particles.get_named_particle_array('fluid')
 
 pa.add_property( {'name':'q', 'type':'double'} )
 
-s = solver.ShockTubeSolver(CubicSplineKernel(dim=1), solver.EulerIntegrator)
+s = solver.ShockTubeSolver(dim=1, integrator_type=solver.EulerIntegrator)
 
 
 # add the smoothing length update function as the first operation

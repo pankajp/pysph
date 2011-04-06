@@ -914,7 +914,12 @@ cdef class CellManager:
             self.cell_size = min_size
 
         if self.cell_size > max_size:
-            self.cell_size = max_size 
+            self.cell_size = max_size
+
+        # hack to let us initialize particles with h == 0
+            
+        if self.cell_size == 0.0:
+            self.cell_size = 1.0
 
         logger.info('using cell size of %f'%(min_size))
         return self.cell_size

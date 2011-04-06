@@ -31,19 +31,24 @@ class SPHOperationTestCase(unittest.TestCase):
 
         """
 
-        #create the fluid particles
         x = numpy.linspace(0,1,11)
         h = numpy.ones_like(x) * 2 * (x[1] - x[0])
+
+        #create the fluid particle array
+
         self.fluid = base.get_particle_array(name='fluid', type=Fluid, x=x,h=h)
 
-        #create the solid particles
+        #create the solid particle array
+        
         self.solid = base.get_particle_array(name="solid", type=Solid, x=x,h=h)
 
-        #set the particles
+        #create the particles
+        
         self.particles = particles = base.Particles(arrays=[self.fluid,
                                                             self.solid])
 
         #set the kernel
+        
         self.kernel = base.CubicSplineKernel()
 
     def test_from_solid_on_fluid(self):
@@ -66,29 +71,37 @@ class SPHOperationTestCase(unittest.TestCase):
 
         calc_data = operation.get_calc_data(self.particles)
 
-        #test for the returned dict
+        # test the calc data
+
+        # one destination for type Fluid
 
         ndsts = len(calc_data)
         self.assertEqual(ndsts, 1)
+
+        # the destination number should be 0 ( the first array is Fluid )
         
         dest_data = calc_data[0]
         self.assertEqual(dest_data['dnum'], 0)
 
+        # the calc should have two sources
+
         sources = dest_data['sources']
         self.assertEqual(len(sources), 2)
+
+        # the calc should have two funcs ( one for each src-dst pair )
 
         funcs = dest_data['funcs']
         self.assertEqual(len(funcs), 2)
         
-        #test the first function
-        func = funcs[0]
+        # test the first function
         
+        func = funcs[0]        
         self.assertEqual(func.dest, self.fluid)
         self.assertEqual(func.source, self.fluid)
 
         #test the second function
-        func = funcs[1]
         
+        func = funcs[1]        
         self.assertEqual(func.dest, self.fluid)
         self.assertEqual(func.source, self.solid)
 
@@ -112,43 +125,54 @@ class SPHIntegrationTestCase(SPHOperationTestCase):
         ncalcs = len(calcs)
         self.assertEqual(ncalcs, 2)
 
-        #Test for the first calc
+        # Test for the first calc
+        # dnum, dest = (0, fluid)
 
         calc1 = calcs[0]
         self.assertEqual(calc1.dnum, 0)
-
         self.assertEqual(calc1.dest, self.fluid)
+
+        # nsrcs = 0 
 
         sources = calc1.sources
         nsrcs = len(sources)
         self.assertEqual(nsrcs, 0)
 
-        self.assertEqual(calc1.integrates, True)
-        self.assertEqual(calc1.nbr_info, False)
+        # integrates == True
 
+        self.assertEqual(calc1.integrates, True)
+        self.assertEqual(calc1.nbr_info, True)
+
+        # updates = ['u','v']
+        
         updates = calc1.updates
         nupdates = len(calc1.updates)
 
         self.assertEqual(nupdates, 2)
         self.assertEqual(updates, ['u','v'])
 
-        #Test for the second calc
+        # Test for the second calc
+        # dnum, dest = (0, solid)
 
         calc = calcs[1]
         self.assertEqual(calc.dnum, 1)
-
         self.assertEqual(calc.dest, self.solid)
 
+        # nsrcs = 0
+        
         sources = calc.sources
         nsrcs = len(sources)
         self.assertEqual(nsrcs, 0)
 
+        # integrates = True
+
         self.assertEqual(calc.integrates, True)
-        self.assertEqual(calc.nbr_info, False)
+        self.assertEqual(calc.nbr_info, True)
+
+        # updates = ['u','v']
 
         updates = calc.updates
         nupdates = len(calc.updates)
-
         self.assertEqual(nupdates, 2)
         self.assertEqual(updates, ['u','v'])
         

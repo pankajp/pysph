@@ -17,11 +17,6 @@ from os import path
 import logging
 logger=logging.getLogger()
 
-try:
-    import pyopencl as cl
-except ImportError:
-    pass
-
 # local imports
 from pysph.base.particle_array cimport ParticleArray, LocalReal, Dummy
 from pysph.base.nnps cimport NNPSManager, FixedDestNbrParticleLocator
@@ -34,6 +29,10 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
 
 
 from pysph.base.carray cimport IntArray, DoubleArray
+
+from pysph.solver.cl_utils import HAS_CL
+if HAS_CL:
+    import pyopencl as cl
 
 cdef int log_level = logger.level
 

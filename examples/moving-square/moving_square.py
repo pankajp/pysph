@@ -64,7 +64,10 @@ class MoveSquare:
         self.time = motion[:,0]
         self.disp = motion[:,3]
 
-    def eval(self, particles, count, time):
+    def eval(self, solver, count):
+
+        particles = solver.particles
+        time = solver.time
 
         square = particles.get_named_particle_array("square")
         x = square.get('x')
@@ -205,8 +208,7 @@ app.process_command_line()
 
 particles = app.create_particles(False, get_particles)
 
-s = solver.Solver(base.CubicSplineKernel(dim=2), 
-                  solver.PredictorCorrectorIntegrator)
+s = solver.Solver(dim=2, integrator_type=solver.PredictorCorrectorIntegrator)
 
 # Equation of state
 
@@ -251,8 +253,8 @@ s.add_operation(solver.SPHIntegration(
 
 # Position stepping and XSPH correction
 
-s.to_step([Fluid])
-s.set_xsph(eps=eps)
+s.add_operation_step([Fluid])
+s.add_operation_xsph(eps=eps)
 
 # add post step and pre step functions for movement
 

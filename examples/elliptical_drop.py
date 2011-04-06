@@ -9,9 +9,8 @@ app.process_command_line()
 particles = app.create_particles(False,
     solver.fluid_solver.get_circular_patch, name='fluid', type=0)
 
-kernel = base.CubicSplineKernel(dim=2)
-
-s = solver.FluidSolver(kernel,solver.RK2Integrator)
+# use the solvers default cubic spline kernel
+s = solver.FluidSolver(dim=2, integrator_type=solver.RK2Integrator)
 
 s.set_final_time(0.00076)
 s.set_time_step(1e-5)

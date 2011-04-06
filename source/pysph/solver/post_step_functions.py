@@ -18,10 +18,13 @@ class PrintNeighborInformation:
         else:
             self.path = "."
     
-    def eval(self, particles, count, time):
+    def eval(self, solver, count):
         
         if not ((count % self.count) == 0):
             return
+
+        particles = solver.particles
+        time = solver.t
 
         nnps = particles.nnps_manager
         locator_cache = nnps.particle_locator_cache

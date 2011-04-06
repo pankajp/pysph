@@ -1,7 +1,8 @@
 """ An implementation of a general solver base class """
 
 import os
-from utils import PBar, savez_compressed, savez, get_cl_devices
+from utils import PBar, savez_compressed, savez
+from cl_utils import get_cl_devices
 
 import pysph.base.api as base
 
@@ -12,12 +13,6 @@ from sph_equation import SPHOperation, SPHIntegration
 
 import logging
 logger = logging.getLogger()
-
-HAS_CL = True
-try:
-    import pyopencl as cl
-except ImportError:
-    HAS_CL=False
 
 Fluids = base.ParticleType.Fluid
 
@@ -62,11 +57,13 @@ class Solver(object):
     
     """
     
-    def __init__(self, kernel, integrator_type):
+    def __init__(self, dim, integrator_type):
 
         self.particles = None
         self.integrator_type = integrator_type
-        self.kernel = kernel
+        self.dim = dim
+
+        self.default_kernel = base.CubicSplineKernel(dim=dim)
 
         self.initialize()
         self.setup_solver()
@@ -83,13 +80,20 @@ class Solver(object):
         self.post_step_functions = []
         self.pfreq = 100
 
-        self.dim = self.kernel.dim
         self.kernel_correction = -1
 
         self.pid = None
         self.eps = -1
 
         self.position_stepping_operations = {}
+
+        self.print_properties = ['x','u','m','h','p','rho',]
+
+        if self.dim > 1:
+            self.print_properties.extend(['y','v'])
+
+        if self.dim > 2:
+            self.print_properties.extend(['z','w'])
 
     def switch_integrator(self, integrator_type):
         """ Change the integrator for the solver """
@@ -100,9 +104,11 @@ class Solver(object):
         self.integrator_type = integrator_type
 
         # setup the new integrator
+
         self.setup_integrator(self.particles)
 
-    def to_step(self, types):
+    def add_operation_step(self, types, xsph=False, eps=0.5):
+        
         """ Specify an acceptable list of types to step
 
         Parameters:
@@ -116,12 +122,51 @@ class Solver(object):
 
         """
         updates = ['x','y','z'][:self.dim]
+
+        kernel = base.DummyKernel(dim=self.dim)
         
         id = 'step'
         
         self.add_operation(SPHIntegration(
-                sph.PositionStepping, on_types=types, updates=updates, id=id)
+            sph.PositionStepping, on_types=types, updates=updates, id=id,
+            kernel=kernel)
                            )
+
+    def add_operation_xsph(self, eps, hks=False):
+        """ Set the XSPH operation if requested
+
+        Parameters:
+        -----------
+        eps -- the epsilon value to use for XSPH stepping
+        
+        Notes:
+        ------
+        The position stepping operation must be defined. This is because
+        the XSPH operation is setup for those arrays that need stepping.
+
+        The smoothing kernel used for this operation is the CubicSpline!
+
+        """       
+        
+        assert eps > 0, 'Invalid value for XSPH epsilon: %f' %(eps)
+        self.eps = eps
+
+        # create the xsph stepping operation
+                
+        id = 'xsph'
+        err = "position stepping function does not exist!"
+        assert self.operation_dict.has_key('step'), err
+
+        types = self.operation_dict['step'].on_types
+        updates = self.operation_dict['step'].updates
+
+                           
+        self.add_operation(SPHIntegration(
+
+            sph.XSPHCorrection.withargs(eps=eps, hks=hks), from_types=[Fluids],
+            on_types=types, updates=updates, id=id, kernel=self.default_kernel)
+
+                           )        
 
     def add_operation(self, operation, before=False, id=None):
         """ Add an SPH operation to the solver.
@@ -281,7 +326,7 @@ class Solver(object):
         if particles:
             self.particles = particles
 
-            self.particles.kernel = self.kernel
+            self.particles.kernel = self.default_kernel
 
             if particles.in_parallel:
                 self.pid = particles.cell_manager.pid
@@ -292,7 +337,11 @@ class Solver(object):
 
             for equation_id in self.order:
                 operation = self.operation_dict[equation_id]
-                calcs = operation.get_calcs(particles,self.kernel)
+
+                if operation.kernel is None:
+                    operation.kernel = self.default_kernel
+                
+                calcs = operation.get_calcs(particles, operation.kernel)
                 self.integrator.calcs.extend(calcs)
 
             self.integrator.setup_integrator()
@@ -318,40 +367,6 @@ class Solver(object):
 
         self.setup_integrator(self.particles)
 
-    def set_xsph(self, eps, hks=False):
-        """ Set the XSPH operation if requested
-
-        Parameters:
-        -----------
-        eps -- the epsilon value to use for XSPH stepping
-        
-        Notes:
-        ------
-        The position stepping operation must be defined. This is because
-        the XSPH operation is setup for those arrays that need stepping.
-
-        """       
-        
-        assert eps > 0, 'Invalid value for XSPH epsilon: %f' %(eps)
-        self.eps = eps
-
-        # create the xsph stepping operation
-                
-        id = 'xsph'
-        err = "position stepping function does not exist!"
-        assert self.operation_dict.has_key('step'), err
-
-        types = self.operation_dict['step'].on_types
-        updates = self.operation_dict['step'].updates
-
-                           
-        self.add_operation(SPHIntegration(
-
-            sph.XSPHCorrection.withargs(eps=eps, hks=hks), from_types=[Fluids],
-            on_types=types, updates=updates, id=id )
-
-                           )
-
     def set_final_time(self, tf):
         """ Set the final time for the simulation """
         self.tf = tf
@@ -371,6 +386,12 @@ class Solver(object):
     def set_output_printing_level(self, detailed_output):
         """ Set the output printing level """
         self.detailed_output = detailed_output
+
+    def add_print_properties(self, props):
+        """ Add a list of properties to print """
+        for prop in props:
+            if not prop in self.print_properties:
+                self.print_properties.append(prop)
 
     def set_output_directory(self, path):
         """ Set the output directory """
@@ -410,32 +431,32 @@ class Solver(object):
 
             self.particles.update()
 
-            #perform any pre step functions
+            # perform any pre step functions
             
             for func in self.pre_step_functions:
-                func.eval(self.particles, count, self.t)
+                func.eval(self, count)
 
-            #perform the integration 
+            # perform the integration 
 
-            logger.info("TIME %f"%(self.t))
+            logger.info("Time %f, time step %f "%(self.t, dt))
 
             self.integrator.integrate(dt)
 
-            #perform any post step functions
+            # perform any post step functions
             
             for func in self.post_step_functions:
-                func.eval(self.particles, count, self.t)
+                func.eval(self, count)
 
-            #dump output
+            # dump output
+
             if count % self.pfreq == 0:
-                self.dump_output(self.t)
+                self.dump_output(*self.print_properties)
 
-            logger.info("Time %f, time step %f "%(self.t, dt))
             bar.update()
 
         bar.finish()
 
-    def dump_output(self, t):
+    def dump_output(self, *print_properties):
         """ Print output based on level of detail required
         
         The default detail level (low) is the integrator's calc's update 
@@ -452,42 +473,18 @@ class Solver(object):
 
         for pa in self.particles.arrays:
             name = pa.name
-            _fname=os.path.join(self.path,fname + name + '_' + str(t) + '.npz')
+            _fname=os.path.join(self.path,fname + name + '_' + str(self.t) + \
+                                '.npz')
             
             if self.detailed_output:
                 savez(_fname, dt=self.dt, **pa.properties)
 
             else:
-                #set the default properties
-                props['x'] = pa.get('x')
-                props['u'] = pa.get('u')
-                props['h'] = pa.get('h')
-                props['m'] = pa.get('m')
-                props['e'] = pa.get('e')
-                props['p'] = pa.get('p')
-                props['idx'] = pa.get("idx")
-                props['rho'] = pa.get('rho')                
-
-                if self.dim > 1:
-                    props['y'] = pa.get('y')
-                    props['v'] = pa.get('v')                
-
-                    if self.dim > 2:
-                        props['z'] = pa.get('z')
-                        props['w'] = pa.get('w')
+                for prop in print_properties:
+                    props[prop] = pa.get(prop)
 
                 savez(_fname, dt=self.dt, cell_size=cell_size, 
                       np = pa.num_real_particles, **props)
-
-    def get_particle_array_props(self):
-        """ Return properties of each particle array in a dict """
-        particle_props = {}
-
-        particles = self.particles
-        for array in particles.arrays:
-            particle_props[array.name] = array.properties
-
-        return particle_props
 
     def setup_solver(self):
         """ Implement the basic solvers here 
@@ -500,7 +497,17 @@ class Solver(object):
         Look at solver/fluid_solver.py for an example.
 
         """
-        pass
+        pass                
+
+    def get_particle_array_props(self):
+        """ Return properties of each particle array in a dict """
+        particle_props = {}
+
+        particles = self.particles
+        for array in particles.arrays:
+            particle_props[array.name] = array.properties
+
+        return particle_props
 
     def setupCL(self):
         """ Setup the OpenCL context and other initializations """

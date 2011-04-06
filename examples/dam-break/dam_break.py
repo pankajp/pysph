@@ -264,8 +264,7 @@ particles = app.create_particles(variable_h=False, callable=get_particles,
 
 print "Number of cells: ", len(particles.cell_manager.cells_dict)
 
-s = solver.Solver(base.CubicSplineKernel(dim=2), 
-                  solver.PredictorCorrectorIntegrator)
+s = solver.Solver(dim=2, integrator_type=solver.PredictorCorrectorIntegrator)
 
 #Equation of state
 s.add_operation(solver.SPHOperation(
@@ -321,10 +320,10 @@ s.add_operation(solver.SPHOperation(
                 
                 )
 
-# Position stepping and XSPH correction
+# Position stepping and XSPH correction operations
 
-s.to_step([Fluid])
-s.set_xsph(eps=eps)
+s.add_operation_step([Fluid])
+s.add_operation_xsph(eps=eps)
 
 dt = 1.25e-4
 

@@ -65,7 +65,8 @@ particles = app.create_particles(variable_h=False, callable=get_particles)
 
 kernel = base.CubicSplineKernel(dim=2)
 
-s = solver.FluidSolver(kernel,solver.PredictorCorrectorIntegrator)
+s = solver.FluidSolver(dim=2,
+                       integrator_type=solver.PredictorCorrectorIntegrator)
 
 s.set_final_time(1.0)
 s.set_time_step(1e-4)

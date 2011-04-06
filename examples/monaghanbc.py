@@ -124,7 +124,14 @@ boundary.m[:] = 1.0
 particles = base.Particles(arrays=[fluid, boundary])
 app.particles = particles
 
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), solver.PredictorCorrectorIntegrator)
+
+kernel = base.HarmonicKernel(dim=2, n=3)
+
+s = solver.Solver(dim=2, integrator_type=solver.PredictorCorrectorIntegrator)
+
+# set the kernel as the default for the solver
+
+s.default_kernel = kernel
 
 #Tait equation
 s.add_operation(solver.SPHOperation(
@@ -132,7 +139,7 @@ s.add_operation(solver.SPHOperation(
         sph.TaitEquation.withargs(co=25.0, ro=1.0), 
         on_types=[Fluid], 
         updates=['p','cs'],
-        id='eos')
+        id='eos', kernel=kernel)
 
                 )
 
@@ -141,7 +148,7 @@ s.add_operation(solver.SPHIntegration(
             
             sph.SPHDensityRate.withargs(), from_types=[Fluid], 
             on_types=[Fluid],
-            updates=['rho'], id='density')
+            updates=['rho'], id='density', kernel=kernel)
 
                 )
 

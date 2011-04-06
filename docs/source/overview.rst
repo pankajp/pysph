@@ -36,14 +36,14 @@ final time. Let's see how to do this in PySPH!
 	pa = base.get_particle_array(name="test", type=Fluid, x=x, y=y, z=z, m=m)
 	particles = base.Particles(arrays=[pa,])
 	
-	kernel = base.CubicSplineKernel(dim=3)
-	s = solver.Solver(kernel, solver.PredictorCorrectorIntegrator)
+	s = solver.Solver(dim=3, 
+	                  integrator_type=solver.PredictorCorrectorIntegrator)
 	
-	s.add_operation(solver.SPHIntegration
+	s.add_operation(solver.SPHIntegration(
 	
 			sph.NBodyForce.withargs(),
 			on_types=[Fluid], from_types=[Fluid],
-			updates=['u','v','w'], id='nbody_force'
+			updates=['u','v','w'], id='nbody_force')
 			
 			)
 			

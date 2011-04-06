@@ -5,9 +5,6 @@ import numpy
 import pysph.base.api as base
 import pysph.sph.api as sph
 
-#from pysph.base.particle_types import ParticleType
-#from pysph.base.particle_array import get_particle_array
-
 from solver import Solver
 from sph_equation import SPHOperation, SPHIntegration
 
@@ -49,40 +46,46 @@ class ShockTubeSolver(Solver):
     
     def setup_solver(self):
 
+        kernel = base.CubicSplineKernel(dim=1)
+
         #create the sph operation objects
 
         self.add_operation(SPHOperation(
-            sph.SPHRho.withargs(), 
+
+            sph.SPHRho.withargs(),
             from_types=[Fluids], on_types=[Fluids], 
-            updates=['rho'], 
-            id = 'density')
+            updates=['rho'], id = 'density', kernel=kernel)
+
                            )
 
         self.add_operation(SPHOperation(
+
             sph.IdealGasEquation.withargs(),
-            on_types = [Fluids],
-            updates=['p', 'cs'],
-            id='eos')
+            on_types = [Fluids], updates=['p', 'cs'], id='eos',
+            kernel=kernel)
+
                            )
 
         self.add_operation(SPHIntegration(
+
             sph.MomentumEquation.withargs(),
             from_types=[Fluids], on_types=[Fluids], 
-            updates=['u'], 
-            id='mom')
+            updates=['u'], id='mom', kernel=kernel)
+
                            )
         
         self.add_operation(SPHIntegration(
+
             sph.EnergyEquation.withargs(hks=False),
             from_types=[Fluids],
-            on_types=[Fluids], 
-            updates=['e'], id='enr')
+            on_types=[Fluids], updates=['e'], id='enr',
+            kernel=kernel)
 
                            )
 
         # Indicate that stepping is only needed for Fluids
 
-        self.to_step([Fluids])
+        self.add_operation_step([Fluids])
 
 
 #############################################################################

@@ -93,3 +93,6 @@ cdef class W10Kernel(KernelBase):
 
 cdef class RepulsiveBoundaryKernel(KernelBase):
     pass
+
+cdef class DummyKernel(KernelBase):
+    pass

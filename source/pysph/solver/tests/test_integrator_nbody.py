@@ -89,7 +89,8 @@ class IntegratorTestCase(unittest.TestCase):
 
         kernel = base.CubicSplineKernel(dim=3)
 
-        self.solver = s = solver.Solver(kernel, solver.EulerIntegrator)
+        self.solver = s = solver.Solver(dim=3,
+                                        integrator_type=solver.EulerIntegrator)
 
         # NBodyForce operation
 
@@ -102,7 +103,7 @@ class IntegratorTestCase(unittest.TestCase):
 
         # position stepping
     
-        s.to_step([Fluids])
+        s.add_operation_step([Fluids])
 
         # time step and final time
         

@@ -250,7 +250,6 @@ cdef class KernelBase:
         
     def py_fac(self, h):
         return self._fac(h)
-##############################################################################
 
 ##############################################################################
 # `Poly6Kernel` class.
@@ -297,8 +296,24 @@ cdef class Poly6Kernel(KernelBase):
     
     cpdef double radius(self):
         return 1.0
-##############################################################################
 
+##############################################################################
+# DummyKernel` class.
+##############################################################################
+cdef class DummyKernel(KernelBase):
+    cdef double function(self, cPoint pa, cPoint pb, double h):
+        return 1.0
+
+    cdef cPoint gradient(self, cPoint pa, cPoint pb, double h):
+        cdef cPoint grad
+        return grad
+
+    cdef double _fac(self, double h):
+        return 1.0
+    
+    cpdef double radius(self):
+        return 1.0
+    
 ##############################################################################
 #`CubicSplineKernel`
 ##############################################################################

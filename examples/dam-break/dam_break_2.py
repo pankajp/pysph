@@ -267,8 +267,10 @@ app.process_command_line()
 
 particles = app.create_particles(variable_h=False, callable=get_particles)
 
-s = solver.Solver(base.HarmonicKernel(dim=2, n=3), 
-                  solver.RK2Integrator)
+kernel = base.HarmonicKernel(dim=2, n=3)
+s = solver.Solver(dim=2, integrator_type=solver.RK2Integrator)
+
+s.default_kernel = kernel
 
 #Equation of state
 s.add_operation(solver.SPHOperation(
@@ -307,10 +309,10 @@ s.add_operation(solver.SPHIntegration(
                 
                 )
 
-# Position stepping and XSPH correction
+# Position stepping and XSPH correction operations
 
-s.to_step([Fluid])
-s.set_xsph(eps=eps)
+s.add_operation_step([Fluid])
+s.add_operation_xsph(eps=eps)
 
 s.set_final_time(10)
 s.set_time_step(1e-4)

@@ -9,32 +9,42 @@ Solid = base.ParticleType.Solid
 class SPHOperation(object):
     """ This class that represents a general SPH operation
 
-    An operation is defined as any SPH equation appearing in the system
-    to be solved. These may be a simple assignment of a certain property
-    as in the equation of state, or a summation ODE as for the momentum
-    equation.
+    An operation is defined as any equation appearing in the system to
+    be solved. This may be an assignment of a certain property or the
+    evaluation of a certain forcing function.
 
-    This is intended as a wrapper around the calc and it's various nuances.
-    
-    This class handles calcs for equations of type::
-                        \rho_a = \sum m_b W_{ab}
-                    OR  p_a = (gamma-1)*rho*e
-                    OR  \frac{D prop}{Dt} = \sum_{b=1}^{N}
-                    OR  \frac{D prop}{Dt} = \vec{F}
-    
-    which may or may not require nbr_info depending on the function.
-    By default the calc is assumed to be non-integrating, which can be set to
-    an integrating clac by passing the argument integrates=True
-    
+    Examples of operations are:
+
+    .. math::
+             \rho = \sum_{j=1}^{N} m_j\,W_{ij}
+
+             p = (\gamma - 1.0)\rho e
+
+    Each equation necessarily defines a *destination* and posiibly a
+    *source* particle on which it operates. This is usually problem
+    specific and the SPHCalc objects which compute the necessary
+    interactions is constructed from this information given.    
+
     Data Members:
     --------------
+
     function -- The function (:class:`sph_func.Function`) to use for evaluating
-            the RHS in an SPH operation.
-    from_types -- The accepted neighbor tags
-    on_types -- The accepted self tags
-    updates -- The property the operation updates
+                the RHS in an SPH operation. One function is created for
+                each source-destination pair.
+
+    from_types -- The influencing type of particles. All particle arrays
+                  matching these types are sources.
+
+    on_types -- The influenced type of particles. All particle arrays matching
+                these types are destinations.
+
+    updates -- A list of strings indicating the destination particle
+               properties updated by the resulting SPHCalc object.
+
     id -- A unique id for this operation
-    intgrates -- (False) whether it is an integrating calc
+    
+    intgrates -- Bool indicating if the RHS evaluated by the Operation
+                 is an acceleration.
 
     Member Functions:
     ------------------
@@ -42,8 +52,28 @@ class SPHOperation(object):
 
     """
     
-    def __init__(self, function, on_types, updates, id, from_types=[],
-                 kernel_correction=-1, integrates=False):
+    def __init__(self, function, on_types, updates, id, kernel=None,
+                 from_types=[], kernel_correction=-1, integrates=False):
+        """ Constructor
+
+        Parameters:
+        -----------
+
+        function -- The SPHFunction for this operation.
+
+        on_types -- valid destination (influenced) particle array types.
+
+        from_types -- valid source (influencing) particle array types
+
+        kernel -- the kernel to use for this operation.
+
+        kernel_correction -- Type of kernel correction to use. (-1) means
+                             no correction.
+
+        integrates -- Flag indicating if the function evaluates an
+                      acceleration.
+
+        """
 
         self.from_types = from_types
         self.on_types = on_types
@@ -52,6 +82,8 @@ class SPHOperation(object):
         self.id = id
         self.integrates = integrates
 
+        self.kernel = kernel
+
         self.has_kernel_correction = False
         self.kernel_correction = kernel_correction
 
@@ -59,30 +91,49 @@ class SPHOperation(object):
             self.has_kernel_correction = True
 
     def get_calc_data(self, particles):
-        """ Get the data for setting up the calcs """ 
+        """ Group particle arrays as src-dst pairs with appropriate
+        functions as required by SPHCalc
+
+        Return a dictionary of calc properties keyed on particle array
+        id in particles which corresponds to the destination particle
+        array for that calc.
+
+        The calc properties are:
+
+        sources -- a list of particle arrays considered as sources for this
+                   calc
+
+        funcs -- a list of num_sources functions of the same type to operate
+                 between destination-source pair.
+
+        dnum -- the destination particle array id in particles for this calc.
+
+        id -- a unique identifier for the calc
         
-        if issubclass(self.function.get_func_class(), sph.SPHFunctionParticle):
-            # all nbr requiring funcs are subclasses of SPHFunctionParticle
-            self.nbr_info = True
-        else:
-            self.nbr_info = False
+        """ 
+        
+        #if issubclass(self.function.get_func_class(), sph.SPHFunctionParticle):
+        #    # all nbr requiring funcs are subclasses of SPHFunctionParticle
+        #    self.nbr_info = True
+        #else:
+        #    self.nbr_info = False
         
         arrays = particles.arrays
         narrays = len(arrays)
+
         calc_data = {}
 
         for i in range(narrays):
 
-            #get the destination array
             dst = arrays[i]
 
-            #create an entry in the dict if this is a destination array
+            # create an entry in the dict if this is a valid destination array
 
             if dst.particle_type in self.on_types:
                 calc_data[i] = {'sources':[], 'funcs':[], 'dnum':i, 'id':"",
                                 'snum':str(i)}
 
-                #from types can be zero for a no-neighbor calc
+                # if from_types == [], no neighbor info is required!
 
                 if self.from_types == []:
                     func = self.function.get_func(dst, dst)
@@ -92,32 +143,49 @@ class SPHOperation(object):
                     calc_data[i]['id'] = self.id + '_' + dst.name
 
                 else:
-                    #check for the sources for this destination
+                    # check for the sources for this destination
                     for j in range(narrays):
                         
-                    #get the potential source array
                         src = arrays[j]
 
-                    #check if this is a valid source for the destination array
+                        # check if this is a valid source array
                  
                         if src.particle_type in self.from_types:
 
-                        #get the function for this pair and set the id
+                            # get the function with the src dst pair
 
                             func = self.function.get_func(source=src, dest=dst)
                             func.id = self.id
 
-                        #make an entry in the dict for this destination
+                            # make an entry in the dict for this destination
 
                             calc_data[i]['sources'].append(src)
                             calc_data[i]['funcs'].append(func)
                             calc_data[i]['snum'] = calc_data[i]['snum']+str(j)
                             calc_data[i]['id'] = self.id + '_' + dst.name
+
+                    if calc_data[i]['sources'] == []:
+                        msg = "No source found for %s operation"%(self.id)
+                        raise RuntimeWarning, msg
                      
         return calc_data
 
     def get_calcs(self, particles, kernel):
-        """ Return calcs for the SPH equation, one for each dest """
+        """ Return a list of calcs for the operation.
+        
+        An SPHCalc is created for each destination particle array for
+        the operation. The calc may have a list of sources with one
+        function for each  src-dst pair.
+
+        Parameters:
+        ------------
+
+        particles -- the collection of particle arrays to consider
+
+        kernel -- the smoothing kernel to use for the operation
+
+        """
+
         calcs = []
         calc_data = self.get_calc_data(particles)
 
@@ -134,13 +202,14 @@ class SPHOperation(object):
                 id = calc_data[i]['id']
                 
                 calc = sph.SPHCalc(
-                    particles=particles, sources=srcs,
-                    dest=dest, kernel=kernel, 
-                    funcs=funcs, updates=self.updates, 
-                    integrates=self.integrates,
-                    dnum=dnum, nbr_info=self.nbr_info, id=id,
-                    kernel_correction=self.kernel_correction,
-                    dim=kernel.dim, snum=snum)
+
+                    particles=particles, sources=srcs, dest=dest,
+                    funcs=funcs, kernel=kernel, updates=self.updates,
+                    integrates=self.integrates, dnum=dnum, id=id,
+                    dim=kernel.dim, snum=snum,
+                    kernel_correction=self.kernel_correction, nbr_info=True,
+
+                    )
 
                 calcs.append(calc)
 
@@ -151,14 +220,16 @@ class SPHIntegration(SPHOperation):
     
         \frac{D prop}{Dt} = \vec{F}
     
-    where `prop` is the property being updated and `F` is the forcing term which
-    may be a scalar or a vector.
+    where `prop` is the property being updated and `F` is the forcing
+    term which may be a scalar or a vector.
 
     Example:
     --------
-    Gravity force in free surface simulations require an evaluation like
 
-        \frac{D\vec{v}}{Dt} = \vec{g}
+    .. math::
+             \frac{D\vec{v}}{Dt} = \vec{g}
+
+             \frac{Dv}{Dt} = \sum_{j=1}^{N} m_j \frac{v_j}{\rho_j}\nablaW_{ij}
     
     Note:
     -----
@@ -166,9 +237,10 @@ class SPHIntegration(SPHOperation):
     :class:`SPHOperation` with integrates=True
     
     """    
-    def __init__(self, function, on_types, updates, id, from_types=[],
-                 kernel_correction=-1):
-        SPHOperation.__init__(self, function, on_types, updates, id,
-                from_types=from_types, kernel_correction=kernel_correction,
-                integrates=True)
+    def __init__(self, function, on_types, updates, id, kernel=None,
+                 from_types=[], kernel_correction=-1):
+
+        SPHOperation.__init__(self, function, on_types, updates, id, kernel,
+                              from_types=from_types, integrates=True,
+                              kernel_correction=kernel_correction,)
         
