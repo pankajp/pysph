@@ -346,10 +346,10 @@ class CL_SPHCalc(object):
             host_pa[i][10] = dst.e[i]
             host_pa[i][11] = dst.cs[i]
             
-            host_pa[i][12] = dst.x[i]
-            host_pa[i][13] = dst.y[i]
-            host_pa[i][14] = dst.z[i]
-            host_pa[i][15] = dst.u[i]
+            host_pa[i][12] = dst.tmpx[i]
+            host_pa[i][13] = dst.tmpy[i]
+            host_pa[i][14] = dst.tmpz[i]
+            host_pa[i][15] = dst.x[i]
         
         self.host_tag = host_tag = numpy.ones(shape=(np,), dtype=numpy.int)
 
@@ -383,13 +383,48 @@ class CL_SPHCalc(object):
                                                        mf.WRITE_ONLY,
                                                        host_result.nbytes)
 
-    def cl_sph(self, output_array1=None, output_array2=None, 
-               output_array3=None):
+    def cl_sph(self):
+        """ Evaluate the contribution from the sources on the
+        destinations using OpenCL.
+
+        Particles are represented as float16 arrays and are assumed to
+        be defined in ParticleArray itselt as a result of a call to
+        ParticleArray's `setupCL` function with a CommandQueue as
+        argument.
+
+        Thus device buffer representaions for the ParticleArray are
+        obtained as:
+
+        pa.pa_buf_device
+        pa.pa_tag_device
+
+        pa_buf_device is a float16 array with the following implicit
+        ordering of variables
+
+        0:x, 1:y, 2:z, 3:u, 4:v, 5:w, 6:h, 7:m, 8:rho, 9:p, 10:e, 11:cs
+        12:tmpx, 13:tmpy, 14:tmpz, 15:x
+
+        pa_tag_device is an int2 array with the following ordering
+        0:tag, 1:idx
+
+        Since an SPH function operates between a source and
+        destination ParticleArray, we need to pass in the
+        corresponding buffers.
+
+        Output is computed in tmpx, tmpy and tmpz by default and since
+        they are defined as components 12, 13, and 14 respectively,
+        they need not be explicitly passed.
+
+        The functions implemented in OpenCL have the signature:
+
+        __kernel void function(__global float16* dst, __global float16* src,
+                               __global int2* dst_tag, __global int* np,
+                               __global_int* kernel_type, __global_int* dim)
+
+        I think this should suffice for the evaluation of the function
+        and hence the contribution from a source to a destination.
+        
         """
-        """
-        if output_array1 is None: output_array1 = 'tmpx'
-        if output_array2 is None: output_array2 = 'tmpy'
-        if output_array3 is None: output_array3 = 'tmpz'
 
         self.prog.CL_SPHRho(self.queue, (self.np,1,1), (1,1,1),
                             self.device_pa, self.device_pa, self.device_tag,
@@ -397,5 +432,11 @@ class CL_SPHCalc(object):
                             self.device_dim, self.device_np)
 
         cl.enqueue_read_buffer(self.queue, self.device_result, self.host_result)
+
+        np = self.calc.dest.get_number_of_particles()
+
+        host_array = self.device_pa.get_host_array((np,), vec.float16)
+
+        print host_array[1][12]
 
         print self.host_result

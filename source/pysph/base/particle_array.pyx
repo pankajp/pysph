@@ -167,7 +167,16 @@ cdef class ParticleArray:
         self.particle_type = particle_type
 
         self.queue = object()
+        self.device = object()
+        self.context = object()
+
+        self.pa_buf_host = object()
+        self.pa_tag_host = object()
+        self.pa_buf_device = object()
+        self.pa_tag_device = object()
+       
         self.cl_properties = {}
+        self.cl_setup_done=False
 
         if props:
             self.initialize(**props)
@@ -1190,6 +1199,18 @@ cdef class ParticleArray:
     # OpenCL interface
     ######################################################################
 
+    def setupCl(self, object queue):
+        """ Setup OpenCL objects from the queue """
+
+        if not cl_utils.HAS_CL:
+            raise RuntimeWarning, "PyOpenCL not found!"
+
+        self.queue = queue
+        self.context = queue.context
+        self.device = queue.device
+
+        self.cl_setup_done = True
+
     def create_cl_arrays(self, object queue):
         """ Create device arrays for the device associated with the
         CommandQueue provided.
@@ -1200,8 +1221,6 @@ cdef class ParticleArray:
         quque -- OpenCL CommandQueue
 
         """
-        self.queue = queue
-
         if not cl_utils.HAS_CL:
             raise RuntimeWarning, "PyOpenCL not found!"
 
@@ -1242,7 +1261,61 @@ cdef class ParticleArray:
             return
         else:
             return self.cl_properties.get(prop)
-    
+
+    def create_cl_buffers(self):
+        """ Create a buffer representation of the ParticleArray
+
+        Each particle is represented as a float16 array with the following
+        implicitly defined order
+
+        x y z u v w h m rho p e cs x y z u
+
+        """
+        if not self.cl_setup_done:
+            raise RuntimeWarning, "OpenCL not setup!"
+
+        np = self.get_number_of_particles()
+
+        mf = cl.mem_flags
+        
+        # set the floating point arrays
+
+        order = ['x','y','z','u','v','w','h','m','rho','p','e','cs',
+                 'tmpx','tmpy','tmpz','x']
+
+        pa_buf = numpy.empty(shape=(np,), dtype=cl_array.vec.float16)
+
+        for i in range(np):
+            pa_props = numpy.empty(16, dtype=numpy.float32)
+            for j in range(16):
+                prop = order[j]
+                pa_props[j] = self.get(prop, only_real_particles=False)[i]
+
+            pa_buf[i] = pa_props
+
+        self.pa_buf_host = pa_buf
+
+        self.pa_buf_device = cl.Buffer(self.context,
+                                       mf.READ_WRITE | mf.COPY_HOST_PTR,
+                                       hostbuf=self.pa_buf_host)
+
+        # set the tag and id int buffers
+
+        pa_tag = numpy.empty(shape=(np,), dtype=cl_array.vec.int2)
+
+        for i in range(np):
+            pa_tags = numpy.empty(2, numpy.int32)
+            pa_tags[0] = self.get('tag',only_real_particles=False)[i] 
+            pa_tags[1] = self.get('idx', only_real_particles=False)[i] 
+
+            pa_tag[i] = pa_tags
+
+        self.pa_tag_host = pa_tag
+
+        self.pa_tag_device = cl.Buffer(self.context,
+                                       mf.READ_WRITE | mf.COPY_HOST_PTR,
+                                       hostbuf=self.pa_tag_host)
+
 ##############################################################################
 
 

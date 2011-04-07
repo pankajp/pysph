@@ -69,8 +69,20 @@ cdef class ParticleArray:
     # dictionary to hold the OpenCL properties for a particle
     cdef public dict cl_properties
 
-    # The OpenCL CommandQueue
+    # bool indicating CL is setup
+    cdef public bint cl_setup_done
+
+    # The OpenCL CommandQueue Context and Device
     cdef public object queue
+    cdef public object context
+    cdef public object device
+
+    # The OpenCL ParticleArray host and device buffers
+    cdef public object pa_buf_host
+    cdef public object pa_tag_host
+
+    cdef public object pa_buf_device
+    cdef public object pa_tag_device
 
     cdef object _create_c_array_from_npy_array(self, np.ndarray arr)
     cdef _check_property(self, str)

@@ -6,28 +6,20 @@ __kernel void CL_SPHRho(__global float16* dst, __global float16* src,
 			__global int* kernel_type,  __global int* dim, 
 			__global int* np)
 {
-  // x, y, z, u, v, w, h, m, rho, p, e, cs ?  ?  ?  ?
-  // 0  1  2  3  4  5  6  7  8    9  10 11 12 13 14 15
+  // x, y, z, u, v, w, h, m, rho, p, e, cs tmpx  tmpy  tmpz  x
+  // 0  1  2  3  4  5  6  7  8    9  10 11  12    13    14   15
 
   unsigned int work_dim = get_work_dim();
 
-  unsigned int gid; // = get_global_id(0);
-  
   Size local_size, num_groups, local_id, group_id;
   
   get_group_information(work_dim, &local_size, &num_groups, &local_id,
   			&group_id);
 
   unsigned int group_size = prod( &local_size );
-  unsigned int ngroups = prod( &num_groups );
 
-  gid = group_id.sizes[0] * group_size +
-    group_id.sizes[1] * num_groups.sizes[0]*group_size +
-    group_id.sizes[2] * num_groups.sizes[0]*num_groups.sizes[1]*group_size;
-
-  gid += local_id.sizes[0] +
-    local_id.sizes[1] * local_size.sizes[0] +
-    local_id.sizes[2] * local_size.sizes[0]*local_size.sizes[1];
+  unsigned int gid = get_gid(&group_id, &num_groups, &local_id, &local_size,
+			     group_size);
 
   float4 pa = (float4)( dst[gid].s0, dst[gid].s1, dst[gid].s2, dst[gid].s6 );
   float wmb = 0.0f;
@@ -56,6 +48,8 @@ __kernel void CL_SPHRho(__global float16* dst, __global float16* src,
       wmb += w*mb;
 	  	  
     } // for i
+
+  dst[gid].s12 = 1000;
   
   result[gid] = wmb;
 
