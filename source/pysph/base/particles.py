@@ -250,7 +250,7 @@ class Particles(object):
 
 ###############################################################################
 
-def get_particle_array(**props):
+def get_particle_array(floating_point_default="double", **props):
     """ Create and return a particle array with default properties 
     
     Parameters:
@@ -292,13 +292,14 @@ def get_particle_array(**props):
             if prop == 'idx':
                 prop_dict[prop] = {'data':props[prop], 'type':'int'}
             else:
-                prop_dict[prop] = {'data':props[prop]}
+                data = props[prop]
+                prop_dict[prop] = {'data':data, 'type':floating_point_default}
             
     # Add the default props
 
     for prop in default_props:
         if prop not in props.keys():
-            prop_dict[prop] = {'name':prop}
+            prop_dict[prop] = {'name':prop, 'type':floating_point_default}
 
     # Add the property idx
 

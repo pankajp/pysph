@@ -66,6 +66,12 @@ cdef class ParticleArray:
     # the number of real particles.
     cdef public long num_real_particles
 
+    # dictionary to hold the OpenCL properties for a particle
+    cdef public dict cl_properties
+
+    # The OpenCL CommandQueue
+    cdef public object queue
+
     cdef object _create_c_array_from_npy_array(self, np.ndarray arr)
     cdef _check_property(self, str)
 

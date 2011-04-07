@@ -24,4 +24,4 @@ from plot import ParticleInformation
 from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
     get_pickled_data
 
-from cl_utils import get_cl_devices, HAS_CL
+from cl_utils import HAS_CL, get_cl_devices, get_cl_include

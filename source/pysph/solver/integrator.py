@@ -323,7 +323,11 @@ class Integrator(object):
                         k_name = k_num + '_' + prop + str(i) + str(j)
                         pa.add_property({'name':k_name})
 
-                        calc.dst_writes.append(k_name)
+                        dst_writes = calc.dst_writes.get(k_num)
+                        if not dst_writes:
+                            calc.dst_writes[k_num] = []
+
+                        calc.dst_writes[k_num].append(k_name)
 
                         self.k_props[calc.id][k_num].append(k_name)
 

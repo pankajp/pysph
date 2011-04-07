@@ -21,3 +21,14 @@ def get_cl_devices():
                 
                 
     return _devices
+
+def get_cl_include():
+    """ Include directories for OpenCL definitions """
+
+    inc_dir = [ "-I/home/kunalp/pysph/source/pysph/base",
+                "-I/home/kunalp/pysph/source/pysph/solver",
+                ]
+
+    return inc_dir
+
+     

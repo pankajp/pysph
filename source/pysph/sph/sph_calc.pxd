@@ -33,7 +33,7 @@ cdef class SPHCalc:
     cdef public list dst_reads
 
     # properties written to the destination arrays
-    cdef public list dst_writes
+    cdef public dict dst_writes
     cdef public list initial_props
 
     # OpenCL context, kernel and command queue

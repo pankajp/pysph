@@ -30,9 +30,11 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
 
 from pysph.base.carray cimport IntArray, DoubleArray
 
-from pysph.solver.cl_utils import HAS_CL
+
+from pysph.solver.cl_utils import HAS_CL, get_cl_include
 if HAS_CL:
     import pyopencl as cl
+    from pyopencl.array import vec
 
 cdef int log_level = logger.level
 
@@ -116,8 +118,8 @@ cdef class SPHCalc:
 
         self.src_reads = []
         self.dst_reads = []
-        self.dst_writes = []
         self.initial_props = []
+        self.dst_writes = {}
 
         self.context = object()
         self.queue = object()
@@ -180,6 +182,7 @@ cdef class SPHCalc:
 
         self.src_reads = func.src_reads
         self.dst_reads = func.dst_reads
+        self.cl_kernel_src_file = func.cl_kernel_src_file
 
         src = path.join( path.abspath('.'), 'funcs/' )
         src = path.join( src, func.cl_kernel_src_file )
@@ -219,15 +222,6 @@ cdef class SPHCalc:
             
             self.nbr_locators.append(loc)
 
-    def setupCL(self, context, queue, options):
-        self.context = context
-        self.queue = queue
-
-        cl_kernel_src = open(self.cl_kernel_src_file, 'r').read()
-
-        program = cl.Program(self.context, cl_kernel_src).build(options=options)
-        self.cl_kernel = program.all_kernels()[0]
-            
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 
         """
@@ -280,3 +274,128 @@ cdef class SPHCalc:
             output3.data[i] = 0.0
 
 #############################################################################
+
+
+class CL_SPHCalc(object):
+    """ OpenCL aware SPHCalc """
+
+    def __init__(self, calc, context):
+        """ Constructor
+
+        Parameters:
+        -----------
+
+        calc -- An SPHCalc instance that is used to create the CL version
+
+        context -- An OpenCL context.
+
+        """
+
+        self.calc = calc
+        self.context = context
+
+        self.devices = context.devices
+
+        # create a command queue with the first device on the context 
+
+        self.queue = cl.CommandQueue(context, self.devices[0])
+
+        self.setupCL()
+
+    def setupCL(self):
+        """ Setup the CL related stuff """
+
+        self.setup_program()
+
+        self.setup_buffers()        
+
+    def setup_program(self):
+        
+        prog_src_file = self.calc.cl_kernel_src_file
+
+        prog_src_file = open(prog_src_file).read()
+
+        build_options = get_cl_include()
+
+        self.prog = cl.Program(self.context, prog_src_file).build(
+            build_options)
+
+    def setup_buffers(self):
+
+        mf = cl.mem_flags
+        ctx = self.context
+
+        dst = self.calc.dest
+        self.np = np = dst.get_number_of_particles()
+
+        # set the host particle array
+        self.host_pa = host_pa = numpy.zeros(shape=(np,),dtype=vec.float16)
+
+        for i in range(np):
+
+            host_pa[i][0] = dst.x[i]
+            host_pa[i][1] = dst.y[i]
+            host_pa[i][2] = dst.z[i]
+            host_pa[i][3] = dst.u[i]
+            host_pa[i][4] = dst.v[i]
+            host_pa[i][5] = dst.w[i]
+            host_pa[i][6] = dst.h[i]
+            host_pa[i][7] = dst.m[i]
+            host_pa[i][8] = dst.rho[i]
+            host_pa[i][9] = dst.p[i]
+            host_pa[i][10] = dst.e[i]
+            host_pa[i][11] = dst.cs[i]
+            
+            host_pa[i][12] = dst.x[i]
+            host_pa[i][13] = dst.y[i]
+            host_pa[i][14] = dst.z[i]
+            host_pa[i][15] = dst.u[i]
+        
+        self.host_tag = host_tag = numpy.ones(shape=(np,), dtype=numpy.int)
+
+        self.host_kernel_type = numpy.ones(shape=(1,), dtype=numpy.int)
+        self.host_dim = numpy.ones(shape=(1,), dtype=numpy.int)
+        self.host_np = numpy.ones(shape=(1,), dtype=numpy.int) * self.np
+
+        self.host_result = host_result = numpy.zeros(shape=(np,),
+                                                     dtype=numpy.float32)
+
+        # allocate the device buffers
+        self.device_pa = devica_pa = cl.Buffer(ctx,
+                                               mf.READ_ONLY | mf.COPY_HOST_PTR,
+                                               hostbuf=host_pa)
+
+        self.device_tag = device_tag = cl.Buffer(ctx,
+                                                 mf.READ_ONLY |mf.COPY_HOST_PTR,
+                                                 hostbuf=host_tag)
+
+        self.device_kernel_type = device_tag = cl.Buffer(
+            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR,
+            hostbuf=self.host_kernel_type)
+
+        self.device_dim = device_tag = cl.Buffer(
+            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR, hostbuf=self.host_dim)
+
+        self.device_np = device_tag = cl.Buffer(
+            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR, hostbuf=self.host_np)
+
+        self.device_result = device_result = cl.Buffer(ctx,
+                                                       mf.WRITE_ONLY,
+                                                       host_result.nbytes)
+
+    def cl_sph(self, output_array1=None, output_array2=None, 
+               output_array3=None):
+        """
+        """
+        if output_array1 is None: output_array1 = 'tmpx'
+        if output_array2 is None: output_array2 = 'tmpy'
+        if output_array3 is None: output_array3 = 'tmpz'
+
+        self.prog.CL_SPHRho(self.queue, (self.np,1,1), (1,1,1),
+                            self.device_pa, self.device_pa, self.device_tag,
+                            self.device_result, self.device_kernel_type,
+                            self.device_dim, self.device_np)
+
+        cl.enqueue_read_buffer(self.queue, self.device_result, self.host_result)
+
+        print self.host_result

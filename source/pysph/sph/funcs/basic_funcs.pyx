@@ -30,7 +30,7 @@ cdef class SPH(CSPHFunctionParticle):
         CSPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
         self.id = 'sph'
 
-        self.cl_kernel_src_file = "basic_funcs.cl"
+        self.cl_kernel_src_file = "/home/kunalp/pysph/source/pysph/sph/funcs/basic_funcs.cl"
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """

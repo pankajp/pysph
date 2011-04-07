@@ -63,7 +63,13 @@ from cpython cimport PyObject
 from cpython cimport *
 from cython cimport *
 
-
+# OpenCL imports
+import pysph.solver.cl_utils as cl_utils
+if cl_utils.HAS_CL:
+    import pyopencl as cl
+    import pyopencl.array as cl_array
+    from pyopencl.array import vec as cl_vec
+    
 # Declares various tags for particles, and functions to check them.
 
 # Note that these tags are the ones set in the 'tag' property of the
@@ -159,6 +165,9 @@ cdef class ParticleArray:
         self.indices_invalid = True
         
         self.particle_type = particle_type
+
+        self.queue = object()
+        self.cl_properties = {}
 
         if props:
             self.initialize(**props)
@@ -1177,4 +1186,63 @@ cdef class ParticleArray:
         for prop_array in self.properties.values():
             prop_array.update_min_max()
 
+    ######################################################################
+    # OpenCL interface
+    ######################################################################
+
+    def create_cl_arrays(self, object queue):
+        """ Create device arrays for the device associated with the
+        CommandQueue provided.
+
+        Parameters:
+        ------------
+
+        quque -- OpenCL CommandQueue
+
+        """
+        self.queue = queue
+
+        if not cl_utils.HAS_CL:
+            raise RuntimeWarning, "PyOpenCL not found!"
+
+        type_map = {'float':numpy.float32, 'double':numpy.float64,
+                    'int':numpy.int32, 'long':numpy.int64}
+
+        np = self.get_number_of_particles()
+        self.cl_properties = {}
+
+        for prop in self.properties:
+            prop_arr = self.properties[prop]
+            prop_type = prop_arr.get_c_type()
+
+            cl_prop = 'cl_' + prop
+            cl_prop_type = type_map[prop_type]
+
+            npy_prop_arr = prop_arr.get_npy_array()
+            
+            # define and set the data for the PyOpenCL Array object
+
+            array = cl_array.Array(queue, shape=(np,), dtype=cl_prop_type)
+            array.set(npy_prop_arr, queue)
+
+            # add to the list of properties
+
+            self.cl_properties[cl_prop] = array
+
+    def get_cl_array(self, str prop):
+        """ Return the PyOpenCL Array objects """
+
+        if not prop.startswith('cl_'):
+            if not self.properties.has_key(prop):
+                return
+            else:
+                prop = 'cl_' + prop
+
+        if prop not in self.cl_properties.keys():
+            return
+        else:
+            return self.cl_properties.get(prop)
+    
 ##############################################################################
+
+
