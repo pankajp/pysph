@@ -18,6 +18,7 @@ cdef class SPHRho(CSPHFunctionParticle):
         self.tag = "density"
 
         self.cl_kernel_src_file = "density_funcs.cl"
+        self.cl_kernel_function_name = "SPHRho"
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):
@@ -76,6 +77,7 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self.dst_reads.extend( ['u','v','w'] )
 
         self.cl_kernel_src_file = "density_funcs.cl"
+        self.cl_kernel_function_name = "SPHDensityRate"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):

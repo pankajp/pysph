@@ -188,6 +188,7 @@ cdef class SPHCalc:
             raise RuntimeWarning, "Kernel file does not exist!"
 
         self.cl_kernel_src_file = src
+        self.cl_kernel_function_name = func.cl_kernel_function_name
 
     cdef setup_internals(self):
         """ Set the update update arrays and neighbor locators """
@@ -384,7 +385,10 @@ class CLCalc(SPHCalc):
 
         dim_buf = cl.Buffer(self.context,
                             mf.READ_ONLY | mf.COPY_HOST_PTR,
-                            hostbuf=dim)                            
+                            hostbuf=dim)
+        for kernel in self.prog.all_kernels():
+            if kernel.function_name == self.cl_kernel_function_name:
+                break
 
         for i in range(self.nsrcs):
             src = self.sources[i]
@@ -395,15 +399,12 @@ class CLCalc(SPHCalc):
             np_buf = cl.Buffer(self.context,
                                mf.READ_ONLY | mf.COPY_HOST_PTR,
                                hostbuf=np)
-            
-            self.prog.SPHRho_CL(self.queue, (npd, 1, 1), (1,1,1),
-                                dst.pa_buf_device, src.pa_buf_device,
-                                dst.pa_tag_device, np_buf, kernel_type_buf,
-                                dim_buf)
 
-        res = dst.pa_buf_device.get_host_array((11,), dtype=vec.float16)
-        print res[0][0]
-                                
+            kernel(self.queue, (npd, 1, 1), (1,1,1),
+                   dst.pa_buf_device, src.pa_buf_device,
+                   dst.pa_tag_device, np_buf, kernel_type_buf,
+                   dim_buf)
+
     def reset_output_arrays(self):
         """ Reset the dst tmpx, tmpy and tmpz arrays to 0
 

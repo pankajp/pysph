@@ -27,8 +27,9 @@ cdef class SPHFunction:
     cdef public list src_reads
     cdef public list dst_reads
 
-    # the name for the cl function definitions
+    # OpenCL kernel source file and function name
     cdef public str cl_kernel_src_file
+    cdef public str cl_kernel_function_name
     
     cdef public DoubleArray s_h, s_m, s_rho
     cdef public DoubleArray s_x, s_y, s_z

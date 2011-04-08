@@ -25,6 +25,7 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
         self.tag = "pilotrho"
 
         self.cl_kernel_src_file = "adke_funcs.cl"
+        self.cl_kernel_function_name = "ADKEPilotRho"
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double* dnr):
@@ -82,6 +83,7 @@ cdef class ADKESmoothingUpdate(ADKEPilotRho):
         self.tag = "h"
 
         self.cl_kernel_src_file = "adke_funcs.cl"
+        self.cl_kernel_function_name = "ADKESmoothingUpdate"
 
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
@@ -149,6 +151,7 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self.dst_reads.extend( ['u','v','w'] )
 
         self.cl_kernel_src_file = "adke_funcs.cl"
+        self.cl_kernel_function_name = "SPHVelocityDivergence"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -226,6 +229,8 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
         self.cl_kernel_src_file = "adke_funcs.cl"
 
         self.dst_reads.append('cs')
+
+        self.cl_kernel_function_name = "ADKEConductionCoeffUpdate"
 
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):

@@ -24,6 +24,7 @@ cdef class XSPHCorrection(CSPHFunctionParticle):
         self.dst_reads.extend( ['u','v','w','rho'] )
 
         self.cl_kernel_src_file = "xsph_funcs.cl"
+        self.cl_kernel_function_name = "XSPHCorrection"
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):

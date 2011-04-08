@@ -28,6 +28,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self.src_reads.append( 'p' )
 
         self.cl_kernel_src_file = "pressure_funcs.cl"
+        self.cl_kernel_function_name = "SPHPressureGradient"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                    KernelBase kernel, double *nr):
@@ -116,6 +117,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.src_reads.extend( ['u','v','w','p','cs','rho'] )
 
         self.cl_kernel_src_file = "pressure_funcs.cl"
+        self.cl_kernel_function_name = "MomentumEquation"
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):

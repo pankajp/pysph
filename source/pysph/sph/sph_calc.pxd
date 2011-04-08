@@ -40,7 +40,10 @@ cdef class SPHCalc:
     cdef public object context
     cdef public object queue
     cdef public object cl_kernel
+
+    # The OpenCL kernel source and function name
     cdef public str cl_kernel_src_file
+    cdef public str cl_kernel_function_name
 
     #kernel correction
     cdef public KernelCorrectionManager correction_manager

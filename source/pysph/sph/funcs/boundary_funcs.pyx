@@ -25,6 +25,7 @@ cdef class MonaghanBoundaryForce(SPHFunctionParticle):
         self.delp = delp
 
         self.cl_kernel_src_file = "boundary_funcs.cl"
+        self.cl_kernel_function_name = "MonaghanBoundaryForce"
 
     cpdef setup_arrays(self):
         """ Setup the arrays needed for the function """
@@ -122,6 +123,7 @@ cdef class BeckerBoundaryForce(SPHFunctionParticle):
         self.sound_speed = sound_speed
 
         self.cl_kernel_src_file = "boundary_funcs.cl"
+        self.cl_kernel_function_name = "BeckerBoundaryForce"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -209,6 +211,7 @@ cdef class LennardJonesForce(SPHFunctionParticle):
         self.p2 = p2
 
         self.cl_kernel_src_file = "boundary_funcs.cl"
+        self.cl_kernel_function_name = "LennardJonesForce"
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
