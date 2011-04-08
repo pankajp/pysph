@@ -27,9 +27,10 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
     FirstOrderCorrectionMatrix, FirstOrderCorrectionTermAlpha, \
     FirstOrderCorrectionMatrixGradient, FirstOrderCorrectionVectorGradient
 
-
 from pysph.base.carray cimport IntArray, DoubleArray
+import pysph.solver.api as solver
 
+from os import path
 
 from pysph.solver.cl_utils import HAS_CL, get_cl_include
 if HAS_CL:
@@ -179,17 +180,12 @@ cdef class SPHCalc:
             #    raise ValueError, msg
 
         func = self.funcs[0]
-
-        self.src_reads = func.src_reads
-        self.dst_reads = func.dst_reads
-        self.cl_kernel_src_file = func.cl_kernel_src_file
-
-        src = path.join( path.abspath('.'), 'funcs/' )
-        src = path.join( src, func.cl_kernel_src_file )
+        
+        src = solver.get_pysph_root()
+        src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
 
         if not path.isfile(src):
-            #raise RuntimeWarning, "Kernel file does not exist!"
-            pass
+            raise RuntimeWarning, "Kernel file does not exist!"
 
         self.cl_kernel_src_file = src
 
@@ -221,6 +217,11 @@ cdef class SPHCalc:
                         %(self.id, src.name, self.dest.name, loc))
             
             self.nbr_locators.append(loc)
+
+        func = self.funcs[0]
+
+        self.src_reads = func.src_reads
+        self.dst_reads = func.dst_reads
 
     cpdef sph(self, str output_array1=None, str output_array2=None, 
               str output_array3=None, bint exclude_self=False): 

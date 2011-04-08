@@ -16,6 +16,8 @@ try:
 except ImportError:
     HAS_PBAR = False
 
+import pysph
+
 def check_array(x, y):
     """Check if two arrays are equal with an absolute tolerance of
     1e-16."""
@@ -271,3 +273,6 @@ def get_pickled_data(fname):
 
     return data
 
+
+def get_pysph_root():
+    return os.path.split(pysph.__file__)[0]

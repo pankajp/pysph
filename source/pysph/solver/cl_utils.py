@@ -4,7 +4,10 @@ try:
 except ImportError:
     HAS_CL=False
 
+from os import path
 import numpy
+
+from utils import get_pysph_root
 
 # Return all available devices on the host
 def get_cl_devices():
@@ -27,9 +30,10 @@ def get_cl_devices():
 def get_cl_include():
     """ Include directories for OpenCL definitions """
 
-    inc_dir = [ "-I/home/kunalp/pysph/source/pysph/base",
-                "-I/home/kunalp/pysph/source/pysph/solver",
-                ]
+    PYSPH_ROOT = get_pysph_root()
+
+    inc_dir = ['-I'+path.join(PYSPH_ROOT, 'base'),
+               '-I'+path.join(PYSPH_ROOT, 'solver'), ]
 
     return inc_dir
 
