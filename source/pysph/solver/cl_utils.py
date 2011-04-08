@@ -4,6 +4,8 @@ try:
 except ImportError:
     HAS_CL=False
 
+import numpy
+
 # Return all available devices on the host
 def get_cl_devices():
     """ Return a dictionary keyed on device type for all devices """
@@ -31,4 +33,5 @@ def get_cl_include():
 
     return inc_dir
 
-     
+
+

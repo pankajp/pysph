@@ -275,29 +275,14 @@ cdef class SPHCalc:
 
 #############################################################################
 
-
-class CL_SPHCalc(object):
+class CLCalc(SPHCalc):
     """ OpenCL aware SPHCalc """
 
-    def __init__(self, calc, context):
-        """ Constructor
-
-        Parameters:
-        -----------
-
-        calc -- An SPHCalc instance that is used to create the CL version
-
-        context -- An OpenCL context.
-
-        """
-
-        self.calc = calc
+    def set_context(self, context):
         self.context = context
-
         self.devices = context.devices
 
         # create a command queue with the first device on the context 
-
         self.queue = cl.CommandQueue(context, self.devices[0])
 
         self.setupCL()
@@ -307,11 +292,28 @@ class CL_SPHCalc(object):
 
         self.setup_program()
 
-        self.setup_buffers()        
+        # set up the device buffers for the srcs and dest
+
+        self.dest.setupCL(self.queue)
+
+        for src in self.sources:
+            src.setupCL(self.queue)
 
     def setup_program(self):
+        """ Setup the OpenCL function used by this Calc
         
-        prog_src_file = self.calc.cl_kernel_src_file
+        The calc computes the interation on a single destination from
+        a list of sources, using the same function.
+
+        A call to this function sets up the OpenCL kernel which
+        encapsulates the SPHFunction function.
+
+        The source for the OpenCL kernel is referenced from the
+        SPHFunction
+        
+        """
+        
+        prog_src_file = self.cl_kernel_src_file
 
         prog_src_file = open(prog_src_file).read()
 
@@ -319,71 +321,8 @@ class CL_SPHCalc(object):
 
         self.prog = cl.Program(self.context, prog_src_file).build(
             build_options)
-
-    def setup_buffers(self):
-
-        mf = cl.mem_flags
-        ctx = self.context
-
-        dst = self.calc.dest
-        self.np = np = dst.get_number_of_particles()
-
-        # set the host particle array
-        self.host_pa = host_pa = numpy.zeros(shape=(np,),dtype=vec.float16)
-
-        for i in range(np):
-
-            host_pa[i][0] = dst.x[i]
-            host_pa[i][1] = dst.y[i]
-            host_pa[i][2] = dst.z[i]
-            host_pa[i][3] = dst.u[i]
-            host_pa[i][4] = dst.v[i]
-            host_pa[i][5] = dst.w[i]
-            host_pa[i][6] = dst.h[i]
-            host_pa[i][7] = dst.m[i]
-            host_pa[i][8] = dst.rho[i]
-            host_pa[i][9] = dst.p[i]
-            host_pa[i][10] = dst.e[i]
-            host_pa[i][11] = dst.cs[i]
-            
-            host_pa[i][12] = dst.tmpx[i]
-            host_pa[i][13] = dst.tmpy[i]
-            host_pa[i][14] = dst.tmpz[i]
-            host_pa[i][15] = dst.x[i]
         
-        self.host_tag = host_tag = numpy.ones(shape=(np,), dtype=numpy.int)
-
-        self.host_kernel_type = numpy.ones(shape=(1,), dtype=numpy.int)
-        self.host_dim = numpy.ones(shape=(1,), dtype=numpy.int)
-        self.host_np = numpy.ones(shape=(1,), dtype=numpy.int) * self.np
-
-        self.host_result = host_result = numpy.zeros(shape=(np,),
-                                                     dtype=numpy.float32)
-
-        # allocate the device buffers
-        self.device_pa = devica_pa = cl.Buffer(ctx,
-                                               mf.READ_ONLY | mf.COPY_HOST_PTR,
-                                               hostbuf=host_pa)
-
-        self.device_tag = device_tag = cl.Buffer(ctx,
-                                                 mf.READ_ONLY |mf.COPY_HOST_PTR,
-                                                 hostbuf=host_tag)
-
-        self.device_kernel_type = device_tag = cl.Buffer(
-            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR,
-            hostbuf=self.host_kernel_type)
-
-        self.device_dim = device_tag = cl.Buffer(
-            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR, hostbuf=self.host_dim)
-
-        self.device_np = device_tag = cl.Buffer(
-            ctx, mf.READ_ONLY |mf.COPY_HOST_PTR, hostbuf=self.host_np)
-
-        self.device_result = device_result = cl.Buffer(ctx,
-                                                       mf.WRITE_ONLY,
-                                                       host_result.nbytes)
-
-    def cl_sph(self):
+    def sph(self):
         """ Evaluate the contribution from the sources on the
         destinations using OpenCL.
 
@@ -425,18 +364,60 @@ class CL_SPHCalc(object):
         and hence the contribution from a source to a destination.
         
         """
+        
+        # set the tmpx, tmpy and tmpz arrays to 0
 
-        self.prog.CL_SPHRho(self.queue, (self.np,1,1), (1,1,1),
-                            self.device_pa, self.device_pa, self.device_tag,
-                            self.device_result, self.device_kernel_type,
-                            self.device_dim, self.device_np)
+        self.reset_output_arrays()
 
-        cl.enqueue_read_buffer(self.queue, self.device_result, self.host_result)
+        dst = self.dest
+        npd = dst.get_number_of_particles()
 
-        np = self.calc.dest.get_number_of_particles()
+        kernel_type = numpy.array([1,], dtype=numpy.int32)
+        dim = numpy.array([self.kernel.dim,], dtype=numpy.int32)
 
-        host_array = self.device_pa.get_host_array((np,), vec.float16)
+        mf = cl.mem_flags
 
-        print host_array[1][12]
+        kernel_type_buf = cl.Buffer(self.context,
+                                    mf.READ_ONLY | mf.COPY_HOST_PTR,
+                                    hostbuf=kernel_type)
 
-        print self.host_result
+        dim_buf = cl.Buffer(self.context,
+                            mf.READ_ONLY | mf.COPY_HOST_PTR,
+                            hostbuf=dim)                            
+
+        for i in range(self.nsrcs):
+            src = self.sources[i]
+            _np = src.get_number_of_particles()
+
+            np = numpy.array([_np,], dtype=numpy.int32)
+
+            np_buf = cl.Buffer(self.context,
+                               mf.READ_ONLY | mf.COPY_HOST_PTR,
+                               hostbuf=np)
+            
+            self.prog.SPHRho_CL(self.queue, (npd, 1, 1), (1,1,1),
+                                dst.pa_buf_device, src.pa_buf_device,
+                                dst.pa_tag_device, np_buf, kernel_type_buf,
+                                dim_buf)
+
+        res = dst.pa_buf_device.get_host_array((11,), dtype=vec.float16)
+        print res[0][0]
+                                
+    def reset_output_arrays(self):
+        """ Reset the dst tmpx, tmpy and tmpz arrays to 0
+
+        Since multiple functions contribute to the same LHS value, the
+        OpenCL kernel code increments the result to tmpx, tmpy and tmpz.
+        To avoid unplesant behavior, we set these variables to 0 before
+        any function is called.
+        
+        """
+
+        if not self.dest.cl_setup_done:
+            raise RuntimeWarning, "CL not setup on destination array!"
+
+        npd = self.dest.get_number_of_particles()
+        self.prog.set_to_zero(self.queue, (npd,1,1), (1,1,1),
+                              self.dest.pa_buf_device)
+
+#############################################################################

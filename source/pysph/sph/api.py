@@ -1,7 +1,7 @@
 """API module to simplify import of common names from pysph.sph package"""
 
 #Import from calc
-from sph_calc import SPHCalc, CL_SPHCalc
+from sph_calc import SPHCalc, CLCalc
 from sph_func import SPHFunction, SPHFunctionParticle, CSPHFunctionParticle
 
 ############################################################################

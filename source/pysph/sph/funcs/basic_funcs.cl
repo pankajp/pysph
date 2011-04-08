@@ -1,10 +1,11 @@
 #include "cl_common.h"
+#include "cl_common.cl"
 #include "kernels.h"
 
-__kernel void CL_SPHRho(__global float16* dst, __global float16* src,
-			__global int* dst_tag,  __global float* result,
-			__global int* kernel_type,  __global int* dim, 
-			__global int* np)
+__kernel void SPHRho_CL(__global float16* dst, __global float16* src,
+			__global int* dst_tag, __global int* np,
+			__global int* kernel_type,  __global int* dim )
+
 {
   // x, y, z, u, v, w, h, m, rho, p, e, cs tmpx  tmpy  tmpz  x
   // 0  1  2  3  4  5  6  7  8    9  10 11  12    13    14   15
@@ -49,8 +50,6 @@ __kernel void CL_SPHRho(__global float16* dst, __global float16* src,
 	  	  
     } // for i
 
-  dst[gid].s12 = 1000;
+  dst[gid].sc += wmb;
   
-  result[gid] = wmb;
-
-} // __kernel CL_SPHRho
+} // __kernel SPHRho_CL
