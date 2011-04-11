@@ -75,6 +75,8 @@ class Solver(object):
         self.operation_dict = {}
         self.order = []
         self.t = 0
+        self.count = 0
+        self.execute_commands = None
 
         self.pre_step_functions = []
         self.post_step_functions = []
@@ -395,7 +397,7 @@ class Solver(object):
 
     def set_output_directory(self, path):
         """ Set the output directory """
-        self.path = path
+        self.output_directory = path
 
     def set_kernel_correction(self, kernel_correction):
         """ Set the kernel correction manager for each calc """
@@ -403,6 +405,14 @@ class Solver(object):
         
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
+
+    def set_command_handler(self, callable, command_interval=1):
+        """ set the `callable` to be called at ever `command_interval` iteration
+        
+        the `callable` is called with the solver instance as an argument
+        """
+        self.execute_commands = callable
+        self.command_interval = command_interval
 
     def solve(self, show_progress=False):
         """ Solve the system
@@ -416,16 +426,13 @@ class Solver(object):
         the stepping within the integrator.
 
         """
-        tf = self.tf
-        dt = self.dt
-
-        count = 0
-        maxval = int((tf - self.t)/dt +1)
+        self.count = 0
+        maxval = int((self.tf - self.t)/self.dt +1)
         bar = PBar(maxval, show=show_progress)
 
-        while self.t < tf:
-            self.t += dt
-            count += 1
+        while self.t < self.tf:
+            self.t += self.dt
+            self.count += 1
             
             #update the particles explicitly
 
@@ -434,25 +441,29 @@ class Solver(object):
             # perform any pre step functions
             
             for func in self.pre_step_functions:
-                func.eval(self, count)
+                func.eval(self, self.count)
 
             # perform the integration 
 
-            logger.info("Time %f, time step %f "%(self.t, dt))
+            logger.info("Time %f, time step %f "%(self.t, self.dt))
 
-            self.integrator.integrate(dt)
+            self.integrator.integrate(self.dt)
 
             # perform any post step functions
             
             for func in self.post_step_functions:
-                func.eval(self, count)
+                func.eval(self, self.count)
 
             # dump output
 
-            if count % self.pfreq == 0:
+            if self.count % self.pfreq == 0:
                 self.dump_output(*self.print_properties)
 
             bar.update()
+        
+            if self.execute_commands is not None:
+                if self.count % self.command_interval == 0:
+                    self.execute_commands(self)
 
         bar.finish()
 
@@ -473,8 +484,8 @@ class Solver(object):
 
         for pa in self.particles.arrays:
             name = pa.name
-            _fname=os.path.join(self.path,fname + name + '_' + str(self.t) + \
-                                '.npz')
+            _fname = os.path.join(self.output_directory,
+                                  fname + name + '_' + str(self.t) + '.npz')
             
             if self.detailed_output:
                 savez(_fname, dt=self.dt, **pa.properties)

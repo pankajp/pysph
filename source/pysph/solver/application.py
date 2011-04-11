@@ -1,14 +1,16 @@
 # Standard imports.
 import logging, os
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from os.path import basename, splitext
 import sys
 
 from utils import mkdir
 
 # PySPH imports.
-from pysph.base.particles import Particles, get_particle_array, ParticleArray
-
+from pysph.base.particles import Particles, ParticleArray
+from pysph.solver.solver_interfaces import CommandlineInterface, \
+        MultiprocessingInterface, XMLRPCInterface
+from pysph.solver.controller import Controller
 # MPI conditional imports
 HAS_MPI = True
 try:
@@ -151,6 +153,29 @@ class Application(object):
         parser.add_option("--xsph", action="store", dest="eps", type="float",
                           default=None, 
                           help="Use XSPH correction with epsilon value")
+        
+        # solver commandline interface
+        interfaces = OptionGroup(parser, "Interfaces",
+                                 "Add interfaces to the solver")
+        
+        interfaces.add_option("--interactive", action="store_true",
+                              dest="cmd_line", default=False,
+                              help=("Add an interactive commandline interface "
+                                    "to the solver"))
+        
+        interfaces.add_option("--xml-rpc", action="store",
+                              dest="xml_rpc", metavar='[HOST:]PORT',
+                              help=("Add an XML-RPC interface to the solver; "
+                                    "HOST=0.0.0.0 by default"))
+        
+        interfaces.add_option("--multiproc", action="store",
+                              dest="multiproc", metavar='[[AUTHKEY@]HOST:]PORT',
+                              help=("Add a python multiprocessing interface "
+                                    "to the solver; "
+                                    "AUTHKEY=pysph, HOST=0.0.0.0 by default"))
+        
+        parser.add_option_group(interfaces)
+    
 
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
@@ -185,11 +210,11 @@ class Application(object):
     ######################################################################
     # Public interface.
     ###################################################################### 
-    def process_command_line(self):
+    def process_command_line(self, args=None):
         """Parse any command line arguments.  Add any new options before
         this is called.  This also sets up the logging automatically.
         """
-        (options, args) = self.opt_parse.parse_args()
+        (options, args) = self.opt_parse.parse_args(args)
         self.options = options
         self.args = args
         
@@ -280,6 +305,34 @@ class Application(object):
             solver.set_xsph(self.options.eps)
 
         solver.setup_integrator(self.particles)
+        
+        # add solver interfaces
+        controller = Controller(solver)
+        solver.set_command_handler(controller.execute_commands)
+        
+        # commandline interface
+        if self.options.cmd_line:
+            controller.add_interface(CommandlineInterface().start)
+        
+        # XML-RPC interface
+        if self.options.xml_rpc:
+            addr = self.options.xml_rpc
+            idx = addr.find(':')
+            host = "0.0.0.0" if idx == -1 else addr[:idx]
+            port = int(addr[idx+1:])
+            controller.add_interface(XMLRPCInterface((host,port)).start)
+        
+        # python MultiProcessing interface
+        if self.options.multiproc:
+            addr = self.options.multiproc
+            idx = addr.find('@')
+            authkey = "pysph" if idx == -1 else addr[:idx] 
+            addr = addr[idx+1:]
+            idx = addr.find(':')
+            host = "0.0.0.0" if idx == -1 else addr[:idx]
+            port = int(addr[idx+1:])
+            controller.add_interface(MultiprocessingInterface((host,port),
+                                                authkey=authkey).start)
 
     def run(self):
         """Run the application."""

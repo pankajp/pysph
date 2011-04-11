@@ -1,0 +1,220 @@
+<html>
+    <head>
+        <title>PySPH Web Interface using XML-RPC</title>
+        <script type="text/javascript" src="mimic/mimic.js"></script>
+        <script type="text/javascript">
+            // mimic monkey-path for async requests
+            XmlRpcRequest.prototype.send_old = XmlRpcRequest.prototype.send
+            XmlRpcRequest.prototype.send = function(callable) {
+                var async = true; // synchronous request
+                if(callable == null) { async = false } // synchronous request
+
+              var xml_params = "";
+              for(var i = 0; i < this.params.length; i++) {
+                  xml_params += XmlRpc.PARAM.replace("${DATA}", this.marshal(this.params[i]));
+              }
+              var xml_call = XmlRpc.REQUEST.replace("${METHOD}", this.methodName);
+              xml_call = XmlRpc.PROLOG + xml_call.replace("${DATA}", xml_params);
+              var xhr = Builder.buildXHR();
+              xhr.open("POST", this.serviceUrl, async);
+              xhr.setRequestHeader("Content-Type", "text/plain");
+              if(async) {
+                  xhr.onreadystatechange = function() {
+                        if (xhr.readyState != 4)
+                            return; // TODO: callbacks?
+                            if (xhr.status != 200) {
+                                log("connection error " + xhr.status);
+                                return;
+                            }
+
+                            var ret = null;
+                            try {
+                                if (xhr.responseXML)
+                                    ret = new XmlRpcResponse(xhr.responseXML);
+                                else
+                                    log("xmlrpc: bad xml: '" + xhr.responseText + "'");
+                            } catch (err) {
+                                err.message = "xmlrpc: " + err.message;
+                                log(err+err.message);
+                            }
+
+                            callable(ret);
+
+                    };
+              }
+              xhr.send(Builder.buildDOM(xml_call));
+              if(! async) {
+                  return new XmlRpcResponse(xhr.responseXML);
+              }
+
+            }
+        </script>
+        <script type="text/javascript">
+            function log(msg)
+            {
+                var logelem = document.getElementById("_log");
+                if(logelem.value.length > 1000) {
+                    logelem.value = logelem.value.substring(500,logelem.value.length);
+                }
+                logelem.value = logelem.value + msg + '\n';
+            }
+
+            function populate_props(props) {
+                var prop_table = document.getElementById("prop_table");
+                prop_table.innerHTML = "";
+                for(var i=0; i<props.length; i++) {
+                    var prop = props[i];
+                    prop_table.innerHTML = prop_table.innerHTML + "\n<tr><td>"+prop+"</td><td><input id=\""+prop+"\" type=\"text\" size=\"30\" onchange=\"setServerProp('"+prop+"')\" /></td></tr>";
+                }
+            }
+
+            function populate_methods(methods) {
+                var methods_elem = document.getElementById("methods");
+                methods_elem.innerHTML = "";
+                
+                for(var i=0; i<methods.length; i++) {
+                    var meth = methods[i];
+                    var opt = document.createElement('option');
+                    opt.text = meth;
+                    methods_elem.appendChild(opt);
+                }
+            }
+
+            function main()
+            {
+                var server_url = document.getElementById('server_url').value
+                
+                // populate the properties
+                var propreq = new XmlRpcRequest(server_url, 'get_prop_names');
+                var resp = propreq.send();
+                resp.parseXML();
+                var props = resp.params[0];
+                populate_props(resp.params[0]);
+
+                for(var i=0; i<props.length; i++) {
+                    setTimeout("setDispProp(\""+props[i]+"\")", 5000);
+                }
+
+                // populate the methods
+                var propreq = new XmlRpcRequest(server_url, 'system.listMethods');
+                var resp = propreq.send();
+                resp.parseXML();
+                var methods = resp.params[0];
+                methods = methods.map(function(meth){return meth.toString()})
+                props = props.map(function(meth){return meth.toString()})
+                
+
+                methods = methods.filter(function(value, index, array){
+                    //if(value == "get" || value == "set") {return false};
+                    if(! (value.substring(0,4) == "get_" || value.substr(0,4) == "set_")) {return true};
+                    if(props.indexOf(value.substring(4,value.length)) != -1) {return false};
+                    return true;
+                })
+                populate_methods(methods);
+
+            }
+
+            function setDispProp(prop)
+            {
+                var server_url = document.getElementById('server_url').value;
+                var elem = document.getElementById(prop);
+                var req = new XmlRpcRequest(server_url, 'get_'+prop);
+                req.send(function(resp){
+                    resp.parseXML();
+                    elem.value = resp.params[0];
+                });
+                setTimeout(function(){setDispProp(prop)}, document.getElementById("refresh_interval").value*1000);
+            }
+            function setServerProp(prop, value)
+            {
+                var elem = document.getElementById(prop);
+                var val = value || elem.value;
+                try {
+                    val = eval(val);
+                } catch(err) {}
+                //fval = parseFloat(value);
+                //if(isFinite(fval)) value = fval;
+                log("setting prop: "+prop+"="+val);
+                var server_url = document.getElementById('server_url').value;
+                var req = new XmlRpcRequest(server_url, 'set_'+prop);
+                req.addParam(val);
+                req.send(function(resp){});
+            }
+
+            function executeServerMethod(meth, args) {
+                var server_url = document.getElementById('server_url').value;
+                var meth_elem = document.getElementById('methods');
+                meth = meth || meth_elem.options[meth_elem.selectedIndex].value;
+                var req = new XmlRpcRequest(server_url, meth);
+
+                var elem = document.getElementById("arguments");
+                var myargs = args
+                if(myargs == null) myargs = elem.value;
+                myargs = myargs.split('|');
+                if(myargs.length == 0 && myargs[0] == '') myargs = [];
+                log("executing method: "+meth+"="+myargs);
+                for(var i=0; i<myargs.length; i++) {
+                    try {
+                        myargs[i] = eval(myargs[i]);
+                    } catch(err) {}
+                    req.addParam(myargs[i]);
+                }
+                
+                req.send(function(resp){
+                    resp.parseXML();
+                    document.getElementById("meth_resp").value = objToString(resp.params[0]);
+                });
+            }
+
+            function objToString(obj, level) {
+                level = level || 5
+                if(level < 0) return obj.toString();
+                if(obj == null) return "";
+                var str = obj.toString();
+                if(str.indexOf('object') != 1) return str;
+                var ret = "(";
+                for(var attrname in obj) {
+                    ret = ret + attrname + '=' + objToString(obj[attrname], level-1) + ', '
+                }
+                return ret + ')';
+            }
+
+        function set_method_help(meth) {
+            var meth_elem = document.getElementById('methods');
+            meth = meth || meth_elem.options[meth_elem.selectedIndex].value;
+
+            var server_url = document.getElementById('server_url').value;
+            var req = new XmlRpcRequest(server_url, "system.methodHelp");
+            req.addParam(meth);
+            req.send(function(resp){
+                resp.parseXML();
+                document.getElementById("method_help").innerHTML = resp.params[0].replace(/\n/g,'\n<br />');
+            });
+        }
+
+        </script>
+    </head>
+
+    <body onload="main()">
+        PySPH XML-RPC server URL: <input type="text" id="server_url" value="/" size="30" onchange="main()" title="include the http:// (or https://) part also" />
+        <input type="button" onclick="main()" value="Reload" />
+
+        <br />
+        Refresh Interval (seconds): <input type="text" id="refresh_interval" value="5" />
+
+        <table id="prop_table"></table>
+        
+        <select id="methods" onchange="set_method_help()"></select>
+        (<input type="text" id="arguments" size="40" title="separate multiple arguments using pipe symbol '|'" onchange="executeServerMethod()" />)
+        <input type="button" value="Execute" onclick="executeServerMethod()" />
+        <br />
+        <b>Help: </b><span id="method_help"></span>
+        <br />
+        <textarea id="meth_resp" rows="4" cols="80"></textarea>
+
+        <br />
+        Show Log Messages <input type="checkbox" checked="true" onchange="document.getElementById('_log').style.display = event.currentTarget.checked?'inline':'none'" />
+        <input type="button" onclick="document.getElementById('_log').value = ''" value="Clear Log" />
+        <br /> <textarea id="_log" rows="4" cols="80"></textarea>
+    </body>
+</html>
