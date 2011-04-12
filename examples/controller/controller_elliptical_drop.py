@@ -13,11 +13,11 @@ particles = app.create_particles(False,
 
 s = solver.FluidSolver(dim=2, integrator_type=solver.EulerIntegrator)
 
+app.set_solver(s)
 s.set_time_step(1e-5)
 s.set_final_time(1e-1)
-s.pfreq = 100
+s.pfreq = 1000
 
-app.set_solver(s)
 
 if __name__ == '__main__':
     app.run()
