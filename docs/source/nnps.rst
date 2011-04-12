@@ -4,7 +4,7 @@ The interaction of particles in SPH is limited to neighboring particles that are
 radius from the target particle as shown in the figure below.
 
 .. _image_particles:
-.. figure:: ..\images\particles.png
+.. figure:: ../images/particles.png
    :align: center
    :width: 175
    :height: 250
@@ -21,10 +21,10 @@ PySPH imposes a cell structure over the particle distribution as shown in the fi
 fixed at the start of each iteration and cells are only created where particles exist.
 
 .. _image_cells:
-.. figure:: ..\images\cells.png
+.. figure:: ../images/cells.png
    :align: center
    :width: 175
    :height: 250
 
 Using this cell structure and the cell to which the target particle belongs, we need only consider
-neighbring cells to search for neighbors.
+neighboring cells to search for neighbors.

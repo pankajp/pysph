@@ -2,7 +2,7 @@ An Overview of PySPH
 =======================
 PySPH is a framework for Smoothed Particle Hydrodynamics (:doc:`sph`) 
 in `Python <http://www.python.org>`_. The framework allows us to define arbitrary collections
-of partcles and forces acting on them. The corresponding initial value problem is then integrated
+of particles and forces acting on them. The corresponding initial value problem is then integrated
 in time to obtain the desired solution. The best way to understand this is to consider an example.
 
 N-Body simulation using PySPH
@@ -96,7 +96,7 @@ variables on the target particles::
 			)
 
 In this example, the operation is of type **SPHIntegration** which uses the **NBodyForce** function to 
-compute forces on all fluids from all fluids. Heruistically, an operation would be required for each
+compute forces on all fluids from all fluids. Heuristically, an operation would be required for each
 equation in the problem considered.
 
 The final operation is therefore the position stepping operation which may have been declared as::
