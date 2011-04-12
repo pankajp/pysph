@@ -283,7 +283,11 @@ class TestPredictorCorrectorIntegrator(IntegratorTestCase):
     def setup(self):
         self.integrator = solver.PredictorCorrectorIntegrator(
             particles=self.particles, calcs = self.calcs)
-
+    
+    def test_constructor(self):
+        """ Some constructor tests """
+        self.assertEqual(self.integrator.nsteps, 2)
+    
     def test_motion(self):
         """ Perform the integration of the particle positons 
 

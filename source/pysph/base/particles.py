@@ -80,7 +80,7 @@ class Particles(object):
     An appropriate cell manager (CellManager/ParallelCellManager) is
     created with reference to the 'in_parallel' attribute.
 
-    Simillarly an appropriate NNPSManager is created with reference to
+    Similarly an appropriate NNPSManager is created with reference to
     the 'variable_h' attribute.
 
     """

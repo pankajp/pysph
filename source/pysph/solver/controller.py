@@ -1,4 +1,4 @@
-''' Controller for the solver to which different interfaces can be added '''
+''' Implement infrastructure for the solver to add various interfaces '''
 
 from functools import wraps, partial
 import threading, thread
@@ -8,33 +8,41 @@ import logging
 logger = logging.getLogger()
 
 class DummyComm(object):
-    ''' A dummy implementation as placeholder for MPI.Comm objects '''
+    ''' A dummy MPI.Comm implementation as placeholder for for serial runs '''
     def Get_size(self):
+        ''' return the size of the comm (1) '''
         return 1
     
     def Get_rank(self):
+        ''' return the rank of the process (0) '''
         return 0
     
     def send(self, data, pid):
+        ''' dummy send implementation '''
         self.data = data
     
     def recv(self, pid):
+        ''' dummy recv implementation '''
         data = self.data
         del self.data
         return data
     
     def bcast(self, data):
+        ''' bcast (broadcast) implementation for serial run '''
         return data
     
     def gather(self, data):
+        ''' gather implementation for serial run '''
         return [data]
 
 def synchronized(lock_or_func):
     ''' decorator for synchronized (thread safe) function
     
     Usage:
-        sync_func = synchronized(lock)(func) # sync with an existing lock
-        sync_func = synchronized(func) # sync with a new private lock
+    
+    - sync_func = synchronized(lock)(func) # sync with an existing lock
+      
+    - sync_func = synchronized(func) # sync with a new private lock
     '''
     if isinstance(lock_or_func, thread.LockType):
         lock = lock_or_func
@@ -50,90 +58,122 @@ def synchronized(lock_or_func):
         lock = threading.Lock()
         return synchronized(lock)(func)
 
+def wrap_dispatcher(obj, meth, *args2, **kwargs2):
+    @wraps(meth)
+    def wrapped(*args, **kwargs):
+        kw = {}
+        kw.update(kwargs2)
+        kw.update(kwargs)
+        return meth(obj.block, *(args2+args), **kw)
+    return wrapped
 
-class ControllerProxy(object):
-    ''' ControllerProxy class as a frontend proxy to the Controller for solver
+class Controller(object):
+    ''' Controller class acts a a proxy to control the solver
     
     This is passed as an argument to the interface
     
-    Methods available:
-    ------------------
-        get -- get the value of a solver parameter
-        set -- set the value of a solver parameter
-        get_result -- return result of a queued command
-        pause_on_next -- pause solver thread on next iteration
-        wait -- wait (block) calling thread till solver is paused
-                (call after `pause_on_next`)
-        cont -- continue solver thread (call after `pause_on_next`)
-        
-        various other methods are also available as listed in
-        `Controller.dispatch_dict` which perform different functions.
-        
-        -- The method in Controller.active_methods do their operation and return
-        the result (if any) immediately
-        -- The method in Controller.lazy_methods do their later when solver
-        thread is available and return a task-id. The result of the task can be
-        obtained later using the blocking call `get_result()` which waits till
-        result is available and returns the result.
-        The availability of the result can be checked using the lock returned
-        by `get_task_lock()` method
-        
-        FIXME: wait/cont currently do not work in parallel
+    **Methods available**:
+    
+    - get -- get the value of a solver parameter
+    - set -- set the value of a solver parameter
+    - get_result -- return result of a queued command
+    - pause_on_next -- pause solver thread on next iteration
+    - wait -- wait (block) calling thread till solver is paused
+      (call after `pause_on_next`)
+    - cont -- continue solver thread (call after `pause_on_next`)
+    
+    Various other methods are also available as listed in
+    :data:`CommandManager.dispatch_dict` which perform different functions.
+    
+    - The methods in CommandManager.active_methods do their operation and return
+      the result (if any) immediately
+    - The methods in CommandManager.lazy_methods do their later when solver
+      thread is available and return a task-id. The result of the task can be
+      obtained later using the blocking call `get_result()` which waits till
+      result is available and returns the result.
+      The availability of the result can be checked using the lock returned
+      by `get_task_lock()` method
+    
+    FIXME: wait/cont currently do not work in parallel
 
     '''
-    def __init__(self, controller):
-        super(ControllerProxy, self).__init__()
-        self.__controller = controller
+    def __init__(self, command_manager, block=True):
+        super(Controller, self).__init__()
+        self.__command_manager = command_manager
         self.daemon = True
-
-        for prop in controller.solver_props:
-            setattr(self, 'get_'+prop, partial(controller.dispatch, 'get', prop))
-            setattr(self, 'set_'+prop, partial(controller.dispatch, 'set', prop))
-
-        for meth in controller.solver_methods:
-            setattr(self, meth, partial(controller.dispatch, meth))
+        self.block = block
+        self._set_methods()
     
-        for meth in controller.lazy_methods:
-            setattr(self, meth, partial(controller.dispatch, meth))
+    def _set_methods(self):
+        for prop in self.__command_manager.solver_props:
+            setattr(self, 'get_'+prop, wrap_dispatcher(self, self.__command_manager.dispatch, 'get', prop))
+            setattr(self, 'set_'+prop, wrap_dispatcher(self, self.__command_manager.dispatch, 'set', prop))
+
+        for meth in self.__command_manager.solver_methods:
+            setattr(self, meth, wrap_dispatcher(self, self.__command_manager.dispatch, meth))
     
-        for meth in controller.active_methods:
-            setattr(self, meth, partial(controller.dispatch, meth))
+        for meth in self.__command_manager.lazy_methods:
+            setattr(self, meth, wrap_dispatcher(self, self.__command_manager.dispatch, meth))
+    
+        for meth in self.__command_manager.active_methods:
+            setattr(self, meth, wrap_dispatcher(self, self.__command_manager.dispatch, meth))
     
     def get(self, name):
         ''' get a solver property; returns immediately '''
-        return self.__controller.dispatch('get', name)
+        return self.__command_manager.dispatch(self.block, 'get', name)
     
     def set(self, name, value):
         ''' set a solver property; returns immediately; '''
-        return self.__controller.dispatch('set', name, value)
+        return self.__command_manager.dispatch(self.block, 'set', name, value)
     
     def pause_on_next(self):
         ''' pause the solver thread on next iteration '''
-        return self.__controller.pause_on_next()
+        return self.__command_manager.pause_on_next()
     
     def wait(self):
         ''' block the calling thread until the solver thread pauses
         
         call this only after calling the `pause_on_next` method to tell
         the controller to pause the solver thread'''
-        self.__controller.wait()
+        self.__command_manager.wait()
+        return True
     
     def get_prop_names(self):
-        return list(self.__controller.solver_props)
+        return list(self.__command_manager.solver_props)
     
     def cont(self):
         ''' continue solver thread after it has been paused by `pause_on_next`
         
         call this only after calling the `pause_on_next` method '''
-        return self.__controller.cont()
+        return self.__command_manager.cont()
     
     def get_result(self, task_id):
         ''' get the result of a previously queued command '''
-        return self.__controller.get_result(task_id)
-
+        return self.__command_manager.get_result(task_id)
+    
+    def set_blocking(self, block):
+        ''' set the blocking mode to True/False
+        
+        In blocking mode (block=True) all methods other than getting of
+        solver properties block until the command is executed by the solver
+        and return the results. The blocking time can vary depending on the
+        time taken by solver per iteration and the command_interval
+        In non-blocking mode, these methods queue the command for later
+        and return a string corresponding to the task_id of the operation.
+        The result can be later obtained by a (blocking) call to get_result
+        with the task_id as argument
+        '''
+        if block != self.block:
+            self.block = block
+            self._set_methods()
+        return self.block
+    
+    def get_blocking(self):
+        ''' get the blocking mode ( True/False ) '''
+        return self.block
 
 def on_root_proc(f):
-    """ run the decorated function only on the root proc """
+    ''' run the decorated function only on the root proc '''
     @wraps(f)
     def wrapper(self, *args, **kwds):
         if self.comm.Get_rank()==0:
@@ -141,14 +181,15 @@ def on_root_proc(f):
     return wrapper
 
 def in_parallel(f):
-    """ return a list of results of running decorated function on all procs """
+    ''' return a list of results of running decorated function on all procs '''
     @wraps(f)
     def wrapper(self, *args, **kwds):
         return self.comm.gather(f(self, *args, **kwds))
     return wrapper
 
 
-class Controller(object):
+class CommandManager(object):
+    ''' Class to manage and synchronize commands from various Controllers '''
     solver_props = set(('t', 'tf', 'dt', 'count', 'pfreq', 'fname',
                 'detailed_output', 'output_directory'))
     
@@ -165,7 +206,7 @@ class Controller(object):
             self.comm = solver.particles.cell_manager.parallel_controller.comm
         except AttributeError:
             self.comm = DummyComm()
-        logger.info('Controller: using comm: %s'%self.comm)
+        logger.info('CommandManager: using comm: %s'%self.comm)
         self.solver = solver
         self.interfaces = []
         self.rlock = threading.RLock()
@@ -179,16 +220,16 @@ class Controller(object):
         self.pause = set([])
     
     @on_root_proc
-    def add_interface(self, callable):
+    def add_interface(self, callable, block=True):
         ''' Add a callable interface to the controller
         
-        The callable must accept an ControllerProxy instance argument.
+        The callable must accept an Controller instance argument.
         The callable is called in a new thread of its own and it can
-        do various actions with methods defined on the ControllerProxy
+        do various actions with methods defined on the Controller
         instance passed to it
         The new created thread is set to daemon mode and returned
         '''
-        control = ControllerProxy(self)
+        control = Controller(self, block)
         thr = threading.Thread(target=callable, args=(control,))
         thr.daemon = True
         thr.start()
@@ -239,6 +280,7 @@ class Controller(object):
         with self.plock:
             self.pause.add(threading.current_thread().ident)
             self.plock.notify()
+        return True
     
     def wait(self):
         with self.plock:
@@ -254,6 +296,8 @@ class Controller(object):
     
     def get_result(self, lock_id):
         ''' get the result of a previously queued command '''
+        print lock_id, type(lock_id)
+        lock_id = int(lock_id)
         lock = self.queue_lock_map[lock_id]
         with lock:
             with self.res_lock:
@@ -264,7 +308,7 @@ class Controller(object):
     
     def get_task_lock(self, lock_id):
         ''' get the Lock instance associated with a command '''
-        return self.queue_lock_map[lock_id]
+        return self.queue_lock_map[int(lock_id)]
     
     def get_prop(self, name):
         ''' get a solver property '''
@@ -343,7 +387,7 @@ class Controller(object):
         dispatch_dict[meth] = locals()[meth]
     
     @synchronized
-    def dispatch(self, meth, *args, **kwargs):
+    def dispatch(self, block, meth, *args, **kwargs):
         ''' execute/queue a command with specified arguments '''
         if meth in self.dispatch_dict:
             if meth=='get' or meth=='set':
@@ -359,10 +403,10 @@ class Controller(object):
             lock.acquire()
             logger.info('controller: dispatch(%d): %s %s %s'%(
                                             lock_id, meth, args, kwargs))
-            if meth=='get' or meth in self.active_methods:
+            if block or meth=='get' or meth in self.active_methods:
                 return self.dispatch_dict[meth](self, *args, **kwargs)
             else:
-                return lock_id
+                return str(lock_id)
         else:
             raise RuntimeError('Invalid dispatch on method: '+meth)
     

@@ -407,7 +407,7 @@ class Solver(object):
             self.operation_dict[id].kernel_correction=kernel_correction
 
     def set_command_handler(self, callable, command_interval=1):
-        """ set the `callable` to be called at ever `command_interval` iteration
+        """ set the `callable` to be called at every `command_interval` iteration
         
         the `callable` is called with the solver instance as an argument
         """

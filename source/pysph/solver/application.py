@@ -8,9 +8,8 @@ from utils import mkdir
 
 # PySPH imports.
 from pysph.base.particles import Particles, ParticleArray
-from pysph.solver.solver_interfaces import CommandlineInterface, \
-        MultiprocessingInterface, XMLRPCInterface
-from pysph.solver.controller import Controller
+from pysph.solver.controller import CommandManager
+
 # MPI conditional imports
 HAS_MPI = True
 try:
@@ -307,23 +306,26 @@ class Application(object):
         solver.setup_integrator(self.particles)
         
         # add solver interfaces
-        controller = Controller(solver)
-        solver.set_command_handler(controller.execute_commands)
+        self.command_manager = CommandManager(solver)
+        solver.set_command_handler(self.command_manager.execute_commands)
         
         # commandline interface
         if self.options.cmd_line:
-            controller.add_interface(CommandlineInterface().start)
+            from pysph.solver.solver_interfaces import CommandlineInterface
+            self.command_manager.add_interface(CommandlineInterface().start)
         
         # XML-RPC interface
         if self.options.xml_rpc:
+            from pysph.solver.solver_interfaces import XMLRPCInterface
             addr = self.options.xml_rpc
             idx = addr.find(':')
             host = "0.0.0.0" if idx == -1 else addr[:idx]
             port = int(addr[idx+1:])
-            controller.add_interface(XMLRPCInterface((host,port)).start)
+            self.command_manager.add_interface(XMLRPCInterface((host,port)).start)
         
         # python MultiProcessing interface
         if self.options.multiproc:
+            from pysph.solver.solver_interfaces import MultiprocessingInterface
             addr = self.options.multiproc
             idx = addr.find('@')
             authkey = "pysph" if idx == -1 else addr[:idx] 
@@ -331,7 +333,7 @@ class Application(object):
             idx = addr.find(':')
             host = "0.0.0.0" if idx == -1 else addr[:idx]
             port = int(addr[idx+1:])
-            controller.add_interface(MultiprocessingInterface((host,port),
+            self.command_manager.add_interface(MultiprocessingInterface((host,port),
                                                 authkey=authkey).start)
 
     def run(self):

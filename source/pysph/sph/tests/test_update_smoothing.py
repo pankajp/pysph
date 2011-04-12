@@ -228,7 +228,7 @@ class TestUpdateSmoothingSolver(unittest.TestCase):
         for integrator in (solver.EulerIntegrator,solver.RK2Integrator,
                            solver.RK4Integrator):
 
-            self.solver = solver.Solver(self.kernel, integrator)
+            self.solver = solver.Solver(self.kernel.dim, integrator)
             self.solver.add_operation(self.adke)
             self.solver.setup_solver()
             self.solver.setup_integrator(self.particles)

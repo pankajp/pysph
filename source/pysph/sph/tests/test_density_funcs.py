@@ -244,5 +244,8 @@ class CLSummationDenstiyTestCase(unittest.TestCase):
         for i in range(np):
             self.assertAlmostEqual(cl_rho[i], pysph_rho[i], 4)
 
+if not HAVE_CL:
+    del CLSummationDenstiyTestCase
+
 if __name__ == '__main__':
     unittest.main()

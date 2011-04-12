@@ -178,8 +178,8 @@ setup(name='PySPH',
       
       include_package_data = True,
       cmdclass={'build_ext': build_ext},
-      #install_requires=['mpi4py>=1.2', 'numpy>=1.0.3', 'Cython>=0.12'],
-      #setup_requires=['Cython>=0.13', 'setuptools>=0.6c1'],
+      #install_requires=['mpi4py>=1.2', 'numpy>=1.0.3', 'Cython>=0.14'],
+      #setup_requires=['Cython>=0.14', 'setuptools>=0.6c1'],
       #extras_require={'3D': 'Mayavi>=3.0'},
       zip_safe = False,
       )

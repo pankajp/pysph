@@ -8,16 +8,16 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 
 
 class MultiprocessingInterface(BaseManager):
-    """ A multiprocessing interface to the solver controller
+    """ A multiprocessing interface to the solver command_manager
     
-    This object exports a controller instance proxy over the multiprocessing
+    This object exports a command_manager instance proxy over the multiprocessing
     interface. Control actions can be performed by connecting to the interface
-    and calling methods on the controller proxy instance """
+    and calling methods on the command_manager proxy instance """
     def get_controller(self):
-        return self.controller
+        return self.command_manager
     
     def start(self, controller):
-        self.controller = controller
+        self.command_manager = controller
         self.register('get_controller', self.get_controller)
         self.get_server().serve_forever()
         
@@ -43,7 +43,7 @@ class MultiprocessingClient(BaseManager):
         pass
     
     def add_interface(self, callable):
-        """ This makes it act as substitute for the actual controller """
+        """ This makes it act as substitute for the actual command_manager """
         thr = threading.Thread(target=callable, args=(self.controller,))
         thr.daemon = True
         thr.start()
@@ -83,7 +83,7 @@ class CrossDomainXMLRPCRequestHandler(SimpleXMLRPCRequestHandler,
         SimpleXMLRPCRequestHandler.end_headers(self)
     
 class XMLRPCInterface(SimpleXMLRPCServer):
-    """ An XML-RPC interface to the solver controller
+    """ An XML-RPC interface to the solver command_manager
     
     Currently cannot work with objects which cannot be marshalled
     (which is basically most custom classes, most importantly
@@ -101,7 +101,7 @@ class XMLRPCInterface(SimpleXMLRPCServer):
 
 
 class CommandlineInterface(object):
-    """ command-line interface to the solver controller """
+    """ command-line interface to the solver command_manager """
     def start(self, controller):
         while True:
             try:

@@ -23,7 +23,7 @@ import xmlrpclib
 from pysph.solver.solver_interfaces import MultiprocessingClient
 
 
-def test_interface(controller):
+def test_interface_nonblocking(controller):
     print 't1', controller.get('dt')
     print 't2', controller.get_dt()
     
@@ -47,16 +47,42 @@ def test_interface(controller):
     
     print controller.get_status()
     
+def test_interface_blocking(controller):
+    print 't1', controller.get('dt')
+    print 't2', controller.get_dt()
+    
+    task_id = controller.pause_on_next()
+    print task_id
+    time.sleep(1)
+    print 'count', controller.get_count()
+    time.sleep(1)
+    
+    # main thread is stopped; count should still be same
+    print 'count2', controller.get_count()
+    controller.cont()
+    
+    # main thread now still running; count should have increased
+    time.sleep(1)
+    print 'count3', controller.get_count()
+    
+    pa_names = controller.get_particle_array_names() # blocking call
+    print 'pa_names', task_id, pa_names
+    
+    print controller.get_status()
+    
 
 def test_XMLRPC_interface(address='http://localhost:8900/'):
     client = xmlrpclib.ServerProxy(address, allow_none=True)
-    
     print client.system.listMethods()
     # client has all methods of `control` instance
     print client.get_t()
     print 'xmlrpcclient:count', client.get('count')
     
-    test_interface(client)
+    test_interface_blocking(client)
+    client.set_blocking(False)
+    test_interface_nonblocking(client)
+    client.set_blocking(True)
+    
     return client
 
 
@@ -68,19 +94,21 @@ def test_multiprocessing_interface(address=('localhost',8800), authkey='pysph'):
     client = MultiprocessingClient(address, authkey)
     
     controller = client.controller
-    task_id = controller.get_particle_array_names()
-    pa_names = controller.get_result(task_id) # blocking call
-    task_id = controller.get_named_particle_array(pa_names[0])
-    print task_id
-    print controller.get_result(task_id)
+    pa_names = controller.get_particle_array_names() # blocking call
+    print controller.get_named_particle_array(pa_names[0]) # blocking call
+    
+    test_interface_blocking(controller)
+    controller.set_blocking(False)
+    test_interface_nonblocking(controller)
+    controller.set_blocking(True)
     
     return controller
 
 
 def test_plot(controller):
-    task_id = controller.get_particle_array_names()
-    pa_name = controller.get_result(task_id)[0] # blocking call
-    pa = controller.get_result(controller.get_named_particle_array(pa_name))
+    controller.set_blocking(True)
+    pa_name = controller.get_particle_array_names()[0]
+    pa = controller.get_named_particle_array(pa_name)
     
     #plt.ion()
     fig = plt.figure()
@@ -95,7 +123,7 @@ def test_plot(controller):
         dt = t2 - t
         t = t2
         print 'count:', controller.get_count(), '\ttimer time:', dt,
-        pa = controller.get_result(controller.get_named_particle_array(pa_name))
+        pa = controller.get_named_particle_array(pa_name)
     
         line.set_offsets(zip(pa.x, pa.y))
         line.set_array(numpy.hypot(pa.u,pa.v))
