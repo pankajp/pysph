@@ -1,6 +1,7 @@
 #include "cl_common.h"
 
-__kernel void set_to_zero(__global float16* dst)
+// set the tmpx, tmpy, tmpz (sc, sd, se)  for the particles to 0
+__kernel void set_tmp_to_zero(__global float16* dst)
 {
   unsigned int work_dim = get_work_dim();
 

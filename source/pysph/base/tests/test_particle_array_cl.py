@@ -28,7 +28,7 @@ class ParticleArrayCLTestCase(unittest.TestCase):
         platforms = cl.get_platforms()
         devices = platforms[0].get_devices()
 
-        ctx = cl.Context(devices)
+        self.ctx = ctx = cl.Context(devices)
         queue = cl.CommandQueue(ctx, devices[0])
 
         self.queue = queue
@@ -60,13 +60,13 @@ class ParticleArrayCLTestCase(unittest.TestCase):
 
             self.assertTrue( numpy.nbytes[type(npy_array[0])], nbytes['float'])
 
-    def test_create_cl_arrays(self):
+    def test_create_cl_buffers(self):
         """ Test the creation of the OpenCL arrays """
 
         pa = self.pa
 
-        # create the OpenCL arrays
-        pa.create_cl_arrays(self.queue)
+        # create the OpenCL buffers
+        pa.setupCL(self.queue)
 
         for prop in pa.properties:
 
@@ -74,13 +74,15 @@ class ParticleArrayCLTestCase(unittest.TestCase):
 
             self.assertTrue( pa.cl_properties.has_key(cl_prop) )
 
-            array = pa.cl_properties.get(cl_prop)
+            # get the OpenCL buffer for the property
+            buffer = pa.cl_properties.get(cl_prop)
 
+            # get the PySPH numpy array for the property
             pysph_arr = pa.properties[prop].get_npy_array()
 
+            # read the contents of the OpenCL buffer in a dummy array
             _array = numpy.empty_like(pysph_arr)
-
-            array.get(self.queue, _array)
+            cl.enqueue_read_buffer(pa.queue, buffer, _array).wait()
 
             self.assertEqual( len(_array), len(pysph_arr) )
 
@@ -88,55 +90,6 @@ class ParticleArrayCLTestCase(unittest.TestCase):
 
             for i in range(np):
                 self.assertEqual( _array[i], pysph_arr[i] )
-
-    def test_create_cl_buffers(self):
-        """ Test the `create_cl_buffers` function """
-
-        pa = self.pa
-        queue = self.queue
-        
-        # setup PyOpenCL
-
-        pa.setupCl(self.queue)
-
-        self.assertEqual( pa.context, queue.context )
-        self.assertEqual( pa.device, queue.device )
-
-        self.assertTrue( pa.cl_setup_done )
-
-        # create the buffers
-
-        pa.create_cl_buffers()
-
-        # Check the pa and tag buffers on host and device
-        np = pa.get_number_of_particles()
-        
-        pa_buf_host = pa.pa_buf_host
-        pa_buf_device = pa.pa_buf_device
-
-        self.assertEqual( numpy.size(pa_buf_host), np )
-
-        host_array = pa.pa_buf_device.get_host_array(pa_buf_host.shape,
-                                                     pa_buf_host.dtype)
-
-        self.assertEqual( numpy.size(host_array), np )
-
-        for i in range(np):
-            for j in range(16):
-                self.assertEqual( host_array[i][j], pa_buf_host[i][j] )
-
-        pa_tag_host = pa.pa_tag_host
-        pa_tag_device = pa.pa_tag_device
-
-        host_tag_array = pa_tag_device.get_host_array(pa_tag_host.shape,
-                                                      pa_tag_host.dtype)
-
-        self.assertEqual( numpy.size(pa_tag_host), np )
-        self.assertEqual( numpy.size(host_tag_array), np )
-
-        for i in range(np):
-            for j in range(2):
-                self.assertEqual( pa_tag_host[i][j], host_tag_array[i][j] )
 
 if __name__ == '__main__':
     unittest.main()

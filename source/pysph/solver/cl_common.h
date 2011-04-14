@@ -1,4 +1,4 @@
-// common definitions for OpenCL 
+// common function definitions for OpenCL 
 
 #ifndef CL_COMMON
 #define CL_COMMON

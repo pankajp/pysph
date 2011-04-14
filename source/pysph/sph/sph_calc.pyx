@@ -374,36 +374,28 @@ class CLCalc(SPHCalc):
         dst = self.dest
         npd = dst.get_number_of_particles()
 
-        kernel_type = numpy.array([1,], dtype=numpy.int32)
-        dim = numpy.array([self.kernel.dim,], dtype=numpy.int32)
-
         mf = cl.mem_flags
 
-        kernel_type_buf = cl.Buffer(self.context,
-                                    mf.READ_ONLY | mf.COPY_HOST_PTR,
-                                    hostbuf=kernel_type)
+        sph_kernel_type = cl.array.Array(self.queue, (1,),numpy.int32)
+        sph_kernel_type.set(numpy.array([1,], numpy.int32), self.queue)
 
-        dim_buf = cl.Buffer(self.context,
-                            mf.READ_ONLY | mf.COPY_HOST_PTR,
-                            hostbuf=dim)
-        for kernel in self.prog.all_kernels():
-            if kernel.function_name == self.cl_kernel_function_name:
+        dim = cl.array.Array(self.queue, (1,), dtype=numpy.int32)
+        dim.set(numpy.array([self.kernel.dim,], numpy.int32), self.queue)
+
+        for cl_kernel in self.prog.all_kernels():
+            if cl_kernel.function_name == self.cl_kernel_function_name:
                 break
 
         for i in range(self.nsrcs):
             src = self.sources[i]
-            _np = src.get_number_of_particles()
 
-            np = numpy.array([_np,], dtype=numpy.int32)
+            np = cl.array.Array(self.queue, (1,), numpy.int32)
+            np.set(numpy.array([src.get_number_of_particles()], numpy.int32))
 
-            np_buf = cl.Buffer(self.context,
-                               mf.READ_ONLY | mf.COPY_HOST_PTR,
-                               hostbuf=np)
-
-            kernel(self.queue, (npd, 1, 1), (1,1,1),
-                   dst.pa_buf_device, src.pa_buf_device,
-                   dst.pa_tag_device, np_buf, kernel_type_buf,
-                   dim_buf)
+            cl_kernel(self.queue, (npd, 1, 1), (1,1,1),
+                      dst.pa_buf_device, src.pa_buf_device,
+                      dst.pa_tag_device, np.data, sph_kernel_type.data,
+                      dim.data)
 
     def reset_output_arrays(self):
         """ Reset the dst tmpx, tmpy and tmpz arrays to 0
@@ -419,7 +411,7 @@ class CLCalc(SPHCalc):
             raise RuntimeWarning, "CL not setup on destination array!"
 
         npd = self.dest.get_number_of_particles()
-        self.prog.set_to_zero(self.queue, (npd,1,1), (1,1,1),
-                              self.dest.pa_buf_device)
+        self.prog.set_tmp_to_zero(self.queue, (npd,1,1), (1,1,1),
+                                  self.dest.pa_buf_device)
 
 #############################################################################
