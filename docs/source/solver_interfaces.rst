@@ -21,10 +21,10 @@ involved in adding an interface to the solver.
 
 .. _image_controller:
 .. figure:: ../images/controller.png
-	:align: center
-	:width: 900
-	
-	Overview of the Solver Interfaces
+    :align: center
+    :width: 900
+    
+    Overview of the Solver Interfaces
 
 The basic design of the controller is as follows:
 
@@ -65,6 +65,34 @@ multiple interfaces to the solver convenient and safe. Each interface gets a
 separate Controller instance so that the various interfaces are isolated.
 
 
+Blocking and Non-Blocking mode
+------------------------------
+
+The :py:class:`Controller` object has a notion of Blocking and Non-Blocking mode.
+
+* In **Blocking** mode operations wait until the command is actually executed on the
+  solver and then return the result. This means execution stops until the
+  execute_commands method of the :py:class:`CommandManager` is executed by the
+  solver, which is after every :py:attr:`~pysph.solver.solver.Solver.commmand_interval` iterations.
+  This mode is the default.
+
+* In **Non-Blocking** mode the Controller queues the command for execution and
+  returns a task_id of the command. The result of the command can then be
+  obtained anytime later by the get_result method of the Controller passing the
+  task_id as argument. The get_result call blocks until result can be obtained.
+
+**Switching between modes**
+
+The blocking/non-blocking modes can be get/set using the methods 
+:py:meth:`Controller.get_blocking` and :py:meth:`Controller.set_blocking` methods
+
+**NOTE :**
+The blocking/non-blocking mode is not for getting/setting solver properties.
+These methods always return immediately, even if the setter is actually executed
+only when the :py:meth:`CommandManager.execute_commands` function is called by
+the solver.
+
+
 .. py:currentmodule:: pysph.solver.solver_interfaces
 
 Interfaces
@@ -81,12 +109,12 @@ count every second to monitor the solver
 
 ::
 
-	import time
-	
-   	def simple_interface(controller):
-   	    while True:
-   	        print controller.get_count()
-   	        time.sleep(1)
+    import time
+    
+    def simple_interface(controller):
+        while True:
+            print controller.get_count()
+            time.sleep(1)
 
 You can use ``dir(controller)`` to find out what methods are available on the
 controller instance.
@@ -97,8 +125,8 @@ and :py:class:`MultiprocessingInterface`, and also in `examples/controller_ellip
 You can check the code to see how to implement various kinds of interfaces.
 
 
-Usage
------
+Adding Interface to Solver
+--------------------------
 
 To add interfaces to a plain solver (not created using :py:class:`~pysph.solver.application.Application`),
 the following steps need to be taken:
@@ -106,7 +134,7 @@ the following steps need to be taken:
 - Set :py:class:`~pysph.solver.controller.CommandManager` for the solver (it is not setup by default)
 - Add the interface to the CommandManager
 
-The following code demonstrates how the the simple interface created above :ref:`simple_interface`
+The following code demonstrates how the the :ref:`Simple Interface <simple_interface>` created above
 can be added to a solver::
 
     # add CommandManager to solver
@@ -116,4 +144,155 @@ can be added to a solver::
     # add the interface
     command_manager.add_interface(simple_interface)
 
+For code which uses :py:class:`~pysph.solver.application.Application`, you
+simply need to add the interface to the application's command_manager::
+
+    app = Application()
+    app.set_solver(s)
+    ...
+    app.command_manager.add_interface(simple_interface)
+
+
+Commandline Interface
+---------------------
+
+The :py:class:`CommandLine` interface enables you to control the solver from
+the commandline even as it is running. Here's a sample session of the command-line
+interface from the controller_elliptical_drop.py example::
+
+    $ python controller_elliptical_drop.py
+    pysph[0]>>> 
+    Invalid command
+    Valid commands are:
+        p | pause
+        c | cont
+        g | get <name>
+        s | set <name> <value>
+        q | quit -- quit commandline interface (solver keeps running)
+    pysph[9]>>> g dt
+    1e-05
+    pysph[64]>>> g tf
+    0.1
+    pysph[114]>>> s tf 0.01
+    None
+    pysph[141]>>> g tf
+    0.01
+    pysph[159]>>> get_particle_array_names
+    ['fluid']
+
+The number inside the square brackets indicates the iteration count.
+
+Note that not all operations can be performed using the command-line interface,
+notably those which use complex python objects.
+
+
+XML-RPC Interface
+-----------------
+
+The :py:class:`XMLRPCInterface` interface exports the controller object's
+methods over an XML-RPC interface. An example html file
+`controller_elliptical_drop_client.html` uses this XML-RPC interface to
+control the solver from a web page.
+
+The following code snippet shows the use of XML-RPC interface, which is
+not much different from any other interface, as they all export the interface
+of the Controller object::
+    
+    import xmlrpclib
+    
+    # address is a tuple of hostname, port, ex. ('localhost',8900)
+    client = xmlrpclib.ServerProxy(address, allow_none=True)
+    
+    # client has all the methods of the controller
+    print client.system.listMethods()
+    
+    print client.get_t()
+    print client.get('count')
+
+The XML-RPC interface also implements a
+simple http server which serves html, javascript and image files from the
+directory it is started from. This enables direct use of the file
+`controller_elliptical_drop_client.html` to get an html interface without
+the need of a dedicated http server.
+
+The figure :ref:`fig_html_client` shows a screenshot of the html client
+in action
+
+.. _fig_html_client:
+.. figure:: ../images/html_client.png
+    :align: center
+    
+    PySPH html client using XML-RPC interface
+
+One limitation of XML-RPC interface is that arbitrary python objects cannot be
+sent across. XML-RPC standard predefines a limited set of types which can be
+transferred.
+
+
+Multiprocessing Interface
+-------------------------
+
+The :py:class:`MultiprocessingInterface` interface also exports the controller
+object similar to the XML-RPC interface, but it is more featured, can use
+authentication keys and can send arbitrary picklable objects. Usage of
+Multiprocessing client is also similar to the XML-RPC client::
+    
+    from pysph.solver.solver_interfaces import MultiprocessingClient
+    
+    # address is a tuple of hostname, port, ex. ('localhost',8900)
+    # authkey is authentication key set on server, defaults to 'pysph'
+    client = MultiprocessingClient(address, authkey)
+    
+    # controller proxy
+    controller = client.controller
+    
+    pa_names = controller.get_particle_array_names()
+    
+    # arbitrary python objects can be transferred (ParticleArray)
+    pa = controller.get_named_particle_array(pa_names[0])
+    
+
+Example
+-------
+
+Here's an example (straight from `controller_elliptical_drop_client.py`)
+put together to show how the controller can be used to create
+useful interfaces for the solver. The code below plots the particle positions
+as a scatter map with color-mapped velocities, and updates the plot every second
+while maintaining user interactivity::
+
+    from pysph.solver.solver_interfaces import MultiprocessingClient
+    
+    client = MultiprocessingClient(address, authkey)
+    controller = client.controller
+    
+    pa_name = controller.get_particle_array_names()[0]
+    pa = controller.get_named_particle_array(pa_name)
+    
+    #plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    line = ax.scatter(pa.x, pa.y, c=numpy.hypot(pa.u,pa.v))
+    
+    global t
+    t = time.time()
+    def update():
+        global t
+        t2 = time.time()
+        dt = t2 - t
+        t = t2
+        print 'count:', controller.get_count(), '\ttimer time:', dt,
+        pa = controller.get_named_particle_array(pa_name)
+    
+        line.set_offsets(zip(pa.x, pa.y))
+        line.set_array(numpy.hypot(pa.u,pa.v))
+        fig.canvas.draw()
+        
+        print '\tresult & draw time:', time.time()-t
+        
+        return True
+    
+    update()
+    gobject.timeout_add_seconds(1, update)
+    plt.show()
 

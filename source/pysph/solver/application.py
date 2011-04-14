@@ -306,7 +306,7 @@ class Application(object):
         solver.setup_integrator(self.particles)
         
         # add solver interfaces
-        self.command_manager = CommandManager(solver)
+        self.command_manager = CommandManager(solver, self.comm)
         solver.set_command_handler(self.command_manager.execute_commands)
         
         # commandline interface

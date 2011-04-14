@@ -190,8 +190,9 @@ def in_parallel(f):
 
 class CommandManager(object):
     ''' Class to manage and synchronize commands from various Controllers '''
+    
     solver_props = set(('t', 'tf', 'dt', 'count', 'pfreq', 'fname',
-                'detailed_output', 'output_directory'))
+                'detailed_output', 'output_directory', 'command_interval'))
     
     solver_methods = set(('dump_output',))
     
@@ -200,12 +201,14 @@ class CommandManager(object):
     
     active_methods = set(('get_status', 'get_task_lock', 'set_log_level'))
     
-    def __init__(self, solver):
-        self.comm = None
-        try:
-            self.comm = solver.particles.cell_manager.parallel_controller.comm
-        except AttributeError:
-            self.comm = DummyComm()
+    def __init__(self, solver, comm=None):
+        if comm is not None:
+            self.comm = comm
+        else:
+            try:
+                self.comm = solver.particles.cell_manager.parallel_controller.comm
+            except AttributeError:
+                self.comm = DummyComm()
         logger.info('CommandManager: using comm: %s'%self.comm)
         self.solver = solver
         self.interfaces = []
@@ -229,6 +232,7 @@ class CommandManager(object):
         instance passed to it
         The new created thread is set to daemon mode and returned
         '''
+        logger.info('adding_interface: %s'%callable)
         control = Controller(self, block)
         thr = threading.Thread(target=callable, args=(control,))
         thr.daemon = True
@@ -256,7 +260,8 @@ class CommandManager(object):
     
     def sync_commands(self):
         ''' send the pending commands to all the procs in parallel run '''
-        self.queue, self.pause = self.comm.bcast((self.queue, self.pause))
+        self.queue_dict, self.queue, self.pause = self.comm.bcast((self.queue_dict, self.queue, self.pause))
+        
     
     def run_queued_commands(self):
         while self.queue:
@@ -267,7 +272,8 @@ class CommandManager(object):
                     self.results[lock_id] = self.run_command(meth, args, kwargs)
                 finally:
                     del self.queue_dict[lock_id]
-                    self.queue_lock_map[lock_id].release()
+                    if self.comm.Get_rank()==0:
+                        self.queue_lock_map[lock_id].release()
     
     def run_command(self, cmd, args=[], kwargs={}):
         res =  self.dispatch_dict[cmd](self, *args, **kwargs)
@@ -277,6 +283,9 @@ class CommandManager(object):
     
     def pause_on_next(self):
         ''' pause and wait for command on the next control interval '''
+        if self.comm.Get_size() > 1:
+            logger.info('pause/continue noy yet supported in parallel runs')
+            return False
         with self.plock:
             self.pause.add(threading.current_thread().ident)
             self.plock.notify()
@@ -288,6 +297,9 @@ class CommandManager(object):
     
     def cont(self):
         ''' continue after a pause command '''
+        if self.comm.Get_size() > 1:
+            logger.info('pause/continue noy yet supported in parallel runs')
+            return
         with self.plock:
             self.pause.remove(threading.current_thread().ident)
             self.plock.notify()
@@ -296,7 +308,6 @@ class CommandManager(object):
     
     def get_result(self, lock_id):
         ''' get the result of a previously queued command '''
-        print lock_id, type(lock_id)
         lock_id = int(lock_id)
         lock = self.queue_lock_map[lock_id]
         with lock:

@@ -27,17 +27,23 @@ $(DIRS) :
 %.c : %.pyx
 	python `which cython` -I$(SRC) -I$(MPI4PY_INCL) -a $<
 
+%.cpp : %.pyx
+	python `which cython` --cplus -I$(SRC) -I$(MPI4PY_INCL) -a $<
+
 cython : $(PYX:.pyx=.c)
+
+cythoncpp : $(PYX:.pyx=.cpp)
 
 extn : $(DIRS)
 	python setup.py build_ext --inplace
 
 clean : 
 	python setup.py clean
-	-for dir in $(DIRS) bench; do rm -f $$dir/*.so; done
+	-for dir in $(DIRS); do rm -f $$dir/*.c; done
+	-for dir in $(DIRS); do rm -f $$dir/*.cpp; done
 
 cleanall : clean
-	-for dir in $(DIRS) bench; do rm -f $$dir/*.c; done
+	-for dir in $(DIRS) bench; do rm -f $$dir/*.so; done
 #	-rm $(patsubst %.pyx,%.c,$(wildcard $(PKG)/*/*.pyx))
 
 test :
@@ -72,4 +78,11 @@ develop : $(DIRS)
 
 install : $(DIRS)
 	python setup.py install
+
+clang :
+	python $(ROOT)/source/pysph/base/generator.py
+	for f in $(DIRS); do $(MAKE) -f $(MAKEFILE) -C $${f} cythoncpp ROOT=$(ROOT); done
+	cd source/pysph/; for f in */*.cpp; do clang++ -g -shared -fPIC -o $${f%.*}.so $$f -I /usr/include/python2.7/ $(shell mpicc --showme:compile) $(shell mpicc --showme:link); done
+	cd source/pysph/; for f in */*/*.cpp; do clang++ -g -shared -fPIC -o $${f%.*}.so $$f -I /usr/include/python2.7/ $(shell mpicxx --showme:compile) (shell mpicxx --showme:link); done
+
 
