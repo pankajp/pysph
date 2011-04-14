@@ -809,7 +809,7 @@ cdef class CellManager:
     """
 
     def __init__(self, list arrays_to_bin=[], double min_cell_size=-1.0,
-                 double max_cell_size=1000, PeriodicDomain periodic_domain=None,
+                 double max_cell_size=0, PeriodicDomain periodic_domain=None,
                  bint initialize=True, double max_radius_scale=2.0):
         
         self.max_radius_scale = max_radius_scale
@@ -913,7 +913,7 @@ cdef class CellManager:
         else:
             self.cell_size = min_size
 
-        if self.cell_size > max_size:
+        if self.cell_size > max_size > 0:
             self.cell_size = max_size
 
         # hack to let us initialize particles with h == 0
@@ -921,7 +921,7 @@ cdef class CellManager:
         if self.cell_size == 0.0:
             self.cell_size = 1.0
 
-        logger.info('using cell size of %f'%(min_size))
+        logger.info('using cell size of %f'%(self.cell_size))
         return self.cell_size
 
     cpdef int update(self) except -1:
