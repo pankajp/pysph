@@ -71,7 +71,7 @@ cpdef dict nnps():
             
             ret['%s up %s /%d'%(vh,nam,np)] = t1/np
             ret['%s %s /%d'%(vh,nam,np)] = t2/np
-            ret['%s es %s /%d'%(vh,nam,np)] = t3/np
+            #ret['%s es %s /%d'%(vh,nam,np)] = t3/np
     return ret
 
 cpdef nbr_particles_from_cell_list():

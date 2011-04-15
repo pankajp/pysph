@@ -9,49 +9,25 @@ from pysph.base.api import get_particle_array, Particles
 from pysph.sph.sph_calc import SPHCalc
 from pysph.sph.sph_calc cimport SPHCalc
 from pysph.base.kernels cimport KernelBase
-from pysph.sph.function import *
+#from pysph.sph.function import *
+from pysph.sph.sph_func import get_all_funcs
+from pysph.sph.sph_func cimport SPHFunctionParticle
 import numpy
 
 import time
 
+funcs_all = get_all_funcs()
+
 # the sph_funcs to test
-funcs_calc = [
-              SPHInterpolation('rho'),
-              SPHSimpleGradient('rho'),
-              SPHGradient('rho'),
-              Laplacian('rho'),
-              MonaghanBoundaryForce(delp=1.0),
-              BeckerBoundaryForce(sound_speed=1.0),
-              LennardJonesForce(D=1.0, ro=1.0, p1=1.0, p2=1.0),
-              SPHRho(),
-              SPHDensityRate(),
-              EnergyEquationNoVisc(),
-              EnergyEquationAVisc(beta=1.0, alpha=1.0, gamma=1.0, eta=1.0),
-              EnergyEquation(beta=1.0, alpha=1.0, gamma=1.4, eta=0.1),
-              ArtificialHeat(),
-              PositionStepping(),
-              SPHPressureGradient(),
-              MomentumEquation(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
-              MonaghanArtificialVsicosity(alpha=1.0, beta=1.0, gamma=1.4, eta=0.1),
-              MorrisViscosity(mu='mu'),
-              XSPHCorrection(eps=0.5),
-              ADKEPilotRho(),
-              VelocityDivergence(),
-              XSPHDensityRate(),
-             ]
-
-
-funcs_eqn = [
-             PositionStepping(),
-             IdealGasEquation(gamma=1.4),
-             TaitEquation(co=1.0, ro=1.0, gamma=7.0),
-             GravityForce(gx=0.0, gy=-9.81, gz=0.0),
-             VectorForce(force=Point(1,1,1)),
-             MoveCircleX(),
-             MoveCircleY(),
-             NeighborCount(),
-            ]
-
+funcs_calc = []
+funcs_eqn = []
+for fname,func in funcs_all.iteritems():
+    if fname == 'pysph.sph.funcs.basic_funcs.FirstOrderCorrectionTermAlpha':
+        continue
+    if issubclass(func.get_func_class(), SPHFunctionParticle):
+        funcs_calc.append(func)
+    else:
+        funcs_eqn.append(func)
 
 Ns = [1000]#, 100000]
 
@@ -78,12 +54,15 @@ cpdef dict sph_func_calc(Ns=Ns):
         da.set_data(z)
         da2.set_data(z)
         pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
-                                tx=z, ty=z, tz=z, nx=z, ny=z, nz=z, u=z, v=z, w=z,
-                                ubar=z, vbar=z, wbar=z)
-        particles = Particles(arrays=[pa])
+                                tx=z, ty=m, tz=z, nx=m, ny=z, nz=z, u=z, v=z, w=z,
+                                ubar=z, vbar=z, wbar=z, q=m)
+        pb = get_particle_array(x=x+0.1**0.5, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
+                                tx=m, ty=z, tz=z, nx=z, ny=m, nz=z, u=z, v=z, w=z,
+                                ubar=z, vbar=z, wbar=z, q=m)
+        particles = Particles(arrays=[pa, pb])
         for func_getter in funcs_calc:
-            func = func_getter.get_func(pa, pa)
-            calc = SPHCalc(particles, [pa], pa, kernel, [func], ['tmp'])
+            func = func_getter.get_func(pa, pb)
+            calc = SPHCalc(particles, [pa], pb, kernel, [func], ['tmp'])
             t = get_time()
             calc.sph('tmp')
             t = get_time() - t
@@ -117,7 +96,9 @@ cpdef dict sph_func_eqn(Ns=Ns):
         da2 = DoubleArray(N)
         da.set_data(z)
         da2.set_data(z)
-        pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z)
+        pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
+                                tx=z, ty=m, tz=z, nx=m, ny=z, nz=z, u=z, v=z, w=z,
+                                ubar=z, vbar=z, wbar=z)
         particles = Particles(arrays=[pa])
         for func_getter in funcs_eqn:
             func = func_getter.get_func(pa, pa)

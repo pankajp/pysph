@@ -22,10 +22,9 @@ TAG_LB_PARTICLE_REPLY = 102
 ###############################################################################
 class LoadBalancer:
     """ Class to perform simple load balancing. """
-    def __init__(self, parallel_solver=None, parallel_cell_manager=None, *args, **kwargs):
+    def __init__(self, parallel_cell_manager=None, *args, **kwargs):
         self.setup_done = False
         self.cell_manager = parallel_cell_manager
-        self.solver = parallel_solver
         self.skip_iteration = 10
         self.pid = 0
         self.num_procs = 1
@@ -55,18 +54,16 @@ class LoadBalancer:
         self.setup_done = True
 
     def load_balance(self, method=None, **args):
-        """ Calls the load_balance_func depending on skip_iteration if set """
+        """ Calls the load_balance_func """
         self.setup()
         if method is None:
             method = self.method
         
-        if self.solver is None or (self.solver.current_iteration %
-                                    self.skip_iteration == 0):
-            if method is None or method == '':
-                self.load_balance_func(**args)
-            else:
-                func = getattr(self, 'load_balance_func_'+method)
-                func(**args)
+        if method is None or method == '':
+            self.load_balance_func(**args)
+        else:
+            func = getattr(self, 'load_balance_func_'+method)
+            func(**args)
 
     def load_balance_func(self, adaptive=False):
         return self.load_balance_func_normal(adaptive)

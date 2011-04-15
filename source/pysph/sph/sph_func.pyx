@@ -23,32 +23,29 @@ def get_all_funcs():
 
 
 class Function(object):
-    """ Class that defines an sph function (sph.funcs) and it's
-    associated parameter values
+    """ Class that defines sph function (sph.funcs) and its parameter values
 
-    Methods:
-    --------
+    **Methods**
 
-    get_func -- Return a particular instance of SPHFunctionParticle
-    	with an appropriate source and destination particle array
+    - get_func -- Return a particular instance of SPHFunctionParticle
+      with an appropriate source and destination particle array
     
-    get_func_class --  get the class for which func will be created
+    - get_func_class --  get the class for which func will be created
     
-    Example:
-    --------
+    **Example**
 
     The sph function MonaghanArtificialVsicosity (defined in
     sph.funcs.viscosity_funcs) requires the parameter values 'alpha',
     'beta', 'gamma' and 'eta' to define the artificial viscosity. This
     function may be created as:
 
-        avisc = Function(MonaghanArtificialVsicosity, hks=False, alpha, beta ..)
-        avisc_func = avisc.get_funcs(source, dest)
+    - avisc = Function(MonaghanArtificialVsicosity, hks=False, alpha, beta ..)
+    - avisc_func = avisc.get_funcs(source, dest)
     
     or as an alternative may also be created as follows:
     
-        avisc = MonaghanArtificialVsicosity.withargs(hks=False, alpha, beta, ..)
-        avisc_func = avisc.get_funcs(source, dest)
+    - avisc = MonaghanArtificialVsicosity.withargs(hks=False, alpha, beta, ..)
+    - avisc_func = avisc.get_funcs(source, dest)
     
     Function provides a convenient way to create funcs between multiple
     source and destination particle arrays with specified
@@ -442,12 +439,11 @@ cdef class SPHFunctionPoint:
 
     cdef void eval(self, cPoint pnt, int dest_pid,
                    KernelBase kernel, double * nr, double * dnr):
-        """
-        Computes the contribution of particle at source_pid on point pnt.
+        """ Computes the contribution of particle at source_pid on point pnt
 
         **Parameters**
 
-         - pnt - the point at which some quatity is to be interpolated.
+         - pnt - the point at which some quantity is to be interpolated.
          - source_pid - the neighbor whose contribution is to be computed.
          - kernel - the kernel to be used.
          - nr - memory location to store the numerator of the result.
@@ -459,9 +455,7 @@ cdef class SPHFunctionPoint:
     cpdef py_eval(self, Point pnt, int dest_pid,
                   KernelBase kernel, numpy.ndarray
                   nr, numpy.ndarray dnr):
-        """
-        Python wrapper for the eval function, to be used in tests.
-        """
+        """ Python wrapper for the eval function, to be used in tests """
         cdef double * _nr
         cdef double * _dnr
         cdef int i

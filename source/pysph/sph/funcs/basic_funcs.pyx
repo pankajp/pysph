@@ -20,10 +20,10 @@ cdef class SPH(CSPHFunctionParticle):
                  str prop_name='rho', **kwargs):
         """ Constructor for SPH
 
-        Parameters:
-        -----------
-        source -- The source particle array.
-        dest -- The destination particle array.
+        Parameters
+        ----------
+        source : The source particle array
+        dest : The destination particle array
 
         """
         self.prop_name = prop_name
@@ -115,10 +115,10 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
                  str prop_name='rho',  *args, **kwargs):
         """ Constructor for SPH
 
-        Parameters:
-        -----------
-        source -- The source particle array.
-        dest -- The destination particle array.
+        Parameters
+        ----------
+        source : The source particle array
+        dest : The destination particle array
         
         """
         self.prop_name = prop_name
@@ -208,12 +208,12 @@ cdef class SPHGradient(SPHFunctionParticle):
                  str prop_name='rho',  *args, **kwargs):
         """ Constructor for SPH
 
-        Parameters:
-        -----------
-        source -- The source particle array.
-        dest -- The destination particle array.
+        Parameters
+        ----------
+        source : The source particle array
+        dest : The destination particle array
 
-        Note:
+        Notes
         -----
         By default, the arrays are not setup. This lets us set the prop
         name after intialization and then setup the arrays.
@@ -241,11 +241,8 @@ cdef class SPHGradient(SPHFunctionParticle):
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
-        """ 
-        Perform an SPH interpolation of the property `prop_name` 
+        """ Perform an SPH interpolation of the property `prop_name` 
 
-        The expression used is:
-        
         """
         cdef double temp
         cdef cPoint grad, grada, gradb
@@ -312,10 +309,10 @@ cdef class SPHLaplacian(SPHFunctionParticle):
                  str prop_name='rho',  *args, **kwargs):
         """ Constructor
 
-        Parameters:
-        -----------
-        source -- The source particle array.
-        dest -- The destination particle array.
+        Parameters
+        ----------
+        source : The source particle array
+        dest : The destination particle array
         
         """
         self.prop_name = prop_name
@@ -346,7 +343,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         
         ..math :: <f(\vec{r}>_a = \sum_{b = 1}^{N}f_b\frac{m_b}{\rho_b}\, 
         \\nabla_aW_{ab}
-            
+        
         """
         cdef double mb, rhob, fb, fa, tmp, dot
         cdef cPoint grad, grada, gradb, rab
@@ -429,8 +426,6 @@ cdef class BonnetAndLokKernelGradientCorrectionTerms(CSPHFunctionParticle):
     formulations", Computer Methods in Applied Mechanical Engineering,
     180, (1997), 97-115
 
-    Note:
-    -----
     The matrix would need to be inverted to calculate the correction terms!
 
     """

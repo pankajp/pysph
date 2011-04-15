@@ -209,16 +209,15 @@ def dam_break_run():
     ret['create_particles'] = t
     
     t = get_time()
-    s = solver.Solver(base.CubicSplineKernel(dim=2), 
-                      solver.RK2Integrator)
+    s = solver.Solver(2, solver.RK2Integrator)
     t = get_time() - t
     ret['create Solver'] = t
     
     t = get_time()
     #Equation of state
-    s.add_operation(solver.SPHAssignment(
+    s.add_operation(solver.SPHOperation(
             
-            sph.TaitEquation(co=co, ro=ro), 
+            sph.TaitEquation.withargs(co=co, ro=ro), 
             on_types=[Fluid, Solid], 
             updates=['p', 'cs'],
             id='eos')
@@ -226,45 +225,45 @@ def dam_break_run():
                     )
     
     #Continuity equation
-    s.add_operation(solver.SPHSummationODE(
+    s.add_operation(solver.SPHIntegration(
             
-            sph.SPHDensityRate(), 
+            sph.SPHDensityRate, 
             on_types=[Fluid, Solid], from_types=[Fluid, Solid], 
             updates=['rho'], id='density')
                     
                     )
     
     #momentum equation
-    s.add_operation(solver.SPHSummationODE(
+    s.add_operation(solver.SPHIntegration(
             
-            sph.MomentumEquation(alpha=alpha, beta=0.0),
+            sph.MomentumEquation.withargs(alpha=alpha, beta=0.0),
             on_types=[Fluid], from_types=[Fluid, Solid],  
             updates=['u','v'], id='mom')
                         
                     )
     
     #Gravity force
-    s.add_operation(solver.SPHSimpleODE(
+    s.add_operation(solver.SPHIntegration(
             
-            sph.GravityForce(gy=-9.81),
+            sph.GravityForce.withargs(gy=-9.81),
             on_types=[Fluid],
             updates=['u','v'],id='gravity')
                     
                     )
     
     #XSPH correction
-    s.add_operation(solver.SPHSummationODE(
+    s.add_operation(solver.SPHIntegration(
             
-            sph.XSPHCorrection(eps=eps), 
+            sph.XSPHCorrection.withargs(eps=eps), 
             on_types=[Fluid], from_types=[Fluid],
             updates=['x','y'], id='xsph')
                     
                     )
     
     #Position stepping
-    s.add_operation(solver.SPHSimpleODE(
+    s.add_operation(solver.SPHIntegration(
             
-            sph.PositionStepping(), 
+            sph.PositionStepping,
             on_types=[Fluid], 
             updates=['x','y'], id='step')
                     
@@ -287,7 +286,7 @@ def dam_break_run():
     ret['run 1 iteration'] = t
     
     t = get_time()
-    s.dump_output(s.t)
+    s.dump_output()
     t = get_time() - t
     ret['dump_output'] = t
     
