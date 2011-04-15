@@ -23,17 +23,15 @@ else:
 # `Application` class.
 ############################################################################## 
 class Application(object):
-    """Class used by any SPH application.
-    """
+    """ Class used by any SPH application """
 
     def __init__(self, load_balance=True, fname=None):
-        """
-        Constructor.
+        """ Constructor
 
-        **Parameters**
-
-         - load_balance - A boolean which determines if automatic load
-                          balancing is to be performed or not.
+        Parameters
+        ----------
+        load_balance : A boolean which determines if automatic load
+                          balancing is to be performed or not
 
         """
         self._solver = None 
@@ -181,16 +179,16 @@ class Application(object):
                       stream=True):
         """Setup logging for the application.
         
-        **Parameters**
-
-         - filename - The filename to log messages to.  If this is None
+        Parameters
+        ----------
+        filename : The filename to log messages to.  If this is None
                       a filename is automatically chosen and if it is an
-                      empty string, no file is used.
+                      empty string, no file is used
 
-         - loglevel - The logging level.
+        loglevel : The logging level
 
-         - stream - Boolean indicating if logging is also printed on
-                    stderr.
+        stream : Boolean indicating if logging is also printed on
+                    stderr
         """
         # logging setup
         logger = logging.getLogger()
