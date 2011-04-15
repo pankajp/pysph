@@ -6,16 +6,12 @@ import numpy
 import pysph.solver.api as solver
 
 from os import path
-import time
 
-np = 256*256*16
+np = 16*16*16
 
-x = numpy.zeros((np,), vec.float16)
-
-for i in range(np):
-    x[i][12] = 10
-    x[i][13] = 20
-    x[i][14] = 30
+x = numpy.ones(np, numpy.float32)
+y = numpy.ones(np, numpy.float32)
+z = numpy.ones(np, numpy.float32)
 
 platform = cl.get_platforms()[0]
 devices = platform.get_devices()
@@ -26,21 +22,28 @@ q = cl.CommandQueue(ctx, device)
 
 mf = cl.mem_flags
 
-xbuf = cl.Buffer(ctx, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=x)
+xbuf = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=x)
+ybuf = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=y)
+zbuf = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=z)
+
+args = (ybuf, zbuf)
 
 pysph_root = solver.get_pysph_root()
 src = open(path.join(pysph_root, 'solver/cl_common.cl')).read()
 
 prog = cl.Program(ctx, src).build(options=solver.get_cl_include())
 
-t1 = time.time()
-prog.set_to_zero(q, (256, 256, 16), (1,1,1), xbuf)
-print "Time taken: ", time.time() - t1
+# launch the OpenCL kernel
+prog.set_tmp_to_zero(q, (16, 16, 16), (1,1,1), xbuf, *args)
 
-out = numpy.empty(x.shape, x.dtype)
-cl.enqueue_read_buffer(q, xbuf, out).wait()
+# read the buffer contents back to the arrays
+cl.enqueue_read_buffer(q, xbuf, x).wait()
+cl.enqueue_read_buffer(q, ybuf, y).wait()
+cl.enqueue_read_buffer(q, zbuf, z).wait()
 
 for i in range(np):
-    assert out[i][12] == 0.0
-    assert out[i][13] == 0.0
-    assert out[i][14] == 0.0
+    assert x[i] == 0.0
+    assert y[i] == 0.0
+    assert z[i] == 0.0
+
+print "OK"

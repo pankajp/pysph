@@ -3,7 +3,7 @@ cimport numpy
 
 # local imports
 from pysph.base.particle_array cimport ParticleArray, LocalReal
-from pysph.base.carray cimport DoubleArray, IntArray, LongArray
+from pysph.base.carray cimport DoubleArray, IntArray, LongArray, BaseArray
 from pysph.base.point cimport Point, cPoint, cPoint_sub
 
 from pysph.base.kernels cimport KernelBase
@@ -30,6 +30,9 @@ cdef class SPHFunction:
     # OpenCL kernel source file and function name
     cdef public str cl_kernel_src_file
     cdef public str cl_kernel_function_name
+
+    # OpenCL kernel name
+    cdef public object cl_kernel
     
     cdef public DoubleArray s_h, s_m, s_rho
     cdef public DoubleArray s_x, s_y, s_z

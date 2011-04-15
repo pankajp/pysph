@@ -132,6 +132,7 @@ cdef class SPHFunction:
         self.dst_reads = ['x','y','z','h','tag']
 
         self.cl_kernel_src_file = ''
+        self.cl_kernel = object()
         
         if setup_arrays:
             self.setup_arrays()
@@ -224,6 +225,9 @@ cdef class SPHFunction:
         Override this in a subclass to do any operations at every iteration
         """
         pass
+
+    def set_cl_kernel(self, object cl_kernel):
+        self.cl_kernel = cl_kernel
 
 ################################################################################
 # `SPHFunctionParticle` class.

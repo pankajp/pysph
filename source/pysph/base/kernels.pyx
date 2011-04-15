@@ -251,6 +251,9 @@ cdef class KernelBase:
     def py_fac(self, h):
         return self._fac(h)
 
+    def get_type(self):
+        raise NotImplementedError, "Type for KernelBase requested!"
+
 ##############################################################################
 # `Poly6Kernel` class.
 ##############################################################################
@@ -419,6 +422,9 @@ cdef class CubicSplineKernel(KernelBase):
 
     cpdef double radius(self):
         return 2
+
+    def get_type(self):
+        return 1
 ##############################################################################
 
 

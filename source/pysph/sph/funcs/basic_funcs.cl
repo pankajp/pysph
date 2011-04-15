@@ -2,9 +2,9 @@
 #include "cl_common.cl"
 #include "kernels.h"
 
-__kernel void SPHRho_CL(__global float16* dst, __global float16* src,
-			__global int* dst_tag, __global int* np,
-			__global int* kernel_type,  __global int* dim )
+__kernel void SPHRho(__global float16* dst, __global float16* src,
+		     __global int* dst_tag, __global int* np,
+		     __global int* kernel_type,  __global int* dim )
 
 {
   // x, y, z, u, v, w, h, m, rho, p, e, cs tmpx  tmpy  tmpz  x

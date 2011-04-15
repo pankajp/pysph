@@ -75,10 +75,10 @@ class ParticleArrayCLTestCase(unittest.TestCase):
             self.assertTrue( pa.cl_properties.has_key(cl_prop) )
 
             # get the OpenCL buffer for the property
-            buffer = pa.cl_properties.get(cl_prop)
+            buffer = pa.get_cl_buffer(prop)
 
             # get the PySPH numpy array for the property
-            pysph_arr = pa.properties[prop].get_npy_array()
+            pysph_arr = pa.get(prop)
 
             # read the contents of the OpenCL buffer in a dummy array
             _array = numpy.empty_like(pysph_arr)

@@ -1,6 +1,6 @@
 """ A wrapper around the sph calc and function to make it simpler """
 
-import pysph.sph.api as sph
+from pysph.sph.sph_calc import SPHCalc, CLCalc
 
 import pysph.base.api as base
 Fluid = base.ParticleType.Fluid
@@ -201,8 +201,8 @@ class SPHOperation(object):
                 snum = calc_data[i]['snum']
                 id = calc_data[i]['id']
                 
-                calc = sph.SPHCalc(
-
+                calc = SPHCalc(
+                    
                     particles=particles, sources=srcs, dest=dest,
                     funcs=funcs, kernel=kernel, updates=self.updates,
                     integrates=self.integrates, dnum=dnum, id=id,

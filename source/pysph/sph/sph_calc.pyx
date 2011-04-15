@@ -28,11 +28,10 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
     FirstOrderCorrectionMatrixGradient, FirstOrderCorrectionVectorGradient
 
 from pysph.base.carray cimport IntArray, DoubleArray
-import pysph.solver.api as solver
 
 from os import path
 
-from pysph.solver.cl_utils import HAS_CL, get_cl_include
+from pysph.solver.cl_utils import HAS_CL, get_cl_include, get_pysph_root
 if HAS_CL:
     import pyopencl as cl
     from pyopencl.array import vec
@@ -181,7 +180,7 @@ cdef class SPHCalc:
 
         func = self.funcs[0]
         
-        src = solver.get_pysph_root()
+        src = get_pysph_root()
         src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
 
         if not path.isfile(src):
@@ -280,26 +279,23 @@ cdef class SPHCalc:
 class CLCalc(SPHCalc):
     """ OpenCL aware SPHCalc """
 
-    def set_context(self, context):
+    def setupCL(self, context):
+        """ Setup the CL related stuff """
+
         self.context = context
         self.devices = context.devices
 
         # create a command queue with the first device on the context 
         self.queue = cl.CommandQueue(context, self.devices[0])
 
-        self.setupCL()
-
-    def setupCL(self):
-        """ Setup the CL related stuff """
-
-        self.setup_program()
-
         # set up the device buffers for the srcs and dest
 
-        self.dest.setupCL(self.queue)
+        self.dest.setupCL(self.context)
 
         for src in self.sources:
-            src.setupCL(self.queue)
+            src.setupCL(self.context)
+
+        self.setup_program()
 
     def setup_program(self):
         """ Setup the OpenCL function used by this Calc
@@ -315,89 +311,77 @@ class CLCalc(SPHCalc):
         
         """
         
-        prog_src_file = self.cl_kernel_src_file
-
-        prog_src_file = open(prog_src_file).read()
+        prog_src_file = open(self.cl_kernel_src_file).read()
 
         build_options = get_cl_include()
 
         self.prog = cl.Program(self.context, prog_src_file).build(
             build_options)
+
+        # find by name the OpenCL kernel for this operation
+        for cl_kernel in self.prog.all_kernels():
+            if cl_kernel.function_name == self.cl_kernel_function_name:
+                break
+
+        # set the OpenCL kernel for each of the SPHFunctions
+        for func in self.funcs:
+            func.set_cl_kernel(cl_kernel)
         
     def sph(self):
         """ Evaluate the contribution from the sources on the
         destinations using OpenCL.
 
-        Particles are represented as float16 arrays and are assumed to
-        be defined in ParticleArray itselt as a result of a call to
-        ParticleArray's `setupCL` function with a CommandQueue as
-        argument.
+        Each of the ParticleArray's properties has an equivalent device
+        representation. The devie buffers have the suffix `cl_` so that
+        a numpy array `rho` on the host has the buffer `cl_rho` on the device.
 
-        Thus device buffer representaions for the ParticleArray are
-        obtained as:
-
-        pa.pa_buf_device
-        pa.pa_tag_device
-
-        pa_buf_device is a float16 array with the following implicit
-        ordering of variables
-
-        0:x, 1:y, 2:z, 3:u, 4:v, 5:w, 6:h, 7:m, 8:rho, 9:p, 10:e, 11:cs
-        12:tmpx, 13:tmpy, 14:tmpz, 15:x
-
-        pa_tag_device is an int2 array with the following ordering
-        0:tag, 1:idx
-
-        Since an SPH function operates between a source and
-        destination ParticleArray, we need to pass in the
-        corresponding buffers.
-
-        Output is computed in tmpx, tmpy and tmpz by default and since
-        they are defined as components 12, 13, and 14 respectively,
-        they need not be explicitly passed.
-
-        The functions implemented in OpenCL have the signature:
-
-        __kernel void function(__global float16* dst, __global float16* src,
-                               __global int2* dst_tag, __global int* np,
-                               __global_int* kernel_type, __global_int* dim)
-
-        I think this should suffice for the evaluation of the function
-        and hence the contribution from a source to a destination.
+        The device buffers are created upon a call to CLCalc's setupCL
+        function. The CommandQueue is created using the first device
+        in the context as default. This could be changed in later
+        revisions.
         
+        Each of the device buffers can be obtained like so:
+
+        pa.get_cl_buffer(prop)
+
+        where prop may not be suffixed with 'cl_'
+        
+        The OpenCL kernel functions have the signature:
+
+        __kernel void function(__global int* kernel_type, __global int* dim,
+                               __global int* nbrs,
+                               __global float* d_x, __global float* d_y,
+                               __global_float* d_z, __global float* d_h,
+                               __global int* d_tag,
+                               __global float* s_x, __global float* s_y,
+                               ...,
+                               __global float* tmpx, ...)
+
+        Thus, the first three qrguments are the sph kernel type,
+        dimension and a list of neighbors for the destination particle.
+
+        The following properties are the destination particle array
+        properties that are required. This is defined in each function
+        as the attribute dst_reads
+
+        The last arguments are the source particle array properties
+        that are required. This i defined in each function as the
+        attribute src_reads.
+
+        The final arguments are the output arrays to which we want to
+        append the result. The number of the output arguments can vary
+        based on the function.
+    
         """
         
-        # set the tmpx, tmpy and tmpz arrays to 0
+        # set the tmpx, tmpy and tmpz arrays for dest to 0
 
-        self.reset_output_arrays()
+        self.cl_reset_output_arrays()
 
-        dst = self.dest
-        npd = dst.get_number_of_particles()
+        for func in self.funcs:
+            func.cl_eval(self.queue, self.context, self.kernel)
 
-        mf = cl.mem_flags
-
-        sph_kernel_type = cl.array.Array(self.queue, (1,),numpy.int32)
-        sph_kernel_type.set(numpy.array([1,], numpy.int32), self.queue)
-
-        dim = cl.array.Array(self.queue, (1,), dtype=numpy.int32)
-        dim.set(numpy.array([self.kernel.dim,], numpy.int32), self.queue)
-
-        for cl_kernel in self.prog.all_kernels():
-            if cl_kernel.function_name == self.cl_kernel_function_name:
-                break
-
-        for i in range(self.nsrcs):
-            src = self.sources[i]
-
-            np = cl.array.Array(self.queue, (1,), numpy.int32)
-            np.set(numpy.array([src.get_number_of_particles()], numpy.int32))
-
-            cl_kernel(self.queue, (npd, 1, 1), (1,1,1),
-                      dst.pa_buf_device, src.pa_buf_device,
-                      dst.pa_tag_device, np.data, sph_kernel_type.data,
-                      dim.data)
-
-    def reset_output_arrays(self):
+    def cl_reset_output_arrays(self):
         """ Reset the dst tmpx, tmpy and tmpz arrays to 0
 
         Since multiple functions contribute to the same LHS value, the
@@ -410,8 +394,15 @@ class CLCalc(SPHCalc):
         if not self.dest.cl_setup_done:
             raise RuntimeWarning, "CL not setup on destination array!"
 
+        dest = self.dest
+
+        cl_tmpx = dest.get_cl_buffer('tmpx')
+        cl_tmpy = dest.get_cl_buffer('tmpy')
+        cl_tmpz = dest.get_cl_buffer('tmpz')
+
         npd = self.dest.get_number_of_particles()
-        self.prog.set_tmp_to_zero(self.queue, (npd,1,1), (1,1,1),
-                                  self.dest.pa_buf_device)
+
+        self.prog.set_tmp_to_zero(self.queue, (npd, 1, 1), (1, 1, 1),
+                                  cl_tmpx, cl_tmpy, cl_tmpz)
 
 #############################################################################
