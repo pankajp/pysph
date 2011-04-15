@@ -1,13 +1,14 @@
 # Standard imports.
 import logging, os
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from os.path import basename, splitext
 import sys
 
 from utils import mkdir
 
 # PySPH imports.
-from pysph.base.particles import Particles, get_particle_array, ParticleArray
+from pysph.base.particles import Particles, ParticleArray
+from pysph.solver.controller import CommandManager
 
 # MPI conditional imports
 HAS_MPI = True
@@ -22,17 +23,15 @@ else:
 # `Application` class.
 ############################################################################## 
 class Application(object):
-    """Class used by any SPH application.
-    """
+    """ Class used by any SPH application """
 
     def __init__(self, load_balance=True, fname=None):
-        """
-        Constructor.
+        """ Constructor
 
-        **Parameters**
-
-         - load_balance - A boolean which determines if automatic load
-                          balancing is to be performed or not.
+        Parameters
+        ----------
+        load_balance : A boolean which determines if automatic load
+                          balancing is to be performed or not
 
         """
         self._solver = None 
@@ -151,22 +150,45 @@ class Application(object):
         parser.add_option("--xsph", action="store", dest="eps", type="float",
                           default=None, 
                           help="Use XSPH correction with epsilon value")
+        
+        # solver commandline interface
+        interfaces = OptionGroup(parser, "Interfaces",
+                                 "Add interfaces to the solver")
+        
+        interfaces.add_option("--interactive", action="store_true",
+                              dest="cmd_line", default=False,
+                              help=("Add an interactive commandline interface "
+                                    "to the solver"))
+        
+        interfaces.add_option("--xml-rpc", action="store",
+                              dest="xml_rpc", metavar='[HOST:]PORT',
+                              help=("Add an XML-RPC interface to the solver; "
+                                    "HOST=0.0.0.0 by default"))
+        
+        interfaces.add_option("--multiproc", action="store",
+                              dest="multiproc", metavar='[[AUTHKEY@]HOST:]PORT',
+                              help=("Add a python multiprocessing interface "
+                                    "to the solver; "
+                                    "AUTHKEY=pysph, HOST=0.0.0.0 by default"))
+        
+        parser.add_option_group(interfaces)
+    
 
     def _setup_logging(self, filename=None, 
                       loglevel=logging.WARNING,
                       stream=True):
         """Setup logging for the application.
         
-        **Parameters**
-
-         - filename - The filename to log messages to.  If this is None
+        Parameters
+        ----------
+        filename : The filename to log messages to.  If this is None
                       a filename is automatically chosen and if it is an
-                      empty string, no file is used.
+                      empty string, no file is used
 
-         - loglevel - The logging level.
+        loglevel : The logging level
 
-         - stream - Boolean indicating if logging is also printed on
-                    stderr.
+        stream : Boolean indicating if logging is also printed on
+                    stderr
         """
         # logging setup
         logger = logging.getLogger()
@@ -185,11 +207,11 @@ class Application(object):
     ######################################################################
     # Public interface.
     ###################################################################### 
-    def process_command_line(self):
+    def process_command_line(self, args=None):
         """Parse any command line arguments.  Add any new options before
         this is called.  This also sets up the logging automatically.
         """
-        (options, args) = self.opt_parse.parse_args()
+        (options, args) = self.opt_parse.parse_args(args)
         self.options = options
         self.args = args
         
@@ -280,6 +302,37 @@ class Application(object):
             solver.set_xsph(self.options.eps)
 
         solver.setup_integrator(self.particles)
+        
+        # add solver interfaces
+        self.command_manager = CommandManager(solver, self.comm)
+        solver.set_command_handler(self.command_manager.execute_commands)
+        
+        # commandline interface
+        if self.options.cmd_line:
+            from pysph.solver.solver_interfaces import CommandlineInterface
+            self.command_manager.add_interface(CommandlineInterface().start)
+        
+        # XML-RPC interface
+        if self.options.xml_rpc:
+            from pysph.solver.solver_interfaces import XMLRPCInterface
+            addr = self.options.xml_rpc
+            idx = addr.find(':')
+            host = "0.0.0.0" if idx == -1 else addr[:idx]
+            port = int(addr[idx+1:])
+            self.command_manager.add_interface(XMLRPCInterface((host,port)).start)
+        
+        # python MultiProcessing interface
+        if self.options.multiproc:
+            from pysph.solver.solver_interfaces import MultiprocessingInterface
+            addr = self.options.multiproc
+            idx = addr.find('@')
+            authkey = "pysph" if idx == -1 else addr[:idx] 
+            addr = addr[idx+1:]
+            idx = addr.find(':')
+            host = "0.0.0.0" if idx == -1 else addr[:idx]
+            port = int(addr[idx+1:])
+            self.command_manager.add_interface(MultiprocessingInterface((host,port),
+                                                authkey=authkey).start)
 
     def run(self):
         """Run the application."""

@@ -2,7 +2,7 @@
 
 import os
 from utils import PBar, savez_compressed, savez
-from cl_utils import get_cl_devices
+from cl_utils import get_cl_devices, HAS_CL
 
 import pysph.base.api as base
 
@@ -19,41 +19,41 @@ Fluids = base.ParticleType.Fluid
 class Solver(object):
     """ Base class for all PySPH Solvers
 
-    Attributes:
-    ------------
-    particles -- the particle arrays to operate on
-
-    integrator_type -- the class of the integrator. This may be one of any 
-                       defined in solver/integrator.py
-
-    kernel -- the kernel to be used throughout the calculations. This may 
-              need to be modified to handle several kernels.
-
-    operation_dict -- an internal structure indexing the operation id and 
-                      the corresponding operation as a dictionary
-
-    order -- a list of strings specifying the order of an SPH simulation.
+    **Attributes**
     
-    t -- the internal time step counter
+    - particles -- the particle arrays to operate on
 
-    pre_step_functions -- a list of functions to be performed before stepping
+    - integrator_type -- the class of the integrator. This may be one of any 
+      defined in solver/integrator.py
 
-    post_step_functions -- a list of functions to execute after stepping
+    - kernel -- the kernel to be used throughout the calculations. This may 
+      need to be modified to handle several kernels.
 
-    pfreq -- the output print frequency
+    - operation_dict -- an internal structure indexing the operation id and 
+      the corresponding operation as a dictionary
 
-    dim -- the dimension of the problem
+    - order -- a list of strings specifying the order of an SPH simulation.
+    
+    - t -- the internal time step counter
 
-    kernel_correction -- flag to indicate type of kernel correction.
-                         Defaults to -1 for no correction
+    - pre_step_functions -- a list of functions to be performed before stepping
 
-    pid -- the processor id if running in parallel
+    - post_step_functions -- a list of functions to execute after stepping
 
-    eps -- the epsilon value to use for XSPH stepping. 
-           Defaults to -1 for no XSPH
+    - pfreq -- the output print frequency
 
-    position_stepping_operations -- the dictionary of position stepping 
-                                    operations.
+    - dim -- the dimension of the problem
+
+    - kernel_correction -- flag to indicate type of kernel correction.
+      Defaults to -1 for no correction
+
+    - pid -- the processor id if running in parallel
+
+    - eps -- the epsilon value to use for XSPH stepping. 
+      Defaults to -1 for no XSPH
+
+    - position_stepping_operations -- the dictionary of position stepping 
+      operations.
     
     """
     
@@ -75,6 +75,8 @@ class Solver(object):
         self.operation_dict = {}
         self.order = []
         self.t = 0
+        self.count = 0
+        self.execute_commands = None
 
         self.pre_step_functions = []
         self.post_step_functions = []
@@ -111,13 +113,12 @@ class Solver(object):
         
         """ Specify an acceptable list of types to step
 
-        Parameters:
-        -----------
-        
-        types -- a list of acceptable types eg Fluid, Solid
+        Parameters
+        ----------
+        types : a list of acceptable types eg Fluid, Solid
 
-        Notes:
-        ------
+        Notes
+        -----
         The types are defined in base/particle_types.py
 
         """
@@ -135,16 +136,16 @@ class Solver(object):
     def add_operation_xsph(self, eps, hks=False):
         """ Set the XSPH operation if requested
 
-        Parameters:
-        -----------
-        eps -- the epsilon value to use for XSPH stepping
+        Parameters
+        ----------
+        eps : the epsilon value to use for XSPH stepping
         
-        Notes:
-        ------
+        Notes
+        -----
         The position stepping operation must be defined. This is because
         the XSPH operation is setup for those arrays that need stepping.
 
-        The smoothing kernel used for this operation is the CubicSpline!
+        The smoothing kernel used for this operation is the CubicSpline
 
         """       
         
@@ -171,14 +172,14 @@ class Solver(object):
     def add_operation(self, operation, before=False, id=None):
         """ Add an SPH operation to the solver.
 
-        Parameters:
-        -----------
-        operation -- the operation (:class:`SPHOperation`) to add
-        before -- flag to indicate insertion before an id. Defaults to False
-        id -- The id where to insert the operation. Defaults to None
+        Parameters
+        ----------
+        operation : the operation (:class:`SPHOperation`) to add
+        before : flag to indicate insertion before an id. Defaults to False
+        id : The id where to insert the operation. Defaults to None
 
-        Notes:
-        ------
+        Notes
+        -----
         An SPH operation typically represents a single equation written
         in SPH form. SPHOperation is defined in solver/sph_equation.py
 
@@ -188,8 +189,8 @@ class Solver(object):
         Similarly, an error is raised if an invalid 'id' is provided 
         as an argument.
 
-        Usage Examples:
-        ---------------
+        Examples
+        --------
         (1)        
 
         >>> solver.add_operation(operation)
@@ -233,13 +234,13 @@ class Solver(object):
     def replace_operation(self, id, operation):
         """ Replace an operation.
 
-        Parameters:
-        -----------
-        id -- the operation with id to replace
-        operation -- The replacement operation
+        Parameters
+        ----------
+        id : the operation with id to replace
+        operation : The replacement operation
 
-        Notes:
-        ------
+        Notes
+        -----
         The id to replace is taken from the provided operation. 
         
         An error is raised if the provided operation does not exist.
@@ -261,12 +262,12 @@ class Solver(object):
     def remove_operation(self, id_or_operation):
         """ Remove an operation with id
 
-        Parameters:
-        -----------
-        id_or_operation -- the operation to remove
+        Parameters
+        ----------
+        id_or_operation : the operation to remove
 
-        Notes:
-        ------
+        Notes
+        -----
         Remove an operation with either the operation object or the 
         operation id.
 
@@ -287,8 +288,6 @@ class Solver(object):
     def set_order(self, order):
         """ Install a new order 
 
-        Notes:
-        ------
         The order determines the manner in which the operations are
         executed by the integrator.
 
@@ -309,8 +308,6 @@ class Solver(object):
     def setup_integrator(self, particles=None):
         """ Setup the integrator for the solver
 
-        Notes:
-        ------
         The solver's processor id is set if the in_parallel flag is set 
         to true.
 
@@ -395,7 +392,7 @@ class Solver(object):
 
     def set_output_directory(self, path):
         """ Set the output directory """
-        self.path = path
+        self.output_directory = path
 
     def set_kernel_correction(self, kernel_correction):
         """ Set the kernel correction manager for each calc """
@@ -404,11 +401,19 @@ class Solver(object):
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
 
+    def set_command_handler(self, callable, command_interval=1):
+        """ set the `callable` to be called at every `command_interval` iteration
+        
+        the `callable` is called with the solver instance as an argument
+        """
+        self.execute_commands = callable
+        self.command_interval = command_interval
+
     def solve(self, show_progress=False):
         """ Solve the system
 
-        Notes:
-        ------
+        Notes
+        -----
         Pre-stepping functions are those that need to be called before
         the integrator is called. 
 
@@ -416,16 +421,13 @@ class Solver(object):
         the stepping within the integrator.
 
         """
-        tf = self.tf
-        dt = self.dt
-
-        count = 0
-        maxval = int((tf - self.t)/dt +1)
+        self.count = 0
+        maxval = int((self.tf - self.t)/self.dt +1)
         bar = PBar(maxval, show=show_progress)
 
-        while self.t < tf:
-            self.t += dt
-            count += 1
+        while self.t < self.tf:
+            self.t += self.dt
+            self.count += 1
             
             #update the particles explicitly
 
@@ -434,25 +436,29 @@ class Solver(object):
             # perform any pre step functions
             
             for func in self.pre_step_functions:
-                func.eval(self, count)
+                func.eval(self, self.count)
 
             # perform the integration 
 
-            logger.info("Time %f, time step %f "%(self.t, dt))
+            logger.info("Time %f, time step %f "%(self.t, self.dt))
 
-            self.integrator.integrate(dt)
+            self.integrator.integrate(self.dt)
 
             # perform any post step functions
             
             for func in self.post_step_functions:
-                func.eval(self, count)
+                func.eval(self, self.count)
 
             # dump output
 
-            if count % self.pfreq == 0:
+            if self.count % self.pfreq == 0:
                 self.dump_output(*self.print_properties)
 
             bar.update()
+        
+            if self.execute_commands is not None:
+                if self.count % self.command_interval == 0:
+                    self.execute_commands(self)
 
         bar.finish()
 
@@ -473,8 +479,8 @@ class Solver(object):
 
         for pa in self.particles.arrays:
             name = pa.name
-            _fname=os.path.join(self.path,fname + name + '_' + str(self.t) + \
-                                '.npz')
+            _fname = os.path.join(self.output_directory,
+                                  fname + name + '_' + str(self.t) + '.npz')
             
             if self.detailed_output:
                 savez(_fname, dt=self.dt, **pa.properties)
@@ -489,8 +495,6 @@ class Solver(object):
     def setup_solver(self):
         """ Implement the basic solvers here 
 
-        Notes:
-        ------
         All subclasses of Solver may implement this function to add the 
         necessary operations for the problem at hand.
 
@@ -589,10 +593,9 @@ class Solver(object):
     def cl_device_allocate(self, pa_props):
         """ Allocate memory on the device for each particle array.
 
-        Parameters:
-        -----------
-
-        pa_props -- A dictionary of props for each particle array.
+        Parameters
+        ----------
+        pa_props : A dictionary of props for each particle array.
 
         """
         for prop_name in pa_props:

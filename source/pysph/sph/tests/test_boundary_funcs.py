@@ -70,7 +70,7 @@ class BoundaryForceTestCase(unittest.TestCase):
 
         self.kernel = kernel = base.CubicSplineKernel(dim=2)
         
-        self.solver = solver.Solver(kernel, solver.EulerIntegrator)
+        self.solver = solver.Solver(kernel.dim, solver.EulerIntegrator)
 
         self.solver.add_operation(solver.SPHIntegration(
                 

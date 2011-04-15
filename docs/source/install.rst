@@ -13,7 +13,7 @@ Assuming you have administrative rights, install the following
 essential dependencies
 
 * `Numpy`_: >= 1.0.4
-* `Cython`_: >= 0.13
+* `Cython`_: >= 0.14
 * `setuptools`_
 
 To install these::

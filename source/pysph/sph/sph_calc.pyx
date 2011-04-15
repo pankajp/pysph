@@ -184,6 +184,7 @@ cdef class SPHCalc:
         src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
 
         if not path.isfile(src):
+            print src
             raise RuntimeWarning, "Kernel file does not exist!"
 
         self.cl_kernel_src_file = src
