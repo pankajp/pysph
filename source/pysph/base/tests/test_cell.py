@@ -449,7 +449,7 @@ class TestCellManager(unittest.TestCase):
         self.assertEqual(len(cm.array_indices), 0)
         self.assertEqual(len(cm.arrays_to_bin), 0)
         self.assertEqual(cm.min_cell_size, -1.0)
-        self.assertEqual(cm.max_cell_size, 1000)
+        self.assertEqual(cm.max_cell_size, 0)
         self.assertEqual(cm.jump_tolerance, 1)
         self.assertEqual(cm.coord_x, 'x')
         self.assertEqual(cm.coord_y, 'y')

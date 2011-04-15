@@ -43,10 +43,10 @@ def create_t_func(func_getter):
             da2.set_data(z)
             pa = get_particle_array(x=x, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
                                     tx=z, ty=m, tz=z, nx=m, ny=z, nz=z, u=z, v=z, w=z,
-                                    ubar=z, vbar=z, wbar=z)
+                                    ubar=z, vbar=z, wbar=z, q=m)
             pb = get_particle_array(x=x+0.1**0.5, y=y, z=z, h=h, mu=mu, rho=rho, m=m, tmp=z,
                                     tx=m, ty=z, tz=z, nx=z, ny=m, nz=z, u=z, v=z, w=z,
-                                    ubar=z, vbar=z, wbar=z)
+                                    ubar=z, vbar=z, wbar=z, q=m)
             particles = Particles(arrays=[pa, pb])
             
             func = func_getter.get_func(pa, pb)

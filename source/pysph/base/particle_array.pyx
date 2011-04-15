@@ -118,8 +118,10 @@ cdef class ParticleArray:
         """
         Constructor.
 
-	    :param str name: name of this particle array
-        :param dict **props: dictionary of properties for every particle
+        Parameters
+        ----------
+        name : (str) name of this particle array.
+        props : (dict) dictionary of properties for every particle in this array
 
     	"""
         self.properties = {'tag':LongArray(0), 'group':LongArray(0),
