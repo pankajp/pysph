@@ -82,6 +82,6 @@ install : $(DIRS)
 clang :
 	python $(ROOT)/source/pysph/base/generator.py
 	for f in $(DIRS); do $(MAKE) -f $(MAKEFILE) -C $${f} cythoncpp ROOT=$(ROOT); done
-	cd source/pysph/; for f in */*.cpp */*/*.cpp; do clang++ -g -shared -fPIC -o $${f%.*}.so $$f -I /usr/include/python2.7/ $(shell mpicxx --showme:compile) $(shell mpicxx --showme:link); done
+	cd source/pysph/; for f in */*.cpp */*/*.cpp; do clang++ -g -O2 -shared -fPIC -o $${f%.*}.so $$f -I /usr/include/python2.7/ $(shell mpicxx --showme:compile) $(shell mpicxx --showme:link); done
 
 

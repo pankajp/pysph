@@ -8,9 +8,7 @@ cdef extern from "math.h":
 
 ##############################################################################
 cdef class EnergyEquationNoVisc(SPHFunctionParticle):
-    """
-    Class to compute the interaction of a boundary particle on a fluid 
-    particle.
+    """ Class to compute interaction of boundary particles on fluid particles
     """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
@@ -34,8 +32,6 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         evaluate boundary forces as described in becker07
         
-        ::math::
-
         """
         cdef double dot, tmp, h
         cdef cPoint vab
@@ -89,9 +85,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
 ##############################################################################
 cdef class EnergyEquationAVisc(SPHFunctionParticle):
-    """
-    Class to compute the interaction of a boundary particle on a fluid 
-    particle.
+    """ Class to compute interaction of boundary particles on fluid particles
     """
 
     #Defined in the .pxd file
@@ -125,8 +119,6 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         evaluate boundary forces as described in becker07
         
-        ::math::
-
         """
 
         cdef double test, gamma, alpha, beta, cs
@@ -206,9 +198,8 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 # `EnergyEquation` class.
 ################################################################################
 cdef class EnergyEquation(SPHFunctionParticle):
-    """
-        INSERTFORMULA
-
+    """ Energy Equation
+    
     """
     #Defined in the .pxd file
     #cdef public double alpha
@@ -324,15 +315,19 @@ cdef class EnergyEquation(SPHFunctionParticle):
 # `ArtificialHeat` class.
 ################################################################################
 cdef class ArtificialHeat(SPHFunctionParticle):        
-    """ Artificial heat condiction term
-
-    ..math::
-
-    \frac{1}{\rho}\nabla\,\cdot(q\nabla(u)) = -\sum_{b=1}^{b=N}
-    m_b \frac{(q_a + q_b)(u_a - u_b)}{\rho_{ab}(|\vec{x_a} - \vec{x_b}|^2 +
-    (h\eta)^2)}\,(\vec{x_a} - vec{x_b})\cdot \nabla_a W_{ab}
-
-    q_a = h_a (g1 c_a + g2 h_a (abs(div_a) - div_a))
+    """ Artificial heat conduction term
+    
+    Notes
+    -----
+    The following equation is used in the evaluation
+    
+    .. math::
+        
+        \frac{1}{\rho}\nabla\,\cdot(q\nabla(u)) = -\sum_{b=1}^{b=N}
+        m_b \frac{(q_a + q_b)(u_a - u_b)}{\rho_{ab}(|\vec{x_a} - \vec{x_b}|^2 +
+        (h\eta)^2)}\,(\vec{x_a} - vec{x_b})\cdot \nabla_a W_{ab}
+        
+        q_a = h_a (g1 c_a + g2 h_a (abs(div_a) - div_a))
 
     """
     
@@ -345,27 +340,16 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         self.id = 'aheat'
         self.tag = "energy"
 
-        self.src_reads.extend( ['u','v','w','p','cs','e'] )
-        self.dst_reads.extend( ['u','v','w','p','cs','e'] )
+        self.src_reads.extend( ['u','v','w','p','cs','e','q'] )
+        self.dst_reads.extend( ['u','v','w','p','cs','e','q'] )
 
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
         SPHFunctionParticle.setup_arrays(self)
 
-        msg = "Source array %s does not define prop q "%(self.source.name)
-        if not self.source.properties.has_key("q"):
-            raise RuntimeError , msg
-
-        msg = "Dest array %s does not define prop q "%(self.source.name)
-        if not self.dest.properties.has_key("q"):
-            raise RuntimeError , msg
-
         self.s_q = self.source.get_carray("q")
         self.d_q = self.dest.get_carray("q")
-
-        self.src_reads.append('q')
-        self.dst_reads.append('q')                             
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):

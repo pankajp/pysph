@@ -42,11 +42,11 @@ cdef class TaitEquation(SPHFunction):
     
     The pressure is set as:
 
-    P = B[(\frac{\rho}{\rho0})^gamma - 1.0]
+    :math:`P = B[(\frac{\rho}{\rho0})^gamma - 1.0]`
 
     where,
     
-    B = c0^2 \frac{\rho0}{\gamma}
+    :math:`B = c0^2 \frac{\rho0}{\gamma}`
     
     rho0 -- Reference density (default 1000)
     c0 -- sound speed at the reference density (10 * Vmax)
@@ -56,7 +56,7 @@ cdef class TaitEquation(SPHFunction):
 
     The sound speed is then set as
     
-    cs = c0 * (\frac{\rho}{\rho0})^((gamma-1)/2)
+    :math:`cs = c0 * (\frac{\rho}{\rho0})^((gamma-1)/2)`
 
     """
     
