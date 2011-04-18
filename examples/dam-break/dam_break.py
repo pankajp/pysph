@@ -312,7 +312,7 @@ s.add_operation(solver.SPHIntegration(
 
 
 #Gravity force
-s.add_operation(solver.SPHOperation(
+s.add_operation(solver.SPHIntegration(
         
     sph.GravityForce.withargs(gy=-9.81),
     on_types=[Fluid],

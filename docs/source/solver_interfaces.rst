@@ -139,7 +139,7 @@ can be added to a solver::
 
     # add CommandManager to solver
     command_manager = CommandManager(solver)
-    solver.set_command_handler(self.command_manager.execute_commands)
+    solver.set_command_handler(command_manager.execute_commands)
     
     # add the interface
     command_manager.add_interface(simple_interface)

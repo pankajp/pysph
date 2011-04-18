@@ -108,7 +108,7 @@ class Application(object):
                           default=None,
                           help="Total time for the simulation.")
         # --time-step
-        parser.add_option("--time_step", action="store",
+        parser.add_option("--time-step", action="store",
                           type="float",
                           dest="time_step",
                           default=None,

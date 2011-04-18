@@ -36,8 +36,6 @@ if HAS_CL:
     import pyopencl as cl
     from pyopencl.array import vec
 
-cdef int log_level = logger.level
-
 ###############################################################################
 # `SPHCalc` class.
 ###############################################################################
@@ -184,8 +182,7 @@ cdef class SPHCalc:
         src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
 
         if not path.isfile(src):
-            print src
-            raise RuntimeWarning, "Kernel file does not exist!"
+            logger.debug("OpenCL kernel file does not exist: %s"%src)
 
         self.cl_kernel_src_file = src
         self.cl_kernel_function_name = func.cl_kernel_function_name
@@ -301,7 +298,7 @@ class CLCalc(SPHCalc):
     def setup_program(self):
         """ Setup the OpenCL function used by this Calc
         
-        The calc computes the interation on a single destination from
+        The calc computes the interaction on a single destination from
         a list of sources, using the same function.
 
         A call to this function sets up the OpenCL kernel which
@@ -358,7 +355,7 @@ class CLCalc(SPHCalc):
                                ...,
                                __global float* tmpx, ...)
 
-        Thus, the first three qrguments are the sph kernel type,
+        Thus, the first three arguments are the sph kernel type,
         dimension and a list of neighbors for the destination particle.
 
         The following properties are the destination particle array
