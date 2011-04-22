@@ -38,4 +38,10 @@ def get_cl_include():
     return inc_dir
 
 
+def get_scalar_buffer(val, dtype, ctx):
+    """ Return a cl.Buffer object that can be passed as a scalar to kernels """
 
+    mf = cl.mem_flags
+
+    arr = numpy.array([val,], dtype)
+    return cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=arr)

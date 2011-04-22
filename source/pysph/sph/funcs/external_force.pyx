@@ -1,6 +1,10 @@
 #cython: cdivision=True
 import numpy
 
+from pysph.solver.cl_utils import HAS_CL, get_scalar_buffer
+if HAS_CL:
+    import pyopencl as cl
+
 from pysph.base.point cimport Point, cPoint, cPoint_length, cPoint_sub, \
      cPoint_distance
 
@@ -27,7 +31,7 @@ cdef class GravityForce(SPHFunction):
         self.gz = gz
 
         self.cl_kernel_src_file = "external_force.cl"
-        self.cl_kernel_function_name = "Gravityforce"
+        self.cl_kernel_function_name = "GravityForce"
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
@@ -37,11 +41,18 @@ cdef class GravityForce(SPHFunction):
         result[1] = self.gy
         result[2] = self.gz
 
-##############################################################################
+    def cl_eval(self, object queue, object context, object kernel):
 
+        tmpx = self.dest.get_cl_buffer('tmpx')
+        tmpy = self.dest.get_cl_buffer('tmpy')
+        tmpz = self.dest.get_cl_buffer('tmpz')
+
+        self.cl_kernel(queue, self.global_sizes, self.local_sizes,
+                       numpy.float32(self.gx), numpy.float32(self.gy),
+                       numpy.float32(self.gz), tmpx, tmpy, tmpz).wait()
 
 #############################################################################
-# `Vector` class.
+# `VectorForce` class.
 #############################################################################
 cdef class VectorForce(SPHFunction):
     """ Class to compute the vector force on a particle """ 

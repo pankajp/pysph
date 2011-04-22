@@ -1,6 +1,8 @@
 from integrator import EulerIntegrator, RK2Integrator, RK4Integrator,\
     PredictorCorrectorIntegrator, LeapFrogIntegrator
 
+from cl_integrator import CLEulerIntegrator
+
 from sph_equation import SPHIntegration, SPHOperation
 
 from solver import Solver
@@ -24,4 +26,4 @@ from plot import ParticleInformation
 from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
     get_pickled_data, get_pysph_root
 
-from cl_utils import HAS_CL, get_cl_devices, get_cl_include
+from cl_utils import HAS_CL, get_cl_devices, get_cl_include, get_scalar_buffer

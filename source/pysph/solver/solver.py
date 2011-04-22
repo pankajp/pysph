@@ -7,9 +7,13 @@ from cl_utils import get_cl_devices, HAS_CL
 import pysph.base.api as base
 
 from pysph.sph.kernel_correction import KernelCorrectionManager
+from pysph.sph.sph_calc import SPHCalc, CLCalc
 import pysph.sph.api as sph
 
 from sph_equation import SPHOperation, SPHIntegration
+
+from integrator import EulerIntegrator
+from cl_integrator import CLEulerIntegrator
 
 if HAS_CL:
     import pyopencl as cl
@@ -70,6 +74,9 @@ class Solver(object):
 
         self.initialize()
         self.setup_solver()
+
+        self.with_cl = False
+        self.cl_integrator_types = {EulerIntegrator:CLEulerIntegrator}
 
     def initialize(self):
         """ Perform basic initializations """
@@ -345,9 +352,13 @@ class Solver(object):
                     operation.kernel = self.default_kernel
                 
                 calcs = operation.get_calcs(particles, operation.kernel)
+
                 self.integrator.calcs.extend(calcs)
 
-            self.integrator.setup_integrator()
+            if self.with_cl:
+                self.integrator.setup_integrator(self.cl_context)
+            else:
+                self.integrator.setup_integrator()
 
             # Setup the kernel correction manager for each calc
 
@@ -406,6 +417,35 @@ class Solver(object):
         
         for id in self.operation_dict:
             self.operation_dict[id].kernel_correction=kernel_correction
+
+    def set_cl(self, with_cl=False):
+        """ Set the flag to use OpenCL
+
+        This option must be set after all operations are created so that
+        we may switch the default SPHCalcs to CLCalcs.
+
+        The solver must also setup an appropriate context which is used
+        to setup the ParticleArrays on the device.
+        
+        """
+        self.with_cl = with_cl
+
+        if with_cl:
+            if not HAS_CL:
+                raise RuntimeWarning, "PyOpenCL not found!"
+
+            for equation_id in self.order:
+                operation = self.operation_dict[equation_id]
+
+                # set the type of calc to use for the operation
+
+                operation.calc_type = CLCalc
+
+            self.integrator_type = self.cl_integrator_types[
+                self.integrator_type]
+
+            # Setup the OpenCL context
+            self.setup_cl()
 
     def set_command_handler(self, callable, command_interval=1):
         """ set the `callable` to be called at every `command_interval` iteration
@@ -509,100 +549,27 @@ class Solver(object):
         """
         pass                
 
-    def get_particle_array_props(self):
-        """ Return properties of each particle array in a dict """
-        particle_props = {}
-
-        particles = self.particles
-        for array in particles.arrays:
-            particle_props[array.name] = array.properties
-
-        return particle_props
-
     def setup_cl(self):
         """ Setup the OpenCL context and other initializations """
 
         if HAS_CL:
             devices = get_cl_devices()
 
-            gpu_device = devices['GPU'][0]
+            gpu_devices = devices['GPU']
+            cpu_devices = devices['CPU']
 
-            if len(devices['GPU']) > 0:
-                self.HAS_GPU = True
+            # choose the first available device by default
+            if len(gpu_devices) > 0:
+                devices = gpu_devices
+                device = gpu_devices[0]
 
-                self.cl_context = cl.Context(devices=[gpu_device,])
-                self.queue = cl.CommandQueue(self.cl_context,
-                                             devices=[gpu_device,])
+            elif len(cpu_devices) > 0:
+                devices = cpu_devices
+                device = cpu_devices[0]
 
-                pa_props = self.get_pa_props()
+            else:
+                raise RuntimeError, "Did not find any OpenCL devices!"
 
-                for calc in integrator.calcs:
-                    
-                    # set the context and command queue for all calcs
-
-                    calc.setupCL(self.cl_context, self.queue)
-
-                # request allocate memory on the device
-                
-                self.cl_device_allocate(pa_props)
-
-    def get_pa_props(self):
-        """ Return a dictionary with various read, write and
-        read/write properties for the particle arrays in the solver.
-
-        The read properties are defined by the calc functions. The
-        write properties are defined by the integrator.
-
-        The dictionary is keyed on particle array name.
-
-        """
-
-        integrator = self.integrator
-        if not integrator.setup_done:
-            raise RuntimeWarning, 'Integrator not setup! Returning'
-
-        pa_props = {}
-
-        for calc in integrator.calcs:
-            
-            # set the particle array props that need allocating
-
-            dst = calc.dest
-            src = calc.source
-
-            dst_props = pa_props.get(dst.name, None)
-            src_props = pa_props.get(src.name, None)
-
-            if not dst_props:
-                dst_props = {'read':set(),'write':set(),'rwrite':set()}
-            if not src_props:
-                src_props = {'read':set(),'write':set(),'rwrite':set()}
-
-            for prop in calc.dst_reads:
-                dst_props['read'].add(prop)
-
-            for prop in calc.src_reads:
-                src_props['read'].add(prop)                        
-
-            for prop in calc.dst_writes:
-                dst_props['write'].add(prop)
-                
-            for prop in calc.initial_props:
-                dst_props['rwrite'].add(prop)                
-            
-        return pa_props
-
-    def cl_device_allocate(self, pa_props):
-        """ Allocate memory on the device for each particle array.
-
-        Parameters
-        ----------
-        pa_props : A dictionary of props for each particle array.
-
-        """
-        for prop_name in pa_props:
-            read_props = pa_props['read']
-            write_props = pa_props['write']
-            rwrite_props = pa_props['rwrite']
+            self.cl_context = cl.Context(devices=devices)
 
 ############################################################################

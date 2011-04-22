@@ -36,6 +36,8 @@ if HAS_CL:
     import pyopencl as cl
     from pyopencl.array import vec
 
+cdef int log_level = logger.level
+
 ###############################################################################
 # `SPHCalc` class.
 ###############################################################################
@@ -176,17 +178,6 @@ cdef class SPHCalc:
             #    msg += ' SPHCalc.dest'
             #    raise ValueError, msg
 
-        func = self.funcs[0]
-        
-        src = get_pysph_root()
-        src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
-
-        if not path.isfile(src):
-            logger.debug("OpenCL kernel file does not exist: %s"%src)
-
-        self.cl_kernel_src_file = src
-        self.cl_kernel_function_name = func.cl_kernel_function_name
-
     cdef setup_internals(self):
         """ Set the update update arrays and neighbor locators """
 
@@ -277,9 +268,40 @@ cdef class SPHCalc:
 class CLCalc(SPHCalc):
     """ OpenCL aware SPHCalc """
 
-    def setupCL(self, context):
-        """ Setup the CL related stuff """
+    def setup_cl_kernel_file(self):
+        func = self.funcs[0]
+        
+        src = get_pysph_root()
+        src = path.join(src, 'sph/funcs/' + func.cl_kernel_src_file)
 
+        if not path.isfile(src):
+            fname = self.func.cl_kernel_src_file
+            logger.debug("OpenCL kernel file does not exist: %s"%fname)
+            
+        self.cl_kernel_src_file = src
+        self.cl_kernel_function_name = func.cl_kernel_function_name
+
+    def setup_cl(self, context):
+        """ Setup the CL related stuff
+
+        Parameters:
+        -----------
+
+        context -- the OpenCL context to use
+
+        The Calc creates an OpenCL CommandQueue using, by default, the
+        first available device within the context.
+
+        The ParticleArrays are allocated on the device by calling
+        their respective setup_cl functions.
+
+        I guess we would need a clean way to deallocate the device
+        arrays once we are through with one step and move on to the
+        next.
+
+        """
+        self.setup_cl_kernel_file()
+        
         self.context = context
         self.devices = context.devices
 
@@ -288,10 +310,10 @@ class CLCalc(SPHCalc):
 
         # set up the device buffers for the srcs and dest
 
-        self.dest.setupCL(self.context)
+        self.dest.setup_cl(self.context, self.queue)
 
         for src in self.sources:
-            src.setupCL(self.context)
+            src.setup_cl(self.context, self.queue)
 
         self.setup_program()
 
@@ -308,7 +330,7 @@ class CLCalc(SPHCalc):
         SPHFunction
         
         """
-        
+
         prog_src_file = open(self.cl_kernel_src_file).read()
 
         build_options = get_cl_include()

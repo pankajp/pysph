@@ -8,7 +8,7 @@ import pyopencl as cl
 
 NSquareNeighborLocator = base.NeighborLocatorType.NSquareNeighborLocator
 
-np = 20001
+np = 5001
 
 x = numpy.linspace(0,1,np)
 m = numpy.ones_like(x) * (x[1] - x[0])

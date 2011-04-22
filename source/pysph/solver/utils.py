@@ -275,4 +275,5 @@ def get_pickled_data(fname):
 
 
 def get_pysph_root():
-    return os.path.split(pysph.__file__)[0]
+    return os.path.split(pysph.__file__)[0]    
+    

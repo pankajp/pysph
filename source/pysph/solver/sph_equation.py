@@ -90,6 +90,8 @@ class SPHOperation(object):
         if kernel_correction != -1:
             self.has_kernel_correction = True
 
+        self.calc_type = SPHCalc
+
     def get_calc_data(self, particles):
         """ Group particle arrays as src-dst pairs with appropriate
         functions as required by SPHCalc
@@ -201,7 +203,7 @@ class SPHOperation(object):
                 snum = calc_data[i]['snum']
                 id = calc_data[i]['id']
                 
-                calc = SPHCalc(
+                calc = self.calc_type(
                     
                     particles=particles, sources=srcs, dest=dest,
                     funcs=funcs, kernel=kernel, updates=self.updates,

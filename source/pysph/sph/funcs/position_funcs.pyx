@@ -3,7 +3,6 @@
 from pysph.base.particle_array cimport ParticleArray, LocalReal
 from pysph.base.carray cimport DoubleArray, LongArray
 from pysph.base.kernels cimport KernelBase
-#from pysph.sph.sph_funcs import SPHFunction
 
 ###############################################################################
 # `PositionStepping' class.
@@ -40,5 +39,19 @@ cdef class PositionStepping(SPHFunction):
                 output3[i] = self.d_w.data[i]
             else:
                 output1[i] = output2[i] = output3[i] = 0
+
+    def cl_eval(self, object queue, object context, object kernel):
+
+        tmpx = self.dest.get_cl_buffer('tmpx')
+        tmpy = self.dest.get_cl_buffer('tmpy')
+        tmpz = self.dest.get_cl_buffer('tmpz')
+
+        tag = self.dest.get_cl_buffer('tag')
+        d_u = self.dest.get_cl_buffer('u')
+        d_v = self.dest.get_cl_buffer('v')
+        d_w = self.dest.get_cl_buffer('w')
+
+        self.cl_kernel(queue, self.global_sizes, self.local_sizes, d_u, d_v,
+                       d_w, tag, tmpx, tmpy, tmpz)           
     
 ##########################################################################

@@ -150,11 +150,16 @@ class Application(object):
         parser.add_option("--xsph", action="store", dest="eps", type="float",
                           default=None, 
                           help="Use XSPH correction with epsilon value")
+
+        # --cl
+        parser.add_option("--cl", action="store_true", dest="with_cl",
+                          default=False, help=""" Use OpenCL to run the
+                          simulation on an appropriate device """)
         
         # solver commandline interface
         interfaces = OptionGroup(parser, "Interfaces",
                                  "Add interfaces to the solver")
-        
+
         interfaces.add_option("--interactive", action="store_true",
                               dest="cmd_line", default=False,
                               help=("Add an interactive commandline interface "
@@ -273,7 +278,29 @@ class Application(object):
 
     def set_solver(self, solver):
         """Set the application's solver.  This will call the solver's
-        `setup_integrator` method."""
+        `setup_integrator` method.
+
+        The following solver options are set:
+
+        dt -- the time step for the solver
+
+        tf -- the final time for the simulationl
+
+        fname -- the file name for output file printing
+
+        freq -- the output print frequency
+
+        level -- the output detail level
+
+        dir -- the output directory
+
+        hks -- Hernquist and Katz kernel correction
+
+        eps -- the xsph correction factor
+
+        with_cl -- OpenCL related initializations
+
+        """
         self._solver = solver
         dt = self.options.time_step
         if dt is not None:
@@ -292,14 +319,27 @@ class Application(object):
             if not self.num_procs == 0:
                 fname += '_' + str(rank)
 
+        # output file name
         solver.set_output_fname(fname)
+
+        # output print frequency
         solver.set_print_freq(self.options.freq)
+
+        # output printing level (default is not detailed)
         solver.set_output_printing_level(self.options.detailed_output)
+
+        # output directory
         solver.set_output_directory(self.options.output_dir)
+
+        # Hernquist and Katz kernel correction
         solver.set_kernel_correction(self.options.kernel_correction)
 
+        # XSPH operation
         if self.options.eps:
             solver.set_xsph(self.options.eps)
+
+        # OpenCL setup for the solver
+        solver.set_cl(self.options.with_cl)
 
         solver.setup_integrator(self.particles)
         
