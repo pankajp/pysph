@@ -26,8 +26,8 @@ for platform in platforms:
     print("Platform version:", platform.version)
     print("---------------------------------------------------------------")
     devices = platform.get_devices()
-    ctx = cl.Context(devices)
     for device in devices:
+        ctx = cl.Context([device])
         print("Device name:", device.name)
         print("Device type:", cl.device_type.to_string(device.type))
         print("Device memory: ", device.global_mem_size//1024//1024, 'MB')
