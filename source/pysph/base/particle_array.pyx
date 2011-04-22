@@ -1120,7 +1120,7 @@ cdef class ParticleArray:
     # OpenCL interface
     ######################################################################
 
-    def setupCL(self, object context):
+    def setup_cl(self, object context, object queue):
         """ Setup OpenCL objects from the queue
 
         Parameters:
@@ -1150,6 +1150,7 @@ cdef class ParticleArray:
             raise RuntimeWarning, "PyOpenCL not found!"
 
         self.context = context
+        self.queue = queue
 
         self.create_cl_buffers()
 
@@ -1222,6 +1223,28 @@ cdef class ParticleArray:
             raise RuntimeWarning, "No property %s found!"%(prop)
         else:
             return self.cl_properties.get(prop)
+
+    def read_from_buffer(self):
+        """ Read all the buffer props """
+
+        for prop in self.properties:
+
+            buffer = self.get_cl_buffer(prop)
+
+            carray = self.properties.get(prop)
+            array = carray.get_npy_array()
+
+            dtype = carray.get_c_type()
+            if dtype == "double":
+                array = array.astype(numpy.float32)
+
+            if dtype == "long":
+                array = array.astype(numpy.int32)
+
+            cl.enqueue_read_buffer(self.queue, buffer, array).wait()
+            #cl.enqueue_copy_buffer(self.queue, buffer, array).wait()
+
+            self.set( **{prop:array} )            
         
 ##############################################################################
 

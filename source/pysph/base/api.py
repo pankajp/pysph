@@ -11,6 +11,8 @@ from kernels import KernelBase, DummyKernel, CubicSplineKernel, \
 from nnps import NbrParticleLocatorBase, FixedDestNbrParticleLocator, \
         VarHNbrParticleLocator, NNPSManager, brute_force_nnps
 
+from nnps import NeighborLocatorType
+
 from particle_array import ParticleArray
 from particles import Particles, get_particle_array
 

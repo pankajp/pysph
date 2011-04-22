@@ -1,5 +1,5 @@
 from cell import CellManager
-from nnps import NNPSManager
+from nnps import NNPSManager, NeighborLocatorType
 from particle_array import ParticleArray
 from particle_types import ParticleType
 
@@ -87,6 +87,7 @@ class Particles(object):
     
     def __init__(self, arrays=[], in_parallel=False, variable_h=False,
                  load_balancing=True, update_particles=True,
+                 locator_type = NeighborLocatorType.SPHNeighborLocator,
                  periodic_domain=None, min_cell_size=-1):
         
         """ Constructor
@@ -111,6 +112,7 @@ class Particles(object):
         self.variable_h = variable_h
         self.in_parallel = in_parallel
         self.load_balancing = load_balancing
+        self.locator_type = locator_type
 
         self.arrays=arrays        
 
@@ -131,7 +133,8 @@ class Particles(object):
         # create the nnps manager
 
         self.nnps_manager = NNPSManager(cell_manager=self.cell_manager,
-                                        variable_h=variable_h)
+                                        variable_h=variable_h,
+                                        locator_type=self.locator_type)
 
         # set defaults
         
@@ -299,7 +302,8 @@ def get_particle_array(floating_point_default="double", **props):
 
     for prop in default_props:
         if prop not in props.keys():
-            prop_dict[prop] = {'name':prop, 'type':floating_point_default}
+            prop_dict[prop] = {'name':prop, 'type':floating_point_default,
+                               'default':1}
 
     # Add the property idx
 

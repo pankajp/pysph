@@ -130,6 +130,11 @@ cdef class SPHFunction:
 
         self.cl_kernel_src_file = ''
         self.cl_kernel = object()
+        self.context = object()
+        self.args = []
+
+        self.global_sizes = (self.dest.get_number_of_particles(), 1, 1)
+        self.local_sizes = (1,1,1)
         
         if setup_arrays:
             self.setup_arrays()
@@ -198,12 +203,12 @@ cdef class SPHFunction:
         for i in range(np):
             if tag_arr.data[i] == LocalReal:
                 self.eval_single(i, kernel, result)
-                output1[i] += result[0]
-                output2[i] += result[1]
-                output3[i] += result[2]
+                output1.data[i] += result[0]
+                output2.data[i] += result[1]
+                output3.data[i] += result[2]
             else:
-                output1[i] = output2[i] = output3[i] = 0
-    
+                output1.data[i] = output2.data[i] = output3.data[i] = 0
+
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double * result):
         """ Evaluate the function on a single dest particle
@@ -223,8 +228,37 @@ cdef class SPHFunction:
         """
         pass
 
-    def set_cl_kernel(self, object cl_kernel):
+    def setup_cl(self, object cl_kernel, object context):
+        """ OpenCL setup for the function.
+
+        You may determine the OpenCL kernel launch parameters from within
+        this function
+
+        Currently we're using the default:
+
+        global_sizes = (ndp, 1, 1)
+        local_sizes = (1, 1, 1)
+
+        """
         self.cl_kernel = cl_kernel
+        self.context = context
+
+        self.set_cl_kernel_args()
+
+    def set_cl_kernel_args(self):
+        for prop in self.dst_reads:
+            self.args.append(self.dest.get_cl_buffer(prop))
+
+        for prop in self.src_reads:
+            self.args.append(self.source.get_cl_buffer(prop))
+
+        # append the output buffer. 
+        self.args.append( self.dest.get_cl_buffer('tmpx') )
+        self.args.append( self.dest.get_cl_buffer('tmpy') )
+        self.args.append( self.dest.get_cl_buffer('tmpz') )
+
+    def set_cl_kernel(self, object kernel):
+        self.cl_kernel = kernel
 
 ################################################################################
 # `SPHFunctionParticle` class.

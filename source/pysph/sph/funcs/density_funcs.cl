@@ -1,9 +1,10 @@
+#define F f
+
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
   
-__kernel void SPHRho(__global int* kernel_type, __global int* dim,
-		     __global int* nbrs,
+__kernel void SPHRho(int const kernel_type, int const dim, int const nbrs,
 		     __global float* d_x, __global float* d_y, 
 		     __global float* d_z, __global float* d_h,
 		     __global int* tag,
@@ -14,37 +15,25 @@ __kernel void SPHRho(__global int* kernel_type, __global int* dim,
 
 {
   unsigned int work_dim = get_work_dim();
-
-  Size local_size, num_groups, local_id, group_id;
-  
-  get_group_information(work_dim, &local_size, &num_groups, &local_id,
-  			&group_id);
-
-  unsigned int group_size = prod( &local_size );
-
-  unsigned int gid = get_gid(&group_id, &num_groups, &local_id, &local_size,
-			     group_size);
+  unsigned int gid = get_gid(work_dim);
   
   float4 pa = (float4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
-  float wmb = 0.0f;
+  float wmb = 0.0F;
   float w;
 
-  int _dim = dim[0];
-  int _np = nbrs[0];
-
-  for (unsigned int i = 0; i < _np; ++i)
+  for (unsigned int i = 0; i < nbrs; ++i)
     {
       float4 pb = (float4)( s_x[i], s_y[i], s_z[i], s_h[i] );
       float mb = s_m[i];
       
-      switch (kernel_type[0])
+      switch (kernel_type)
 	{
 	case 1:
-	  w = cubic_spline_function(pa, pb, _dim);
+	  w = cubic_spline_function(pa, pb, dim);
 	  break;
 	  
 	default:
-	  w = cubic_spline_function(pa, pb, _dim);
+	  w = cubic_spline_function(pa, pb, dim);
 	  break;
 	      
 	} // switch

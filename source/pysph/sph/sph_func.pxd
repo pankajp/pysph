@@ -27,12 +27,22 @@ cdef class SPHFunction:
     cdef public list src_reads
     cdef public list dst_reads
 
+    # OpenCL Context
+    cdef public object context
+
     # OpenCL kernel source file and function name
     cdef public str cl_kernel_src_file
     cdef public str cl_kernel_function_name
 
     # OpenCL kernel name
     cdef public object cl_kernel
+
+    # OpenCL kernel launch parameters
+    cdef public tuple global_sizes
+    cdef public tuple local_sizes
+
+    # OpenCL kernel arguments
+    cdef public list args
     
     cdef public DoubleArray s_h, s_m, s_rho
     cdef public DoubleArray s_x, s_y, s_z

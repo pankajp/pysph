@@ -66,7 +66,7 @@ class ParticleArrayCLTestCase(unittest.TestCase):
         pa = self.pa
 
         # create the OpenCL buffers
-        pa.setupCL(self.queue)
+        pa.setup_cl(self.ctx, self.queue)
 
         for prop in pa.properties:
 
@@ -81,8 +81,16 @@ class ParticleArrayCLTestCase(unittest.TestCase):
             pysph_arr = pa.get(prop)
 
             # read the contents of the OpenCL buffer in a dummy array
-            _array = numpy.empty_like(pysph_arr)
-            cl.enqueue_read_buffer(pa.queue, buffer, _array).wait()
+            _array = numpy.ones_like(pysph_arr)
+
+            carray = pa.properties[prop]
+            dtype = carray.get_c_type()
+            if dtype == "double":
+                _array = _array.astype(numpy.float32)
+            if dtype == "long":
+                _array = _array.astype(numpy.int32)
+
+            cl.enqueue_read_buffer(self.queue, buffer, _array).wait()
 
             self.assertEqual( len(_array), len(pysph_arr) )
 
@@ -90,6 +98,31 @@ class ParticleArrayCLTestCase(unittest.TestCase):
 
             for i in range(np):
                 self.assertEqual( _array[i], pysph_arr[i] )
+
+    def test_read_from_buffer(self):
+
+        pa = self.pa
+
+        # create the OpenCL buffers
+        pa.setup_cl(self.ctx, self.queue)
+
+        copies = {}
+        for prop in pa.properties:
+            copies[prop] = pa.get(prop).copy()
+
+        # read the contents back into the array
+
+        pa.read_from_buffer()
+
+        for prop in pa.properties:
+
+            buffer_array = pa.get(prop)
+            orig_array = copies.get(prop)
+
+            self.assertEqual( len(buffer_array), len(orig_array) )
+
+            for i in range( len(buffer_array) ):
+                self.assertAlmostEqual(buffer_array[i], orig_array[i], 10 )
 
 if __name__ == '__main__':
     unittest.main()

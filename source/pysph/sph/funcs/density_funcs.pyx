@@ -74,34 +74,14 @@ cdef class SPHRho(CSPHFunctionParticle):
         for prop in self.src_reads:
             args.append(self.source.get_cl_buffer(prop))
 
-        mf = cl.mem_flags
-
         # append the output buffer. Only one for Summation Density
         args.append( self.dest.get_cl_buffer('tmpx') )
 
-        # OpenCL kernel arguments for the SPH kernel and dim
-        kernel_type = numpy.array([kernel.get_type(),], numpy.int32)
-        kernel_type_buf = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR,
-                                    hostbuf=kernel_type)
-
-        dim = numpy.array([kernel.dim,], numpy.int32)
-        dimbuf = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR,
-                           hostbuf=dim)
-
-        # OpenCL kernel arguments for the neighbor list
-        nbrs = numpy.array([self.source.get_number_of_particles(),],
-                           numpy.int32)
-        nbrbuf = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR,
-                           hostbuf=nbrs)
-
-        # OpenCL kernel launch parameters
-        ndp = self.dest.get_number_of_particles()
-        global_dims = (ndp, 1, 1)
-        local_dims = (1, 1, 1)
-
         # Enqueue the OpenCL kernel for execution
-        self.cl_kernel(queue, global_dims, local_dims, kernel_type_buf,
-                       dimbuf, nbrbuf, *args)
+        self.cl_kernel(queue, self.global_sizes, self.local_sizes,
+                       numpy.int32(kernel.get_type()), numpy.int32(kernel.dim),
+                       numpy.int32(self.source.get_number_of_particles()),
+                       *args).wait()
 
 ################################################################################
 # `SPHDensityRate` class.

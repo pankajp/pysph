@@ -6,7 +6,6 @@ from pysph.base.cell cimport CellManager
 from pysph.base.point cimport Point, cPoint, cPoint_distance2
 from pysph.base.kernels cimport KernelBase
 
-
 ##############################################################################
 # `Classes for nearest particle location`.
 ##############################################################################
@@ -16,14 +15,31 @@ cdef class NbrParticleLocatorBase:
     cdef public ParticleArray source
     cdef public int source_index
 
-    cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
-                                            LongArray output_array, 
-                                            long exclude_index=*) except -1
+    # Neighbor Locator type
+    cdef public int locator_type
+
+    cdef int get_nearest_particles_to_point(
+        self, cPoint pnt, double radius, LongArray output_array, 
+        long exclude_index=*) except -1
+
+    cdef int get_nearest_particles_to_point_sph(
+        self, cPoint pnt, double radius, LongArray output_array, 
+        long exclude_index=*) except -1
+
+    cdef int get_nearest_particles_to_point_all(
+        self, cPoint pnt, LongArray output_array,
+        long exclude_index=*) except -1
+
+    cdef int get_nearest_particles_to_point_dsmc(
+        self, cPoint pnt, LongArray output_array,
+        long exclude_index=*) except -1
+
     cdef int _get_nearest_particles_from_cell_list(
         self, cPoint pnt, double radius, list cell_list,
         LongArray output_array, long exclude_index=*) except -1
 
-
+    cpdef set_locator_type(self, int locator_type)
+    
 cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
     """
     Particle locator, where all particle interactions have the destination
@@ -46,7 +62,7 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
     
     cdef LongArray get_nearest_particles(self, long dest_p_index,
                                    bint exclude_self=*)
-    
+
     cdef int get_nearest_particles_nocache(self, long dest_p_index,
                                    LongArray output_array,
                                    bint exclude_self=*) except -1
@@ -83,6 +99,9 @@ cdef class NNPSManager:
     cdef public bint variable_h
     cdef public str h
     cdef public dict particle_locator_cache
+
+    # The type of the NeighborLocator
+    cdef public int locator_type
 
     cdef public CachedNbrPolygonLocatorManager polygon_cache_manager
 

@@ -131,6 +131,21 @@ cpdef numpy.ndarray get_adjacency_matrix_pa(ParticleArray parray,
                     parray.get('z'), parray.get('h'), radius_scale)
 
 ###############################################################################
+# `NeighborLocatorType` class.
+###############################################################################
+class NeighborLocatorType:
+    """ An Empty class to emulate an Enum for the neighbor locator types """
+
+    SPHNeighborLocator = 0
+    NSquareNeighborLocator = 1
+    DSMCNeighborLocator = 2
+
+    def __init__(self):
+        raise SystemError, 'Do not instantiate the EntityTypes class'
+
+
+
+###############################################################################
 # `NbrParticleLocatorBase` class.
 ###############################################################################
 cdef class NbrParticleLocatorBase:
@@ -176,10 +191,24 @@ cdef class NbrParticleLocatorBase:
             if self.source_index is None:
                 msg = 'Source %s does not exist'%(self.source.name)
                 raise ValueError, msg
+
+    cdef int get_nearest_particles_to_point(
+        self, cPoint pnt, double radius, LongArray output_array, 
+        long exclude_index=-1) except -1:
+        
+        if self.locator_type == NeighborLocatorType.SPHNeighborLocator:
+            return self.get_nearest_particles_to_point_sph(pnt, radius,
+                                                           output_array,
+                                                           exclude_index)
+
+        if self.locator_type == NeighborLocatorType.NSquareNeighborLocator:
+            return self.get_nearest_particles_to_point_all(pnt, output_array,
+                                                           exclude_index)
+
             
-    cdef int get_nearest_particles_to_point(self, cPoint pnt, double radius,
-                                            LongArray output_array, 
-                                            long exclude_index=-1) except -1: 
+    cdef int get_nearest_particles_to_point_sph(
+        self, cPoint pnt, double radius, LongArray output_array, 
+        long exclude_index=-1) except -1: 
 
         """ Get the nearest particles to a given point
 
@@ -211,6 +240,33 @@ cdef class NbrParticleLocatorBase:
         self._get_nearest_particles_from_cell_list(pnt, radius, cell_list,
                                                    output_array, exclude_index)
         return 0
+
+    cdef int get_nearest_particles_to_point_all(
+        self, cPoint pnt, LongArray output_array, 
+        long exclude_index=-1) except -1:
+
+        cdef long nnbrs = self.source.get_number_of_particles()
+        cdef long i
+
+        output_array.resize(nnbrs)
+
+        for i in range(nnbrs):
+            output_array.data[i] = i
+
+        if exclude_index >= 0:
+            output_array.data[exclude_index], output_array.data[nnbrs-1] = \
+                                              output_array.data[nnbrs-1], \
+                                              output_array.data[exclude_index]
+            
+            output_array.resize(nnbrs - 1)
+
+        return 0
+
+    cdef int get_nearest_particles_to_point_dsmc(
+        self, cPoint pnt, LongArray output_array,
+        long exclude_index=-1) except -1:
+
+        pass
 
     cdef int _get_nearest_particles_from_cell_list(
         self, cPoint pnt,
@@ -298,6 +354,9 @@ cdef class NbrParticleLocatorBase:
                         output_array.append(idx)
                     
         return 0
+
+    cpdef set_locator_type(self, int locator_type):
+        self.locator_type = locator_type
     
     ######################################################################
     # python wrappers.
@@ -426,22 +485,40 @@ cdef class FixedDestNbrParticleLocator(NbrParticleLocatorBase):
         cdef LongArray index_array, output_array
         cdef int i
         cdef long *data
+        cdef cPoint pnt
 
-        # update internal data. Calculate the particle cache
+        if not self.locator_type == NeighborLocatorType.NSquareNeighborLocator:
         
-        self.update()
+            # update internal data. Calculate the particle cache
         
-        # return data from cache.
+            self.update()
+        
+            # return data from cache.
 
-        output_array = index_array = self.particle_cache[dest_p_index]
-        
-        if self.dest is self.source:
-            if exclude_self:
-                # cached array has self index as last value
-                output_array = LongArray(index_array.length-1)
-                # TODO: can use memcpy
-                for i in range(index_array.length-1):
-                    output_array[i] = index_array.data[i]
+            output_array = index_array = self.particle_cache[dest_p_index]
+
+            if self.dest is self.source:
+                if exclude_self:
+                    # cached array has self index as last value
+                    output_array = LongArray(index_array.length-1)
+                    # TODO: can use memcpy
+                    for i in range(index_array.length-1):
+                        output_array[i] = index_array.data[i]
+
+        if self.locator_type == NeighborLocatorType.NSquareNeighborLocator:
+            output_array = LongArray()
+            index_array = LongArray()
+
+            pnt.x = self.d_x.data[dest_p_index]
+            pnt.y = self.d_y.data[dest_p_index]
+            pnt.z = self.d_z.data[dest_p_index]
+
+            if (self.dest is self.source) and (exclude_self):
+                self.get_nearest_particles_to_point_all(
+                    pnt, output_array, dest_p_index)
+            else:
+                self.get_nearest_particles_to_point_all(
+                    pnt, output_array, -1)
         
         return output_array
     
@@ -697,10 +774,12 @@ cdef class NNPSManager:
     """
 
     def __init__(self, CellManager cell_manager=None,
-                 bint variable_h=False, str h='h'):
+                 bint variable_h=False, str h='h',
+                 int locator_type=NeighborLocatorType.SPHNeighborLocator):
         self.cell_manager = cell_manager
         self.variable_h = variable_h
         self.h = h
+        self.locator_type = locator_type
         
         self.particle_locator_cache = dict()
         
@@ -720,7 +799,8 @@ cdef class NNPSManager:
         
         """
         if dest is None:
-            return NbrParticleLocatorBase(source, self.cell_manager)
+            return NbrParticleLocatorBase(source, self.cell_manager,
+                                          locator_type=self.locator_type)
         else:
             self.add_interaction(source, dest, radius_scale)
             return self.get_cached_locator(source.name, dest.name, radius_scale)
@@ -782,9 +862,15 @@ cdef class NNPSManager:
             if not self.variable_h:
                 loc = FixedDestNbrParticleLocator(source, dest, radius_scale,
                                    cell_manager=self.cell_manager, h=self.h)
+
+                loc.set_locator_type(self.locator_type)
+                
             else:
                 loc = VarHNbrParticleLocator(source, dest, radius_scale,
                                  cell_manager=self.cell_manager, h=self.h)
+
+                loc.set_locator_type(self.locator_type)
+                
             self.particle_locator_cache[t] = loc
     
     cpdef FixedDestNbrParticleLocator get_cached_locator(self,

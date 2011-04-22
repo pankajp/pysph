@@ -11,6 +11,9 @@ import pysph.sph.api as sph
 
 from sph_equation import SPHOperation, SPHIntegration
 
+if HAS_CL:
+    import pyopencl as cl
+
 import logging
 logger = logging.getLogger()
 
@@ -103,9 +106,11 @@ class Solver(object):
         if self.particles == None:
             raise RuntimeError, "There are no particles!"
 
-        self.integrator_type = integrator_type
+        if self.with_cl:
+            self.integrator_type = self.cl_integrator_types[integrator_type]
 
-        # setup the new integrator
+        else:
+            self.integrator_type = integrator_type
 
         self.setup_integrator(self.particles)
 
@@ -514,12 +519,8 @@ class Solver(object):
 
         return particle_props
 
-    def setupCL(self):
+    def setup_cl(self):
         """ Setup the OpenCL context and other initializations """
-
-        integrator = self.integrator
-        if not integrator.setup_done:
-            raise RuntimeWarning, 'Integrator not setup! '
 
         if HAS_CL:
             devices = get_cl_devices()

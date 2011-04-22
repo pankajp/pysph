@@ -3,6 +3,9 @@
 #ifndef CL_COMMON
 #define CL_COMMON
 
+#define TRUE 1
+#define FALSE 2
+
 typedef struct {
   int sizes[3];
 } Size;
@@ -25,9 +28,9 @@ void get_group_information(unsigned int work_dim, Size* local_size,
     } // for i
 }
 
-unsigned int get_gid(Size* group_id, Size* num_groups, 
-		     Size* local_id, Size* local_size,
-		     unsigned int group_size)
+unsigned int _get_gid(Size* group_id, Size* num_groups, 
+		      Size* local_id, Size* local_size,
+		      unsigned int group_size)
 {
   unsigned int gid;
 
@@ -40,6 +43,20 @@ unsigned int get_gid(Size* group_id, Size* num_groups,
     local_id->sizes[2] * local_size->sizes[0]*local_size->sizes[1];
 
   return gid;
+}
+
+unsigned int get_gid(unsigned int work_dim)
+{
+    Size local_size, num_groups, local_id, group_id;
+  
+    get_group_information(work_dim, &local_size, &num_groups, &local_id,
+			  &group_id);
+
+    unsigned int group_size = prod( &local_size );
+
+    return _get_gid(&group_id, &num_groups, &local_id, &local_size,
+		    group_size);
+
 }
 
 #endif CL_COMMON

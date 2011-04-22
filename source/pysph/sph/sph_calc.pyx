@@ -323,7 +323,7 @@ class CLCalc(SPHCalc):
 
         # set the OpenCL kernel for each of the SPHFunctions
         for func in self.funcs:
-            func.set_cl_kernel(cl_kernel)
+            func.setup_cl(cl_kernel, self.context)
         
     def sph(self):
         """ Evaluate the contribution from the sources on the
@@ -333,7 +333,7 @@ class CLCalc(SPHCalc):
         representation. The devie buffers have the suffix `cl_` so that
         a numpy array `rho` on the host has the buffer `cl_rho` on the device.
 
-        The device buffers are created upon a call to CLCalc's setupCL
+        The device buffers are created upon a call to CLCalc's setup_cl
         function. The CommandQueue is created using the first device
         in the context as default. This could be changed in later
         revisions.
@@ -401,6 +401,6 @@ class CLCalc(SPHCalc):
         npd = self.dest.get_number_of_particles()
 
         self.prog.set_tmp_to_zero(self.queue, (npd, 1, 1), (1, 1, 1),
-                                  cl_tmpx, cl_tmpy, cl_tmpz)
+                                  cl_tmpx, cl_tmpy, cl_tmpz).wait()
 
 #############################################################################

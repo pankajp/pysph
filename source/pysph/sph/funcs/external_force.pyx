@@ -169,24 +169,28 @@ cdef class NBodyForce(SPHFunctionParticle):
 
         """
 
-        cdef ParticleArray src = self.nbr_locator.source
-        cdef ParticleArray dest = self.nbr_locator.dest
+        cdef ParticleArray src = self.source
+        cdef ParticleArray dest = self.dest
 
         cdef list nbrs
         cdef int nnbrs
 
-        result[0] = result[1] = result[2] = 0.0
+        result[0] = 0.0
+        result[1] = 0.0
+        result[2] = 0.0
 
-        if not ( dest.name == src.name ):
-        
-            nnbrs = src.get_number_of_particles()
-            nbrs = range(nnbrs)
-            
+        nnbrs = src.get_number_of_particles()
+        nbrs = range(nnbrs)
+
+        if not (src.name == dest.name):
             for j in range(nnbrs):
                 self.eval_nbr(nbrs[j], dest_pid, kernel, result)
         else:
-            pass
-
+            for j in range(nnbrs):
+                source_pid = nbrs[j]
+                if not (source_pid == dest_pid):
+                    self.eval_nbr(source_pid, dest_pid, kernel, result)
+                    
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                    KernelBase kernel, double *nr):
 
@@ -210,5 +214,15 @@ cdef class NBodyForce(SPHFunctionParticle):
         nr[0] += f * rba.x
         nr[1] += f * rba.y
         nr[2] += f * rba.z
+
+    def cl_eval(self, object queue, object context, object kernel):
+
+        # Enqueue the OpenCL kernel for execution
+
+        self.cl_kernel(queue, self.global_sizes, self.local_sizes,
+                       numpy.int32(self.source.get_number_of_particles()),
+                       numpy.int32(self.dest.name==self.source.name),
+                       numpy.float32(self.eps),
+                       *self.args).wait()
         
 ###########################################################################
