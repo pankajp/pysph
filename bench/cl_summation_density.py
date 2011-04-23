@@ -82,10 +82,8 @@ for platform in platforms:
 
         # Compare the results
 
-        diff = 0.0
         cython_rho = pa.get('tmpx')
-        for i in range(np):
-            diff += abs( cl_rho[i] - cython_rho[i] )
+        diff = sum(abs(cl_rho - cython_rho))
             
         if diff/np < 1e-6:
             print "CL == Cython: True"
