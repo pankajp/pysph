@@ -66,6 +66,12 @@ cdef class ParticleArray:
     # the number of real particles.
     cdef public long num_real_particles
 
+    ########################################
+    # OpenCL related attributes.
+
+    # The floating point precision {'single', 'double'}
+    cdef public str cl_precision
+
     # dictionary to hold the OpenCL properties for a particle
     cdef public dict cl_properties
 

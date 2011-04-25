@@ -1,6 +1,6 @@
 from integrator import Integrator
 from cl_utils import HAS_CL, get_pysph_root, get_cl_include,\
-     get_scalar_buffer
+     get_scalar_buffer, cl_read
 
 if HAS_CL:
     import pyopencl as cl
@@ -37,7 +37,8 @@ class CLIntegrator(Integrator):
 
         # setup the OpenCL Program
         root = get_pysph_root()
-        src = open(path.join(root, 'solver/integrator.cl')).read()
+        src = cl_read(path.join(root, 'solver/integrator.cl'), 
+                      self.particles.get_cl_precision())
 
         self.program = cl.Program(context, src).build(get_cl_include())
 

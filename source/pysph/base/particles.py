@@ -114,7 +114,14 @@ class Particles(object):
         self.load_balancing = load_balancing
         self.locator_type = locator_type
 
-        self.arrays=arrays        
+        # Some sanity checks on the input arrays.
+        assert len(arrays) > 0, "Particles must be given some arrays!"
+        prec = arrays[0].cl_precision
+        msg = "All arrays must have the same cl_precision"
+        for arr in arrays[1:]:
+            assert arr.cl_precision == prec, msg
+
+        self.arrays = arrays
 
         self.kernel = None
 
@@ -251,14 +258,27 @@ class Particles(object):
         return self.nnps_manager.get_neighbor_particle_locator(
             src, dst, radius_scale)
 
-###############################################################################
+    def get_cl_precision(self):
+        """Return the cl_precision used by the Particle Arrays.
 
-def get_particle_array(floating_point_default="double", **props):
+        This property cannot be set it is set at construction time for
+        the Particle arrays.  This is simply a convenience function to
+        query the cl_precision.
+        """
+        return self.arrays[0].cl_precision
+
+###############################################################################
+def get_particle_array(cl_precision="double", **props):
     """ Create and return a particle array with default properties 
     
-    Parameters:
-    -----------
-    props -- A dictionary of properties requested
+    Parameters
+    ----------
+
+    cl_precision : {'single', 'double'}
+        Precision to use in OpenCL (default: 'double').
+
+    props : dict
+        A dictionary of properties requested.
 
     Example Usage:
     --------------
@@ -279,8 +299,10 @@ def get_particle_array(floating_point_default="double", **props):
     name = ""
     particle_type = Fluid
 
-    default_props = ['x','y','z','u','v','w','m','h','p','e','rho','cs',
-                     'tmpx','tmpy','tmpz']
+    default_props = {'x':0.0, 'y':0.0, 'z':0.0, 'u':0.0, 'v':0.0 ,
+                     'w':0.0, 'm':1.0, 'h':1.0, 'p':0.0,'e':0.0,
+                     'rho':1.0, 'cs':0.0, 'tmpx':0.0,
+                     'tmpy':0.0, 'tmpz':0.0}
     
     #Add the properties requested
     
@@ -290,23 +312,21 @@ def get_particle_array(floating_point_default="double", **props):
         if prop in ['name','type']:
             pass
         else:
-            assert type(props[prop]) == numpy.ndarray, 'Numpy array required!'
             np = len(props[prop])
             if prop == 'idx':
-                prop_dict[prop] = {'data':props[prop], 'type':'int'}
+                prop_dict[prop] = {'data':numpy.asarray(props[prop]), 
+                                   'type':'int'}
             else:
-                data = props[prop]
-                prop_dict[prop] = {'data':data, 'type':floating_point_default}
+                data = numpy.asarray(props[prop])
+                prop_dict[prop] = {'data':data, 'type':'double'}
             
     # Add the default props
-
     for prop in default_props:
         if prop not in props.keys():
-            prop_dict[prop] = {'name':prop, 'type':floating_point_default,
-                               'default':1}
+            prop_dict[prop] = {'name':prop, 'type':'double',
+                               'default':default_props[prop]}
 
     # Add the property idx
-
     if not prop_dict.has_key('idx') and np != 0:
         prop_dict['idx'] = {'name':'idx', 'data':numpy.arange(np),
                             'type':'int'}
@@ -320,6 +340,8 @@ def get_particle_array(floating_point_default="double", **props):
         particle_type = props["type"]
         assert particle_type in [Fluid, Solid], 'Type not understood!'
 
-    pa = ParticleArray(name=name, particle_type=particle_type, **prop_dict)
+    pa = ParticleArray(name=name, particle_type=particle_type,
+                       cl_precision=cl_precision, **prop_dict)
 
     return pa
+

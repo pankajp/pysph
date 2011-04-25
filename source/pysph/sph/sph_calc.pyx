@@ -31,7 +31,8 @@ from pysph.base.carray cimport IntArray, DoubleArray
 
 from os import path
 
-from pysph.solver.cl_utils import HAS_CL, get_cl_include, get_pysph_root
+from pysph.solver.cl_utils import (HAS_CL, get_cl_include,
+    get_pysph_root, cl_read)
 if HAS_CL:
     import pyopencl as cl
     from pyopencl.array import vec
@@ -46,7 +47,7 @@ cdef class SPHCalc:
     
     Members:
     --------
-    source -- the source particle array
+    sources -- a list of source particle arrays
     dest -- the destination particles array
     func -- the function to use between the source and destination
     nbr_loc -- a list of neighbor locator for each (source, dest)
@@ -72,7 +73,8 @@ cdef class SPHCalc:
     """
 
     #Defined in the .pxd file
-    #cdef public ParticleArray dest, source
+    #cdef public ParticleArray dest
+    #cdef public list sources
     #cdef public list funcs
     #cdef public list nbr_locators
     #cdef public NNPSManager nnps_manager
@@ -331,7 +333,8 @@ class CLCalc(SPHCalc):
         
         """
 
-        prog_src_file = open(self.cl_kernel_src_file).read()
+        prog_src_file = cl_read(self.cl_kernel_src_file, 
+                                precision=self.particles.get_cl_precision())
 
         build_options = get_cl_include()
 

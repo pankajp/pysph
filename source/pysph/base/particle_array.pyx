@@ -120,14 +120,25 @@ cdef class ParticleArray:
     ######################################################################
     def __cinit__(self, str name='', default_particle_tag=LocalReal,
                   particle_type = ParticleType.Fluid,
+                  cl_precision = 'double',
                   *args, **props):
         """
         Constructor.
 
         Parameters
         ----------
-        name : (str) name of this particle array.
-        props : (dict) dictionary of properties for every particle in this array
+
+        name : str 
+            name of this particle array.
+
+        particle_type : ParticleType
+            The particle type to use (Fluid, Solid etc.)
+
+        cl_precision : {'single', 'double'}
+            Set the precision to use for OpenCL.
+
+        props : dict 
+            dictionary of properties for every particle in this array
 
     	"""
         self.properties = {'tag':LongArray(0), 'group':LongArray(0),
@@ -141,6 +152,8 @@ cdef class ParticleArray:
         self.indices_invalid = True
         
         self.particle_type = particle_type
+
+        self.cl_precision = cl_precision
 
         self.queue = object()
         self.device = object()
@@ -1178,9 +1191,6 @@ cdef class ParticleArray:
         if not cl_utils.HAS_CL:
             raise RuntimeWarning, "PyOpenCL not found!"
 
-        type_map = {'float':numpy.float32, 'double':numpy.float64,
-                    'int':numpy.int32, 'long':numpy.int64}
-
         np = self.get_number_of_particles()
         self.cl_properties = {}
 
@@ -1191,15 +1201,15 @@ cdef class ParticleArray:
             prop_type = prop_arr.get_c_type()
 
             cl_prop = 'cl_' + prop
-            cl_prop_type = type_map[prop_type]
 
             npy_prop_arr = self.get(prop)
 
-            if prop_type == "double":
-                npy_prop_arr = npy_prop_arr.astype(numpy.float32)
+            if self.cl_precision == 'single':
+                if prop_type == "double":
+                    npy_prop_arr = npy_prop_arr.astype(numpy.float32)
 
-            if prop_type == "long":
-                npy_prop_arr = npy_prop_arr.astype(numpy.float32)
+                if prop_type == "long":
+                    npy_prop_arr = npy_prop_arr.astype(numpy.int32)
            
             # define and set the data for the PyOpenCL buffer object
 
@@ -1235,11 +1245,12 @@ cdef class ParticleArray:
             array = carray.get_npy_array()
 
             dtype = carray.get_c_type()
-            if dtype == "double":
-                array = array.astype(numpy.float32)
+            if self.cl_precision == 'single':
+                if dtype == "double":
+                    array = array.astype(numpy.float32)
 
-            if dtype == "long":
-                array = array.astype(numpy.int32)
+                if dtype == "long":
+                    array = array.astype(numpy.int32)
 
             cl.enqueue_read_buffer(self.queue, buffer, array).wait()
             #cl.enqueue_copy_buffer(self.queue, buffer, array).wait()
