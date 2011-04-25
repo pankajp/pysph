@@ -1,7 +1,7 @@
 #cython: cdivision=True
 import numpy
 
-from pysph.solver.cl_utils import HAS_CL, get_scalar_buffer
+from pysph.solver.cl_utils import HAS_CL, get_scalar_buffer, get_real
 if HAS_CL:
     import pyopencl as cl
 
@@ -47,9 +47,12 @@ cdef class GravityForce(SPHFunction):
         tmpy = self.dest.get_cl_buffer('tmpy')
         tmpz = self.dest.get_cl_buffer('tmpz')
 
+        gx = get_real(self.gx, self.dest.cl_precision)
+        gy = get_real(self.gy, self.dest.cl_precision)
+        gz = get_real(self.gz, self.dest.cl_precision)
+
         self.cl_kernel(queue, self.global_sizes, self.local_sizes,
-                       numpy.float32(self.gx), numpy.float32(self.gy),
-                       numpy.float32(self.gz), tmpx, tmpy, tmpz).wait()
+                       gx, gy, gz, tmpx, tmpy, tmpz).wait()
 
 #############################################################################
 # `VectorForce` class.
@@ -230,10 +233,11 @@ cdef class NBodyForce(SPHFunctionParticle):
 
         # Enqueue the OpenCL kernel for execution
 
+        eps = get_real(self.eps, self.dest.cl_precision)
+
         self.cl_kernel(queue, self.global_sizes, self.local_sizes,
                        numpy.int32(self.source.get_number_of_particles()),
                        numpy.int32(self.dest.name==self.source.name),
-                       numpy.float32(self.eps),
-                       *self.args).wait()
+                       eps, *self.args).wait()
         
 ###########################################################################

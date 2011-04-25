@@ -1,6 +1,6 @@
 from integrator import Integrator
 from cl_utils import HAS_CL, get_pysph_root, get_cl_include,\
-     get_scalar_buffer, cl_read
+     get_scalar_buffer, cl_read, get_real
 
 if HAS_CL:
     import pyopencl as cl
@@ -26,6 +26,8 @@ class CLIntegrator(Integrator):
         Integrator.setup_integrator(self)
 
         self.setup_cl(context)
+
+        self.cl_precision = self.particles.get_cl_precision()
 
     def setup_cl(self, context):
         """ OpenCL setup """
@@ -181,6 +183,8 @@ class CLIntegrator(Integrator):
 
         ncalcs = len(calcs)
 
+        cl_dt = get_real(dt, self.cl_precision)
+
         k_num = 'k' + str(self.cstep)
         for i in range(ncalcs):
             calc = calcs[i]
@@ -206,7 +210,7 @@ class CLIntegrator(Integrator):
                 
                     self.program.step(queue, (np,1,1), (1,1,1),
                                       current_buffer, step_buffer,
-                                      tmp_buffer, numpy.float32(dt))
+                                      tmp_buffer, cl_dt)
 
                     cl.enqueue_copy_buffer(queue, src=tmp_buffer,
                                            dst=current_buffer)
@@ -240,6 +244,8 @@ class CLEulerIntegrator(CLIntegrator):
         pa = self.arrays[calc.dnum]
         np = pa.get_number_of_particles()
 
+        cl_dt = get_real(dt, self.cl_precision)
+
         for i in range(nupdates):
             initial_prop = self.initial_props[calc.id][i]
             k_prop = self.k_props[calc.id]['k1'][i]
@@ -249,10 +255,10 @@ class CLEulerIntegrator(CLIntegrator):
             update_buffer = pa.get_cl_buffer(update_prop)
             k1_buffer = pa.get_cl_buffer(k_prop)
             tmp_buffer = pa.get_cl_buffer('tmpx')
-            
+           
             self.program.step(queue, (np,1,1), (1,1,1),
                               initial_buffer, k1_buffer,
-                              tmp_buffer, numpy.float32(dt)).wait()
+                              tmp_buffer, cl_dt).wait()
 
             cl.enqueue_copy_buffer(queue, src=tmp_buffer,
                                    dst=initial_buffer).wait()

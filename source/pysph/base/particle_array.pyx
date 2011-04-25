@@ -1173,11 +1173,6 @@ cdef class ParticleArray:
         """ Create device arrays for the device associated with the
         CommandQueue provided.
 
-        Parameters:
-        ------------
-
-        quque -- OpenCL CommandQueue
-
         Notes:
         ------
 
@@ -1185,11 +1180,19 @@ cdef class ParticleArray:
         corresponds to numpy.float32
 
         """
+        queue = self.queue
+        
         if self.cl_setup_done:
             return
+
+        if self.cl_precision == "double":
+            if 'cl_khr_fp64' not in queue.device.extensions:
+                devname = queue.device.name
+                msg = "Device %s does not support double precision"%(devname)
+                raise RuntimeError(msg)
         
         if not cl_utils.HAS_CL:
-            raise RuntimeWarning, "PyOpenCL not found!"
+            raise RuntimeWarning("PyOpenCL not found!")
 
         np = self.get_number_of_particles()
         self.cl_properties = {}

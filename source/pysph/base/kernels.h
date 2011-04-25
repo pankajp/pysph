@@ -2,68 +2,68 @@
 
 #define PI 2.0f*acos(0.0f)
 
-float cubic_spline_fac(unsigned int dim, float h)
+REAL cubic_spline_fac(unsigned int dim, REAL h)
 {
-  float fac = 0.0f;
+  REAL fac = 0.0;
 
   if ( dim == 1 )
-    fac = ( 2.0f/3.0f ) / (h);
+    fac = ( 2.0/3.0 ) / (h);
 
   if (dim == 2 )
-    fac = ( 10.0f ) / ( 7.0f*PI ) / ( h*h );
+    fac = ( 10.0 ) / ( 7.0*PI ) / ( h*h );
 
   if ( dim == 3 )
-    fac = 1.0f /( PI*h*h*h );
+    fac = 1.0 /( PI*h*h*h );
 
   return fac;
 }
 
-float cubic_spline_function(float4 pa, float4 pb, unsigned int dim)
+REAL cubic_spline_function(REAL4 pa, REAL4 pb, unsigned int dim)
 {
   // {s0, s1, s2, s3} == {x, y, z, h}
 
-  float4 rab = pa - pb;
+  REAL4 rab = pa - pb;
 
-  float h = 0.5f * ( pa.s3 + pb.s3 );
-  float q = length(rab)/h;
+  REAL h = 0.5 * ( pa.s3 + pb.s3 );
+  REAL q = length(rab)/h;
 
-  float val = 0.0f;
-  float fac = cubic_spline_fac(dim, h);
+  REAL val = 0.0;
+  REAL fac = cubic_spline_fac(dim, h);
     
-  if ( q >= 0.0f )
-    val = 1.0f - 1.5f * (q*q) * (1.0f - 0.5f * q);
+  if ( q >= 0.0 )
+    val = 1.0 - 1.5 * (q*q) * (1.0 - 0.5 * q);
 
-  if ( q >= 1.0f )
-    val = 0.25f * (2.0f-q) * (2.0f-q) * (2.0f-q);
+  if ( q >= 1.0 )
+    val = 0.25 * (2.0-q) * (2.0-q) * (2.0-q);
 
-  if ( q >= 2.0f )
-      val = 0.0f;
+  if ( q >= 2.0 )
+      val = 0.0;
   
   return val * fac;
 }
 
-void cubic_spline_gradient(float4 pa, float4 pb, float4* grad, 
+void cubic_spline_gradient(REAL4 pa, REAL4 pb, REAL4* grad, 
 			   unsigned int dim)
 {
-  float4 rab = pa - pb;
+  REAL4 rab = pa - pb;
 
-  float h = 0.5f * ( pa.s3 + pb.s3 );
-  float q = length(rab)/h;
+  REAL h = 0.5 * ( pa.s3 + pb.s3 );
+  REAL q = length(rab)/h;
 
-  float val = 0.0f;
-  float fac = cubic_spline_fac(dim, h);
+  REAL val = 0.0;
+  REAL fac = cubic_spline_fac(dim, h);
 
-  if ( q == 0.0f )
-    val = 0.0f;
+  if ( q == 0.0 )
+    val = 0.0;
 
-  if ( q > 0.0f )
-    val = 3.0f*(0.75f*q - 1.0f)/(h*h);
+  if ( q > 0.0 )
+    val = 3.0*(0.75*q - 1.0)/(h*h);
   
-  if ( q >= 1.0f )
-    val = -0.75f * (2.0f-q) * (2.0f-q)/(h * length(rab));
+  if ( q >= 1.0 )
+    val = -0.75 * (2.0-q) * (2.0-q)/(h * length(rab));
       
-  if ( q >= 2.0f )
-    val = 0.0f;
+  if ( q >= 2.0 )
+    val = 0.0;
   
   val *= fac;
 

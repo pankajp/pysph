@@ -2,9 +2,9 @@
 #include "cl_common.cl"
 #include "kernels.h"
   
-__kernel void GravityForce(float const gx, float const gy, float const gz,
-			   __global float* tmpx, __global float* tmpy,
-			   __global float* tmpz)
+__kernel void GravityForce(REAL const gx, REAL const gy, REAL const gz,
+			   __global REAL* tmpx, __global REAL* tmpy,
+			   __global REAL* tmpz)
 {
   unsigned int work_dim = get_work_dim();
   unsigned int gid = get_gid(work_dim);
@@ -17,32 +17,32 @@ __kernel void GravityForce(float const gx, float const gy, float const gz,
 
 
 __kernel void NBodyForce(int const nbrs, int const self,
-			 float const eps,
-			 __global float* d_x, __global float* d_y, 
-			 __global float* d_z, __global float* d_h,
+			 REAL const eps,
+			 __global REAL* d_x, __global REAL* d_y, 
+			 __global REAL* d_z, __global REAL* d_h,
 			 __global int* tag,
-			 __global float* s_x, __global float* s_y,
-			 __global float* s_z, __global float* s_h,
-			 __global float* s_m, __global float* s_rho,
-			 __global float* tmpx, __global float* tmpy,
-			 __global float* tmpz)
+			 __global REAL* s_x, __global REAL* s_y,
+			 __global REAL* s_z, __global REAL* s_h,
+			 __global REAL* s_m, __global REAL* s_rho,
+			 __global REAL* tmpx, __global REAL* tmpy,
+			 __global REAL* tmpz)
 
 {
   unsigned int work_dim = get_work_dim();
   unsigned int gid = get_gid(work_dim);
 
-  float4 pa = (float4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
-  float4 rba;
+  REAL4 pa = (REAL4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
+  REAL4 rba;
 
-  float invr, force_mag;
+  REAL invr, force_mag;
 
   for (unsigned int i = 0; i < nbrs; ++i)
     {
       
-      float4 pb = (float4)( s_x[i], s_y[i], s_z[i], s_h[i] );
+      REAL4 pb = (REAL4)( s_x[i], s_y[i], s_z[i], s_h[i] );
       rba = pb - pa;
       
-      invr = 1.0f/( length(rba) + eps );
+      invr = 1.0/( length(rba) + eps );
       invr *= ( invr * invr );
 	      
       force_mag = s_m[i] * invr;

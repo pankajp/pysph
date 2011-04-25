@@ -329,7 +329,7 @@ def get_particle_array(cl_precision="double", **props):
     # Add the property idx
     if not prop_dict.has_key('idx') and np != 0:
         prop_dict['idx'] = {'name':'idx', 'data':numpy.arange(np),
-                            'type':'int'}
+                            'type':'long'}
             
     #handle the name and particle_type information separately
 

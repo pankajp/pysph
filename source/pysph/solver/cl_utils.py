@@ -87,3 +87,23 @@ def cl_read(filename, precision='double'):
         
     return hdr + src
 
+def get_real(val, precision):
+    """ Return a suitable floating point number for OpenCL.
+
+    Parameters
+    ----------
+
+    val : float
+        The value to convert.
+        
+    precision : {'single', 'double'}
+        The precision to use.
+    
+    """
+    if precision == "single":
+        return numpy.float32(val)
+    elif precision == "double":
+        return numpy.float64(val)
+    else:
+        raise ValueError ("precision %s not supported!"%(precision))
+    

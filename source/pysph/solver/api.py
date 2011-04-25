@@ -26,4 +26,5 @@ from plot import ParticleInformation
 from utils import savez, savez_compressed, get_distributed_particles, mkdir, \
     get_pickled_data, get_pysph_root
 
-from cl_utils import HAS_CL, get_cl_devices, get_cl_include, get_scalar_buffer
+from cl_utils import HAS_CL, get_cl_devices, get_cl_include, \
+     get_scalar_buffer, cl_read, get_real

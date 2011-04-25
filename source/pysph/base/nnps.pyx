@@ -799,8 +799,9 @@ cdef class NNPSManager:
         
         """
         if dest is None:
-            return NbrParticleLocatorBase(source, self.cell_manager,
-                                          locator_type=self.locator_type)
+            loc = NbrParticleLocatorBase(source, self.cell_manager)
+            loc.set_locator_type(self.locator_type)
+            return loc
         else:
             self.add_interaction(source, dest, radius_scale)
             return self.get_cached_locator(source.name, dest.name, radius_scale)

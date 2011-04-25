@@ -29,6 +29,8 @@ class NBodyForceTestCase(unittest.TestCase):
         The mass of each particle is 1
 
         """
+        
+        self.precision = "single"
 
         self.np = 4
 
@@ -42,7 +44,8 @@ class NBodyForceTestCase(unittest.TestCase):
 
         self.pa = pa = base.get_particle_array(name="test", x=x,  y=y, z=z,
                                                m=m, tmpx=tmpx, tmpy=tmpy,
-                                               tmpz=tmpz)
+                                               tmpz=tmpz,
+                                               cl_precision=self.precision)
 
         self.func = func = sph.NBodyForce.get_func(pa, pa)
         self.eps = func.eps
@@ -51,8 +54,13 @@ class NBodyForceTestCase(unittest.TestCase):
             self.ctx = ctx = cl.create_some_context()
             self.q = q = cl.CommandQueue(ctx)
             pysph_root = solver.get_pysph_root()
-            src = open(path.join(pysph_root,
-                                 'sph/funcs/external_force.cl')).read()
+
+            src = solver.cl_read(path.join(pysph_root,
+                                           "sph/funcs/external_force.cl"),
+                                 precision=self.precision)
+            
+            #src = open(path.join(pysph_root,
+            #                     'sph/funcs/external_force.cl')).read()
 
             self.prog = cl.Program(ctx, src).build(solver.get_cl_include())
             pa.setup_cl(ctx, q)
