@@ -20,7 +20,7 @@ class ParticleArrayCLTestCase(unittest.TestCase):
         rho = numpy.ones_like(x)
         h = 2*m
 
-        pa = base.get_particle_array(floating_point_default="float",
+        pa = base.get_particle_array(cl_precision="single",
                                      x=x, h=h, m=m, rho=rho)
 
         self.pa = pa

@@ -36,7 +36,7 @@ for platform in platforms:
 
         # create the partice array with doubles as the default
 
-        pa = base.get_particle_array(floating_point_default="double",
+        pa = base.get_particle_array(cl_precision="single",
                                      name="test", x=x,h=h,m=m,rho=rho)
 
         particles = base.Particles(arrays=[pa,] ,
