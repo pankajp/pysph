@@ -25,6 +25,25 @@ cdef:
     double SQRT_1_PI = 1.0/sqrt(PI)
     double infty = numpy.inf
 
+
+##############################################################################
+# These are simple ints to define the different types of kernels.  This
+# is what is returned by the `KernelBase.get_type` method. The only
+# reason we do this is to unify the numbers used between Cython and
+# OpenCL.
+cdef:
+    int CUBIC_SPLINE = 1
+    int GAUSSIAN = 2
+    int QUINTIC_SPLINE = 3
+    int WENDLAND_QUINTIC_SPLINE = 4
+    int HARMONIC = 5
+    int M6_SPLINE = 6
+    int W8 = 7
+    int W10 = 8
+    int REPULSIVE = 9
+    int POLY6 = 10
+
+
 cdef inline double h_dim(double h, int dim):
     if dim == 1:
         return 1/h
@@ -300,6 +319,9 @@ cdef class Poly6Kernel(KernelBase):
     cpdef double radius(self):
         return 1.0
 
+    def get_type(self):
+        return POLY6 
+
 ##############################################################################
 # DummyKernel` class.
 ##############################################################################
@@ -424,7 +446,8 @@ cdef class CubicSplineKernel(KernelBase):
         return 2
 
     def get_type(self):
-        return 1
+        return CUBIC_SPLINE
+
 ##############################################################################
 
 
@@ -526,6 +549,8 @@ cdef class QuinticSplineKernel(KernelBase):
     cpdef double radius(self):
         return 3
 
+    def get_type(self):
+        return QUINTIC_SPLINE 
 
 ##############################################################################
 #`WendlandQuinticSplineKernel`
@@ -604,6 +629,9 @@ cdef class WendlandQuinticSplineKernel(KernelBase):
 
     cpdef double radius(self):
         return 2
+
+    def get_type(self):
+        return WENDLAND_QUINTIC_SPLINE 
 
 ##############################################################################
 #`HarmonicKernel`
@@ -697,6 +725,10 @@ cdef class HarmonicKernel(KernelBase):
 
     cpdef double radius(self):
         return 2
+
+    def get_type(self):
+        return HARMONIC
+
 #############################################################################
 
 ##############################################################################
@@ -769,6 +801,10 @@ cdef class M6SplineKernel(KernelBase):
 
     cpdef double radius(self):
         return 2
+
+    def get_type(self):
+        return M6_SPLINE
+
 #############################################################################
 
 ##############################################################################
@@ -826,6 +862,9 @@ cdef class GaussianKernel(KernelBase):
 
     cpdef double radius(self):
         return 3.0
+
+    def get_type(self):
+        return GAUSSIAN 
 ##############################################################################
 
 
@@ -903,6 +942,9 @@ cdef class W8Kernel(KernelBase):
     cpdef double radius(self):
         return 2
 
+    def get_type(self):
+        return W8 
+
 ##############################################################################
 
 
@@ -977,6 +1019,9 @@ cdef class W10Kernel(KernelBase):
 
     cpdef double radius(self):
         return 2
+
+    def get_type(self):
+        return W10 
 
 
 ################################################################################
@@ -1056,5 +1101,7 @@ cdef class RepulsiveBoundaryKernel(KernelBase):
             raise ValueError
         else: return (1.0/h)
 
+    def get_type(self):
+        return REPULSIVE 
 
 

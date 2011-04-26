@@ -24,19 +24,7 @@ __kernel void SPHRho(int const kernel_type, int const dim, int const nbrs,
     {
       REAL4 pb = (REAL4)( s_x[i], s_y[i], s_z[i], s_h[i] );
       REAL mb = s_m[i];
-      
-      switch (kernel_type)
-	{
-	case 1:
-	  w = cubic_spline_function(pa, pb, dim);
-	  break;
-	  
-	default:
-	  w = cubic_spline_function(pa, pb, dim);
-	  break;
-	      
-	} // switch
-	  
+      w = kernel_function(pa, pb, dim, kernel_type); 
       wmb += w*mb;
   	  	  
     } // for i

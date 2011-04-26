@@ -1,6 +1,22 @@
 // C declarations for the SPH smoothing kernels
+#ifndef CL_KERNEL_H
+#define CL_KERNEL_H
 
 #define PI 2.0f*acos(0.0f)
+
+enum KernelType {
+    CUBIC_SPLINE = 1,
+    GAUSSIAN = 2,
+    QUINTIC_SPLINE = 3,
+    WENDLAND_QUINTIC_SPLINE = 4,
+    HARMONIC = 5,
+    M6_SPLINE = 6,
+    W8 = 7,
+    W10 = 8,
+    REPULSIVE = 9,
+    POLY6 = 10
+};
+
 
 REAL cubic_spline_fac(unsigned int dim, REAL h)
 {
@@ -72,3 +88,37 @@ void cubic_spline_gradient(REAL4 pa, REAL4 pb, REAL4* grad,
   grad[0].s2 = val * rab.s2;
 
 }
+
+REAL kernel_function(REAL4 pa, REAL4 pb, unsigned int dim, int kernel_type)
+{
+    REAL w;
+
+    switch (kernel_type) {
+        case CUBIC_SPLINE:
+            w = cubic_spline_function(pa, pb, dim);
+            break;
+        // FIXME: implement the rest!
+        default:
+            w = cubic_spline_function(pa, pb, dim);
+            break;
+    } // switch (kernel_type).
+
+    return w;
+}
+
+void kernel_gradient(REAL4 pa, REAL4 pb, REAL4* grad, 
+                     unsigned int dim, int kernel_type)
+{
+    switch (kernel_type) {
+        case CUBIC_SPLINE:
+            cubic_spline_gradient(pa, pb, grad, dim);
+            break;
+        // FIXME: implement the rest!
+        default:
+            cubic_spline_gradient(pa, pb, grad, dim);
+            break;
+    } // switch (kernel_type).
+}
+
+#endif // CL_KERNEL_H
+

@@ -58,4 +58,4 @@ unsigned int get_gid(unsigned int work_dim)
 
 }
 
-#endif CL_COMMON
+#endif // CL_COMMON
