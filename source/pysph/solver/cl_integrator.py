@@ -208,9 +208,9 @@ class CLIntegrator(Integrator):
                     step_buffer = pa.get_cl_buffer(k_prop)
                     tmp_buffer = pa.get_cl_buffer('tmpx')
                 
-                    self.program.step(queue, (np,1,1), (1,1,1),
-                                      current_buffer, step_buffer,
-                                      tmp_buffer, cl_dt)
+                    self.program.step_array(queue, (np,1,1), (1,1,1),
+                                            current_buffer, step_buffer,
+                                            tmp_buffer, cl_dt)
 
                     cl.enqueue_copy_buffer(queue, src=tmp_buffer,
                                            dst=current_buffer)
@@ -256,9 +256,9 @@ class CLEulerIntegrator(CLIntegrator):
             k1_buffer = pa.get_cl_buffer(k_prop)
             tmp_buffer = pa.get_cl_buffer('tmpx')
            
-            self.program.step(queue, (np,1,1), (1,1,1),
-                              initial_buffer, k1_buffer,
-                              tmp_buffer, cl_dt).wait()
+            self.program.step_array(queue, (np,1,1), (1,1,1),
+                                    initial_buffer, k1_buffer,
+                                    tmp_buffer, cl_dt).wait()
 
             cl.enqueue_copy_buffer(queue, src=tmp_buffer,
                                    dst=initial_buffer).wait()

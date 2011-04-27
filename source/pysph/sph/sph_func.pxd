@@ -34,8 +34,9 @@ cdef class SPHFunction:
     cdef public str cl_kernel_src_file
     cdef public str cl_kernel_function_name
 
-    # OpenCL kernel name
+    # OpenCL program and kernel
     cdef public object cl_kernel
+    cdef public object cl_program
 
     # OpenCL kernel launch parameters
     cdef public tuple global_sizes

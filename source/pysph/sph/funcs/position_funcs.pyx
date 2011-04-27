@@ -51,7 +51,8 @@ cdef class PositionStepping(SPHFunction):
         d_v = self.dest.get_cl_buffer('v')
         d_w = self.dest.get_cl_buffer('w')
 
-        self.cl_kernel(queue, self.global_sizes, self.local_sizes, d_u, d_v,
-                       d_w, tag, tmpx, tmpy, tmpz)           
+        self.cl_program.PositionStepping(
+            queue, self.global_sizes, self.local_sizes, d_u, d_v,
+            d_w, tag, tmpx, tmpy, tmpz)
     
 ##########################################################################

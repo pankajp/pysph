@@ -78,10 +78,12 @@ cdef class SPHRho(CSPHFunctionParticle):
         args.append( self.dest.get_cl_buffer('tmpx') )
 
         # Enqueue the OpenCL kernel for execution
-        self.cl_kernel(queue, self.global_sizes, self.local_sizes,
-                       numpy.int32(kernel.get_type()), numpy.int32(kernel.dim),
-                       numpy.int32(self.source.get_number_of_particles()),
-                       *args).wait()
+        self.cl_program.SPHRho(
+            queue, self.global_sizes, self.local_sizes,
+            numpy.int32(kernel.get_type()),
+            numpy.int32(kernel.dim),
+            numpy.int32(self.source.get_number_of_particles()),
+            *args).wait()
 
 ################################################################################
 # `SPHDensityRate` class.

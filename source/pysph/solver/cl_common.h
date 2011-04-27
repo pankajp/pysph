@@ -4,6 +4,7 @@
 #define CL_COMMON
 
 #define TRUE 1
+#define FALSE 0
 
 typedef struct {
   int sizes[3];

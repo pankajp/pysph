@@ -130,6 +130,7 @@ cdef class SPHFunction:
 
         self.cl_kernel_src_file = ''
         self.cl_kernel = object()
+        self.cl_program = object()
         self.context = object()
         self.args = []
 
@@ -228,7 +229,7 @@ cdef class SPHFunction:
         """
         pass
 
-    def setup_cl(self, object cl_kernel, object context):
+    def setup_cl(self, object program, object context):
         """ OpenCL setup for the function.
 
         You may determine the OpenCL kernel launch parameters from within
@@ -240,7 +241,7 @@ cdef class SPHFunction:
         local_sizes = (1, 1, 1)
 
         """
-        self.cl_kernel = cl_kernel
+        self.cl_program = program
         self.context = context
 
         self.set_cl_kernel_args()
@@ -257,8 +258,8 @@ cdef class SPHFunction:
         self.args.append( self.dest.get_cl_buffer('tmpy') )
         self.args.append( self.dest.get_cl_buffer('tmpz') )
 
-    def set_cl_kernel(self, object kernel):
-        self.cl_kernel = kernel
+    def set_cl_program(self, object program):
+        self.cl_program = program
 
 ################################################################################
 # `SPHFunctionParticle` class.

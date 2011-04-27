@@ -341,14 +341,9 @@ class CLCalc(SPHCalc):
         self.prog = cl.Program(self.context, prog_src_file).build(
             build_options)
 
-        # find by name the OpenCL kernel for this operation
-        for cl_kernel in self.prog.all_kernels():
-            if cl_kernel.function_name == self.cl_kernel_function_name:
-                break
-
         # set the OpenCL kernel for each of the SPHFunctions
         for func in self.funcs:
-            func.setup_cl(cl_kernel, self.context)
+            func.setup_cl(self.prog, self.context)
         
     def sph(self):
         """ Evaluate the contribution from the sources on the

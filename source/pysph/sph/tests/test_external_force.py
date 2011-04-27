@@ -55,12 +55,9 @@ class NBodyForceTestCase(unittest.TestCase):
             self.q = q = cl.CommandQueue(ctx)
             pysph_root = solver.get_pysph_root()
 
-            src = solver.cl_read(path.join(pysph_root,
-                                           "sph/funcs/external_force.cl"),
-                                 precision=self.precision)
-            
-            #src = open(path.join(pysph_root,
-            #                     'sph/funcs/external_force.cl')).read()
+            src = solver.cl_read(
+                path.join(pysph_root, "sph/funcs/external_force.cl"),
+                precision=self.precision)
 
             self.prog = cl.Program(ctx, src).build(solver.get_cl_include())
             pa.setup_cl(ctx, q)
@@ -124,7 +121,7 @@ class NBodyForceTestCase(unittest.TestCase):
             
             k = base.CubicSplineKernel()
 
-            func.setup_cl(self.prog.NBodyForce, self.ctx)
+            func.setup_cl(self.prog, self.ctx)
 
             func.cl_eval(self.q, self.ctx, k)
 
