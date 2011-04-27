@@ -2,7 +2,7 @@
 #ifndef CL_KERNEL_H
 #define CL_KERNEL_H
 
-#define PI 2.0f*acos(0.0f)
+#define PI 2.0F*acos(0.0f)
 
 enum KernelType {
     CUBIC_SPLINE = 1,
@@ -20,16 +20,16 @@ enum KernelType {
 
 REAL cubic_spline_fac(unsigned int dim, REAL h)
 {
-  REAL fac = 0.0;
+  REAL fac = 0.0F;
 
   if ( dim == 1 )
-    fac = ( 2.0/3.0 ) / (h);
+    fac = ( 2.0F/3.0F ) / (h);
 
   if (dim == 2 )
-    fac = ( 10.0 ) / ( 7.0*PI ) / ( h*h );
+    fac = ( 10.0F ) / ( 7.0F*PI ) / ( h*h );
 
   if ( dim == 3 )
-    fac = 1.0 /( PI*h*h*h );
+    fac = 1.0F /( PI*h*h*h );
 
   return fac;
 }
@@ -40,20 +40,20 @@ REAL cubic_spline_function(REAL4 pa, REAL4 pb, unsigned int dim)
 
   REAL4 rab = pa - pb;
 
-  REAL h = 0.5 * ( pa.s3 + pb.s3 );
+  REAL h = 0.5F * ( pa.s3 + pb.s3 );
   REAL q = length(rab)/h;
 
-  REAL val = 0.0;
+  REAL val = 0.0F;
   REAL fac = cubic_spline_fac(dim, h);
     
-  if ( q >= 0.0 )
-    val = 1.0 - 1.5 * (q*q) * (1.0 - 0.5 * q);
+  if ( q >= 0.0F )
+    val = 1.0F - 1.5F * (q*q) * (1.0F - 0.5F * q);
 
-  if ( q >= 1.0 )
-    val = 0.25 * (2.0-q) * (2.0-q) * (2.0-q);
+  if ( q >= 1.0F )
+    val = 0.25F * (2.0F-q) * (2.0F-q) * (2.0F-q);
 
-  if ( q >= 2.0 )
-      val = 0.0;
+  if ( q >= 2.0F )
+      val = 0.0F;
   
   return val * fac;
 }
@@ -63,23 +63,23 @@ void cubic_spline_gradient(REAL4 pa, REAL4 pb, REAL4* grad,
 {
   REAL4 rab = pa - pb;
 
-  REAL h = 0.5 * ( pa.s3 + pb.s3 );
+  REAL h = 0.5F * ( pa.s3 + pb.s3 );
   REAL q = length(rab)/h;
 
-  REAL val = 0.0;
+  REAL val = 0.0F;
   REAL fac = cubic_spline_fac(dim, h);
 
-  if ( q == 0.0 )
-    val = 0.0;
+  if ( q == 0.0F )
+    val = 0.0F;
 
-  if ( q > 0.0 )
-    val = 3.0*(0.75*q - 1.0)/(h*h);
+  if ( q > 0.0F )
+    val = 3.0F*(0.75F*q - 1.0F)/(h*h);
   
-  if ( q >= 1.0 )
-    val = -0.75 * (2.0-q) * (2.0-q)/(h * length(rab));
+  if ( q >= 1.0F )
+    val = -0.75F * (2.0F-q) * (2.0F-q)/(h * length(rab));
       
-  if ( q >= 2.0 )
-    val = 0.0;
+  if ( q >= 2.0F )
+    val = 0.0F;
   
   val *= fac;
 

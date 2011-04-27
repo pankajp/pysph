@@ -1,7 +1,6 @@
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
-
   
 __kernel void SPHRho(int const kernel_type, int const dim, int const nbrs,
 		     __global REAL* d_x, __global REAL* d_y, 
@@ -17,7 +16,7 @@ __kernel void SPHRho(int const kernel_type, int const dim, int const nbrs,
   unsigned int gid = get_gid(work_dim);
   
   REAL4 pa = (REAL4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
-  REAL wmb = 0.0;
+  REAL wmb = 0.0F ;
   REAL w;
 
   for (unsigned int i = 0; i < nbrs; ++i)

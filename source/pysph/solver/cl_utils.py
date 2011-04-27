@@ -75,16 +75,17 @@ def cl_read(filename, precision='double'):
 
     if precision == 'single':
         typ = 'float'
-        hdr = ""
+        hdr = "#define F f \n"
     else:
         typ = 'double'
-        hdr = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n" 
+        hdr = "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n"
+        hdr += '#define F \n'
 
     for x in ('', '2', '3', '4', '8'):
         hdr += '#define REAL%s %%(typ)s%s\n'%(x, x)
     
     hdr = hdr%(dict(typ=typ))
-        
+
     return hdr + src
 
 def get_real(val, precision):

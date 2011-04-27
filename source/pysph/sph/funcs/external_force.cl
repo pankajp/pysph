@@ -42,7 +42,7 @@ __kernel void NBodyForce(int const nbrs, int const self,
       REAL4 pb = (REAL4)( s_x[i], s_y[i], s_z[i], s_h[i] );
       rba = pb - pa;
       
-      invr = 1.0/( length(rba) + eps );
+      invr = 1.0F/( length(rba) + eps );
       invr *= ( invr * invr );
 	      
       force_mag = s_m[i] * invr;
