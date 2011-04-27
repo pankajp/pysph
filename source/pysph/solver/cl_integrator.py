@@ -76,8 +76,9 @@ class CLIntegrator(Integrator):
                     update_prop_buffer = pa.get_cl_buffer(update_prop)
                     initial_prop_buffer = pa.get_cl_buffer(initial_prop)
 
-                    cl.enqueue_copy_buffer(queue=queue, src=update_prop_buffer,
-                                           dst=initial_prop_buffer).wait()
+                    cl.enqueue_copy(queue=queue, src=update_prop_buffer,
+                                    dest=initial_prop_buffer,
+                                    ).wait()
 
                     pa.read_from_buffer()
 
@@ -106,8 +107,8 @@ class CLIntegrator(Integrator):
 
                     # reset the current property to the initial array
 
-                    cl.enqueue_copy_buffer(queue=queue,src=initial_prop_buffer,
-                                           dst=update_prop_buffer)
+                    cl.enqueue_copy(queue=queue,src=initial_prop_buffer,
+                                    dest=update_prop_buffer)
                     
 
     def eval(self, calcs):
@@ -146,7 +147,7 @@ class CLIntegrator(Integrator):
                     update_prop_buffer = pa.get_cl_buffer(update_prop)
 
                     cl.enqueue_copy_buffer(queue, src=step_prop_buffer,
-                                           dst=update_prop_buffer).wait()
+                                           dest=update_prop_buffer).wait()
                                        
                     # ensure that all processes have reached this point
 
@@ -169,8 +170,9 @@ class CLIntegrator(Integrator):
 
                     k_prop_buffer = pa.get_cl_buffer(k_prop)
 
-                    cl.enqueue_copy_buffer(queue, src=step_prop_buffer,
-                                           dst=k_prop_buffer).wait()
+                    cl.enqueue_copy(queue, src=step_prop_buffer,
+                                    dest=k_prop_buffer,
+                                    ).wait()
 
                 pass
 
@@ -212,8 +214,8 @@ class CLIntegrator(Integrator):
                                             current_buffer, step_buffer,
                                             tmp_buffer, cl_dt)
 
-                    cl.enqueue_copy_buffer(queue, src=tmp_buffer,
-                                           dst=current_buffer)
+                    cl.enqueue_copy(queue, src=tmp_buffer,
+                                    dest=current_buffer)
                     
                 pass
             pass
@@ -260,11 +262,13 @@ class CLEulerIntegrator(CLIntegrator):
                                     initial_buffer, k1_buffer,
                                     tmp_buffer, cl_dt).wait()
 
-            cl.enqueue_copy_buffer(queue, src=tmp_buffer,
-                                   dst=initial_buffer).wait()
+            cl.enqueue_copy(queue, src=tmp_buffer,
+                            dest=initial_buffer,
+                            ).wait()
 
-            cl.enqueue_copy_buffer(queue, src=tmp_buffer,
-                                   dst=update_buffer).wait()
+            cl.enqueue_copy(queue, src=tmp_buffer,
+                            dest=update_buffer,
+                            ).wait()
 
     def integrate(self, dt):
 

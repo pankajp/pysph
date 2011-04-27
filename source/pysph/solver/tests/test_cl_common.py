@@ -29,7 +29,8 @@ zbuf = cl.Buffer(ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=z)
 args = (ybuf, zbuf)
 
 pysph_root = solver.get_pysph_root()
-src = open(path.join(pysph_root, 'solver/cl_common.cl')).read()
+src = solver.cl_read(path.join(pysph_root, 'solver/cl_common.cl'),
+                     precision='single')
 
 prog = cl.Program(ctx, src).build(options=solver.get_cl_include())
 
@@ -37,9 +38,9 @@ prog = cl.Program(ctx, src).build(options=solver.get_cl_include())
 prog.set_tmp_to_zero(q, (16, 16, 16), (1,1,1), xbuf, *args)
 
 # read the buffer contents back to the arrays
-cl.enqueue_read_buffer(q, xbuf, x).wait()
-cl.enqueue_read_buffer(q, ybuf, y).wait()
-cl.enqueue_read_buffer(q, zbuf, z).wait()
+cl.enqueue_copy(q, src=xbuf, dest=x).wait()
+cl.enqueue_copy(q, src=ybuf, dest=y).wait()
+cl.enqueue_copy(q, src=zbuf, dest=z).wait()
 
 for i in range(np):
     assert x[i] == 0.0
