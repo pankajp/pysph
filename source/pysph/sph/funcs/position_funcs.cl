@@ -1,3 +1,6 @@
+
+$PositionStepping
+
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
@@ -15,3 +18,4 @@ __kernel void PositionStepping(__global float* d_u, __global float* d_v,
   tmpz[gid] = d_w[0];
 
 }
+$PositionStepping

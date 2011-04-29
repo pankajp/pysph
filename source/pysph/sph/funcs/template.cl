@@ -1,0 +1,20 @@
+#include "cl_common.h"
+#include "cl_common.cl"
+#include "kernels.h"
+
+// The kernel arguments are filled in automatically.
+__kernel void SPHFunctionOpenCLKernel(%(kernel_args)s)
+{
+    %(workgroup_code)s
+
+    // The term `dest_id` will be suitably defined at this point.
+    // dest_id refers to the destination particle's index for which
+    // the evalation is being done.
+
+    %(neighbor_loop_code)s 
+    {
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over this index.
+    }
+
+}

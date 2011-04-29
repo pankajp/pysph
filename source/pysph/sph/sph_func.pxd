@@ -5,6 +5,7 @@ cimport numpy
 from pysph.base.particle_array cimport ParticleArray, LocalReal
 from pysph.base.carray cimport DoubleArray, IntArray, LongArray, BaseArray
 from pysph.base.point cimport Point, cPoint, cPoint_sub
+from pysph.base.kernels cimport KernelBase
 
 from pysph.base.kernels cimport KernelBase
 from pysph.base.nnps cimport FixedDestNbrParticleLocator
@@ -27,6 +28,9 @@ cdef class SPHFunction:
     cdef public list src_reads
     cdef public list dst_reads
 
+    # SPH kernel
+    cdef public KernelBase kernel
+
     # OpenCL Context
     cdef public object context
 
@@ -43,7 +47,8 @@ cdef class SPHFunction:
     cdef public tuple local_sizes
 
     # OpenCL kernel arguments
-    cdef public list args
+    cdef public list cl_args
+    cdef public list cl_args_name
     
     cdef public DoubleArray s_h, s_m, s_rho
     cdef public DoubleArray s_x, s_y, s_z

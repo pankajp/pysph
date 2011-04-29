@@ -48,19 +48,25 @@ class NBodyForceTestCase(unittest.TestCase):
                                                cl_precision=self.precision)
 
         self.func = func = sph.NBodyForce.get_func(pa, pa)
+
         self.eps = func.eps
 
         if solver.HAS_CL:
             self.ctx = ctx = cl.create_some_context()
             self.q = q = cl.CommandQueue(ctx)
-            pysph_root = solver.get_pysph_root()
 
-            src = solver.cl_read(
+            pa.setup_cl(ctx, q)
+            
+            pysph_root = solver.get_pysph_root()
+            
+            template = solver.cl_read(
                 path.join(pysph_root, "sph/funcs/external_force.cl"),
+                function_name=func.cl_kernel_function_name,
                 precision=self.precision)
 
-            self.prog = cl.Program(ctx, src).build(solver.get_cl_include())
-            pa.setup_cl(ctx, q)
+            prog_src = solver.create_program(template, func)
+
+            self.prog = cl.Program(ctx, prog_src).build(solver.get_cl_include())
         
     def get_reference_solution(self):
         """ Evaluate the force on each particle manually """

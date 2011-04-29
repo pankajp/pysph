@@ -1,72 +1,70 @@
+
+$GravityForce
+
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
-  
-__kernel void GravityForce(REAL const gx, REAL const gy, REAL const gz,
-			   __global REAL* tmpx, __global REAL* tmpy,
-			   __global REAL* tmpz)
-{
-  unsigned int work_dim = get_work_dim();
-  unsigned int gid = get_gid(work_dim);
 
-  tmpx[gid] = gx;
-  tmpy[gid] = gy;
-  tmpz[gid] = gz;
+__kernel void GravityForce(%(kernel_args)s)
+{
+    %(workgroup_code)s
+
+    tmpx[dest_id] = gx;
+    tmpy[dest_id] = gy;
+    tmpz[dest_id] = gz;
   
 } // __kernel GravityForce
+$GravityForce
 
+$NBodyForce
 
-__kernel void NBodyForce(int const nbrs, int const self,
-			 REAL const eps,
-			 __global REAL* d_x, __global REAL* d_y, 
-			 __global REAL* d_z, __global REAL* d_h,
-			 __global int* tag,
-			 __global REAL* s_x, __global REAL* s_y,
-			 __global REAL* s_z, __global REAL* s_h,
-			 __global REAL* s_m, __global REAL* s_rho,
-			 __global REAL* tmpx, __global REAL* tmpy,
-			 __global REAL* tmpz)
+#include "cl_common.h"
+#include "cl_common.cl"
+#include "kernels.h"
 
+__kernel void NBodyForce(%(kernel_args)s)
 {
-  unsigned int work_dim = get_work_dim();
-  unsigned int gid = get_gid(work_dim);
+    %(workgroup_code)s
 
-  REAL4 pa = (REAL4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
-  REAL4 rba;
+    // The term `dest_id` will be suitably defined at this point.
 
-  REAL invr, force_mag;
+    REAL4 pa = (REAL4)( d_x[dest_id],d_y[dest_id], d_z[dest_id], d_h[dest_id] );
+    REAL4 rba;
+    REAL invr, force_mag;
 
-  for (unsigned int i = 0; i < nbrs; ++i)
+    %(neighbor_loop_code)s 
     {
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over, this index.
+
+        REAL4 pb = (REAL4)( s_x[src_id],s_y[src_id],s_z[src_id],s_h[src_id] );
+        rba = pb - pa;
       
-      REAL4 pb = (REAL4)( s_x[i], s_y[i], s_z[i], s_h[i] );
-      rba = pb - pa;
-      
-      invr = 1.0F/( length(rba) + eps );
-      invr *= ( invr * invr );
+        invr = 1.0F/( length(rba) + eps );
+        invr *= ( invr * invr );
 	      
-      force_mag = s_m[i] * invr;
+	force_mag = s_m[src_id] * invr;
 
-      if ( self == TRUE )
-	{
-	  if ( i != gid )
-	    {
-	      tmpx[gid] += force_mag * rba.x;
-	      tmpy[gid] += force_mag * rba.y;
-	      tmpz[gid] += force_mag * rba.z;
+	if ( self == TRUE )
+	  {
+	    if ( src_id != dest_id )
+	      {
+		tmpx[dest_id] += force_mag * rba.x;
+		tmpy[dest_id] += force_mag * rba.y;
+		tmpz[dest_id] += force_mag * rba.z;
 
-	    } // if (i != gid)
+	      } // if (i != dest_id)
 
-	} // if (self == true)
+	  } // if (self == true)
 
-      else
-	{
-	  tmpx[gid] += force_mag * rba.x;
-	  tmpy[gid] += force_mag * rba.y;
-	  tmpz[gid] += force_mag * rba.z;
-	}
-      
-    } // for i
+	else
+	  {
+	    tmpx[dest_id] += force_mag * rba.x;
+	    tmpy[dest_id] += force_mag * rba.y;
+	    tmpz[dest_id] += force_mag * rba.z;
+	  }
+	
+    } // neighbor loop
 
 } // __kernel NBodyForce
-     
+$NBodyForce     

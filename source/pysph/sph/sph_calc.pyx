@@ -29,8 +29,6 @@ from pysph.sph.funcs.basic_funcs cimport BonnetAndLokKernelGradientCorrectionTer
 
 from pysph.base.carray cimport IntArray, DoubleArray
 
-from os import path
-
 from pysph.solver.cl_utils import (HAS_CL, get_cl_include,
     get_pysph_root, cl_read)
 if HAS_CL:
@@ -127,6 +125,7 @@ cdef class SPHCalc:
         self.queue = object()
         self.cl_kernel = object()
         self.cl_kernel_src_file = ''
+        self.cl_kernel_function_name = ''
 
         self.check_internals()
         self.setup_internals()
@@ -193,11 +192,15 @@ cdef class SPHCalc:
 
         # set the calc's tag from the function tags. Check ensures all are same
         self.tag = self.funcs[0].tag
+        self.cl_kernel_function_name = self.funcs[0].cl_kernel_function_name
 
         # set the neighbor locators
         for i in range(nsrcs):
             src = self.sources[i]
             func = self.funcs[i]
+
+            # set the SPHFunction kernel
+            func.kernel = self.kernel
 
             loc = self.nnps_manager.get_neighbor_particle_locator(
                 src, self.dest, self.kernel.radius())
@@ -281,7 +284,6 @@ class CLCalc(SPHCalc):
             logger.debug("OpenCL kernel file does not exist: %s"%fname)
             
         self.cl_kernel_src_file = src
-        self.cl_kernel_function_name = func.cl_kernel_function_name
 
     def setup_cl(self, context):
         """ Setup the CL related stuff
@@ -319,6 +321,43 @@ class CLCalc(SPHCalc):
 
         self.setup_program()
 
+    def _create_program(self, template):
+        """Given a program source template, flesh out the code and
+        return it.
+
+        An OpenCL kernel template requires the following pieces of
+        code to make it a valid OpenCL kerel file:
+
+        kernel_args -- the arguments for the kernel injected by the
+                       function.
+
+        workgroup_code -- code injected by the function to get the
+                          global id from the kernel launch parameters.
+
+        neighbor_loop_code -- code injected by the neighbor locator to
+                              determine the next neighbor for a given
+                              particle                       
+
+        """
+        k_args = []
+
+        for func in self.funcs:
+            func.set_cl_kernel_args()
+
+        func = self.funcs[0]
+        k_args.extend(func.cl_args_name)
+
+        # Build the kernel args string.
+        kernel_args = ',\n    '.join(k_args)
+
+        # Get the kernel workgroup code
+        workgroup_code = func.get_cl_workgroup_code()
+
+        # Construct the neighbor loop code.
+        neighbor_loop_code = "for (int src_id=0; src_id<nbrs; ++src_id)"
+
+        return template%(locals())
+
     def setup_program(self):
         """ Setup the OpenCL function used by this Calc
         
@@ -328,17 +367,24 @@ class CLCalc(SPHCalc):
         A call to this function sets up the OpenCL kernel which
         encapsulates the SPHFunction function.
 
-        The source for the OpenCL kernel is referenced from the
-        SPHFunction
-        
+        The OpenCL source file template is read and suitable code is
+        injected to make it work.
+
+        An example template file is 'sph/funcs/density_funcs.cl'
+
         """
 
-        prog_src_file = cl_read(self.cl_kernel_src_file, 
-                                precision=self.particles.get_cl_precision())
+        prog_src_tmp = cl_read(self.cl_kernel_src_file,
+                               precision=self.particles.get_cl_precision(),
+                               function_name=self.cl_kernel_function_name)
+
+        prog_src = self._create_program(prog_src_tmp)
+
+        self.cl_kernel_src = prog_src
 
         build_options = get_cl_include()
 
-        self.prog = cl.Program(self.context, prog_src_file).build(
+        self.prog = cl.Program(self.context, prog_src).build(
             build_options)
 
         # set the OpenCL kernel for each of the SPHFunctions

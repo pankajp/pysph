@@ -41,19 +41,23 @@ cdef class GravityForce(SPHFunction):
         result[1] = self.gy
         result[2] = self.gz
 
+    def _set_extra_cl_args(self):
+
+        self.cl_args.append(get_real(self.gx, self.dest.cl_precision))
+        self.cl_args_name.append('REAL const gx')
+        
+        self.cl_args.append(get_real(self.gy, self.dest.cl_precision))
+        self.cl_args_name.append('REAL const gy')
+        
+        self.cl_args.append(get_real(self.gz, self.dest.cl_precision))
+        self.cl_args_name.append('REAL const gz')
+
     def cl_eval(self, object queue, object context, object kernel):
 
-        tmpx = self.dest.get_cl_buffer('tmpx')
-        tmpy = self.dest.get_cl_buffer('tmpy')
-        tmpz = self.dest.get_cl_buffer('tmpz')
-
-        gx = get_real(self.gx, self.dest.cl_precision)
-        gy = get_real(self.gy, self.dest.cl_precision)
-        gz = get_real(self.gz, self.dest.cl_precision)
+        self.set_cl_kernel_args()        
 
         self.cl_program.GravityForce(
-            queue, self.global_sizes, self.local_sizes,
-            gx, gy, gz, tmpx, tmpy, tmpz).wait()
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
 
 #############################################################################
 # `VectorForce` class.
@@ -230,16 +234,19 @@ cdef class NBodyForce(SPHFunctionParticle):
         nr[1] += f * rba.y
         nr[2] += f * rba.z
 
+    def _set_extra_cl_args(self):
+
+        self.cl_args.append( get_real(self.eps, self.dest.cl_precision) )
+        self.cl_args_name.append("REAL const eps")
+
+        self.cl_args.append( numpy.int32(self.dest.name==self.source.name) )
+        self.cl_args_name.append("int const self")
+
     def cl_eval(self, object queue, object context, object kernel):
 
-        # Enqueue the OpenCL kernel for execution
-
-        eps = get_real(self.eps, self.dest.cl_precision)
+        self.set_cl_kernel_args()
 
         self.cl_program.NBodyForce(
-            queue, self.global_sizes, self.local_sizes,
-            numpy.int32(self.source.get_number_of_particles()),
-            numpy.int32(self.dest.name==self.source.name),
-            eps, *self.args).wait()
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
         
 ###########################################################################

@@ -46,7 +46,7 @@ def get_scalar_buffer(val, dtype, ctx):
     arr = numpy.array([val,], dtype)
     return cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=arr)
 
-def cl_read(filename, precision='double'):
+def cl_read(filename, precision='double', function_name=None):
     """Read an OpenCL source file.  
     
     The function also adds a few convenient #define's so as to allow us
@@ -66,12 +66,20 @@ def cl_read(filename, precision='double'):
     precision : {'single', 'double'}, optional
         The floating point precision to use.
 
+    function_name: str, optional
+        An optional function name to indicate a block to extract from
+        the OpenCL template file.
+
     """
     if precision not in ['single', 'double']:
         msg = "Invalid argument for 'precision' should be 'single'"\
               " or 'double'."
         raise ValueError(msg) 
+
     src = open(filename).read()
+
+    if function_name:
+        src = src.split('$'+function_name)[1]
 
     if precision == 'single':
         typ = 'float'
@@ -108,3 +116,40 @@ def get_real(val, precision):
     else:
         raise ValueError ("precision %s not supported!"%(precision))
     
+
+def create_program(template, func, loc=None):
+    """ Create an OpenCL program given a template string and function
+
+    Parameters
+    ----------
+
+    template: str
+        The template source file that is read using cl_read
+
+    func: SPHFunctionParticle
+        The function that provides the kernel arguments to the template
+
+    loc: NotImplemented
+
+    A template is the basic outline of an OpenCL kernel for a
+    SPHFunctionParticle. The arguments to the kernel and neighbor
+    looping code needs to be provided to render it a valid OpenCL
+    kenrel.
+
+    """
+
+    k_args = []
+
+    func.set_cl_kernel_args()
+    k_args.extend(func.cl_args_name)
+
+    # Build the kernel args string.
+    kernel_args = ',\n    '.join(k_args)
+    
+    # Get the kernel workgroup code
+    workgroup_code = func.get_cl_workgroup_code()
+    
+    # Construct the neighbor loop code.
+    neighbor_loop_code = "for (int src_id=0; src_id<nbrs; ++src_id)"
+
+    return template%(locals())

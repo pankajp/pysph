@@ -65,25 +65,15 @@ cdef class SPHRho(CSPHFunctionParticle):
 
         nr[0] += w*self.s_m.data[source_pid]
 
+    def _set_extra_cl_args(self):
+        pass
+
     def cl_eval(self, object queue, object context, object kernel):
 
-        args = []
-        for prop in self.dst_reads:
-            args.append(self.dest.get_cl_buffer(prop))
+        self.set_cl_kernel_args()
 
-        for prop in self.src_reads:
-            args.append(self.source.get_cl_buffer(prop))
-
-        # append the output buffer. Only one for Summation Density
-        args.append( self.dest.get_cl_buffer('tmpx') )
-
-        # Enqueue the OpenCL kernel for execution
         self.cl_program.SPHRho(
-            queue, self.global_sizes, self.local_sizes,
-            numpy.int32(kernel.get_type()),
-            numpy.int32(kernel.dim),
-            numpy.int32(self.source.get_number_of_particles()),
-            *args).wait()
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
 
 ################################################################################
 # `SPHDensityRate` class.

@@ -43,6 +43,7 @@ cdef class SPHCalc:
 
     # The OpenCL kernel source and function name
     cdef public str cl_kernel_src_file
+    cdef public str cl_kernel_src
     cdef public str cl_kernel_function_name
 
     #kernel correction

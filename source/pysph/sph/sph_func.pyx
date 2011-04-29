@@ -1,7 +1,7 @@
 #include for malloc
 from libc.stdlib cimport * 
 cimport numpy
-
+import numpy
 
 def get_all_funcs():
     ''' function to gather all implemented funcs in pysph.sph.funcs package '''
@@ -128,11 +128,15 @@ cdef class SPHFunction:
         self.src_reads = ['x','y','z','h','m', 'rho']
         self.dst_reads = ['x','y','z','h','tag']
 
+        self.kernel = None
+
         self.cl_kernel_src_file = ''
         self.cl_kernel = object()
         self.cl_program = object()
         self.context = object()
-        self.args = []
+
+        self.cl_args = []
+        self.cl_args_name = []
 
         self.global_sizes = (self.dest.get_number_of_particles(), 1, 1)
         self.local_sizes = (1,1,1)
@@ -244,22 +248,59 @@ cdef class SPHFunction:
         self.cl_program = program
         self.context = context
 
-        self.set_cl_kernel_args()
-
     def set_cl_kernel_args(self):
+
+        self.cl_args_name = []
+        self.cl_args = []
+        
+        # setup the  sph kernel args
+        nbrs = numpy.int32(self.source.get_number_of_particles())
+        self.cl_args.append(nbrs)
+        self.cl_args_name.append('int const nbrs')
+
+        if self.kernel is not None:        
+            kernel_type = numpy.int32(self.kernel.get_type())
+            dim = numpy.int32(self.kernel.dim)   
+
+            self.cl_args.append(kernel_type)
+            self.cl_args_name.append('int const kernel_type')
+
+            self.cl_args.append(dim)
+            self.cl_args_name.append('int const dim')
+        
         for prop in self.dst_reads:
-            self.args.append(self.dest.get_cl_buffer(prop))
+            self.cl_args.append(self.dest.get_cl_buffer(prop))
+
+            if not prop == "tag":
+                self.cl_args_name.append('__global REAL* d_%s'%(prop))
+            else:
+                self.cl_args_name.append('__global int* d_tag')
 
         for prop in self.src_reads:
-            self.args.append(self.source.get_cl_buffer(prop))
+            self.cl_args.append(self.source.get_cl_buffer(prop))
+            self.cl_args_name.append('__global REAL* s_%s'%(prop))
 
         # append the output buffer. 
-        self.args.append( self.dest.get_cl_buffer('tmpx') )
-        self.args.append( self.dest.get_cl_buffer('tmpy') )
-        self.args.append( self.dest.get_cl_buffer('tmpz') )
+        self.cl_args.append( self.dest.get_cl_buffer('tmpx') )
+        self.cl_args_name.append('__global REAL* tmpx')
 
+        self.cl_args.append( self.dest.get_cl_buffer('tmpy') )
+        self.cl_args_name.append('__global REAL* tmpy')
+
+        self.cl_args.append( self.dest.get_cl_buffer('tmpz') )
+        self.cl_args_name.append('__global REAL* tmpz')
+
+        self._set_extra_cl_args()
+
+    def _set_extra_cl_args(self):
+        raise NotImplementedError("SPHFunction _set_extra_cl_args!")
+        
     def set_cl_program(self, object program):
         self.cl_program = program
+
+    def get_cl_workgroup_code(self):
+        return """unsigned int work_dim = get_work_dim();
+    unsigned int dest_id = get_gid(work_dim); """        
 
 ################################################################################
 # `SPHFunctionParticle` class.

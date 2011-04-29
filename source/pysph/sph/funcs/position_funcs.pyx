@@ -40,6 +40,9 @@ cdef class PositionStepping(SPHFunction):
             else:
                 output1[i] = output2[i] = output3[i] = 0
 
+    def _set_extra_cl_args(self):
+        pass
+    
     def cl_eval(self, object queue, object context, object kernel):
 
         tmpx = self.dest.get_cl_buffer('tmpx')

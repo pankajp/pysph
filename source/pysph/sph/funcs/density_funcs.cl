@@ -1,33 +1,35 @@
+
+// The kernel arguments are filled in automatically.
+$SPHRho
+
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
-  
-__kernel void SPHRho(int const kernel_type, int const dim, int const nbrs,
-		     __global REAL* d_x, __global REAL* d_y, 
-		     __global REAL* d_z, __global REAL* d_h,
-		     __global int* tag,
-		     __global REAL* s_x, __global REAL* s_y,
-		     __global REAL* s_z, __global REAL* s_h,
-		     __global REAL* s_m, __global REAL* s_rho,
-		     __global REAL* tmpx)
 
+__kernel void SPHRho(%(kernel_args)s)
 {
-  unsigned int work_dim = get_work_dim();
-  unsigned int gid = get_gid(work_dim);
-  
-  REAL4 pa = (REAL4)( d_x[gid], d_y[gid], d_z[gid], d_h[gid] );
-  REAL wmb = 0.0F ;
-  REAL w;
+    %(workgroup_code)s
 
-  for (unsigned int i = 0; i < nbrs; ++i)
+    // The term `dest_id` will be suitably defined at this point.
+
+    REAL4 pa = (REAL4)( d_x[dest_id], d_y[dest_id], 
+                        d_z[dest_id], d_h[dest_id] );
+    REAL wmb = 0.0F ;
+    REAL w;
+
+    %(neighbor_loop_code)s 
     {
-      REAL4 pb = (REAL4)( s_x[i], s_y[i], s_z[i], s_h[i] );
-      REAL mb = s_m[i];
-      w = kernel_function(pa, pb, dim, kernel_type); 
-      wmb += w*mb;
-  	  	  
-    } // for i
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over, this index.
 
-  tmpx[gid] += wmb;
+        REAL4 pb = (REAL4)(s_x[src_id], s_y[src_id], s_z[src_id], s_h[src_id]);
+        REAL mb = s_m[src_id];
+        w = kernel_function(pa, pb, dim, kernel_type); 
+        wmb += w*mb;  	  
+    }
+
+    tmpx[dest_id] += wmb;
   
 } // __kernel SPHRho
+
+$SPHRho
