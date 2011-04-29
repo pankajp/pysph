@@ -60,7 +60,7 @@ class NBodyForceTestCase(unittest.TestCase):
             pysph_root = solver.get_pysph_root()
             
             template = solver.cl_read(
-                path.join(pysph_root, "sph/funcs/external_force.cl"),
+                path.join(pysph_root, "sph/funcs/external_force.clt"),
                 function_name=func.cl_kernel_function_name,
                 precision=self.precision)
 

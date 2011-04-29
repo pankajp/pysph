@@ -24,7 +24,7 @@ cdef class SPHRho(CSPHFunctionParticle):
         self.id = 'sphrho'
         self.tag = "density"
 
-        self.cl_kernel_src_file = "density_funcs.cl"
+        self.cl_kernel_src_file = "density_funcs.clt"
         self.cl_kernel_function_name = "SPHRho"
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,

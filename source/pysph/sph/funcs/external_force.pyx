@@ -30,7 +30,7 @@ cdef class GravityForce(SPHFunction):
         self.gy = gy
         self.gz = gz
 
-        self.cl_kernel_src_file = "external_force.cl"
+        self.cl_kernel_src_file = "external_force.clt"
         self.cl_kernel_function_name = "GravityForce"
 
     cdef void eval_single(self, size_t dest_pid,
@@ -174,7 +174,7 @@ cdef class NBodyForce(SPHFunctionParticle):
         self.id = 'nbody_force'
         self.tag = "velocity"
 
-        self.cl_kernel_src_file = "external_force.cl"
+        self.cl_kernel_src_file = "external_force.clt"
         self.cl_kernel_function_name = "NBodyForce"
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
