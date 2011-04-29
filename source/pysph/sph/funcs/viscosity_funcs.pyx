@@ -30,11 +30,13 @@ cdef class MonaghanArtificialVsicosity(SPHFunctionParticle):
         self.id = 'momavisc'
         self.tag = "velocity"
 
-        self.src_reads.extend( ['u','v','w','cs'] )
-        self.dst_reads.extend( ['u','v','w','cs','rho'] )
-
         self.cl_kernel_src_file = "viscosity_funcs.cl"
         self.cl_kernel_function_name = "MonaghanArtificialVsicosity"
+
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','u','v','w','cs']
+        self.dst_reads = ['x','y','z','h','p',
+                          'u','v','w','cs','rho','tag']
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -149,6 +151,10 @@ cdef class MorrisViscosity(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "viscosity_funcs.cl"
         self.cl_kernel_function_name = "MorrisViscosity"
+
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','u','v','w',self.mu]
+        self.dst_reads = ['x','y','z','h','rho','u','v','w','tag',self.mu]
 
     cpdef setup_arrays(self):
         """

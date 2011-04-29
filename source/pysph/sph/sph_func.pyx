@@ -125,8 +125,8 @@ cdef class SPHFunction:
         
         self.num_outputs = 3
 
-        self.src_reads = ['x','y','z','h','m', 'rho']
-        self.dst_reads = ['x','y','z','h','tag']
+        self.src_reads = []
+        self.dst_reads = []
 
         self.kernel = None
 
@@ -140,6 +140,9 @@ cdef class SPHFunction:
 
         self.global_sizes = (self.dest.get_number_of_particles(), 1, 1)
         self.local_sizes = (1,1,1)
+
+        # setup the source and destination reads
+        self.set_src_dst_reads()
         
         if setup_arrays:
             self.setup_arrays()
@@ -300,7 +303,21 @@ cdef class SPHFunction:
 
     def get_cl_workgroup_code(self):
         return """unsigned int work_dim = get_work_dim();
-    unsigned int dest_id = get_gid(work_dim); """        
+    unsigned int dest_id = get_gid(work_dim); """
+
+    def set_src_dst_reads(self):
+        """ Populate the read requirements for the Function
+
+        The read requirements specify which particle properties will
+        be required by this function. Properties read from the source
+        particle array are appended to the list `src_reads` and those
+        from the destinatio particle array are appended to `dst_reads`
+
+        These read requirements are used to construct the OpenCL
+        kernel arguments at program creation time.
+
+        """
+        raise NotImplementedError("SPHFunction set_src_dst_reads called!")
 
 ################################################################################
 # `SPHFunctionParticle` class.

@@ -28,7 +28,7 @@ __kernel void NBodyForce(%(kernel_args)s)
 
     // The term `dest_id` will be suitably defined at this point.
 
-    REAL4 pa = (REAL4)( d_x[dest_id],d_y[dest_id], d_z[dest_id], d_h[dest_id] );
+    REAL4 pa = (REAL4)( d_x[dest_id],d_y[dest_id], d_z[dest_id], 0.0F );
     REAL4 rba;
     REAL invr, force_mag;
 
@@ -37,7 +37,7 @@ __kernel void NBodyForce(%(kernel_args)s)
         // SPH innermost loop code goes here.  The index `src_id` will
         // be available and looped over, this index.
 
-        REAL4 pb = (REAL4)( s_x[src_id],s_y[src_id],s_z[src_id],s_h[src_id] );
+        REAL4 pb = (REAL4)( s_x[src_id],s_y[src_id],s_z[src_id], 0.0F );
         rba = pb - pa;
       
         invr = 1.0F/( length(rba) + eps );

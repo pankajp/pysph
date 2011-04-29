@@ -20,14 +20,17 @@ cdef class IdealGasEquation(SPHFunction):
         self.id = 'idealgas'
         self.tag = "state"
 
-        self.dst_reads.extend( ['e','rho', 'p'] )
-
         self.cl_kernel_src_file = "eos_funcs.cl"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.dst_reads.extend( ['e','rho'] )
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):
         
-        cdef double Pa = self.d_p.data[dest_pid]
         cdef double ea = self.d_e.data[dest_pid]
         cdef double rhoa = self.d_rho.data[dest_pid]
         cdef double gamma = self.gamma
@@ -75,9 +78,13 @@ cdef class TaitEquation(SPHFunction):
         self.id = 'tait'
         self.tag = "state"
 
-        self.dst_reads.append('rho')
-
         self.cl_kernel_src_file = "eos_funcs.cl"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.dst_reads.extend( ['rho'] )
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):

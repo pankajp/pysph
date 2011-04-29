@@ -27,6 +27,13 @@ cdef class SPHRho(CSPHFunctionParticle):
         self.cl_kernel_src_file = "density_funcs.clt"
         self.cl_kernel_function_name = "SPHRho"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m'] )
+        self.dst_reads.extend( ['x','y','z','h','tag'] )
+
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):
         """ Compute the contribution from source_pid on dest_pid. """
@@ -89,11 +96,18 @@ cdef class SPHDensityRate(SPHFunctionParticle):
         self.id = 'densityrate'
         self.tag = "density"
 
-        self.src_reads.extend( ['u','v','w'] )
-        self.dst_reads.extend( ['u','v','w'] )
-
         self.cl_kernel_src_file = "density_funcs.cl"
         self.cl_kernel_function_name = "SPHDensityRate"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m'] )
+        self.dst_reads.extend( ['x','y','z','h','tag'] )
+
+        self.src_reads.extend( ['u','v','w'] )
+        self.dst_reads.extend( ['u','v','w'] )
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):

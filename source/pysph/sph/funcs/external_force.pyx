@@ -33,6 +33,9 @@ cdef class GravityForce(SPHFunction):
         self.cl_kernel_src_file = "external_force.clt"
         self.cl_kernel_function_name = "GravityForce"
 
+    def set_src_dst_reads(self):
+        pass
+
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
         """ Perform the gravity force computation """
@@ -79,6 +82,9 @@ cdef class VectorForce(SPHFunction):
         self.cl_kernel_src_file = "external_force.cl"
         self.cl_kernel_function_name = "VectorForce"
 
+    def set_src_dst_reads(self):
+        pass
+
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
         """ Perform the force computation """
@@ -103,6 +109,9 @@ cdef class MoveCircleX(SPHFunction):
 
         self.id = 'circlex'
         self.tag = "position"
+
+    def set_src_dst_reads(self):
+        pass        
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
@@ -135,6 +144,9 @@ cdef class MoveCircleY(SPHFunction):
 
         self.id = 'circley'
         self.tag = "position"
+
+    def set_src_dst_reads(self):
+        pass        
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):
@@ -176,6 +188,13 @@ cdef class NBodyForce(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "external_force.clt"
         self.cl_kernel_function_name = "NBodyForce"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','m'] )
+        self.dst_reads.extend( ['x','y','z','m','tag'] )
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double * result):

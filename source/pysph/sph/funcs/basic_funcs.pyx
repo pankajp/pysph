@@ -33,6 +33,13 @@ cdef class SPH(CSPHFunctionParticle):
         self.cl_kernel_src_file = "basic_funcs.clt"
         self.cl_kernel_function_name = "SPH"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho',self.prop_name] )
+        self.dst_reads.extend( ['x','y','z','h','tag'] )
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -129,6 +136,13 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
         self.cl_kernel_src_file = "basic_funcs.cl"
         self.cl_kernel_function_name = "SPHSimpleGradient"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho',self.prop_name] )
+        self.dst_reads.extend( ['x','y','z','h','tag'] )
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -137,9 +151,6 @@ cdef class SPHSimpleGradient(SPHFunctionParticle):
 
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
-
-        self.src_reads.append(self.prop_name)
-        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -227,6 +238,13 @@ cdef class SPHGradient(SPHFunctionParticle):
         self.cl_kernel_src_file = "basic_funcs.cl"
         self.cl_kernel_function_name = "SPHGradient"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho',self.prop_name] )
+        self.dst_reads.extend( ['x','y','z','h','tag'] )
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -235,9 +253,6 @@ cdef class SPHGradient(SPHFunctionParticle):
 
         self.d_prop = self.dest.get_carray(self.prop_name)
         self.s_prop = self.source.get_carray(self.prop_name)
-
-        self.src_reads.append(self.prop_name)
-        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -323,6 +338,13 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         self.cl_kernel_src_file = "basic_funcs.cl"
         self.cl_kernel_function_name = "SPHLaplacian"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho',self.prop_name] )
+        self.dst_reads.extend( ['x','y','z','h','tag',self.prop_name] )        
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
@@ -330,9 +352,6 @@ cdef class SPHLaplacian(SPHFunctionParticle):
         SPHFunctionParticle.setup_arrays(self)
         self.s_prop = self.source.get_carray(self.prop_name)
         self.d_prop = self.dest.get_carray(self.prop_name)
-
-        self.src_reads.append(self.prop_name)
-        self.dst_reads.append(self.prop_name)
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -410,6 +429,9 @@ cdef class CountNeighbors(SPHFunctionParticle):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays = True)
         self.id = 'nbrs'
+
+    def set_src_dst_reads(self):
+        pass
 
     cdef void eval_single(self, size_t dest_pid,
                           KernelBase kernel, double *result):

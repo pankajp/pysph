@@ -20,11 +20,12 @@ cdef class XSPHCorrection(CSPHFunctionParticle):
         self.id = 'xsph'
         self.tag = "position"
 
-        self.src_reads.extend( ['u','v','w'] )
-        self.dst_reads.extend( ['u','v','w','rho'] )
-
         self.cl_kernel_src_file = "xsph_funcs.cl"
         self.cl_kernel_function_name = "XSPHCorrection"
+
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','u','v','w']
+        self.dst_reads = ['x','y','z','h','rho','u','v','w']
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid,
                             KernelBase kernel, double *nr, double *dnr):

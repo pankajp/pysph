@@ -85,6 +85,14 @@ cdef class ADKESmoothingUpdate(ADKEPilotRho):
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "ADKESmoothingUpdate"
 
+    def set_src_dst_reads(self):
+
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','m','rho'] )
+        self.dst_reads.extend( ['x','y','z','tag'] )
+
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
@@ -147,11 +155,15 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
         self.id = "vdivergence"
         self.tag = "vdivergence"
 
-        self.src_reads.extend( ['u','v','w'] )
-        self.dst_reads.extend( ['u','v','w'] )
-
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "SPHVelocityDivergence"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','u','v','w','m'] )
+        self.dst_reads.extend( ['x','y','z','h','u','v','w','rho','tag'] )
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
@@ -166,7 +178,6 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 
 
         """
-
         cdef double ha = self.d_h.data[dest_pid]
         cdef double hb = self.s_h.data[source_pid]
 
@@ -232,6 +243,13 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         self.cl_kernel_function_name = "ADKEConductionCoeffUpdate"
 
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','u','v','w','m'] )
+        self.dst_reads.extend( ['x','y','z','h','u','v','w','rho','cs','tag'] )
+        
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays Note

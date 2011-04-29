@@ -19,11 +19,18 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         self.id = 'energyeqn'
         self.tag = "energy"
 
-        self.src_reads.extend( ['u','v','w','p'] )
-        self.dst_reads.extend( ['u','v','w','p'] )
-
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquationNoVisc"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho'] )
+        self.dst_reads.extend( ['x','y','z','h','rho','tag'] )
+
+        self.src_reads.extend( ['u','v','w','p'] )
+        self.dst_reads.extend( ['u','v','w','p'] )
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -107,11 +114,18 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
         self.id = 'energyavisc'
         self.tag = "energy"
 
-        self.src_reads.extend( ['u','v','w','p','cs'] )
-        self.dst_reads.extend( ['u','v','w','p','cs'] )
-
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquationAVisc"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho'] )
+        self.dst_reads.extend( ['x','y','z','h','rho','tag'] )
+
+        self.src_reads.extend( ['u','v','w','p','cs'] )
+        self.dst_reads.extend( ['u','v','w','p','cs'] )
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -222,15 +236,21 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.id = 'energyequation'
         self.tag = "energy"
 
-        self.src_reads.extend( ['u','v','w','p','cs'] )
-        self.dst_reads.extend( ['u','v','w','p','cs'] )
-
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquation"
+
+    def set_src_dst_reads(self):
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','h','m','rho'] )
+        self.dst_reads.extend( ['x','y','z','h','rho','tag'] )
+
+        self.src_reads.extend( ['u','v','w','p','cs'] )
+        self.dst_reads.extend( ['u','v','w','p','cs'] )        
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
-                       KernelBase kernel, double *nr):
-    
+                       KernelBase kernel, double *nr):    
     
         cdef cPoint vab, rab
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb

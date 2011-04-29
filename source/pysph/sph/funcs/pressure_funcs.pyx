@@ -24,11 +24,12 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self.id = 'pgrad'
         self.tag = "velocity"
 
-        self.dst_reads.extend( ['p', 'rho'] )
-        self.src_reads.append( 'p' )
-
         self.cl_kernel_src_file = "pressure_funcs.cl"
         self.cl_kernel_function_name = "SPHPressureGradient"
+
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','p']
+        self.dst_reads = ['x','y','z','h','rho','p','tag']
 
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                    KernelBase kernel, double *nr):
@@ -113,11 +114,13 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.id = 'momentumequation'
         self.tag = "velocity"
 
-        self.src_reads.extend( ['u','v','w','p','cs'] )
-        self.src_reads.extend( ['u','v','w','p','cs','rho'] )
-
         self.cl_kernel_src_file = "pressure_funcs.cl"
         self.cl_kernel_function_name = "MomentumEquation"
+
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','p','u','v','w','cs']
+        self.dst_reads = ['x','y','z','h','rho','p',
+                          'u','v','w','cs','tag']
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
