@@ -99,9 +99,6 @@ sph = [
         Extension("pysph.sph.funcs.energy_funcs",
                   ["source/pysph/sph/funcs/energy_funcs.pyx"],),
 
-        Extension("pysph.sph.funcs.eval_funcs",
-                  ["source/pysph/sph/funcs/eval_funcs.pyx"],),
-
         Extension("pysph.sph.funcs.viscosity_funcs",
                    ["source/pysph/sph/funcs/viscosity_funcs.pyx"],),
 
