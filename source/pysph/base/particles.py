@@ -5,6 +5,7 @@ from particle_types import ParticleType
 
 Fluid = ParticleType.Fluid
 Solid = ParticleType.Solid
+Probe = ParticleType.Probe
 
 # MPI conditional imports
 HAS_MPI = True
@@ -338,7 +339,7 @@ def get_particle_array(cl_precision="double", **props):
 
     if props.has_key("type"):
         particle_type = props["type"]
-        assert particle_type in [Fluid, Solid], 'Type not understood!'
+        assert particle_type in [Fluid, Solid, Probe], 'Type not understood!'
 
     pa = ParticleArray(name=name, particle_type=particle_type,
                        cl_precision=cl_precision, **prop_dict)
