@@ -1,6 +1,8 @@
 #cython: cdivision=True
 from pysph.base.point cimport cPoint_new, cPoint_sub, cPoint_add
 
+from pysph.solver.cl_utils import get_real
+
 cdef extern from "math.h":
     double sqrt(double)
 
@@ -131,7 +133,20 @@ cdef class MomentumEquation(SPHFunctionParticle):
         self.src_reads = ['x','y','z','h','m','rho','p','u','v','w','cs']
         self.dst_reads = ['x','y','z','h','rho','p',
                           'u','v','w','cs','tag']
-        
+
+    def _set_extra_cl_args(self):
+        self.cl_args.append( get_real(self.alpha, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const alpha' )
+
+        self.cl_args.append( get_real(self.beta, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const beta' )
+
+        self.cl_args.append( get_real(self.gamma, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const gamma' )
+
+        self.cl_args.append( get_real(self.eta, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const eta' )
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                        KernelBase kernel, double *nr):
         cdef double Pa, Pb, rhoa, rhob, rhoab, mb
@@ -222,5 +237,13 @@ cdef class MomentumEquation(SPHFunctionParticle):
         nr[0] += tmp*grad.x
         nr[1] += tmp*grad.y
         nr[2] += tmp*grad.z
+
+    def cl_eval(self, object queue, object context, object kernel):
+
+        self.set_cl_kernel_args()        
+
+        self.cl_program.MomentumEquation(
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
+        
         
 ###############################################################################
