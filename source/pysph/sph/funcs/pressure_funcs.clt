@@ -1,3 +1,47 @@
+
+
+$SPHPressureGradient
+
 #include "cl_common.h"
 #include "cl_common.cl"
 #include "kernels.h"
+
+__kernel void SPHPressureGradient(%(kernel_args)s)
+{
+    %(workgroup_code)s
+
+    // The term `dest_id` will be suitably defined at this point.
+
+    REAL4 ri = (REAL4)( d_x[dest_id], d_y[dest_id], 
+                        d_z[dest_id], d_h[dest_id] );
+
+    REAL rhoa = d_rho[dest_id];
+    REAL Pa = d_p[dest_id];
+    REAL4 grad;
+    REAL temp;
+ 
+    %(neighbor_loop_code)s 
+
+       {
+
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over, this index.
+
+        REAL4 rj = (REAL4)(s_x[src_id], s_y[src_id], s_z[src_id], s_h[src_id]);
+        REAL Pb = s_p[src_id];
+        REAL mb = s_m[src_id];
+	REAL rhob = s_rho[src_id];
+	
+	temp = -mb*( Pa/(rhoa*rhoa) + Pb/(rhob*rhob) ) ;
+	
+	kernel_gradient(ri, rj, &grad, dim, kernel_type);
+	
+	tmpx[dest_id] += temp*grad.x;
+	tmpy[dest_id] += temp*grad.y;
+	tmpz[dest_id] += temp*grad.z;
+
+       } // neighbor loop
+
+} // __kernel
+
+$SPHPressureGradient

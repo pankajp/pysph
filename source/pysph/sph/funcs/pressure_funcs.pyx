@@ -31,6 +31,9 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         self.src_reads = ['x','y','z','h','m','rho','p']
         self.dst_reads = ['x','y','z','h','rho','p','tag']
 
+    def _set_extra_cl_args(self):
+        pass
+
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid,
                    KernelBase kernel, double *nr):
         cdef double mb = self.s_m.data[source_pid]
@@ -81,6 +84,13 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
         nr[0] += temp*grad.x
         nr[1] += temp*grad.y
         nr[2] += temp*grad.z
+
+    def cl_eval(self, object queue, object context, object kernel):
+
+        self.set_cl_kernel_args()        
+
+        self.cl_program.SPHPressureGradient(
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
         
 #############################################################################
 

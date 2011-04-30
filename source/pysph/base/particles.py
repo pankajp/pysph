@@ -7,6 +7,8 @@ Fluid = ParticleType.Fluid
 Solid = ParticleType.Solid
 Probe = ParticleType.Probe
 
+SPHNeighborLocator = NeighborLocatorType.SPHNeighborLocator
+
 # MPI conditional imports
 HAS_MPI = True
 try:
@@ -88,7 +90,7 @@ class Particles(object):
     
     def __init__(self, arrays=[], in_parallel=False, variable_h=False,
                  load_balancing=True, update_particles=True,
-                 locator_type = NeighborLocatorType.SPHNeighborLocator,
+                 locator_type = SPHNeighborLocator,
                  periodic_domain=None, min_cell_size=-1):
         
         """ Constructor
@@ -254,9 +256,17 @@ class Particles(object):
         if self.in_parallel:
             self.cell_manager.barrier()
 
-    def get_neighbor_particle_locator(self, src, dst, radius_scale=2.0):
+    @classmethod
+    def get_neighbor_particle_locator(self, src, dst, 
+                                      locator_type = SPHNeighborLocator,
+                                      variable_h=False, radius_scale=2.0):
         """ Return a neighbor locator from the NNPSManager """
-        return self.nnps_manager.get_neighbor_particle_locator(
+
+        cell_manager = CellManager(arrays_to_bin=[src, dst])
+        nnps_manager = NNPSManager(cell_manager, locator_type=locator_type,
+                                   variable_h=variable_h)
+
+        return nnps_manager.get_neighbor_particle_locator(
             src, dst, radius_scale)
 
     def get_cl_precision(self):
