@@ -69,7 +69,6 @@ __kernel void MomentumEquation(%(kernel_args)s)
     REAL4 grad;
     REAL temp, Pi_ab;
  
-    Pi_ab = 0.0F;
     %(neighbor_loop_code)s 
 
        {
@@ -80,6 +79,7 @@ __kernel void MomentumEquation(%(kernel_args)s)
         REAL4 rb = (REAL4)(s_x[src_id], s_y[src_id], s_z[src_id], s_h[src_id]);
         REAL Pb = s_p[src_id];
 	REAL rhob = s_rho[src_id];
+	REAL mb = s_m[src_id];
 
 	REAL4 vb = (REAL4)(s_u[src_id], s_v[src_id], s_w[src_id], 0.0F);
 
@@ -88,7 +88,8 @@ __kernel void MomentumEquation(%(kernel_args)s)
 	temp =  Pa/(rhoa*rhoa) + Pb/(rhob*rhob)  ;
 	
 	kernel_gradient(ra, rb, &grad, dim, kernel_type);
-	
+
+	Pi_ab = 0.0F;	
 	if ( dot_product < 0.0F )
 	  {
 	    REAL cab = 0.5F * ( d_cs[dest_id] + s_cs[src_id] );
@@ -96,8 +97,9 @@ __kernel void MomentumEquation(%(kernel_args)s)
 	    
 	    REAL hab = 0.5F * ( d_h[dest_id] + s_h[src_id] );
 	    REAL mu = dot_product*hab;
-
-	    mu /= ( length(ra-rb) + eta*eta*hab*hab );
+	    REAL norm2 = length(ra-rb) * length(ra-rb);
+	    
+	    mu /= ( norm2 + eta*eta*hab*hab );
 
 	    Pi_ab = -alpha*cab*mu + beta*mu*mu;
 	    Pi_ab /= rhoab;
@@ -105,7 +107,7 @@ __kernel void MomentumEquation(%(kernel_args)s)
 	  } //if
 
 	temp += Pi_ab;
-	temp *= -s_m[src_id];
+	temp = -mb*temp;
 
 	tmpx[dest_id] += temp*grad.x;
 	tmpy[dest_id] += temp*grad.y;

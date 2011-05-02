@@ -1,4 +1,4 @@
-""" Tests for the pressure force functions """
+""" Tests for the energy force functions """
 
 import pysph.base.api as base
 import pysph.solver.api as solver
@@ -13,20 +13,22 @@ from os import path
 
 NSquareLocator = base.NeighborLocatorType.NSquareNeighborLocator
 
-class PressureForceTestCase(unittest.TestCase):
+class EnergyFunctionsTestCase(unittest.TestCase):
 
     def runTest(self):
         pass
 
     def setUp(self):
         """ The setup consists of four particles placed at the
-        vertices of a unit square. The pressure gradient term to be
-        tested is
+        vertices of a unit square.
+
+        The function tested is
 
         ..math::
 
-                \frac{\nablaP}{\rho}_i = \sum_{j=1}^{4}
-                -m_j(\frac{Pa}{\rho_a^2} + \frac{Pb}{\rho_b^2})\nabla W_{ab}
+        \frac{DU_a}{Dt} = \frac{1}{2}\sum_{b=1}^{N}m_b\left[
+        \left(\frac{p_a}{\rho_a^2} + \frac{p_b}{\rho_b^2}\right)\,(v_a -
+        v_b)\right]\,\nabla_a \cdot W_{ab}
 
         The mass of each particle is 1
 
@@ -54,21 +56,21 @@ class PressureForceTestCase(unittest.TestCase):
                                                tmpx=tmpx, tmpy=tmpy, tmpz=tmpz,
                                                cl_precision=self.precision)
 
-        grad_func = sph.SPHPressureGradient.withargs()
-        mom_func = sph.MomentumEquation.withargs(alpha=1.0, beta=1.0,
-                                                 gamma=1.4, eta=0.1)
+        env = sph.EnergyEquationNoVisc.withargs()
+        ewv = sph.EnergyEquation.withargs(alpha=1.0, beta=1.0,
+                                          gamma=1.4, eta=0.1)
 
 
-        self.grad_func = grad_func.get_func(pa,pa)
-        self.mom_func = mom_func.get_func(pa,pa)
+        self.env = env.get_func(pa,pa)
+        self.ewv = ewv.get_func(pa,pa)
         
-        self.grad_func.kernel = base.CubicSplineKernel(dim=2)
-        self.grad_func.nbr_locator = \
-                              base.Particles.get_neighbor_particle_locator(pa,
-                                                                           pa)
+        self.env.kernel = base.CubicSplineKernel(dim=2)
+        self.env.nbr_locator = \
+                             base.Particles.get_neighbor_particle_locator(pa,
+                                                                          pa)
 
-        self.mom_func.kernel = base.CubicSplineKernel(dim=2)
-        self.mom_func.nbr_locator = \
+        self.ewv.kernel = base.CubicSplineKernel(dim=2)
+        self.ewv.nbr_locator = \
                              base.Particles.get_neighbor_particle_locator(pa,
                                                                           pa)
 
@@ -77,7 +79,7 @@ class PressureForceTestCase(unittest.TestCase):
     def setup_cl(self):
         pass
 
-class SPHPressureGradientTestCase(PressureForceTestCase):
+class EnergyEquationNoViscTestCase(EnergyFunctionsTestCase):
 
     def setup_cl(self):
         pa = self.pa
@@ -91,11 +93,11 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
             pysph_root = solver.get_pysph_root()
             
             template = solver.cl_read(
-                path.join(pysph_root, "sph/funcs/pressure_funcs.clt"),
-                function_name=self.grad_func.cl_kernel_function_name,
+                path.join(pysph_root, "sph/funcs/energy_funcs.clt"),
+                function_name=self.env.cl_kernel_function_name,
                 precision=self.precision)
 
-            prog_src = solver.create_program(template, self.grad_func)
+            prog_src = solver.create_program(template, self.env)
 
             self.prog=cl.Program(ctx, prog_src).build(solver.get_cl_include())
 
@@ -106,36 +108,40 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
         forces = []
 
         x,y,z,p,m,h,rho = pa.get('x','y','z','p','m','h','rho')
+        u,v,w = pa.get('u','v','w')
 
         kernel = base.CubicSplineKernel(dim=2)
 
         for i in range(self.np):
 
             force = base.Point()
-            xi, yi, zi = x[i], y[i], z[i]
+            xa, ya, za = x[i], y[i], z[i]
+            ua, va, wa = u[i], v[i], w[i]
 
-            ri = base.Point(xi,yi,zi)
+            ra = base.Point(xa,ya,za)
+            Va = base.Point(ua,va,wa) 
 
-            Pi, rhoi = p[i], rho[i]
-            hi = h[i]
+            Pa, rhoa = p[i], rho[i]
+            ha = h[i]
 
             for j in range(self.np):
 
                 grad = base.Point()
-                xj, yj, zj = x[j], y[j], z[j]
-                Pj, rhoj = p[j], rho[j]
-                hj, mj = m[j], h[j]
+                xb, yb, zb = x[j], y[j], z[j]
+                ub, vb, wb = u[j], v[j], w[j]
 
-                havg = 0.5 * (hi + hj)
+                Pb, rhob = p[j], rho[j]
+                hb, mb = m[j], h[j]
 
-                rj = base.Point(xj, yj, zj)
+                havg = 0.5 * (ha + hb)
+
+                rb = base.Point(xb, yb, zb)
+                Vb = base.Point(ub, vb, wb)
         
-                tmp = -mj * ( Pi/(rhoi*rhoi) + Pj/(rhoj*rhoj) )
-                kernel.py_gradient(ri, rj, havg, grad)
+                tmp = 0.5*mb * ( Pa/(rhoa*rhoa) + Pb/(rhob*rhob) )
+                kernel.py_gradient(ra, rb, havg, grad)
 
-                force.x += tmp*grad.x
-                force.y += tmp*grad.y
-                force.z += tmp*grad.z
+                force.x += tmp * grad.dot(Va-Vb)
 
             forces.append(force)
 
@@ -145,7 +151,7 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
         """ Test the PySPH solution """
 
         pa = self.pa
-        func = self.grad_func
+        func = self.env
 
         k = base.CubicSplineKernel(dim=2)
 
@@ -168,7 +174,7 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
         if solver.HAS_CL:
 
             pa = self.pa
-            func = self.grad_func
+            func = self.env
             
             k = base.CubicSplineKernel(dim=2)
 
@@ -185,7 +191,7 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
                 self.assertAlmostEqual(reference_solution[i].y, pa.tmpy[i], 6)
                 self.assertAlmostEqual(reference_solution[i].z, pa.tmpz[i], 6)
 
-class MomentumEquationTestCase(PressureForceTestCase):
+class EnergyEquationTestCase(EnergyFunctionsTestCase):
 
     def setup_cl(self):
         pa = self.pa
@@ -199,12 +205,12 @@ class MomentumEquationTestCase(PressureForceTestCase):
             pysph_root = solver.get_pysph_root()
             
             template = solver.cl_read(
-                path.join(pysph_root, "sph/funcs/pressure_funcs.clt"),
-                function_name=self.mom_func.cl_kernel_function_name,
+                path.join(pysph_root, "sph/funcs/energy_funcs.clt"),
+                function_name=self.ewv.cl_kernel_function_name,
                 precision=self.precision)
 
-            self.mom_func.set_cl_kernel_args()
-            prog_src = solver.create_program(template, self.mom_func)
+            self.ewv.set_cl_kernel_args()
+            prog_src = solver.create_program(template, self.ewv)
 
             self.prog=cl.Program(ctx, prog_src).build(solver.get_cl_include())
 
@@ -222,34 +228,34 @@ class MomentumEquationTestCase(PressureForceTestCase):
         for i in range(self.np):
 
             force = base.Point()
-            xi, yi, zi = x[i], y[i], z[i]
-            ui, vi, wi = u[i], v[i], w[i]
+            xa, ya, za = x[i], y[i], z[i]
+            ua, va, wa = u[i], v[i], w[i]
 
-            ri = base.Point(xi,yi,zi)
-            Va = base.Point(ui,vi,wi)
+            ra = base.Point(xa,ya,za)
+            Va = base.Point(ua,va,wa)
 
-            Pi, rhoi = p[i], rho[i]
-            hi = h[i]
+            Pa, rhoa = p[i], rho[i]
+            ha = h[i]
 
             for j in range(self.np):
 
                 grad = base.Point()
-                xj, yj, zj = x[j], y[j], z[j]
-                Pj, rhoj = p[j], rho[j]
-                hj, mj = h[j], m[j]
+                xb, yb, zb = x[j], y[j], z[j]
+                Pb, rhob = p[j], rho[j]
+                hb, mb = h[j], m[j]
 
-                uj, vj, wj = u[j], v[j], w[j]
-                Vb = base.Point(uj,vj,wj)
+                ub, vb, wb = u[j], v[j], w[j]
+                Vb = base.Point(ub,vb,wb)
 
-                havg = 0.5 * (hi + hj)
+                havg = 0.5 * (hb + ha)
 
-                rj = base.Point(xj, yj, zj)
+                rb = base.Point(xb, yb, zb)
         
-                tmp = Pi/(rhoi*rhoi) + Pj/(rhoj*rhoj)
-                kernel.py_gradient(ri, rj, havg, grad)
+                tmp = Pa/(rhoa*rhoa) + Pb/(rhob*rhob)
+                kernel.py_gradient(ra, rb, havg, grad)
 
                 vab = Va-Vb
-                rab = ri-rj
+                rab = ra-rb
 
                 dot = vab.dot(rab)
                 piab = 0.0
@@ -262,7 +268,7 @@ class MomentumEquationTestCase(PressureForceTestCase):
 
                     cab = 0.5 * (cs[i] + cs[j])
 
-                    rhoab = 0.5 * (rhoi + rhoj)
+                    rhoab = 0.5 * (rhoa + rhob)
                     muab = havg * dot
 
                     muab /= ( rab.norm() + eta*eta*havg*havg )
@@ -271,11 +277,9 @@ class MomentumEquationTestCase(PressureForceTestCase):
                     piab /= rhoab
 
                 tmp += piab
-                tmp *= -mj
-                    
-                force.x += tmp*grad.x
-                force.y += tmp*grad.y
-                force.z += tmp*grad.z
+                tmp *= 0.5*mb
+
+                force.x += tmp * ( vab.dot(grad) )
 
             forces.append(force)
 
@@ -285,7 +289,7 @@ class MomentumEquationTestCase(PressureForceTestCase):
         """ Test the PySPH solution """
 
         pa = self.pa
-        func = self.mom_func
+        func = self.ewv
 
         k = base.CubicSplineKernel(dim=2)
 
@@ -298,9 +302,9 @@ class MomentumEquationTestCase(PressureForceTestCase):
         reference_solution = self.get_reference_solution()
 
         for i in range(self.np):
-            self.assertAlmostEqual(reference_solution[i].x, tmpx[i])
-            self.assertAlmostEqual(reference_solution[i].y, tmpy[i])
-            self.assertAlmostEqual(reference_solution[i].z, tmpz[i])
+            self.assertAlmostEqual(reference_solution[i].x, tmpx[i], 6)
+            self.assertAlmostEqual(reference_solution[i].y, tmpy[i], 6)
+            self.assertAlmostEqual(reference_solution[i].z, tmpz[i], 6)
 
     def test_cl_eval(self):
         """ Test the PyOpenCL implementation """
@@ -308,7 +312,7 @@ class MomentumEquationTestCase(PressureForceTestCase):
         if solver.HAS_CL:
 
             pa = self.pa
-            func = self.mom_func
+            func = self.ewv
             
             k = base.CubicSplineKernel(dim=2)
 

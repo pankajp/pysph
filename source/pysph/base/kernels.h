@@ -86,6 +86,7 @@ void cubic_spline_gradient(REAL4 pa, REAL4 pb, REAL4* grad,
   grad[0].s0 = val * rab.s0;
   grad[0].s1 = val * rab.s1;
   grad[0].s2 = val * rab.s2;
+  grad[0].s3 = 0.0F;
 
 }
 

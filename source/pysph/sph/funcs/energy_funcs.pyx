@@ -2,6 +2,8 @@
 from pysph.base.point cimport cPoint, cPoint_dot, cPoint_new, cPoint_sub,\
      cPoint_norm
 
+from pysph.solver.cl_utils import get_real
+
 cdef extern from "math.h":
     double sqrt(double)
     double fabs(double)
@@ -31,6 +33,9 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         self.src_reads.extend( ['u','v','w','p'] )
         self.dst_reads.extend( ['u','v','w','p'] )
+
+    def _set_extra_cl_args(self):
+        pass
     
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):
@@ -89,7 +94,14 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
         tmp = 0.5*mb*(pa/(rhoa*rhoa) + pb/(rhob*rhob))
 
         nr[0] += tmp*dot
-##############################################################################
+
+    def cl_eval(self, object queue, object context, object kernel):
+
+        self.set_cl_kernel_args()        
+
+        self.cl_program.EnergyEquationNoVisc(
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
+        
 
 ##############################################################################
 cdef class EnergyEquationAVisc(SPHFunctionParticle):
@@ -232,12 +244,13 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
+        self.eta = eta
 
         self.id = 'energyequation'
         self.tag = "energy"
 
         self.cl_kernel_src_file = "energy_funcs.cl"
-        self.cl_kernel_function_name = "EnergyEquation"
+        self.cl_kernel_function_name = "EnergyEquationWithVisc"
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -247,7 +260,20 @@ cdef class EnergyEquation(SPHFunctionParticle):
         self.dst_reads.extend( ['x','y','z','h','rho','tag'] )
 
         self.src_reads.extend( ['u','v','w','p','cs'] )
-        self.dst_reads.extend( ['u','v','w','p','cs'] )        
+        self.dst_reads.extend( ['u','v','w','p','cs'] )
+
+    def _set_extra_cl_args(self):
+        self.cl_args.append( get_real(self.alpha, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const alpha' )
+
+        self.cl_args.append( get_real(self.beta, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const beta' )
+
+        self.cl_args.append( get_real(self.gamma, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const gamma' )
+
+        self.cl_args.append( get_real(self.eta, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const eta' )        
         
     cdef void eval_nbr(self, size_t source_pid, size_t dest_pid, 
                        KernelBase kernel, double *nr):    
@@ -332,8 +358,14 @@ cdef class EnergyEquation(SPHFunctionParticle):
         tmp = cPoint_dot(grad, vab) * tmp
 
         nr[0] += 0.5*mb*tmp
-        
 
+    def cl_eval(self, object queue, object context, object kernel):
+
+        self.set_cl_kernel_args()        
+
+        self.cl_program.EnergyEquationWithVisc(
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
+        
 ################################################################################
 # `ArtificialHeat` class.
 ################################################################################

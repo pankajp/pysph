@@ -1,0 +1,144 @@
+
+
+$EnergyEquationNoVisc
+
+/* Thermal energy equation (eq 10) described in "A shock-captiting SPH
+   scheme based on adaptive kernel estimation" by Leonardo
+   Di. G. Sigalotti et al.
+
+   The equation without artificial viscosity and artificial heat is
+
+   \frac{DU_a}{Dt} = \frac{1}{2}\sum_{b=1}^{N}m_b\left[
+   \left(\frac{p_a}{\rho_a^2} + \frac{p_b}{\rho_b^2}\right)\,(v_a -
+   v_b)\right]\,\nabla_a \cdot W_{ab}
+
+*/
+
+#include "cl_common.h"
+#include "cl_common.cl"
+#include "kernels.h"
+
+__kernel void EnergyEquationNoVisc(%(kernel_args)s)
+{
+    %(workgroup_code)s
+
+    // The term `dest_id` will be suitably defined at this point.
+
+    REAL4 ra = (REAL4)( d_x[dest_id], d_y[dest_id], 
+                        d_z[dest_id], d_h[dest_id] );
+
+    REAL rhoa = d_rho[dest_id];
+    REAL Pa = d_p[dest_id];
+
+    REAL4 va = (REAL4)(d_u[dest_id], d_v[dest_id], d_w[dest_id], 0.0F);
+
+    REAL4 grad;
+    REAL temp;
+ 
+    %(neighbor_loop_code)s 
+
+       {
+
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over, this index.
+
+        REAL4 rb = (REAL4)(s_x[src_id], s_y[src_id], s_z[src_id], s_h[src_id]);
+        REAL Pb = s_p[src_id];
+        REAL mb = s_m[src_id];
+	REAL rhob = s_rho[src_id];
+
+	REAL4 vb = (REAL4)(s_u[src_id], s_v[src_id], s_w[src_id], 0.0F);
+	
+	temp = 0.5F*mb*( Pa/(rhoa*rhoa) + Pb/(rhob*rhob) ) ;
+
+	kernel_gradient(ra, rb, &grad, dim, kernel_type);
+
+	tmpx[dest_id] += temp * ( dot(va-vb, grad) );
+	
+       } // neighbor loop
+
+} // __kernel
+
+$EnergyEquationNoVisc
+
+
+$EnergyEquationWithVisc
+
+/* Thermal energy equation (eq 10) described in "A shock-captiting SPH
+   scheme based on adaptive kernel estimation" by Leonardo
+   Di. G. Sigalotti et al.
+
+   The equation without artificial heat is
+
+   \frac{DU_a}{Dt} = \frac{1}{2}\sum_{b=1}^{N}m_b\left[
+   \left(\frac{p_a}{\rho_a^2} + \frac{p_b}{\rho_b^2} +
+   \Pi_{ab}\right)\,(v_a - v_b)\right]\,\nabla_a \cdot W_{ab}
+
+*/
+
+#include "cl_common.h"
+#include "cl_common.cl"
+#include "kernels.h"
+
+__kernel void EnergyEquationWithVisc(%(kernel_args)s)
+{
+    %(workgroup_code)s
+
+    // The term `dest_id` will be suitably defined at this point.
+
+    REAL4 ra = (REAL4)( d_x[dest_id], d_y[dest_id], 
+                        d_z[dest_id], d_h[dest_id] );
+  
+    REAL4 va = (REAL4)(d_u[dest_id], d_v[dest_id], d_w[dest_id], 0.0F);
+    
+    REAL rhoa = d_rho[dest_id];
+    REAL Pa = d_p[dest_id];
+    REAL4 grad;
+    REAL temp, Pi_ab;
+ 
+    %(neighbor_loop_code)s 
+
+       {
+
+        // SPH innermost loop code goes here.  The index `src_id` will
+        // be available and looped over, this index.
+
+        REAL4 rb = (REAL4)(s_x[src_id], s_y[src_id], s_z[src_id], s_h[src_id]);
+        REAL Pb = s_p[src_id];
+	REAL rhob = s_rho[src_id];
+
+	REAL4 vb = (REAL4)(s_u[src_id], s_v[src_id], s_w[src_id], 0.0F);
+
+	REAL dot_product = dot( (va-vb), (ra-rb) );
+	
+	temp =  Pa/(rhoa*rhoa) + Pb/(rhob*rhob)  ;
+	
+	kernel_gradient(ra, rb, &grad, dim, kernel_type);
+
+	Pi_ab = 0.0F;	
+	if ( dot_product < 0.0F )
+	  {
+	    REAL cab = 0.5F * ( d_cs[dest_id] + s_cs[src_id] );
+	    REAL rhoab = 0.5F * (rhoa + rhob);
+	    
+	    REAL hab = 0.5F * ( d_h[dest_id] + s_h[src_id] );
+	    REAL mu = dot_product*hab;
+	    REAL norm = length(ra-rb);
+
+	    mu /= ( norm*norm + eta*eta*hab*hab );
+
+	    Pi_ab = -alpha*cab*mu + beta*mu*mu;
+	    Pi_ab /= rhoab;
+	      
+	  } //if
+
+	temp += Pi_ab;
+	temp *= 0.5F*s_m[src_id];
+
+	tmpx[dest_id] += temp * dot( va-vb, grad );
+
+       } //neighbor_loop_code
+
+} //__kernel
+	
+$EnergyEquationWithVisc
