@@ -75,7 +75,7 @@ cdef class SPHRho(CSPHFunctionParticle):
     def _set_extra_cl_args(self):
         pass
 
-    def cl_eval(self, object queue, object context, object kernel):
+    def cl_eval(self, object queue, object context):
 
         self.set_cl_kernel_args()
 
