@@ -4,6 +4,8 @@ from pysph.base.particle_array cimport ParticleArray, LocalReal
 from pysph.base.carray cimport DoubleArray, LongArray
 from pysph.base.kernels cimport KernelBase
 
+from pysph.solver.cl_utils import get_real
+
 cdef extern from "math.h":
     double pow(double x, double y)
     double sqrt(double x)
@@ -21,12 +23,17 @@ cdef class IdealGasEquation(SPHFunction):
         self.tag = "state"
 
         self.cl_kernel_src_file = "eos_funcs.cl"
+        self.cl_kernel_function_name = "IdealGasEquation"
 
     def set_src_dst_reads(self):
         self.src_reads = []
         self.dst_reads = []
 
         self.dst_reads.extend( ['e','rho'] )
+
+    def _set_extra_cl_args(self):
+        self.cl_args.append( get_real(self.gamma, self.dest.cl_precision) )
+        self.cl_args_name.append( 'REAL const gamma' )
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double* result):
@@ -37,6 +44,13 @@ cdef class IdealGasEquation(SPHFunction):
 
         result[0] = (gamma-1.0)*rhoa*ea
         result[1] = sqrt(ea*(gamma - 1.0))
+
+    def cl_eval(self, object queue, object context):
+
+        self.set_cl_kernel_args()        
+
+        self.cl_program.IdealGasEquation(
+            queue, self.global_sizes, self.local_sizes, *self.cl_args).wait()
 
 ##############################################################################
 

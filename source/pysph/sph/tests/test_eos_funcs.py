@@ -1,4 +1,4 @@
-""" Tests for the External Force Functions """
+""" Tests for the eos functions """
 
 import pysph.base.api as base
 import pysph.solver.api as solver
@@ -11,22 +11,24 @@ import numpy
 import unittest
 from os import path
 
-class NBodyForceTestCase(unittest.TestCase):
-    """ Simple test for the NBodyForce """
+NSquareLocator = base.NeighborLocatorType.NSquareNeighborLocator
+
+class EOSFunctionsTestCase(unittest.TestCase):
 
     def runTest(self):
         pass
 
     def setUp(self):
         """ The setup consists of four particles placed at the
-        vertices of a unit square. The force function to be tested is:
+        vertices of a unit square.
+
+        The function tested is
 
         ..math::
 
-                f_i = \sum_{j=1}^{4} \frac{m_j}{|x_j - x_i|^3 +
-                \eps}(x_j - x_i)
+        p_a = (\gamma - 1.0)\rho_a U_a
+        cs_a = \sqrt( (\gamma - 1.0) U_a )
 
-        The mass of each particle is 1
 
         """
         
@@ -36,21 +38,40 @@ class NBodyForceTestCase(unittest.TestCase):
 
         x = numpy.array([0, 0, 1, 1], numpy.float64)
         y = numpy.array([0, 1, 1, 0], numpy.float64)
+
         z = numpy.zeros_like(x)
         m = numpy.ones_like(x)
+
+        e = numpy.array([1, 2, 1, 2], numpy.float64)
+        rho = numpy.array([2, 1, 2, 1], numpy.float64)
+        
         tmpx = numpy.zeros_like(x)
         tmpy = numpy.zeros_like(x)
         tmpz = numpy.zeros_like(x)
 
         self.pa = pa = base.get_particle_array(name="test", x=x,  y=y, z=z,
-                                               m=m, tmpx=tmpx, tmpy=tmpy,
-                                               tmpz=tmpz,
+                                               m=m, e=e, rho=rho,
+                                               tmpx=tmpx, tmpy=tmpy, tmpz=tmpz,
                                                cl_precision=self.precision)
 
-        self.func = func = sph.NBodyForce.get_func(pa, pa)
+        ideal = sph.IdealGasEquation.withargs(gamma=1.4)
 
-        self.eps = func.eps
+        self.ideal = ideal.get_func(pa,pa)
+        
+        self.ideal.nbr_locator = \
+                               base.Particles.get_neighbor_particle_locator(pa,
+                                                                            pa)
 
+        self.setup_cl()
+
+    def setup_cl(self):
+        pass
+
+class IdealGasEquationTestCase(EOSFunctionsTestCase):
+
+    def setup_cl(self):
+        pa = self.pa
+        
         if solver.HAS_CL:
             self.ctx = ctx = cl.create_some_context()
             self.q = q = cl.CommandQueue(ctx)
@@ -60,49 +81,46 @@ class NBodyForceTestCase(unittest.TestCase):
             pysph_root = solver.get_pysph_root()
             
             template = solver.cl_read(
-                path.join(pysph_root, "sph/funcs/external_force.clt"),
-                function_name=func.cl_kernel_function_name,
+                path.join(pysph_root, "sph/funcs/eos_funcs.clt"),
+                function_name=self.ideal.cl_kernel_function_name,
                 precision=self.precision)
 
-            prog_src = solver.create_program(template, func)
+            prog_src = solver.create_program(template, self.ideal)
 
-            self.prog = cl.Program(ctx, prog_src).build(solver.get_cl_include())
-        
+            self.prog=cl.Program(ctx, prog_src).build(solver.get_cl_include())
+
     def get_reference_solution(self):
         """ Evaluate the force on each particle manually """
-
+        
         pa = self.pa
-        def get_force(i):
-            xi = pa.x[i]; yi = pa.y[i]
+        result = []
+
+        rho, e = pa.get('rho', 'e')
+
+        kernel = base.CubicSplineKernel(dim=2)
+        gamma = 1.4
+
+        for i in range(self.np):
 
             force = base.Point()
 
-            for j in range(self.np):
-                xj = pa.x[j]; yj = pa.y[j]
+            rhoa = rho[i]
+            ea = e[i]
 
-                xji = xj - xi; yji = yj - yi
-                dist = numpy.sqrt( xji**2 + yji**2 )
+            force.x = (gamma - 1.0) * ea * rhoa
+            force.y = numpy.sqrt( (gamma-1.0) * ea )
 
-                invr = 1.0/(dist + self.eps)
-                invr3 = invr * invr * invr
-              
-                if not ( i == j ):
-                    
-                    force.x += invr3 * xji
-                    force.y += invr3 * yji
+            result.append(force)
 
-            return force
-
-        forces = [get_force(i) for i in range(self.np)]
-        return forces
+        return result
 
     def test_eval(self):
         """ Test the PySPH solution """
 
         pa = self.pa
-        func = self.func
+        func = self.ideal
 
-        k = base.CubicSplineKernel()
+        k = base.CubicSplineKernel(dim=2)
 
         tmpx = pa.properties['tmpx']
         tmpy = pa.properties['tmpy']
@@ -123,7 +141,7 @@ class NBodyForceTestCase(unittest.TestCase):
         if solver.HAS_CL:
 
             pa = self.pa
-            func = self.func
+            func = self.ideal
             
             func.setup_cl(self.prog, self.ctx)
 

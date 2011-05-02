@@ -443,7 +443,7 @@ class CLCalc(SPHCalc):
         self.cl_reset_output_arrays()
 
         for func in self.funcs:
-            func.cl_eval(self.queue, self.context, self.kernel)
+            func.cl_eval(self.queue, self.context)
 
     def cl_reset_output_arrays(self):
         """ Reset the dst tmpx, tmpy and tmpz arrays to 0

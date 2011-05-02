@@ -95,7 +95,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         nr[0] += tmp*dot
 
-    def cl_eval(self, object queue, object context, object kernel):
+    def cl_eval(self, object queue, object context):
 
         self.set_cl_kernel_args()        
 
@@ -359,7 +359,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         nr[0] += 0.5*mb*tmp
 
-    def cl_eval(self, object queue, object context, object kernel):
+    def cl_eval(self, object queue, object context):
 
         self.set_cl_kernel_args()        
 

@@ -170,11 +170,9 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
             pa = self.pa
             func = self.grad_func
             
-            k = base.CubicSplineKernel(dim=2)
-
             func.setup_cl(self.prog, self.ctx)
 
-            func.cl_eval(self.q, self.ctx, k)
+            func.cl_eval(self.q, self.ctx)
 
             pa.read_from_buffer()
 
@@ -310,11 +308,9 @@ class MomentumEquationTestCase(PressureForceTestCase):
             pa = self.pa
             func = self.mom_func
             
-            k = base.CubicSplineKernel(dim=2)
-
             func.setup_cl(self.prog, self.ctx)
 
-            func.cl_eval(self.q, self.ctx, k)
+            func.cl_eval(self.q, self.ctx)
 
             pa.read_from_buffer()
 

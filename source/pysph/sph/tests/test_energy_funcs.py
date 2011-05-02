@@ -176,11 +176,9 @@ class EnergyEquationNoViscTestCase(EnergyFunctionsTestCase):
             pa = self.pa
             func = self.env
             
-            k = base.CubicSplineKernel(dim=2)
-
             func.setup_cl(self.prog, self.ctx)
 
-            func.cl_eval(self.q, self.ctx, k)
+            func.cl_eval(self.q, self.ctx)
 
             pa.read_from_buffer()
 
@@ -314,11 +312,9 @@ class EnergyEquationTestCase(EnergyFunctionsTestCase):
             pa = self.pa
             func = self.ewv
             
-            k = base.CubicSplineKernel(dim=2)
-
             func.setup_cl(self.prog, self.ctx)
 
-            func.cl_eval(self.q, self.ctx, k)
+            func.cl_eval(self.q, self.ctx)
 
             pa.read_from_buffer()
 

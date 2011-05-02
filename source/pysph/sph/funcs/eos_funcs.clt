@@ -1,0 +1,33 @@
+
+$IdealGasEquation
+
+/* 
+   Ideal gas equation given by
+   
+   p_a = (\gamma - 1.0)\rho_a U_a
+   cs_a = \sqrt( (\gamma - 1.0) U_a )
+   
+   Here U is the specific thermal energy.
+   
+*/
+
+#include "cl_common.h"
+#include "cl_common.cl"
+#include "kernels.h"
+
+__kernel void IdealGasEquation(%(kernel_args)s)
+{
+  
+  
+  %(workgroup_code)s
+    
+  REAL tmp = gamma - 1.0F;
+  REAL rhoa = d_rho[dest_id];
+  REAL ea = d_e[dest_id];
+  
+  tmpx[dest_id] = tmp * rhoa * ea;
+  
+  tmpy[dest_id] = sqrt( tmp * ea );
+}
+
+$IdealGasEquation
