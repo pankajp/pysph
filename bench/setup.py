@@ -16,8 +16,8 @@ def get_spcl_extn(extn):
     cpp_extensions = 'sph_funcs', 'nnps', 'cell', 'cpp_vs_pyx', 'cpp_extensions', 'nnps_brute_force'
 
     if extn.name in cpp_extensions:
-        extn.language = 'c++'
-        extn.sources.append('cPoint.cpp')
+        pass
+        #extn.sources.append('cPoint.cpp')
     return extn
 
 def compile_extns(extensions=None, dirname=None, inc_dirs=None):
@@ -50,7 +50,7 @@ def compile_extns(extensions=None, dirname=None, inc_dirs=None):
     extns = []
     for extnname in extensions:
         extn = Extension(extnname, [extnname+".pyx"], include_dirs=inc_dirs,
-                             extra_compile_args=cargs)
+                         language='c++', extra_compile_args=cargs)
         extn = get_spcl_extn(extn)
         extns.append(extn)
     

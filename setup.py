@@ -15,10 +15,13 @@ for more information.
 
 from setuptools import find_packages, setup
 from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 from numpy.distutils.extension import Extension
 
 import numpy
-import os
+import sys
+import multiprocessing
+ncpu = multiprocessing.cpu_count()
 
 inc_dirs = [numpy.get_include()]
 extra_compile_args = []
@@ -44,6 +47,8 @@ try:
 except ImportError:
     HAS_MPI4PY = False
 
+cy_directives = {'embedsignature':True,
+                 }
 
 # base extension modules.
 base = [Extension("pysph.base.carray", 
@@ -151,6 +156,7 @@ for extn in ext_modules:
     extn.include_dirs = inc_dirs
     extn.extra_compile_args = extra_compile_args
     extn.extra_link_args = extra_link_args
+    extn.pyrex_directives = cy_directives
     if USE_CPP:
         extn.language = 'c++'
 
@@ -158,6 +164,9 @@ for extn in parallel:
     extn.include_dirs.extend(mpi_inc_dirs)
     extn.extra_compile_args.extend(mpi_compile_args)
     extn.extra_link_args.extend(mpi_link_args)
+
+if 'build_ext' in sys.argv or 'develop' in sys.argv or 'install' in sys.argv:
+    ext_modules = cythonize(ext_modules, nthreads=ncpu, include_path=inc_dirs)
 
 setup(name='PySPH',
       version = '0.9beta',
@@ -175,7 +184,7 @@ setup(name='PySPH',
       
       include_package_data = True,
       cmdclass={'build_ext': build_ext},
-      #install_requires=['mpi4py>=1.2', 'numpy>=1.0.3', 'Cython>=0.14'],
+      #install_requires=[python>=2.6<3', 'mpi4py>=1.2', 'numpy>=1.0.3', 'Cython>=0.14'],
       #setup_requires=['Cython>=0.14', 'setuptools>=0.6c1'],
       #extras_require={'3D': 'Mayavi>=3.0'},
       zip_safe = False,

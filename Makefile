@@ -16,26 +16,34 @@ BENCH =
 MPI4PY_INCL = $(shell python -c "import mpi4py; print mpi4py.get_include()")
 
 # the default target to make
-all : $(DIRS) extn
+all : build
 
-.PHONY : $(DIRS) bench
+.PHONY : $(DIRS) bench build
+
+build :
+	python setup.py build_ext --inplace
 
 $(DIRS) : 
 	cd $@;  python $(ROOT)/source/pysph/base/generator.py
-	$(MAKE) -f $(MAKEFILE) -C $@ cython ROOT=$(ROOT)
+	$(MAKE) -f $(MAKEFILE) -C $@ cythoncpp ROOT=$(ROOT)
 
 %.c : %.pyx
-	python `which cython` -I$(SRC) -I$(MPI4PY_INCL) -a $<
+	python `which cython` -I$(SRC) -I$(MPI4PY_INCL) $<
 
 %.cpp : %.pyx
+	python `which cython` --cplus -I$(SRC) -I$(MPI4PY_INCL) $<
+
+%.html : %.pyx
 	python `which cython` --cplus -I$(SRC) -I$(MPI4PY_INCL) -a $<
 
 cython : $(PYX:.pyx=.c)
 
 cythoncpp : $(PYX:.pyx=.cpp)
 
-extn : $(DIRS)
-	python setup.py build_ext --inplace
+_annotate : $(PYX:.pyx=.html)
+
+annotate :
+	for f in $(DIRS); do $(MAKE) -f $(MAKEFILE) -C $${f} _annotate ROOT=$(ROOT); done
 
 clean : 
 	python setup.py clean
@@ -58,14 +66,6 @@ bench :
 	#
 	#-$(MAKE) -f $(MAKEFILE) -i -C $(PKG)/bench/ cython ROOT=$(ROOT)
 	cd bench; python bench.py $(BENCH)
-
-coverage2 :
-	python `which nosetests` --exe --cover-erase --with-coverage --cover-html-dir=htmlcov/ --cover-html --cover-package=pysph source/pysph/
-
-coverage :
-	python pyx_coverage.py erase
-	-python pyx_coverage.py run `which nosetests` --exe source/pysph/
-	python pyx_coverage.py html
 
 epydoc :
 	python cython-epydoc.py --config epydoc.cfg pysph
