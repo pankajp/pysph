@@ -1,4 +1,4 @@
-a"""A particle viewer using Mayavi.
+"""A particle viewer using Mayavi.
 
 This code uses the :py:class:`MultiprocessingClient` solver interface to
 communicate with a running solver and displays the particles using
@@ -237,14 +237,12 @@ class MayaviViewer(HasTraits):
         self.host_changed = True
 
     def _client_default(self):
-        try:
-            if:
-                MultiprocessingClient.is_available((self.host, self.port))
-                return MultiprocessingClient(address=(self.host, self.port),
+        if MultiprocessingClient.is_available((self.host, self.port)):
+            return MultiprocessingClient(address=(self.host, self.port),
                                          authkey=self.authkey)
-        except socket.error, e:
+        else:
             logger.info('Could not connect: check if solver is running')
-        return None
+            return None
 
     def _get_controller(self):
         ''' get the controller, also sets the iteration count '''
