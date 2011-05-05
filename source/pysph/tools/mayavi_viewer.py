@@ -1,4 +1,4 @@
-"""A particle viewer using Mayavi.
+a"""A particle viewer using Mayavi.
 
 This code uses the :py:class:`MultiprocessingClient` solver interface to
 communicate with a running solver and displays the particles using
@@ -8,9 +8,10 @@ Mayavi.
 import sys
 import math
 import numpy
+import socket
 
 from enthought.traits.api import (HasTraits, Instance, on_trait_change,
-        List, Str, Int, Range, Float, Bool, Password)
+        List, Str, Int, Range, Float, Bool, Password, Property)
 from enthought.traits.ui.api import (View, Item, Group, HSplit, 
         ListEditor, EnumEditor, TitleEditor)
 from enthought.mayavi.core.api import PipelineBase
@@ -23,6 +24,8 @@ from enthought.tvtk.array_handler import array2vtk
 from pysph.base.api import ParticleArray
 from pysph.solver.solver_interfaces import MultiprocessingClient
 
+import logging
+logger = logging.getLogger()
 
 def set_arrays(dataset, particle_array):
     """ Code to add all the arrays to a dataset given a particle array."""
@@ -97,7 +100,7 @@ class ParticleArrayHelper(HasTraits):
     def _particle_array_changed(self, pa):
         self.name = pa.name
         # Setup the scalars.
-        self.scalar_list = pa.properties.keys()
+        self.scalar_list = sorted(pa.properties.keys())
 
         # Update the plot.
         x, y, z, u, v, w = pa.x, pa.y, pa.z, pa.u, pa.v, pa.w
@@ -141,22 +144,24 @@ class MayaviViewer(HasTraits):
     are queried from a running solver.
     """
 
-    particle_arrays = List(Instance(ParticleArrayHelper))
-    pa_names = List(Str)
+    particle_arrays = List(Instance(ParticleArrayHelper), [])
+    pa_names = List(Str, [])
 
     client = Instance(MultiprocessingClient)
     
     host = Str('localhost', desc='machine to connect to')
     port = Int(8800, desc='port to use to connect to solver')
     authkey = Password('pysph', desc='authorization key')
+    host_changed = Bool(False)
 
     scene = Instance(MlabSceneModel, ())
 
+    controller = Property()
 
     ########################################
     # Timer traits.
     timer = Instance(Timer)
-    interval = Range(0.5, 20.0, 5.0, 
+    interval = Range(2, 20.0, 5.0, 
                      desc='frequency in seconds with which plot is updated')
     
     ########################################
@@ -169,12 +174,12 @@ class MayaviViewer(HasTraits):
     # The layout of the dialog created
     view = View(HSplit(
                   Group(
-                    #Group(
-                    #      Item(name='host'),
-                    #      Item(name='port'),
-                    #      Item(name='authkey'),
-                    #      label='Connection',
-                    #      ),
+                    Group(
+                          Item(name='host'),
+                          Item(name='port'),
+                          Item(name='authkey'),
+                          label='Connection',
+                          ),
                     Group(
                           Item(name='current_time'),
                           Item(name='iteration'),
@@ -202,7 +207,7 @@ class MayaviViewer(HasTraits):
 
     ######################################################################
     # `MayaviViewer` interface.
-    ###################################################################### 
+    ######################################################################
     @on_trait_change('scene.activated')
     def start_timer(self):
         # Just accessing the timer will start it.
@@ -212,31 +217,85 @@ class MayaviViewer(HasTraits):
 
     @on_trait_change('scene.activated')
     def update_plot(self):
-        c = self.client.controller
-        self.iteration = c.get_count()
-        self.current_time = c.get_t()
+        # do not update if solver is paused
+        if self.pause_solver:
+            return
+        controller = self.controller
+        if controller is None:
+            return
+        
+        self.current_time = controller.get_t()
         for idx, name in enumerate(self.pa_names):
-            pa = c.get_named_particle_array(name)
+            pa = controller.get_named_particle_array(name)
             self.particle_arrays[idx].particle_array = pa
 
     ######################################################################
     # Private interface.
     ######################################################################
+    @on_trait_change('host,port,authkey')
+    def _mark_reconnect(self):
+        self.host_changed = True
+
     def _client_default(self):
-        return MultiprocessingClient(address=(self.host, self.port),
-                                     authkey=self.authkey)
+        try:
+            if:
+                MultiprocessingClient.is_available((self.host, self.port))
+                return MultiprocessingClient(address=(self.host, self.port),
+                                         authkey=self.authkey)
+        except socket.error, e:
+            logger.info('Could not connect: check if solver is running')
+        return None
 
-    def _pa_names_default(self):
-        c = self.client.controller
-        return c.get_particle_array_names()
+    def _get_controller(self):
+        ''' get the controller, also sets the iteration count '''
+        reconnect = self.host_changed
+        
+        if not reconnect:
+            try:
+                c = self.client.controller
+                self.iteration = c.get_count()
+            except Exception as e:
+                logger.info('Error: no connection or connection closed: reconnecting')
+                reconnect = True
+                self.client = None
+        
+        if reconnect:
+            self.host_changed = False
+            try:
+                if MultiprocessingClient.is_available((self.host, self.port)):
+                    self.client = MultiprocessingClient(address=(self.host, self.port),
+                                                        authkey=self.authkey)
+                else:
+                    return None
+            except Exception as e:
+                logger.info('Could not connect: check if solver is running')
+                return None
+            c = self.client.controller
+            self.iteration = c.get_count()
+        
+        return self.client.controller
+    
+    def _client_changed(self, old, new):
+        if self.client is None:
+            return
+        else:
+            self.pa_names = self.client.controller.get_particle_array_names()
 
-    def _particle_arrays_default(self):
-        r = [ParticleArrayHelper(scene=self.scene, name=x) for x in
-                self.pa_names]
+        for pa in self.particle_arrays:
+            if pa.plot is not None:
+                pa.plot.remove()
+        self.particle_arrays = [ParticleArrayHelper(scene=self.scene, name=x) for x in
+                                self.pa_names]
         # Turn on the legend for the first particle array.
-        if len(r) > 0:
-            r[0].show_legend = True
-        return r
+        if len(self.particle_arrays) > 0:
+            self.particle_arrays[0].show_legend = True
+
+    def _timer_event(self):
+        # catch all Exceptions else timer will stop
+        try:
+            self.update_plot()
+        except Exception:
+            pass
 
     def _interval_changed(self, value):
         t = self.timer
@@ -247,7 +306,7 @@ class MayaviViewer(HasTraits):
             t.Start(int(value*1000))
 
     def _timer_default(self):
-        return Timer(int(self.interval*1000), self.update_plot)
+        return Timer(int(self.interval*1000), self._timer_event)
 
     def _pause_solver_changed(self, value):
         c = self.client.controller

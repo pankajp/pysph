@@ -1,23 +1,24 @@
 
 import threading
 import os
-
+import socket
 from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
-from multiprocessing.managers import BaseManager
 from SimpleHTTPServer import SimpleHTTPRequestHandler
+
+from multiprocessing.managers import BaseManager, BaseProxy
 
 
 class MultiprocessingInterface(BaseManager):
-    """ A multiprocessing interface to the solver command_manager
+    """ A multiprocessing interface to the solver controller
     
-    This object exports a command_manager instance proxy over the multiprocessing
+    This object exports a controller instance proxy over the multiprocessing
     interface. Control actions can be performed by connecting to the interface
-    and calling methods on the command_manager proxy instance """
+    and calling methods on the controller proxy instance """
     def get_controller(self):
-        return self.command_manager
+        return self.controller
     
     def start(self, controller):
-        self.command_manager = controller
+        self.controller = controller
         self.register('get_controller', self.get_controller)
         self.get_server().serve_forever()
         
@@ -32,12 +33,27 @@ class MultiprocessingClient(BaseManager):
         if start:
             self.start()
     
-    def start(self):
+    def start(self, connect=True):
         self.interfaces = []
+        
+        # to work around a python caching bug
+        # http://stackoverflow.com/questions/3649458/broken-pipe-when-using-python-multiprocessing-managers-basemanager-syncmanager
+        if self.address in BaseProxy._address_to_local:
+            del BaseProxy._address_to_local[self.address][0].connection
+        
         self.register('get_controller')
-        self.connect()
-        self.controller = self.get_controller()
+        if connect:
+            self.connect()
+            self.controller = self.get_controller()
         self.run(self.controller)
+    
+    @staticmethod
+    def is_available(address):
+        try:
+            socket.create_connection(address, 1).close()
+            return True
+        except socket.error:
+            return False
     
     def run(self, controller):
         pass
@@ -83,7 +99,7 @@ class CrossDomainXMLRPCRequestHandler(SimpleXMLRPCRequestHandler,
         SimpleXMLRPCRequestHandler.end_headers(self)
     
 class XMLRPCInterface(SimpleXMLRPCServer):
-    """ An XML-RPC interface to the solver command_manager
+    """ An XML-RPC interface to the solver controller
     
     Currently cannot work with objects which cannot be marshalled
     (which is basically most custom classes, most importantly
@@ -101,7 +117,7 @@ class XMLRPCInterface(SimpleXMLRPCServer):
 
 
 class CommandlineInterface(object):
-    """ command-line interface to the solver command_manager """
+    """ command-line interface to the solver controller """
     def start(self, controller):
         while True:
             try:

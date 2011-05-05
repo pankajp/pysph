@@ -171,6 +171,9 @@ class Controller(object):
     def get_blocking(self):
         ''' get the blocking mode ( True/False ) '''
         return self.block
+    
+    def ping(self):
+        return True
 
 def on_root_proc(f):
     ''' run the decorated function only on the root proc '''
@@ -212,6 +215,7 @@ class CommandManager(object):
         logger.info('CommandManager: using comm: %s'%self.comm)
         self.solver = solver
         self.interfaces = []
+        self.func_dict = {}
         self.rlock = threading.RLock()
         self.res_lock = threading.Lock()
         self.plock = threading.Condition()
@@ -238,6 +242,11 @@ class CommandManager(object):
         thr.daemon = True
         thr.start()
         return thr
+
+    def add_function(self, callable, interval=1):
+        ''' add a function to to be called every `interval` iterations '''
+        l = self.func_dict[interval] = self.func_dict.get(interval, [])
+        l.append(callable)
     
     def execute_commands(self, solver):
         ''' called by the solver after each timestep '''
@@ -246,6 +255,11 @@ class CommandManager(object):
         self.sync_commands()
         self.run_queued_commands()
         logger.info('control handler: count=%d'%solver.count)
+        
+        for interval in self.func_dict:
+            if solver.count%interval == 0:
+                for func in self.func_dict[interval]:
+                    func(solver)
         
         self.wait_for_cmd()
     
