@@ -111,6 +111,7 @@ class ParticleArrayHelper(HasTraits):
                                          mode='point',
                                          scale_mode='none')
             p.glyph.color_mode = 'color_by_scalar'
+            p.glyph.glyph_source.glyph_position = 'center'
             p.actor.property.point_size = 3
             p.mlab_source.dataset.point_data.scalars.name = self.scalar
             scm = p.module_manager.scalar_lut_manager
@@ -152,7 +153,7 @@ class MayaviViewer(HasTraits):
     host = Str('localhost', desc='machine to connect to')
     port = Int(8800, desc='port to use to connect to solver')
     authkey = Password('pysph', desc='authorization key')
-    host_changed = Bool(False)
+    host_changed = Bool(True)
 
     scene = Instance(MlabSceneModel, ())
 
@@ -236,14 +237,6 @@ class MayaviViewer(HasTraits):
     def _mark_reconnect(self):
         self.host_changed = True
 
-    def _client_default(self):
-        if MultiprocessingClient.is_available((self.host, self.port)):
-            return MultiprocessingClient(address=(self.host, self.port),
-                                         authkey=self.authkey)
-        else:
-            logger.info('Could not connect: check if solver is running')
-            return None
-
     def _get_controller(self):
         ''' get the controller, also sets the iteration count '''
         reconnect = self.host_changed
@@ -292,8 +285,8 @@ class MayaviViewer(HasTraits):
         # catch all Exceptions else timer will stop
         try:
             self.update_plot()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.info('Exception: %s caught in timer_event'%e)
 
     def _interval_changed(self, value):
         t = self.timer
