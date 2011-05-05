@@ -98,7 +98,7 @@ cdef class ADKESmoothingUpdate(SPHFunction):
     cpdef setup_arrays(self):
         """
         """
-        SPHFunctionParticle.setup_arrays(self)
+        SPHFunction.setup_arrays(self)
 
         self.d_rhop = self.dest.get_carray('rhop')
 
@@ -220,13 +220,13 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 ###############################################################################
 # `ADKEConductionCoeffUpdate` class.
 ###############################################################################
-cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
+cdef class ADKEConductionCoeffUpdate(SPHFunction):
     """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, g1=0.0, g2=0.0, **kwargs):
         
-        SPHVelocityDivergence.__init__(self,source,dest,setup_arrays,**kwargs)
+        SPHFunction.__init__(self,source,dest,setup_arrays,**kwargs)
 
         self.g1 = g1
         self.g2 = g2
@@ -236,8 +236,6 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         self.cl_kernel_src_file = "adke_funcs.cl"
 
-        self.dst_reads.append('cs')
-
         self.cl_kernel_function_name = "ADKEConductionCoeffUpdate"
 
     def set_src_dst_reads(self):
@@ -246,6 +244,13 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         self.src_reads.extend( ['x','y','z','h','u','v','w','m'] )
         self.dst_reads.extend( ['x','y','z','h','u','v','w','rho','cs','tag'] )
+
+    cpdef setup_arrays(self):
+        """
+        """
+        SPHFunction.setup_arrays(self)
+
+        self.d_div = self.dest.get_carray('div')
         
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
@@ -258,42 +263,26 @@ cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
 
         """
 
-        cdef double div, g1, g2, ca, ha
+        cdef double g1, g2, ca, ha
         cdef int i
 
         self.setup_iter_data()
         cdef size_t np = self.dest.num_real_particles
 
         cdef LongArray tag_arr = self.dest.get_carray('tag')
+        cdef DoubleArray div = self.d_div
 
         g1 = self.g1
         g2 = self.g2                
 
         for i in range(np):
-            self.eval_single(i, kernel, &div)
+            if tag_arr.data[i] == LocalReal:
+                ca = self.d_cs.data[i]
+                ha = self.d_h.data[i]
 
-            ca = self.d_cs.data[i]
-            ha = self.d_h.data[i]
-
-            abs_div = fabs(div)
-            
-            # set q_a = g1 h_a c_a + g2 h_a^2 [abs(div_a) - div_a]
-            
-            output1.data[i] = g1 * ca + ( g2 * ha * (abs_div - div) )
-            output1.data[i] *= ha
-
-    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
-                          double * result):
-        """ Computes contribution of all neighbors on particle at dest_pid """
-
-        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
-        cdef size_t nnbrs = nbrs.length
-
-        if self.exclude_self:
-            if self.src is self.dest:
-                nnbrs -= 1
+                abs_div = fabs( div.data[i] )
                 
-        result[0] = 0.0
-        for j in range(nnbrs):
-            self.eval_nbr(nbrs.data[j], dest_pid, kernel, result)
-        
+                # set q_a = g1 h_a c_a + g2 h_a^2 [abs(div_a) - div_a]
+            
+                output1.data[i] = g1*ca + ( g2 * ha * (abs_div - div.data[i]) )
+                output1.data[i] *= ha

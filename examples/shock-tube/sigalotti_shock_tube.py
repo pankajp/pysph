@@ -31,6 +31,7 @@ particles = app.create_particles(
 
 pa = particles.get_named_particle_array('fluid')
 pa.add_property({'name':'rhop'})
+pa.add_property({'name':'div'})
 
 # ensure that the array 'q' is available
 
@@ -59,10 +60,17 @@ s.add_operation(solver.SPHOperation(
 
 s.add_operation(solver.SPHOperation(
 
+    sph.VelocityDivergence.withargs(),
+    on_types=[Fluid], from_types=[Fluid], updates=['div'], id='vdivergence'),
+
+    before=False, id='density')
+
+s.add_operation(solver.SPHOperation(
+
     sph.ADKEConductionCoeffUpdate.withargs(g1=g1, g2=g2),
     on_types=[Fluid], from_types=[Fluid], updates=['q'], id='qcoeff'),
 
-    before=False, id='density')
+    before=False, id='vdivergence')
 
 
 # add the artificial heat term after the energy equation
@@ -73,7 +81,6 @@ s.add_operation(solver.SPHIntegration(
     updates=['e'], id='aheat'),
 
     before=False, id="enr")
-
 
 s.set_final_time(0.15)
 s.set_time_step(3e-4)

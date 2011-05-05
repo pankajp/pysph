@@ -37,6 +37,7 @@ cdef class SPHVelocityDivergence(SPHFunctionParticle):
 ###############################################################################
 # `ADKEConductionCoeffUpdate` class.
 ###############################################################################
-cdef class ADKEConductionCoeffUpdate(SPHVelocityDivergence):
+cdef class ADKEConductionCoeffUpdate(SPHFunction):
     """ Compute the new smoothing length for the ADKE algorithm """
     cdef double g1, g2
+    cdef DoubleArray d_div
