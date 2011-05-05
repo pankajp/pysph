@@ -1,7 +1,8 @@
 """ Declarations for the adke functions """
 
 #sph imports
-from pysph.sph.sph_func cimport SPHFunctionParticle, CSPHFunctionParticle
+from pysph.sph.sph_func cimport SPHFunctionParticle, CSPHFunctionParticle,\
+     SPHFunction
 
 #base imports 
 from pysph.base.particle_array cimport ParticleArray
@@ -20,9 +21,10 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
 ###############################################################################
 # `ADKESmoothingUpdate` class.
 ###############################################################################
-cdef class ADKESmoothingUpdate(ADKEPilotRho):
+cdef class ADKESmoothingUpdate(SPHFunction):
     """ Compute the new smoothing length for the ADKE algorithm """
-    cdef double k, eps
+    cdef double k, eps, h0
+    cdef DoubleArray d_rhop
 
 
 ###############################################################################

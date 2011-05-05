@@ -4,6 +4,7 @@
 from libc.math cimport log, exp
 
 from pysph.base.point cimport cPoint, cPoint_new, cPoint_sub, cPoint_dot
+from pysph.base.particle_array cimport LocalReal
 
 cdef extern from "math.h":
     double fabs (double)
@@ -26,6 +27,14 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
 
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "ADKEPilotRho"
+
+    def set_src_dst_reads(self):
+
+        self.src_reads = []
+        self.dst_reads = []
+
+        self.src_reads.extend( ['x','y','z','m','rho'] )
+        self.dst_reads.extend( ['x','y','z','tag'] )
 
     cdef void eval_nbr_csph(self, size_t source_pid, size_t dest_pid, 
                             KernelBase kernel, double *nr, double* dnr):
@@ -67,78 +76,66 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
 ###############################################################################
 # `ADKESmoothingUpdate` class.
 ###############################################################################
-cdef class ADKESmoothingUpdate(ADKEPilotRho):
+cdef class ADKESmoothingUpdate(SPHFunction):
     """ Compute the pilot estimate of density for the ADKE algorithm """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
                  bint setup_arrays=True, k=1.0, eps=0.0, double h0=1.0,
                  **kwargs):
         
-        ADKEPilotRho.__init__(self, source, dest,
-                              setup_arrays=setup_arrays, h0=h0, **kwargs)
+        SPHFunction.__init__(self, source, dest, setup_arrays, **kwargs)
+
         self.k = k
         self.eps = eps
+        self.h0 = h0
 
-        self.id = "adke_smoothing"
+        self.id = "adke_smoothing_update"
         self.tag = "h"
 
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "ADKESmoothingUpdate"
 
+    cpdef setup_arrays(self):
+        """
+        """
+        SPHFunctionParticle.setup_arrays(self)
+
+        self.d_rhop = self.dest.get_carray('rhop')
+
     def set_src_dst_reads(self):
 
         self.src_reads = []
-        self.dst_reads = []
-
-        self.src_reads.extend( ['x','y','z','m','rho'] )
-        self.dst_reads.extend( ['x','y','z','tag'] )
+        self.dst_reads = ['rhop']
 
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
         """ Evaluate the store the results in the output arrays """
-        cdef double result, g, log_g=0.0
+
+        cdef LongArray tag_arr = self.dest.get_carray('tag')
+        cdef DoubleArray rhop = self.d_rhop
+
+        cdef double result, g, log_g
         cdef int i
 
         self.setup_iter_data()
-        cdef size_t np = self.dest.num_real_particles
+        cdef size_t np = self.dest.get_number_of_particles()
+        cdef size_t nr = self.dest.num_real_particles
 
-        cdef LongArray tag_arr = self.dest.get_carray('tag')
-
+        log_g = 0.0
         for i in range(np):
-            self.eval_single(i, kernel, &result)
-            output1.data[i] = result
-            log_g += log(result)
+            if tag_arr.data[i] == LocalReal:
+                log_g += log( rhop.data[i] )
 
-        log_g /= np
+        log_g /= nr
         g = exp(log_g)
         
         for i in range(np):
-            output1.data[i] = self.h0 * self.k * (g/output1.data[i])**self.eps
+            if tag_arr.data[i] == LocalReal:
+                output1.data[i] = self.h0 * self.k * (g/rhop.data[i])**self.eps
 
         # set the destination's dirty bit since new neighbors are needed
         
-        self.dest.set_dirty(True)
-    
-    cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
-                          double * result):
-        """ Computes contribution of all neighbors on particle at dest_pid """
-
-        cdef LongArray nbrs = self.nbr_locator.get_nearest_particles(dest_pid)
-        cdef size_t nnbrs = nbrs.length
-
-        cdef double dnr = 0.0
-        if self.exclude_self:
-            if self.src is self.dest:
-                # this works because nbrs has self particle in last position
-                nnbrs -= 1
-                
-        result[0] = 0.0
-        for j in range(nnbrs):
-            self.eval_nbr_csph(nbrs.data[j], dest_pid, kernel, result, &dnr)
-        
-        if dnr != 0.0:
-            result[0] /= dnr
-    
+        self.dest.set_dirty(True)    
 
 ###############################################################################
 # `SPHDivergence` class.

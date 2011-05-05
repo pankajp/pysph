@@ -310,6 +310,8 @@ class Integrator(object):
 
                 self.initial_props[calc.id].append(prop_initial)
 
+                # set the step properties for non integrating calcs
+
                 for l in range(self.nsteps):
                     k_num = 'k'+str(l+1)
 
@@ -442,66 +444,31 @@ class Integrator(object):
         for i in range(ncalcs):
             calc = calcs[i]
 
-            updates = calc.updates
-            nupdates = calc.nupdates
-
-            # get the destination particle array for this calc
-            
-            pa = self.arrays[calc.dnum]
-            
             if logger.level < 30:
                 logger.info("Integrator:eval: operating on calc %d, %s"%(
                         i, calc.id))
 
             # Evaluate the calc
+            if calc.integrates:
+                calc.sph(*calc.dst_writes[k_num])
 
-            calc.sph(*self.step_props)
+            else:
+                calc.sph(*calc.updates)
 
-            for j in range(nupdates):
-                update_prop = updates[j]
-                step_prop = self.step_props[j]
+                # ensure all processes have reached this point
+                particles.barrier()
 
-                step_array = pa.get(step_prop)
+                # update the remote particle properties
 
-                if not calc.integrates:
+                self.rupdate_list[calc.dnum] = [calc.updates]
 
-                    #set the evaluated property
-                    if logger.level < 30:
-                        logger.info("""Integrator:eval: setting the prop 
-                                    %s for calc %d, %s"""
-                                    %(update_prop,  i, calc.id))
-
-                    pa.set(**{update_prop:step_array.copy()})
-
-                    # ensure that all processes have reached this point
-
-                    particles.barrier()
-
-                    # update neighbor information if 'h' has been updated
-
-                    if calc.tag == "h":
-                        particles.update()
-
-                    # update the remote particle properties
-
-                    self.rupdate_list[calc.dnum] = [update_prop]
-
-                    if logger.level < 30:
-                        logger.info("""Integrator:eval: updating remote particle
-                                     properties %s"""%(self.rupdate_list))
+                if logger.level < 30:
+                    logger.info("""Integrator:eval: updating remote particle
+                    properties %s"""%(self.rupdate_list))
  
-                    particles.update_remote_particle_properties(
-                        self.rupdate_list)
-                    
-                else:
-                    k_prop = self.k_props[calc.id][k_num][j]
-
-                    pa.set(**{k_prop:step_array.copy()})
-
-                pass
-
-        #ensure that the eval phase is completed for all processes
-
+                particles.update_remote_particle_properties(
+                    self.rupdate_list)                
+            
         particles.barrier()
 
     def step(self, calcs, dt):

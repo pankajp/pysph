@@ -30,6 +30,7 @@ particles = app.create_particles(
     name='fluid', type=Fluid)
 
 pa = particles.get_named_particle_array('fluid')
+pa.add_property({'name':'rhop'})
 
 # ensure that the array 'q' is available
 
@@ -42,11 +43,18 @@ s = solver.ShockTubeSolver(dim=1, integrator_type=solver.EulerIntegrator)
 
 s.add_operation(solver.SPHOperation(
 
+    sph.ADKEPilotRho.withargs(h0=h0),
+    on_types=[Fluid], from_types=[Fluid], updates=['rhop'], id='adke_rho'),
+
+                before=True, id="density")
+
+s.add_operation(solver.SPHOperation(
+
     sph.ADKESmoothingUpdate.withargs(h0=h0, k=k, eps=eps),
-    on_types=[Fluid], from_types=[Fluid], updates=['h'], id='adke'),
-
-    before=True, id="density")
-
+    on_types=[Fluid], updates=['h'], id='adke'),
+                
+                before=True, id="density")
+                
 # add the update conduction coefficient after the density calculation
 
 s.add_operation(solver.SPHOperation(
