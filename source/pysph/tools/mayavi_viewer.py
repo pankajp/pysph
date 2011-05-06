@@ -106,12 +106,11 @@ class ParticleArrayHelper(HasTraits):
         x, y, z, u, v, w = pa.x, pa.y, pa.z, pa.u, pa.v, pa.w
         s = getattr(pa, self.scalar)
         p = self.plot
+        mlab = self.scene.mlab
         if p is None:
-            p = self.scene.mlab.quiver3d(x, y, z, u, v, w, scalars=s,
-                                         mode='point',
-                                         scale_mode='none')
-            p.glyph.color_mode = 'color_by_scalar'
-            p.glyph.glyph_source.glyph_position = 'center'
+            src = mlab.pipeline.vector_scatter(x, y, z, u, v, w,
+                                               scalars=s)
+            p = mlab.pipeline.glyph(src, mode='point', scale_mode='none')
             p.actor.property.point_size = 3
             p.mlab_source.dataset.point_data.scalars.name = self.scalar
             scm = p.module_manager.scalar_lut_manager
