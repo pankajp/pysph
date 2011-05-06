@@ -14,6 +14,7 @@ import pyopencl as cl
 # local imports
 import pysph.base.api as base
 import pysph.sph.api as sph
+import pysph.solver.api as solver
 
 from pysph.sph.funcs.density_funcs import SPHRho, SPHDensityRate
 from pysph.base.particle_array import ParticleArray
@@ -24,82 +25,133 @@ def check_array(x, y):
     1e-16."""
     return numpy.allclose(x, y, atol=1e-16, rtol=0)
 
-class CLSPHRhoTestCase(unittest.TestCase):
+NSquareLocator = base.NeighborLocatorType.NSquareNeighborLocator
+
+class DensityFunctionsTestCase(unittest.TestCase):
+
+    def runTest(self):
+        pass
+
     def setUp(self):
-        self.np = np = 11
-        self.x = x = numpy.linspace(-1,1,np).astype(numpy.float32)
-        self.y = y = numpy.zeros_like(x)
-        self.z = z = numpy.zeros_like(x)
-
-        self.m = m = numpy.ones_like(x)
-        self.h = h = numpy.ones_like(x) * 2 * (x[1] - x[0])
-
-        self.pa = pa = base.get_particle_array(name="test", x=x, y=y, z=z, h=h,
-                                               m=m)
+        """ The setup consists of four particles placed at the
+        vertices of a unit square. 
         
-        self.func = func = sph.SPHRho.get_func(pa, pa)
+        """
+        
+        self.precision = "single"
 
-        # load the kernel source
-        root = cl_utils.get_pysph_root()
-        src = open(os.path.join(root, 'sph/funcs/density_funcs.clt')).read()
+        self.np = 4
 
-        self.devices = devices = cl.get_platforms()[0].get_devices()
-        self.device = device = devices[0]
+        x = numpy.array([0, 0, 1, 1], numpy.float64)
+        y = numpy.array([0, 1, 1, 0], numpy.float64)
 
-        self.ctx = ctx = cl.Context(devices)
-        self.q = q = cl.CommandQueue(ctx)
+        z = numpy.zeros_like(x)
+        m = numpy.ones_like(x)
 
-        self.prog = prog = cl.Program(
-            ctx,src).build(cl_utils.get_cl_include())
+        u = numpy.array([1, 0, 0, -1], numpy.float64)
+        p = numpy.array([0, 0, 1, 1], numpy.float64)
+        
+        self.pa = pa = base.get_particle_array(name="test", x=x,  y=y, z=z,
+                                               m=m, u=u, p=p,
+                                               cl_precision=self.precision)
 
-        kernel = base.CubicSplineKernel(dim=1)
+        self.particles = particles = base.Particles([pa,])
 
-        self.kernel_type = numpy.array([1,], numpy.int32)
-        self.dim = numpy.array([1,], numpy.int32)
-        self.nbrs = numpy.array([np,], numpy.int32)
+        sphrho_func = sph.SPHRho.withargs()
+        density_rate_func = sph.SPHDensityRate.withargs()
 
-    def test_SPHRho(self):
-        """ Print testing the OpenCL summation density function SPHRho"""
+        self.sphrho_func = sphrho_func.get_func(pa,pa)
+        self.density_rate_func = density_rate_func.get_func(pa,pa)
+        
+        self.sphrho_func.kernel = base.CubicSplineKernel(dim=2)
+        self.density_rate_func.kernel = base.CubicSplineKernel(dim=2)
+
+        self.rho_calc = sph.SPHCalc(particles, [pa,], pa,
+                                    base.CubicSplineKernel(dim=2),
+                                    [self.sphrho_func,], updates=['rho']
+                                    )
+
+        self.rho_calc_cl = sph.CLCalc(particles, [pa,], pa,
+                                      base.CubicSplineKernel(dim=2),
+                                      [self.sphrho_func,], updates=['rho']
+                                      )
+
+        if solver.HAS_CL:
+            self.ctx = ctx = cl.create_some_context()
+            self.q = q = cl.CommandQueue(ctx)
+            self.rho_calc_cl.setup_cl(ctx)
+
+class SummationDensityTestCase(DensityFunctionsTestCase):
+
+    def get_reference_solution(self):
+        """ Evaluate the force on each particle manually """
+        
+        pa = self.pa
+        rhos = []
+
+        x,y,z,p,m,h,rho = pa.get('x','y','z','p','m','h','rho')
+
+        kernel = base.CubicSplineKernel(dim=2)
+
+        for i in range(self.np):
+
+            rho = 0.0
+            xi, yi, zi = x[i], y[i], z[i]
+
+            ri = base.Point(xi,yi,zi)
+
+            hi = h[i]
+
+            for j in range(self.np):
+
+                grad = base.Point()
+                xj, yj, zj = x[j], y[j], z[j]
+                hj, mj = m[j], h[j]
+
+                havg = 0.5 * (hi + hj)
+
+                rj = base.Point(xj, yj, zj)
+        
+                wij = kernel.py_function(ri, rj, havg)
+
+                rho += mj*wij
+
+            rhos.append(rho)
+
+        return rhos
+
+    def test_eval(self):
+        """ Test the PySPH solution """
 
         pa = self.pa
-        np = pa.get_number_of_particles()
+        calc = self.rho_calc
 
-        # Perform the OpenCL solution
+        k = base.CubicSplineKernel(dim=2)
 
-        mf = cl.mem_flags
+        calc.sph()
+        tmpx = pa.properties['_tmpx']
 
-        pa.setupCL(self.ctx)
+        reference_solution = self.get_reference_solution()
 
-        xbuf = pa.get_cl_buffer('x')
-        ybuf = pa.get_cl_buffer('y')
-        zbuf = pa.get_cl_buffer('z')
-        hbuf = pa.get_cl_buffer('h')
-        mbuf = pa.get_cl_buffer('m')
-        rhobuf = pa.get_cl_buffer('rho')
-        tagbuf = pa.get_cl_buffer('tag')
-        tmpbuf = pa.get_cl_buffer('tmpx')
+        for i in range(self.np):
+            self.assertAlmostEqual(reference_solution[i], tmpx[i])
 
-        kernel_type_buf=cl.Buffer(self.ctx,
-                                  mf.READ_WRITE | mf.COPY_HOST_PTR,
-                                  hostbuf=self.kernel_type)
+    def test_cl_eval(self):
+        """ Test the PyOpenCL implementation """
 
-        dimbuf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR,
-                           hostbuf=self.dim)
+        if solver.HAS_CL:
 
-        nbrbuf = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR,
-                           hostbuf=self.nbrs)
+            pa = self.pa
+            calc = self.rho_calc_cl
+            
+            calc.sph()
+            pa.read_from_buffer()
 
-        q = self.q
-        self.prog.SPHRho(q, (np,1,1), (1,1,1), kernel_type_buf, dimbuf, nbrbuf,
-                         xbuf, ybuf, zbuf, hbuf, tagbuf, xbuf, ybuf, zbuf,
-                         hbuf, mbuf, rhobuf, tmpbuf)
+            reference_solution = self.get_reference_solution()
 
-        tmpx = self.pa.get('tmpx')
-        print tmpx
+            for i in range(self.np):
+                self.assertAlmostEqual(reference_solution[i], pa._tmpx[i], 6)
 
-        cl.enqueue_read_buffer(self.q, tmpbuf, tmpx)
-
-        print tmpx
         
 if __name__ == '__main__':
     unittest.main()

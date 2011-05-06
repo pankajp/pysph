@@ -179,9 +179,9 @@ class SPHPressureGradientTestCase(PressureForceTestCase):
             reference_solution = self.get_reference_solution()
 
             for i in range(self.np):
-                self.assertAlmostEqual(reference_solution[i].x, pa.tmpx[i], 6)
-                self.assertAlmostEqual(reference_solution[i].y, pa.tmpy[i], 6)
-                self.assertAlmostEqual(reference_solution[i].z, pa.tmpz[i], 6)
+                self.assertAlmostEqual(reference_solution[i].x, pa._tmpx[i], 6)
+                self.assertAlmostEqual(reference_solution[i].y, pa._tmpy[i], 6)
+                self.assertAlmostEqual(reference_solution[i].z, pa._tmpz[i], 6)
 
 class MomentumEquationTestCase(PressureForceTestCase):
 
@@ -317,9 +317,9 @@ class MomentumEquationTestCase(PressureForceTestCase):
             reference_solution = self.get_reference_solution()
 
             for i in range(self.np):
-                self.assertAlmostEqual(reference_solution[i].x, pa.tmpx[i], 6)
-                self.assertAlmostEqual(reference_solution[i].y, pa.tmpy[i], 6)
-                self.assertAlmostEqual(reference_solution[i].z, pa.tmpz[i], 6)
+                self.assertAlmostEqual(reference_solution[i].x, pa._tmpx[i], 6)
+                self.assertAlmostEqual(reference_solution[i].y, pa._tmpy[i], 6)
+                self.assertAlmostEqual(reference_solution[i].z, pa._tmpz[i], 6)
                 
 
 if __name__ == '__main__':

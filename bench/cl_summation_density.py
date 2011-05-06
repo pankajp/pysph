@@ -81,17 +81,17 @@ for platform in platforms:
 
             print "Read from buffer time: %g s "%(read_elapsed)
             
-            cl_rho = pa.get('tmpx').copy()
+            cl_rho = pa.get('_tmpx').copy()
             
             # Do the same thing with Cython.
             t1 = time.time()
-            calc.sph('tmpx')
+            calc.sph('_tmpx')
             cython_elapsed = time.time() - t1
             print "Execution time for PySPH Cython: %g s" %(cython_elapsed)
 
             # Compare the results
 
-            cython_rho = pa.get('tmpx')
+            cython_rho = pa.get('_tmpx')
             diff = sum(abs(cl_rho - cython_rho))
             
             if diff/np < 1e-6:

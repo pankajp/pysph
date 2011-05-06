@@ -18,7 +18,8 @@ def test_cl_read():
 
     # Test single precision
     src = clu.cl_read(name, precision='single')
-    expect = """#define REAL float
+    expect = """#define F f
+#define REAL float
 #define REAL2 float2
 #define REAL3 float3
 #define REAL4 float4
@@ -32,6 +33,7 @@ def test_cl_read():
     # Test double precision
     src = clu.cl_read(name, precision='double')
     expect = """#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#define F
 #define REAL double
 #define REAL2 double2
 #define REAL3 double3
