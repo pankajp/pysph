@@ -347,32 +347,33 @@ class Application(object):
         self.command_manager = CommandManager(solver, self.comm)
         solver.set_command_handler(self.command_manager.execute_commands)
         
-        # commandline interface
-        if self.options.cmd_line:
-            from pysph.solver.solver_interfaces import CommandlineInterface
-            self.command_manager.add_interface(CommandlineInterface().start)
+        if comm.Get_rank() == 0:
+            # commandline interface
+            if self.options.cmd_line:
+                from pysph.solver.solver_interfaces import CommandlineInterface
+                self.command_manager.add_interface(CommandlineInterface().start)
         
-        # XML-RPC interface
-        if self.options.xml_rpc:
-            from pysph.solver.solver_interfaces import XMLRPCInterface
-            addr = self.options.xml_rpc
-            idx = addr.find(':')
-            host = "0.0.0.0" if idx == -1 else addr[:idx]
-            port = int(addr[idx+1:])
-            self.command_manager.add_interface(XMLRPCInterface((host,port)).start)
+            # XML-RPC interface
+            if self.options.xml_rpc:
+                from pysph.solver.solver_interfaces import XMLRPCInterface
+                addr = self.options.xml_rpc
+                idx = addr.find(':')
+                host = "0.0.0.0" if idx == -1 else addr[:idx]
+                port = int(addr[idx+1:])
+                self.command_manager.add_interface(XMLRPCInterface((host,port)).start)
         
-        # python MultiProcessing interface
-        if self.options.multiproc:
-            from pysph.solver.solver_interfaces import MultiprocessingInterface
-            addr = self.options.multiproc
-            idx = addr.find('@')
-            authkey = "pysph" if idx == -1 else addr[:idx] 
-            addr = addr[idx+1:]
-            idx = addr.find(':')
-            host = "0.0.0.0" if idx == -1 else addr[:idx]
-            port = int(addr[idx+1:])
-            self.command_manager.add_interface(MultiprocessingInterface((host,port),
-                                                authkey=authkey).start)
+            # python MultiProcessing interface
+            if self.options.multiproc:
+                from pysph.solver.solver_interfaces import MultiprocessingInterface
+                addr = self.options.multiproc
+                idx = addr.find('@')
+                authkey = "pysph" if idx == -1 else addr[:idx] 
+                addr = addr[idx+1:]
+                idx = addr.find(':')
+                host = "0.0.0.0" if idx == -1 else addr[:idx]
+                port = int(addr[idx+1:])
+                self.command_manager.add_interface(MultiprocessingInterface(
+                        (host,port), authkey=authkey).start)
 
     def run(self):
         """Run the application."""

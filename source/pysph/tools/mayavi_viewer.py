@@ -271,9 +271,7 @@ class MayaviViewer(HasTraits):
         else:
             self.pa_names = self.client.controller.get_particle_array_names()
 
-        for pa in self.particle_arrays:
-            if pa.plot is not None:
-                pa.plot.remove()
+        self.scene.mayavi_scene.children[:] = []
         self.particle_arrays = [ParticleArrayHelper(scene=self.scene, name=x) for x in
                                 self.pa_names]
         # Turn on the legend for the first particle array.
@@ -321,7 +319,10 @@ def error(msg):
     print msg
     sys.exit()
 
-def main(args):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
     if '-h' in args or '--help' in args:
         usage()
         sys.exit(0)
@@ -339,5 +340,5 @@ def main(args):
     m.configure_traits()
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
 

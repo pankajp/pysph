@@ -1,4 +1,4 @@
-include MANIFEST.in Makefile *.py *.txt
+include MANIFEST.in Makefile *.py *.txt pip_requirements.txt
 recursive-include examples *.py shock-tube/clawpack-solution.npz
 recursive-include docs *.* *
 include source/pysph/base/*.src
