@@ -221,9 +221,9 @@ cdef class SPHCalc:
               str output_array3=None, bint exclude_self=False): 
         """
         """
-        if output_array1 is None: output_array1 = 'tmpx'
-        if output_array2 is None: output_array2 = 'tmpy'
-        if output_array3 is None: output_array3 = 'tmpz'
+        if output_array1 is None: output_array1 = '_tmpx'
+        if output_array2 is None: output_array2 = '_tmpy'
+        if output_array3 is None: output_array3 = '_tmpz'
 
         cdef DoubleArray output1 = self.dest.get_carray(output_array1)
         cdef DoubleArray output2 = self.dest.get_carray(output_array2)
@@ -465,9 +465,9 @@ class CLCalc(SPHCalc):
 
         dest = self.dest
 
-        cl_tmpx = dest.get_cl_buffer('tmpx')
-        cl_tmpy = dest.get_cl_buffer('tmpy')
-        cl_tmpz = dest.get_cl_buffer('tmpz')
+        cl_tmpx = dest.get_cl_buffer('_tmpx')
+        cl_tmpy = dest.get_cl_buffer('_tmpy')
+        cl_tmpz = dest.get_cl_buffer('_tmpz')
 
         npd = self.dest.get_number_of_particles()
 

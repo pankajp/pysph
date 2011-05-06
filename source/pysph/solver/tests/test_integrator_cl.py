@@ -106,37 +106,37 @@ class CLIntegratorTestCase(unittest.TestCase):
         for arr in [self.f1, self.f2]:
 
             # Initial props
-            self.assertTrue( arr.properties.has_key('x_0') )
-            self.assertTrue( arr.properties.has_key('y_0') )
-            self.assertTrue( arr.properties.has_key('u_0') )
-            self.assertTrue( arr.properties.has_key('v_0') )
+            self.assertTrue( arr.properties.has_key('_x_0') )
+            self.assertTrue( arr.properties.has_key('_y_0') )
+            self.assertTrue( arr.properties.has_key('_u_0') )
+            self.assertTrue( arr.properties.has_key('_v_0') )
             
-            self.assertTrue( arr.cl_properties.has_key('cl_x_0') )
-            self.assertTrue( arr.cl_properties.has_key('cl_y_0') )
-            self.assertTrue( arr.cl_properties.has_key('cl_u_0') )
-            self.assertTrue( arr.cl_properties.has_key('cl_v_0') )
+            self.assertTrue( arr.cl_properties.has_key('cl__x_0') )
+            self.assertTrue( arr.cl_properties.has_key('cl__y_0') )
+            self.assertTrue( arr.cl_properties.has_key('cl__u_0') )
+            self.assertTrue( arr.cl_properties.has_key('cl__v_0') )
 
         # check for the k1 step props
 
         arr = self.f1
 
-        self.assertTrue( arr.properties.has_key('k1_u00') )
-        self.assertTrue( arr.properties.has_key('k1_v01') )
+        self.assertTrue( arr.properties.has_key('_k1_u00') )
+        self.assertTrue( arr.properties.has_key('_k1_v01') )
 
-        self.assertTrue( arr.properties.has_key('k1_u20') )
-        self.assertTrue( arr.properties.has_key('k1_v21') )
+        self.assertTrue( arr.properties.has_key('_k1_u20') )
+        self.assertTrue( arr.properties.has_key('_k1_v21') )
 
-        self.assertTrue( arr.properties.has_key('k1_x40') )
-        self.assertTrue( arr.properties.has_key('k1_y41') )
+        self.assertTrue( arr.properties.has_key('_k1_x40') )
+        self.assertTrue( arr.properties.has_key('_k1_y41') )
 
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_u00') )
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_v01') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_u00') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_v01') )
 
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_u20') )
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_v21') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_u20') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_v21') )
 
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_x40') )
-        self.assertTrue( arr.cl_properties.has_key('cl_k1_y41') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_x40') )
+        self.assertTrue( arr.cl_properties.has_key('cl__k1_y41') )
 
 class CLEulerIntegratorTestCase(CLIntegratorTestCase):
     """ Test the Euler Integration of the system using OpenCL """

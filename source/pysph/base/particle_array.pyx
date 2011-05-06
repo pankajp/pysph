@@ -202,12 +202,13 @@ cdef class ParticleArray:
         default_values = {}
 
         for prop, arr in self.properties.iteritems():
-            pinfo = {}
-            pinfo['name'] = prop            
-            pinfo['type'] = arr.get_c_type()
-            pinfo['data'] = arr.get_npy_array()
-            pinfo['default'] = self.default_values[prop]
-            props[prop] = pinfo
+            if not prop.startswith('_'):
+                pinfo = {}
+                pinfo['name'] = prop            
+                pinfo['type'] = arr.get_c_type()
+                pinfo['data'] = arr.get_npy_array()
+                pinfo['default'] = self.default_values[prop]
+                props[prop] = pinfo
         
         d['properties'] = props
 

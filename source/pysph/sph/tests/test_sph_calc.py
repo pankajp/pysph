@@ -40,11 +40,11 @@ def test_sph_calc():
                        kernel=kernel, funcs=[func1, func2],
                        updates=['u','v','w'], integrates=True)
 
-    # evaluate the calc. Accelerations are stored in tmpx, tmpy and tmpz
+    # evaluate the calc. Accelerations are stored in _tmpx, _tmpy and _tmpz
 
-    calc.sph('tmpx', 'tmpy', 'tmpz')
+    calc.sph('_tmpx', '_tmpy', '_tmpz')
 
-    tmpx, tmpy, tmpz = pa.get('tmpx', 'tmpy', 'tmpz')
+    tmpx, tmpy, tmpz = pa.get('_tmpx', '_tmpy', '_tmpz')
 
     # the acceleration should be 2 in each direction
 

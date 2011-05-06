@@ -222,7 +222,7 @@ class Integrator(object):
 
         self.rupdate_list = []
 
-        self.step_props = 'tmpx', 'tmpy', 'tmpz'
+        self.step_props = '_tmpx', '_tmpy', '_tmpz'
 
     def set_rupdate_list(self):
         for i in range(len(self.particles.arrays)):
@@ -300,7 +300,7 @@ class Integrator(object):
 
                 # define and add the initial and step properties
 
-                prop_initial = prop+'_0'
+                prop_initial = '_'+prop+'_0'
 
                 if calc.integrates:             
                     pa.add_property({'name':prop_initial})
@@ -322,7 +322,7 @@ class Integrator(object):
                         
                         # add the k array name 
                         
-                        k_name = k_num + '_' + prop + str(i) + str(j)
+                        k_name = '_'+k_num + '_' + prop + str(i) + str(j)
                         pa.add_property({'name':k_name})
 
                         dst_writes = calc.dst_writes.get(k_num)

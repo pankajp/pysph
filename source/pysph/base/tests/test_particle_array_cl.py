@@ -39,7 +39,7 @@ class ParticleArrayCLTestCase(unittest.TestCase):
         # default properties as copied from particles.py
 
         default_props = ['x','y','z','u','v','w','m','h','p','e','rho','cs',
-                         'tmpx','tmpy','tmpz']
+                         '_tmpx','_tmpy','_tmpz']
 
         nbytes = {'float':32}
 
@@ -94,7 +94,7 @@ class ParticleArrayCLTestCase(unittest.TestCase):
                     _array = _array.astype(numpy.int32)
                     pysph_arr = pysph_arr.astype(numpy.int32)
 
-            cl.enqueue_read_buffer(self.queue, buffer, _array).wait()
+            cl.enqueue_copy(self.queue, dest=_array, src=buffer)
 
             self.assertEqual( len(_array), len(pysph_arr) )
 

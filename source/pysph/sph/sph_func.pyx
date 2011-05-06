@@ -284,13 +284,13 @@ cdef class SPHFunction:
             self.cl_args_name.append('__global REAL* s_%s'%(prop))
 
         # append the output buffer. 
-        self.cl_args.append( self.dest.get_cl_buffer('tmpx') )
+        self.cl_args.append( self.dest.get_cl_buffer('_tmpx') )
         self.cl_args_name.append('__global REAL* tmpx')
 
-        self.cl_args.append( self.dest.get_cl_buffer('tmpy') )
+        self.cl_args.append( self.dest.get_cl_buffer('_tmpy') )
         self.cl_args_name.append('__global REAL* tmpy')
 
-        self.cl_args.append( self.dest.get_cl_buffer('tmpz') )
+        self.cl_args.append( self.dest.get_cl_buffer('_tmpz') )
         self.cl_args_name.append('__global REAL* tmpz')
 
         self._set_extra_cl_args()

@@ -41,7 +41,7 @@ class CLSPHRhoTestCase(unittest.TestCase):
 
         # load the kernel source
         root = cl_utils.get_pysph_root()
-        src = open(os.path.join(root, 'sph/funcs/density_funcs.cl')).read()
+        src = open(os.path.join(root, 'sph/funcs/density_funcs.clt')).read()
 
         self.devices = devices = cl.get_platforms()[0].get_devices()
         self.device = device = devices[0]
