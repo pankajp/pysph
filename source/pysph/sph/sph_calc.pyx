@@ -232,6 +232,11 @@ cdef class SPHCalc:
         self.reset_output_arrays(output1, output2, output3)
         self.sph_array(output1, output2, output3, exclude_self)
 
+        # call an update on the particles if the destination pa is dirty
+
+        if self.dest.is_dirty:
+            self.particles.update()
+
     cpdef sph_array(self, DoubleArray output1, DoubleArray output2, DoubleArray
                      output3, bint exclude_self=False):
         """

@@ -30,6 +30,8 @@ particles = app.create_particles(
     name='fluid', type=Fluid)
 
 pa = particles.get_named_particle_array('fluid')
+pa.add_property({'name':'rhop'})
+pa.add_property({'name':'div'})
 
 # ensure that the array 'q' is available
 
@@ -42,19 +44,33 @@ s = solver.ShockTubeSolver(dim=1, integrator_type=solver.EulerIntegrator)
 
 s.add_operation(solver.SPHOperation(
 
+    sph.ADKEPilotRho.withargs(h0=h0),
+    on_types=[Fluid], from_types=[Fluid], updates=['rhop'], id='adke_rho'),
+
+                before=True, id="density")
+
+s.add_operation(solver.SPHOperation(
+
     sph.ADKESmoothingUpdate.withargs(h0=h0, k=k, eps=eps),
-    on_types=[Fluid], from_types=[Fluid], updates=['h'], id='adke'),
-
-    before=True, id="density")
-
+    on_types=[Fluid], updates=['h'], id='adke'),
+                
+                before=True, id="density")
+                
 # add the update conduction coefficient after the density calculation
+
+s.add_operation(solver.SPHOperation(
+
+    sph.VelocityDivergence.withargs(),
+    on_types=[Fluid], from_types=[Fluid], updates=['div'], id='vdivergence'),
+
+    before=False, id='density')
 
 s.add_operation(solver.SPHOperation(
 
     sph.ADKEConductionCoeffUpdate.withargs(g1=g1, g2=g2),
     on_types=[Fluid], from_types=[Fluid], updates=['q'], id='qcoeff'),
 
-    before=False, id='density')
+    before=False, id='vdivergence')
 
 
 # add the artificial heat term after the energy equation
@@ -65,7 +81,6 @@ s.add_operation(solver.SPHIntegration(
     updates=['e'], id='aheat'),
 
     before=False, id="enr")
-
 
 s.set_final_time(0.15)
 s.set_time_step(3e-4)

@@ -337,7 +337,7 @@ cdef class DummyKernel(KernelBase):
         return 1.0
     
     cpdef double radius(self):
-        return 1.0
+        return 2.0
     
 ##############################################################################
 #`CubicSplineKernel`

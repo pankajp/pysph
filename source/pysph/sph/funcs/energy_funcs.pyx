@@ -401,6 +401,10 @@ cdef class ArtificialHeat(SPHFunctionParticle):
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "ArtificialHeat"
 
+    def set_src_dst_reads(self):
+        self.src_reads = ['x','y','z','h','m','rho','e,','u','v','w','cs','q']
+        self.dst_reads = ['x','y','z','h','rho','e','u','v','w','cs','q']
+
     cpdef setup_arrays(self):
         """ Setup the arrays required to read data from source and dest. """
 
