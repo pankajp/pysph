@@ -13,7 +13,7 @@ cdef class PropertyGet(SPHFunction):
         dest -- The destination particle array
         prop_names -- The properties to get (upto 3 particle arrays)
         """
-        self.prop_names = prop_names
+        self.prop_names = list(prop_names)
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = len(prop_names)
         self.id = 'property_get'
@@ -47,7 +47,7 @@ cdef class PropertyAdd(SPHFunction):
         prop_names -- The properties to get the sum of
         constant -- a constant value to add to the result
         """
-        self.prop_names = prop_names
+        self.prop_names = list(prop_names)
         self.constant = constant
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = 1
@@ -83,7 +83,7 @@ cdef class PropertyNeg(SPHFunction):
         dest -- The destination particle array.
         prop_names -- The properties to get the inverse of (upto 3)
         """
-        self.prop_names = prop_names
+        self.prop_names = list(prop_names)
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = len(prop_names)
         self.id = 'property_neg'
@@ -117,7 +117,7 @@ cdef class PropertyMul(SPHFunction):
         prop_names -- The properties to get product of
         constant -- a constant value to multiply to the result
         """
-        self.prop_names = prop_names
+        self.prop_names = list(prop_names)
         self.constant = constant
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = 1
@@ -153,7 +153,7 @@ cdef class PropertyInv(SPHFunction):
         dest -- The destination particle array.
         prop_names -- The properties to get inverse of (upto 3)
         """
-        self.prop_names = prop_names
+        self.prop_names = list(prop_names)
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = len(prop_names)
         self.id = 'property_inv'

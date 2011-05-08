@@ -55,7 +55,7 @@ class BoundaryForceTestCase(unittest.TestCase):
         rhof = numpy.ones_like(xf)
 
         self.fluid = base.get_particle_array(x=xf, y=yf, h=hf, m=mf, rho=rhof,
-                                             cs=cs, tmpx=mf, tmpy=mf, tmpz=mf,
+                                             cs=cs, ax=mf, ay=mf, az=mf,
                                              name='fluid', type=Fluid)
 
 
@@ -113,7 +113,7 @@ class BoundaryForceTestCase(unittest.TestCase):
 
         self.particles.update()
 
-        calc.sph('tmpx', 'tmpy', 'tmpz')
+        calc.sph('ax', 'ay', 'az')
 
         force = fluid.tmpy
 
