@@ -141,7 +141,9 @@ class SPHIntegrationTestCase(SPHOperationTestCase):
         # integrates == True
 
         self.assertEqual(calc1.integrates, True)
-        self.assertEqual(calc1.nbr_info, True)
+        
+        # GravityForce does not require neighbors
+        self.assertEqual(calc1.nbr_info, False)
 
         # updates = ['u','v']
         
@@ -167,7 +169,6 @@ class SPHIntegrationTestCase(SPHOperationTestCase):
         # integrates = True
 
         self.assertEqual(calc.integrates, True)
-        self.assertEqual(calc.nbr_info, True)
 
         # updates = ['u','v']
 

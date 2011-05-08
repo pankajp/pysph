@@ -44,9 +44,12 @@ cdef class ParticleArray:
     #the type of particles
     cdef public int particle_type
 
-    # dictionary to hold the properties held per particle.
+    # dictionary to hold the properties held per particle
     cdef public dict properties
     cdef public list property_arrays
+    
+    # dictionary to hold the constants for all the particles
+    cdef public dict constants
 
     # default value associated with each property
     cdef public dict default_values

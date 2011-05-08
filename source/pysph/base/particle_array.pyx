@@ -120,10 +120,9 @@ cdef class ParticleArray:
     ######################################################################
     def __cinit__(self, str name='', default_particle_tag=LocalReal,
                   particle_type = ParticleType.Fluid,
-                  cl_precision = 'double',
+                  cl_precision = 'double', constants={},
                   *args, **props):
-        """
-        Constructor.
+        """ Constructor
 
         Parameters
         ----------
@@ -140,12 +139,15 @@ cdef class ParticleArray:
         props : dict 
             dictionary of properties for every particle in this array
 
-    	"""
+        """
         self.properties = {'tag':LongArray(0), 'group':LongArray(0),
                            'local':IntArray(0)}
         self.default_values = {'tag':default_particle_tag, 'group':0, 'local':1}
         
         self.temporary_arrays = {}
+        
+        self.constants = {}
+        self.constants.update(constants)
 
         self.name = name
         self.is_dirty = True
@@ -180,6 +182,8 @@ cdef class ParticleArray:
         keys = self.properties.keys() + self.temporary_arrays.keys()
         if name in keys:
             return self._get_real_particle_prop(name)
+        elif name in self.constants:
+            return self.constants[name]
         else:
             raise AttributeError, 'property %s not found'%(name)
 
@@ -188,6 +192,8 @@ cdef class ParticleArray:
         keys = self.properties.keys() + self.temporary_arrays.keys()
         if name in keys:
             self.set(**{name:value})
+        elif name in self.constants:
+            self.constants[name] = value
         else:
             raise AttributeError, 'property %s not found'%(name)
 
@@ -198,6 +204,7 @@ cdef class ParticleArray:
         d['name'] = self.name
         d['particle_type'] = self.particle_type
         d['temporary_arrays'] = self.temporary_arrays.keys()
+        d['constants'] = self.constants
         props = {}
         default_values = {}
 
@@ -226,6 +233,7 @@ cdef class ParticleArray:
         self.name = d['name']
         self.particle_type = d['particle_type']
         props = d['properties']
+        self.constants = d['constants']
         for prop in props:
             self.add_property(props[prop])
         self.num_real_particles = numpy.sum(props['tag']['data']==LocalReal)
@@ -359,7 +367,7 @@ cdef class ParticleArray:
         the index_list and reduce the size of the array by one. This is done for
         every property and temporary arrays that is being maintained.
     
-    	**Parameters**
+        **Parameters**
         
          - index_list - an array of indices, this array should be a LongArray.
 
@@ -376,7 +384,7 @@ cdef class ParticleArray:
          for every array in temporary_arrays:
              array.remove(sorted_indices)
 
-    	"""
+        """
         cdef str msg
         cdef numpy.ndarray sorted_indices
         cdef BaseArray prop_array
@@ -454,12 +462,12 @@ cdef class ParticleArray:
         """
         Add particles in particle_array to self.
     
-	**Parameters**
+        **Parameters**
 
          - particle_props - a dictionary containing numpy arrays for various
            particle properties.
          
-    	**Notes**
+        **Notes**
          
          - all properties should have same length arrays.
          - all properties should already be present in this particles array.
@@ -467,11 +475,11 @@ cdef class ParticleArray:
          - temporary arrays are not to be specified here, only particle
            properties.
 
-    	**Issues**
+        **Issues**
 
          - should the input parameter type be changed ?
 
-    	"""
+        """
         cdef int num_extra_particles, old_num_particles, new_num_particles
         cdef str prop
         cdef BaseArray arr
@@ -553,6 +561,9 @@ cdef class ParticleArray:
                 nparr_source = source.get_npy_array()
                 nparr_dest[old_num_particles:] = nparr_source
 
+        for const in parray.constants:
+            self.constants.setdefault(const, parray.constants[const])
+
         if num_extra_particles > 0:
             self.align_particles()
             self.is_dirty = True
@@ -604,7 +615,7 @@ cdef class ParticleArray:
                 return None
 
     def get(self, *args, only_real_particles=True):
-        """ Return the numpy array for the  property names in *args
+        """ Return the numpy array/constant for the  property names in *args
         
         **Parameters**
 
@@ -641,6 +652,8 @@ cdef class ParticleArray:
                     result.append(
                         self.temporary_arrays[arg].get_npy_array()[
                             :self.num_real_particles])
+                else:
+                    result.append(self.constants[arg])
         else:
             for i in range(nargs):
                 arg = args[i]
@@ -651,11 +664,13 @@ cdef class ParticleArray:
                     result.append(arg_array.get_npy_array())
                 elif self.temporary_arrays.has_key(arg):
                     result.append(self.temporary_arrays[arg].get_npy_array())
+                else:
+                    result.append(self.constants[arg])
 
         if nargs == 1:
             return result[0]
         else:
-            return tuple(result)        
+            return tuple(result)
 
     def set(self, **props):
         """ Set properties from numpy arrays like objects
@@ -905,7 +920,8 @@ cdef class ParticleArray:
     cdef _check_property(self, str prop):
         """ Check if a property is present or not """
         if (PyDict_Contains(self.temporary_arrays, prop) == 1 or
-            PyDict_Contains(self.properties, prop)):
+            PyDict_Contains(self.properties, prop) or
+            PyDict_Contains(self.constants, prop)):
             return
         else:
             raise AttributeError, 'property %s not present'%(prop)
@@ -1057,7 +1073,7 @@ cdef class ParticleArray:
             result_array.add_property({'name':prop,
                                        'type':prop_type,
                                        'default':prop_default})
-        
+
         # now we have the result array setup.
         # resize it
         if index_array.length == 0:
@@ -1073,8 +1089,11 @@ cdef class ParticleArray:
             src_prop_array = self.get_carray(prop)
             dst_prop_array = result_array.get_carray(prop)
             src_prop_array.copy_values(index_array, dst_prop_array)
+
+        for const in self.constants:
+            result_array.constants[const] = self.constants[const]
         
-        result_array.align_particles() 
+        result_array.align_particles()
         result_array.name = self.name
         result_array.particle_type = self.particle_type
         return result_array
