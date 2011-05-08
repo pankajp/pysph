@@ -18,7 +18,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
     """
 
     def __init__(self, ParticleArray source, ParticleArray dest,
-                 bint setup_arrays=True, **kwargs):
+                 bint setup_arrays=True, int dim=3, **kwargs):
         
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
                                      **kwargs)
@@ -28,6 +28,7 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "pressure_funcs.cl"
         self.cl_kernel_function_name = "SPHPressureGradient"
+        self.num_outputs = dim
 
     def set_src_dst_reads(self):
         self.src_reads = ['x','y','z','h','m','rho','p']
@@ -82,10 +83,12 @@ cdef class SPHPressureGradient(SPHFunctionParticle):
 
         if self.bonnet_and_lok_correction:
             self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
-            
+        
         nr[0] += temp*grad.x
-        nr[1] += temp*grad.y
-        nr[2] += temp*grad.z
+        if self.num_outputs > 1:
+            nr[1] += temp*grad.y
+            if self.num_outputs > 2:
+                nr[2] += temp*grad.z
 
     def cl_eval(self, object queue, object context):
 
@@ -113,7 +116,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
     def __init__(self, ParticleArray source, ParticleArray dest, 
                  bint setup_arrays=True, alpha=1, beta=1, gamma=1.4, 
-                 eta=0.1, **kwargs):
+                 eta=0.1, int dim=3, **kwargs):
 
         SPHFunctionParticle.__init__(self, source, dest, setup_arrays,
                                      **kwargs)
@@ -128,6 +131,7 @@ cdef class MomentumEquation(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "pressure_funcs.cl"
         self.cl_kernel_function_name = "MomentumEquation"
+        self.num_outputs = dim
 
     def set_src_dst_reads(self):
         self.src_reads = ['x','y','z','h','m','rho','p','u','v','w','cs']
@@ -235,8 +239,10 @@ cdef class MomentumEquation(SPHFunctionParticle):
             self.bonnet_and_lok_gradient_correction(dest_pid, &grad)
 
         nr[0] += tmp*grad.x
-        nr[1] += tmp*grad.y
-        nr[2] += tmp*grad.z
+        if self.num_outputs > 1:
+            nr[1] += tmp*grad.y
+            if self.num_outputs > 2:
+                nr[2] += tmp*grad.z
 
     def cl_eval(self, object queue, object context):
 

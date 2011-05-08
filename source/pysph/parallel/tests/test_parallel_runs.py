@@ -84,6 +84,10 @@ class ParallelTest(unittest.TestCase):
     def test_share_data(self):
         for i in range(1,6):
             run_mpi_script('share_data.py', i)
+
+    def test_particle_array_pickling(self):
+        for i in range(2,3):
+            run_mpi_script('particle_array_pickling.py', i)
         
 
 #for filename in tests:

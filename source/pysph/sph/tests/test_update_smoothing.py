@@ -51,7 +51,7 @@ class UpdateSmoothingTestCase(unittest.TestCase):
         h0 = dx
 
         pa = base.get_particle_array(name="test", type=Fluid,
-                                     x=x, h=h, rho=rho,  m=m)
+                                     x=x, h=h, rho=rho, m=m, tmp=m)
 
         particles = base.Particles(arrays=[pa], variable_h=True)
 
@@ -192,6 +192,10 @@ class TestUpdateSmoothing(sph.SPHFunctionParticle):
     The smoothing length of the fifth particle is doubled i.e. h[5] *= 2
 
     """
+    def __init__(self, source, dest, setup_arrays=True):
+        sph.SPHFunctionParticle.__init__(self, source, dest, setup_arrays)
+        self.num_outputs = 1
+        self.dst_reads = ['h']
 
     def eval(self, kernel, output1, output2, output3):
         for i in range(output1.length):
@@ -209,24 +213,22 @@ class TestUpdateSmoothingSolver(unittest.TestCase):
         self.h0 = dx
 
         self.pa = pa = base.get_particle_array(name="test", type=Fluid,
-                                     x=x, h=h, rho=rho,  m=m)
+                                     x=x, h=h, rho=rho, m=m, tmp=m)
 
         self.particles = base.Particles(arrays=[pa], variable_h=True)
 
         # smoothing length update operation
 
         self.adke = solver.SPHOperation(
-
-            TestUpdateSmoothing.withargs( h0=self.h0, k=1.0, eps=0.0 ),
+            TestUpdateSmoothing,
             from_types=[Fluid], on_types=[Fluid],
-            updates=["h"], id="pilotrho" )
-
+            updates=["tmp"], # updates='h' will first reset array h to 0
+            id="pilotrho" )
         self.kernel = base.CubicSplineKernel(dim=1)
     
     def test_solve(self):
 
-        for integrator in (solver.EulerIntegrator,solver.RK2Integrator,
-                           solver.RK4Integrator):
+        for integrator in [solver.EulerIntegrator]:
 
             self.solver = solver.Solver(self.kernel.dim, integrator)
             self.solver.add_operation(self.adke)
@@ -241,7 +243,7 @@ class TestUpdateSmoothingSolver(unittest.TestCase):
             h_expect = self.pa.h[5] * 2**self.solver.integrator.nsteps
 
             self.solver.solve(False)
-            self.assertAlmostEqual(self.pa.h[5], h_expect)
+            self.assertAlmostEqual(self.pa.tmp[5], h_expect)
     
 if __name__ == "__main__":
     unittest.main()

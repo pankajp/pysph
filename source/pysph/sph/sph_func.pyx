@@ -207,15 +207,31 @@ cdef class SPHFunction:
 
         self.setup_iter_data()
         cdef size_t np = self.dest.get_number_of_particles()
-
-        for i in range(np):
-            if tag_arr.data[i] == LocalReal:
-                self.eval_single(i, kernel, result)
-                output1.data[i] += result[0]
-                output2.data[i] += result[1]
-                output3.data[i] += result[2]
-            else:
-                output1.data[i] = output2.data[i] = output3.data[i] = 0
+        
+        if self.num_outputs == 3:
+            for i in range(np):
+                if tag_arr.data[i] == LocalReal:
+                    self.eval_single(i, kernel, result)
+                    output1.data[i] += result[0]
+                    output2.data[i] += result[1]
+                    output3.data[i] += result[2]
+                else:
+                    output1.data[i] = output2.data[i] = output3.data[i] = 0
+        elif self.num_outputs == 2:
+            for i in range(np):
+                if tag_arr.data[i] == LocalReal:
+                    self.eval_single(i, kernel, result)
+                    output1.data[i] += result[0]
+                    output2.data[i] += result[1]
+                else:
+                    output1.data[i] = output2.data[i] = 0
+        elif self.num_outputs == 1:
+            for i in range(np):
+                if tag_arr.data[i] == LocalReal:
+                    self.eval_single(i, kernel, result)
+                    output1.data[i] += result[0]
+                else:
+                    output1.data[i] = 0
 
     cdef void eval_single(self, size_t dest_pid, KernelBase kernel,
                           double * result):
@@ -226,9 +242,6 @@ cdef class SPHFunction:
         """
         raise NotImplementedError, 'SPHFunction.eval_single()'
     	
-    cpdef int output_fields(self) except - 1:
-        return self.num_outputs
-    
     cpdef setup_iter_data(self):
         """ setup operations performed in each iteration
         
@@ -311,13 +324,13 @@ cdef class SPHFunction:
         The read requirements specify which particle properties will
         be required by this function. Properties read from the source
         particle array are appended to the list `src_reads` and those
-        from the destinatio particle array are appended to `dst_reads`
+        from the destination particle array are appended to `dst_reads`
 
         These read requirements are used to construct the OpenCL
         kernel arguments at program creation time.
 
         """
-        raise NotImplementedError("SPHFunction set_src_dst_reads called!")
+        pass
 
 ################################################################################
 # `SPHFunctionParticle` class.

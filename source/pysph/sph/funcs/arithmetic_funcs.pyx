@@ -37,7 +37,7 @@ cdef class PropertyGet(SPHFunction):
 cdef class PropertyAdd(SPHFunction):
     """ function to add property arrays (any number of arrays) """
     def __init__(self, ParticleArray source, ParticleArray dest=None,
-                 prop_names=['rho'], **kwargs):
+                 prop_names=['rho'], constant=0.0, **kwargs):
         """ Constructor for SPH
 
         Parameters:
@@ -45,8 +45,10 @@ cdef class PropertyAdd(SPHFunction):
         source -- The source particle array
         dest -- The destination particle array
         prop_names -- The properties to get the sum of
+        constant -- a constant value to add to the result
         """
         self.prop_names = prop_names
+        self.constant = constant
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = 1
         self.id = 'property_add'
@@ -55,7 +57,7 @@ cdef class PropertyAdd(SPHFunction):
         #Setup the basic properties like m, x rho etc.
         SPHFunction.setup_arrays(self)
         self.d_props = [self.dest.get_carray(i) for i in self.prop_names]
-        self.num_props = len(self.prop_names)
+        self.num_props = len(self.d_props)
     
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
@@ -67,7 +69,7 @@ cdef class PropertyAdd(SPHFunction):
         for n in range(1, self.num_props):
             arr = self.d_props[n]
             for i in range(np):
-                output1.data[i] += arr.data[i]
+                output1.data[i] += arr.data[i] + self.constant
 
 cdef class PropertyNeg(SPHFunction):
     """ function to return the negative of upto 3 particle arrays """
@@ -105,7 +107,7 @@ cdef class PropertyNeg(SPHFunction):
 cdef class PropertyMul(SPHFunction):
     """ function to get product of property arrays (any number of arrays) """
     def __init__(self, ParticleArray source, ParticleArray dest=None,
-                 prop_names=['rho'], **kwargs):
+                 prop_names=['rho'], constant=0.0, **kwargs):
         """ Constructor for SPH
 
         Parameters:
@@ -113,8 +115,10 @@ cdef class PropertyMul(SPHFunction):
         source -- The source particle array.
         dest -- The destination particle array.
         prop_names -- The properties to get product of
+        constant -- a constant value to multiply to the result
         """
         self.prop_names = prop_names
+        self.constant = constant
         SPHFunction.__init__(self, source, dest, setup_arrays=True)
         self.num_outputs = 1
         self.id = 'property_mul'
@@ -123,7 +127,7 @@ cdef class PropertyMul(SPHFunction):
         #Setup the basic properties like m, x rho etc.
         SPHFunction.setup_arrays(self)
         self.d_props = [self.dest.get_carray(i) for i in self.prop_names]
-        self.num_props = len(self.prop_names)
+        self.num_props = len(self.d_props)
     
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3):
@@ -135,7 +139,7 @@ cdef class PropertyMul(SPHFunction):
         for n in range(1, self.num_props):
             arr = self.d_props[n]
             for i in range(np):
-                output1.data[i] *= arr.data[i]
+                output1.data[i] *= arr.data[i] * self.constant
 
 cdef class PropertyInv(SPHFunction):
     """ function to return the inverse of upto 3 particle arrays """

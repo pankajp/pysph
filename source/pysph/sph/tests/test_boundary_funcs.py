@@ -55,7 +55,7 @@ class BoundaryForceTestCase(unittest.TestCase):
         rhof = numpy.ones_like(xf)
 
         self.fluid = base.get_particle_array(x=xf, y=yf, h=hf, m=mf, rho=rhof,
-                                             cs=cs,
+                                             cs=cs, tmpx=mf, tmpy=mf, tmpz=mf,
                                              name='fluid', type=Fluid)
 
 
@@ -76,7 +76,7 @@ class BoundaryForceTestCase(unittest.TestCase):
                 
                 sph.MonaghanBoundaryForce.withargs(delp=dp),
                 from_types = [Solid], on_types=[Fluid],
-                updates=['u','v'], id='boundary')
+                updates=['u','v','w'], id='boundary')
                                   
                                   )
                              

@@ -23,6 +23,7 @@ cdef class EnergyEquationNoVisc(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquationNoVisc"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -128,6 +129,7 @@ cdef class EnergyEquationAVisc(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquationAVisc"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -251,6 +253,7 @@ cdef class EnergyEquation(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "EnergyEquationWithVisc"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -400,6 +403,7 @@ cdef class ArtificialHeat(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "energy_funcs.cl"
         self.cl_kernel_function_name = "ArtificialHeat"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = ['x','y','z','h','m','rho','e,','u','v','w','cs','q']

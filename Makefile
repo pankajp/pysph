@@ -73,10 +73,10 @@ epydoc :
 doc :
 	cd docs; make html
 
-develop : $(DIRS)
+develop :
 	python setup.py develop
 
-install : $(DIRS)
+install :
 	python setup.py install
 
 clang :

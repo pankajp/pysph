@@ -32,6 +32,7 @@ cdef class SPH(CSPHFunctionParticle):
 
         self.cl_kernel_src_file = "basic_funcs.clt"
         self.cl_kernel_function_name = "SPH"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -337,6 +338,7 @@ cdef class SPHLaplacian(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "basic_funcs.cl"
         self.cl_kernel_function_name = "SPHLaplacian"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []

@@ -27,6 +27,7 @@ cdef class ADKEPilotRho(CSPHFunctionParticle):
 
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "ADKEPilotRho"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
 
@@ -94,6 +95,7 @@ cdef class ADKESmoothingUpdate(SPHFunction):
 
         self.cl_kernel_src_file = "adke_funcs.cl"
         self.cl_kernel_function_name = "ADKESmoothingUpdate"
+        self.num_outputs = 1
 
     cpdef setup_arrays(self):
         """
@@ -237,6 +239,7 @@ cdef class ADKEConductionCoeffUpdate(SPHFunction):
         self.cl_kernel_src_file = "adke_funcs.cl"
 
         self.cl_kernel_function_name = "ADKEConductionCoeffUpdate"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []

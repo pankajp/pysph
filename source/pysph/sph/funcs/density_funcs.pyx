@@ -26,6 +26,7 @@ cdef class SPHRho(CSPHFunctionParticle):
 
         self.cl_kernel_src_file = "density_funcs.clt"
         self.cl_kernel_function_name = "SPHRho"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -98,6 +99,7 @@ cdef class SPHDensityRate(SPHFunctionParticle):
 
         self.cl_kernel_src_file = "density_funcs.cl"
         self.cl_kernel_function_name = "SPHDensityRate"
+        self.num_outputs = 1
 
     def set_src_dst_reads(self):
         self.src_reads = []

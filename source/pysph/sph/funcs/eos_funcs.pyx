@@ -24,6 +24,7 @@ cdef class IdealGasEquation(SPHFunction):
 
         self.cl_kernel_src_file = "eos_funcs.cl"
         self.cl_kernel_function_name = "IdealGasEquation"
+        self.num_outputs = 2
 
     def set_src_dst_reads(self):
         self.src_reads = []
@@ -93,6 +94,7 @@ cdef class TaitEquation(SPHFunction):
         self.tag = "state"
 
         self.cl_kernel_src_file = "eos_funcs.cl"
+        self.num_outputs = 2
 
     def set_src_dst_reads(self):
         self.src_reads = []

@@ -32,9 +32,6 @@ if pid == 0:
     # make sure the sending data defines the underscored variables
     assert pa.properties.has_key('_rho')
     assert pa.properties.has_key('_p')
-    assert pa.properties.has_key('_tmpx')
-    assert pa.properties.has_key('_tmpy')
-    assert pa.properties.has_key('_tmpz')
 
     comm.send(obj=pa, dest=1)
 
@@ -45,9 +42,6 @@ if pid == 1:
     # make sure that the underscored variables are not there
     assert not pa2.properties.has_key('_rho')
     assert not pa2.properties.has_key('_p')
-    assert not pa2.properties.has_key('_tmpx')
-    assert not pa2.properties.has_key('_tmpy')
-    assert not pa2.properties.has_key('_tmpz')
 
     # now append the received array to the local array
     pa.append_parray(pa2)

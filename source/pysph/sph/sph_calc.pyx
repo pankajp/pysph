@@ -5,7 +5,6 @@ This module provides the SPHCalc class, which does the actual SPH summation.
     
 """
 
-#include "stdlib.pxd"
 from libc.stdlib cimport *
 
 cimport numpy
@@ -172,7 +171,10 @@ cdef class SPHCalc:
                 msg = 'SPHFunction.source not same as'
                 msg += ' SPHCalc.sources[%d]'%(i)
                 raise ValueError, msg
-
+            if funcs[i].num_outputs > len(self.updates):
+                raise ValueError, ('Number of updates not same as num_outputs'
+                       '; required %d, got %d %s for func %s'%(funcs[i].num_outputs,
+                                       len(self.updates), self.updates, funcs[i]))
             # not valid for SPHFunction
             #if funcs[i].dest != self.dest:
             #    msg = 'SPHFunction.dest not same as'
@@ -228,8 +230,11 @@ cdef class SPHCalc:
         cdef DoubleArray output1 = self.dest.get_carray(output_array1)
         cdef DoubleArray output2 = self.dest.get_carray(output_array2)
         cdef DoubleArray output3 = self.dest.get_carray(output_array3)
+        
+        if output1 is not None: self.reset_output_array(output1)
+        if output2 is not None: self.reset_output_array(output2)
+        if output3 is not None: self.reset_output_array(output3)
 
-        self.reset_output_arrays(output1, output2, output3)
         self.sph_array(output1, output2, output3, exclude_self)
 
         # call an update on the particles if the destination pa is dirty
@@ -264,14 +269,11 @@ cdef class SPHCalc:
 
             func.eval(self.kernel, output1, output2, output3)
 
-    cdef reset_output_arrays(self, DoubleArray output1, DoubleArray output2,
-                             DoubleArray output3):
+    cdef reset_output_array(self, DoubleArray output):
 
         cdef int i
-        for i in range(output1.length):
-            output1.data[i] = 0.0
-            output2.data[i] = 0.0
-            output3.data[i] = 0.0
+        for i in range(output.length):
+            output.data[i] = 0.0
 
 #############################################################################
 

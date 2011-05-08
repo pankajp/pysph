@@ -13,7 +13,7 @@ from pysph.base.nnps cimport FixedDestNbrParticleLocator
 cdef class SPHFunction:
     cdef public ParticleArray source, dest
     cdef public FixedDestNbrParticleLocator nbr_locator
-    cdef readonly num_outputs
+    cdef public num_outputs
 
     cdef public str name, id
     cdef public str tag
@@ -65,8 +65,6 @@ cdef class SPHFunction:
     cpdef setup_arrays(self)
     cpdef setup_iter_data(self)
 
-    cpdef int output_fields(self) except -1
-    
     cpdef eval(self, KernelBase kernel, DoubleArray output1,
                DoubleArray output2, DoubleArray output3)
 

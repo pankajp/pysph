@@ -75,7 +75,7 @@ class FluidSolver(Solver):
         self.add_operation(SPHIntegration(
             sph.MomentumEquation.withargs(alpha=0.01, beta=0.0, hks=False),
             from_types=[Fluids], on_types=[Fluids], 
-            updates=['u','v'], 
+            updates=['u','v','w'], 
             id='mom')
                            )
 

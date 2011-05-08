@@ -9,6 +9,7 @@ cdef class PropertyGet(SPHFunction):
 cdef class PropertyAdd(SPHFunction):
     cdef list prop_names, d_props
     cdef int num_props
+    cdef public double constant
 
 cdef class PropertyNeg(SPHFunction):
     cdef list prop_names, d_props
@@ -16,6 +17,7 @@ cdef class PropertyNeg(SPHFunction):
 cdef class PropertyMul(SPHFunction):
     cdef list prop_names, d_props
     cdef int num_props
+    cdef public double constant
 
 cdef class PropertyInv(SPHFunction):
     cdef list prop_names, d_props

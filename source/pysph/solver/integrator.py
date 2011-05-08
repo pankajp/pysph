@@ -222,8 +222,6 @@ class Integrator(object):
 
         self.rupdate_list = []
 
-        self.step_props = '_tmpx', '_tmpy', '_tmpz'
-
     def set_rupdate_list(self):
         for i in range(len(self.particles.arrays)):
             self.rupdate_list.append([])

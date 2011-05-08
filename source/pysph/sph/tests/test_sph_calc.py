@@ -26,7 +26,7 @@ def test_sph_calc():
     z = numpy.array([0,])
     h = numpy.ones_like(x)
 
-    pa = base.get_particle_array(name="test", x=x, y=y, z=z,h=h)
+    pa = base.get_particle_array(name="test", x=x, y=y, z=z,h=h, _tmpx=z, _tmpy=z, _tmpz=z)
     particles = base.Particles(arrays=[pa,])
     kernel = base.CubicSplineKernel(dim=1)
 

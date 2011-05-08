@@ -109,6 +109,7 @@ cdef class MoveCircleX(SPHFunction):
 
         self.id = 'circlex'
         self.tag = "position"
+        self.num_outputs = 2
 
     def set_src_dst_reads(self):
         pass        
@@ -144,6 +145,7 @@ cdef class MoveCircleY(SPHFunction):
 
         self.id = 'circley'
         self.tag = "position"
+        self.num_outputs = 2
 
     def set_src_dst_reads(self):
         pass        
