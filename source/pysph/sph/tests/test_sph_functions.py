@@ -50,7 +50,7 @@ def create_t_func(func_getter):
             particles = Particles(arrays=[pa, pb])
             
             func = func_getter.get_func(pa, pb)
-            calc = SPHCalc(particles, [pa], pb, kernel, [func], ['tmp'])
+            calc = SPHCalc(particles, [pa], pb, kernel, [func], ['tmp']*func.num_outputs)
             print cls.__name__
             t = get_time()
             calc.sph('tmp', 'tmp', 'tmp')

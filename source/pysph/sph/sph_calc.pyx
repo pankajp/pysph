@@ -172,10 +172,10 @@ cdef class SPHCalc:
                 msg += ' SPHCalc.sources[%d]'%(i)
                 raise ValueError, msg
             if funcs[i].num_outputs != len(self.updates):
-                logger.warn('Number of updates not same as num_outputs; '
-                            'required %d, got %d %s for func %s'%(
-                                funcs[i].num_outputs, len(self.updates),
-                                self.updates, funcs[i]))
+                raise ValueError, ('Number of updates not same as num_outputs; '
+                                   'required %d, got %d %s for func %s'%(
+                                       funcs[i].num_outputs, len(self.updates),
+                                       self.updates, funcs[i]))
             # not valid for SPHFunction
             #if funcs[i].dest != self.dest:
             #    msg = 'SPHFunction.dest not same as'
@@ -217,9 +217,6 @@ cdef class SPHCalc:
 
         func = self.funcs[0]
 
-        # Add temporary array in case of fewer arguments to sph()
-        self.dest.add_property(dict(name='_tmp'))
-
         self.src_reads = func.src_reads
         self.dst_reads = func.dst_reads
 
@@ -227,23 +224,15 @@ cdef class SPHCalc:
               str output_array3=None, bint exclude_self=False): 
         """
         """
-        cdef DoubleArray output1, output2, output3
-        if output_array1 is None:
-            output1 = self.dest.get_carray('_tmp')
-        else:
-            output1 = self.dest.get_carray(output_array1)
+        cdef DoubleArray output1 = self.dest.get_carray(output_array1)
+        cdef DoubleArray output2 = self.dest.get_carray(output_array2)
+        cdef DoubleArray output3 = self.dest.get_carray(output_array3)
+
+        if output1 is not None:
             self.reset_output_array(output1)
-
-        if output_array2 is None:
-            output2 = self.dest.get_carray('_tmp')
-        else:
-            output2 = self.dest.get_carray(output_array2)
+        if output2 is not None:
             self.reset_output_array(output2)
-
-        if output_array3 is None:
-            output3 = self.dest.get_carray('_tmp')
-        else:
-            output3 = self.dest.get_carray(output_array3)
+        if output3 is not None:
             self.reset_output_array(output3)
 
         self.sph_array(output1, output2, output3, exclude_self)

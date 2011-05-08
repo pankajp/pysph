@@ -88,7 +88,7 @@ class SolverTestCase(unittest.TestCase):
 
         s.add_operation(solver.SPHIntegration(
                 
-                sph.SPHPressureGradient, on_types=[Fluids],
+                sph.SPHPressureGradient.withargs(dim=2), on_types=[Fluids],
                 from_types=[Fluids, Solids], updates=['u','v'], id='pgrad')
 
                              )
@@ -96,7 +96,7 @@ class SolverTestCase(unittest.TestCase):
         s.add_operation(solver.SPHIntegration(
 
                 sph.MonaghanArtificialVsicosity, on_types=[Fluids],
-                from_types=[Fluids, Solids], updates=['u','v'], id='avisc')
+                from_types=[Fluids, Solids], updates=['u','v','w'], id='avisc')
 
                              )
 

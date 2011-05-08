@@ -115,7 +115,7 @@ class BoundaryForceTestCase(unittest.TestCase):
 
         calc.sph('ax', 'ay', 'az')
 
-        force = fluid.tmpy
+        force = fluid.ay
 
         for i in range(np):
             self.assertTrue(numpy.allclose(force, force[i]))
