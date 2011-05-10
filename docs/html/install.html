@@ -1,0 +1,196 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installation &mdash; PySPH v0.9 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="PySPH v0.9 documentation" href="index.html" />
+    <link rel="next" title="An Overview of PySPH" href="overview.html" />
+    <link rel="prev" title="Welcome to PySPH’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="An Overview of PySPH"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to PySPH’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">PySPH v0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Release:</th><td class="field-body">0.9</td>
+</tr>
+<tr class="field"><th class="field-name">Date:</th><td class="field-body">May 10, 2011</td>
+</tr>
+</tbody>
+</table>
+<p>There are several ways to install the PySPH package.</p>
+<div class="section" id="installation-on-ubuntu-10-10">
+<h2>Installation on Ubuntu 10.10<a class="headerlink" href="#installation-on-ubuntu-10-10" title="Permalink to this headline">¶</a></h2>
+<p>Assuming you have administrative rights, install the following
+essential dependencies</p>
+<ul class="simple">
+<li><a class="reference external" href="http://numpy.scipy.org/">Numpy</a>: &gt;= 1.0.4</li>
+<li><a class="reference external" href="http://cython.org/">Cython</a>: &gt;= 0.14</li>
+<li><a class="reference external" href="http://pypi.python.org/pypi/setuptools">setuptools</a></li>
+</ul>
+<p>To install these:</p>
+<div class="highlight-python"><pre>sudo apt-get install python-numpy python-dev cython python-setuptools</pre>
+</div>
+<p>The following are non essential dependencies</p>
+<ul class="simple">
+<li><a class="reference external" href="http://www.open-mpi.org/">MPI</a> and <a class="reference external" href="http://mpi4py.scipy.org">mpi4py</a> &gt;=1.2: Message Passing Interface for parallel runs</li>
+<li><a class="reference external" href="http://sphinx.pocoo.org/">sphinx</a>: &gt;= 0.5 to generate documentation.</li>
+<li><a class="reference external" href="http://code.google.com/p/python-nose/">nose</a>: to run tests</li>
+</ul>
+<p>To install</p>
+<div class="highlight-python"><pre>sudo apt-get install openmpi-bin libopenmpi-dev python-mpi4py python-sphinx python-nose</pre>
+</div>
+<p>Download and untar the latest source tarball from
+<a class="reference external" href="http://pysph.googlecode.com">http://pysph.googlecode.com</a></p>
+<div class="highlight-python"><pre>$(pysph) tar -xvzf &lt;tarball&gt;</pre>
+</div>
+<p>Alternatively, you make a clone of the repository as:</p>
+<div class="highlight-python"><pre>hg clone https://devel.pysph.googlecode.com/hg pysph</pre>
+</div>
+<p>Build and install the package as</p>
+<div class="highlight-python"><pre>$(pysph) make develop; make install</pre>
+</div>
+<p>Once the package is installed you can test if everything is OK by
+running the test suite like so:</p>
+<div class="highlight-python"><pre>$ make test</pre>
+</div>
+<p>If all goes well, you have successfully installed PySPH!</p>
+<p>To build the documentation using <a class="reference external" href="http://sphinx.pocoo.org/">Sphinx</a> do the following:</p>
+<div class="highlight-python"><pre>$ cd docs
+$ make html</pre>
+</div>
+<p>The docs should now be available in the <tt class="docutils literal"><span class="pre">build/html</span></tt> directory.
+Point your browser at <tt class="docutils literal"><span class="pre">build/html/index.html</span></tt>.</p>
+</div>
+<div class="section" id="setting-up-pysph-using-virtualenv">
+<h2>Setting up PySPH using virtualenv<a class="headerlink" href="#setting-up-pysph-using-virtualenv" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://virtualenv.openplans.org/">Virtualenv</a> lets you set up a python environment within which you may
+install python packages locally and without administrative rights.</p>
+<p>Ensure all dependencies are met:</p>
+<div class="highlight-python"><pre>sudo apt-get install python-numpy python-dev openmpi-bin libopenmpi-dev python-virtualenv</pre>
+</div>
+<p>Once you have virtualenv installed, you can create an environment
+within which PySPH can be installed.:</p>
+<div class="highlight-python"><pre>$ cd ~
+$ virtualenv envs/pysph
+$ source envs/pysph/bin/activate
+$(pysph)</pre>
+</div>
+<p>Within this environment, you may install all python related
+dependencies as simply as:</p>
+<div class="highlight-python"><pre>$(pysph) easy_install cython mpi4py python-sphinx python-nose</pre>
+</div>
+<p>Download the source code from <a class="reference external" href="https://pysph.googlecode.com">https://pysph.googlecode.com</a> and install:</p>
+<div class="highlight-python"><pre>$(pysph) make install
+$(pysph) make test</pre>
+</div>
+<p>If all the tests pass, you have successfully installed PySPH!</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#installation-on-ubuntu-10-10">Installation on Ubuntu 10.10</a></li>
+<li><a class="reference internal" href="#setting-up-pysph-using-virtualenv">Setting up PySPH using virtualenv</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to PySPH&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="overview.html"
+                        title="next chapter">An Overview of PySPH</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/install.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="overview.html" title="An Overview of PySPH"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to PySPH’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">PySPH v0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Chandrashekhar P. Kaushik and Prabhu Ramachandran.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,375 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Solver Interfaces &mdash; PySPH v0.9 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.9',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="PySPH v0.9 documentation" href="index.html" />
+    <link rel="next" title="PySPH Reference Documentation" href="reference/index.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="reference/index.html" title="PySPH Reference Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting started"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">PySPH v0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="solver-interfaces">
+<h1>Solver Interfaces<a class="headerlink" href="#solver-interfaces" title="Permalink to this headline">¶</a></h1>
+<p>Interfaces are a way to control, gather data and execute commands on a running
+solver instance. This can be useful for example to pause/continue the solver,
+get the iteration count, get/set the dt or final time or simply to monitor the
+running of the solver.</p>
+<div class="section" id="commandmanager">
+<h2>CommandManager<a class="headerlink" href="#commandmanager" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">CommandManager</span></tt> class provides functionality to control the solver in
+a restricted way so that adding multiple interfaces to the solver is possible
+in a simple way.</p>
+<p>The figure <a class="reference internal" href="#image-controller"><em>Overview of the Solver Interfaces</em></a> shows an overview of the classes and objects
+involved in adding an interface to the solver.</p>
+<div class="figure align-center" id="image-controller">
+<img alt="_images/controller.png" src="_images/controller.png" style="width: 900px;" />
+<p class="caption">Overview of the Solver Interfaces</p>
+</div>
+<p>The basic design of the controller is as follows:</p>
+<ol class="arabic simple">
+<li><tt class="xref py py-class docutils literal"><span class="pre">Solver</span></tt> has a method
+<tt class="xref py py-meth docutils literal"><span class="pre">set_command_handler()</span></tt> takes a callable
+and a command_interval, and calls the callable with self as an argument
+every <cite>command_interval</cite> iterations</li>
+<li>The method <tt class="xref py py-meth docutils literal"><span class="pre">CommandManager.execute_commands()</span></tt> of <cite>CommandManager</cite> object is
+set as the command_handler for the solver. Now <cite>CommandManager</cite> can do any operation
+on the solver</li>
+<li>Interfaces are added to the <cite>CommandManager</cite> by the <tt class="xref py py-meth docutils literal"><span class="pre">CommandManager.add_interface()</span></tt>
+method, which takes a callable (Interface) as an argument and calls the callable
+in a separate thread with a new <tt class="xref py py-class docutils literal"><span class="pre">Controller</span></tt> instance as an argument</li>
+<li>A <cite>Controller</cite> instance is a proxy for the <cite>CommandManager</cite> which redirects
+its methods to call <tt class="xref py py-meth docutils literal"><span class="pre">CommandManager.dispatch()</span></tt> on the <cite>CommandManager</cite>, which is
+synchronized in the <cite>CommandManager</cite> class so that only one thread (Interface)
+can call it at a time. The <cite>CommandManager</cite> queues the commands and sends them to
+all procs in a parallel run and executes them when the solver calls its
+<tt class="xref py py-meth docutils literal"><span class="pre">execute_commands()</span></tt> method</li>
+<li>Writing a new Interface is simply writing a function/method which calls
+appropriate methods on the <tt class="xref py py-class docutils literal"><span class="pre">Controller</span></tt> instance passed to it.</li>
+</ol>
+</div>
+<div class="section" id="controller">
+<h2>Controller<a class="headerlink" href="#controller" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">Controller</span></tt> class is a convenience class which has various methods
+which redirect to the <tt class="xref py py-meth docutils literal"><span class="pre">Controller.dispatch()</span></tt> method to do the actual
+work of queuing the commands. This method is synchronized so that multiple
+controllers can operate in a thread-safe manner. It also restricts the operations
+which are possible on the solver through various interfaces. This enables adding
+multiple interfaces to the solver convenient and safe. Each interface gets a
+separate Controller instance so that the various interfaces are isolated.</p>
+</div>
+<div class="section" id="blocking-and-non-blocking-mode">
+<h2>Blocking and Non-Blocking mode<a class="headerlink" href="#blocking-and-non-blocking-mode" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">Controller</span></tt> object has a notion of Blocking and Non-Blocking mode.</p>
+<ul class="simple">
+<li>In <strong>Blocking</strong> mode operations wait until the command is actually executed on the
+solver and then return the result. This means execution stops until the
+execute_commands method of the <tt class="xref py py-class docutils literal"><span class="pre">CommandManager</span></tt> is executed by the
+solver, which is after every <tt class="xref py py-attr docutils literal"><span class="pre">commmand_interval</span></tt> iterations.
+This mode is the default.</li>
+<li>In <strong>Non-Blocking</strong> mode the Controller queues the command for execution and
+returns a task_id of the command. The result of the command can then be
+obtained anytime later by the get_result method of the Controller passing the
+task_id as argument. The get_result call blocks until result can be obtained.</li>
+</ul>
+<p><strong>Switching between modes</strong></p>
+<p>The blocking/non-blocking modes can be get/set using the methods
+<tt class="xref py py-meth docutils literal"><span class="pre">Controller.get_blocking()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">Controller.set_blocking()</span></tt> methods</p>
+<p><strong>NOTE :</strong>
+The blocking/non-blocking mode is not for getting/setting solver properties.
+These methods always return immediately, even if the setter is actually executed
+only when the <tt class="xref py py-meth docutils literal"><span class="pre">CommandManager.execute_commands()</span></tt> function is called by
+the solver.</p>
+</div>
+<div class="section" id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline">¶</a></h2>
+<p>Interfaces are functions which are called in a separate thread and receive a
+<tt class="xref py py-class docutils literal"><span class="pre">Controller</span></tt> instance so that they can query the solver, get/set
+various properties and execute commands on the solver in a safe manner.</p>
+<p>Here&#8217;s the example of a simple interface which simply prints out the iteration
+count every second to monitor the solver</p>
+<div class="highlight-python" id="simple-interface"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">time</span>
+
+<span class="k">def</span> <span class="nf">simple_interface</span><span class="p">(</span><span class="n">controller</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">print</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_count</span><span class="p">()</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can use <tt class="docutils literal"><span class="pre">dir(controller)</span></tt> to find out what methods are available on the
+controller instance.</p>
+<p>A few simple interfaces are implemented in the <tt class="xref py py-mod docutils literal"><span class="pre">solver_interfaces</span></tt>
+module, namely <tt class="xref py py-class docutils literal"><span class="pre">CommandlineInterface</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">XMLRPCInterface</span></tt>
+and <tt class="xref py py-class docutils literal"><span class="pre">MultiprocessingInterface</span></tt>, and also in <cite>examples/controller_elliptical_drop_client.py</cite>.
+You can check the code to see how to implement various kinds of interfaces.</p>
+</div>
+<div class="section" id="adding-interface-to-solver">
+<h2>Adding Interface to Solver<a class="headerlink" href="#adding-interface-to-solver" title="Permalink to this headline">¶</a></h2>
+<p>To add interfaces to a plain solver (not created using <tt class="xref py py-class docutils literal"><span class="pre">Application</span></tt>),
+the following steps need to be taken:</p>
+<ul class="simple">
+<li>Set <tt class="xref py py-class docutils literal"><span class="pre">CommandManager</span></tt> for the solver (it is not setup by default)</li>
+<li>Add the interface to the CommandManager</li>
+</ul>
+<p>The following code demonstrates how the the <a class="reference internal" href="#simple-interface"><em>Simple Interface</em></a> created above
+can be added to a solver:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># add CommandManager to solver</span>
+<span class="n">command_manager</span> <span class="o">=</span> <span class="n">CommandManager</span><span class="p">(</span><span class="n">solver</span><span class="p">)</span>
+<span class="n">solver</span><span class="o">.</span><span class="n">set_command_handler</span><span class="p">(</span><span class="n">command_manager</span><span class="o">.</span><span class="n">execute_commands</span><span class="p">)</span>
+
+<span class="c"># add the interface</span>
+<span class="n">command_manager</span><span class="o">.</span><span class="n">add_interface</span><span class="p">(</span><span class="n">simple_interface</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For code which uses <tt class="xref py py-class docutils literal"><span class="pre">Application</span></tt>, you
+simply need to add the interface to the application&#8217;s command_manager:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">app</span> <span class="o">=</span> <span class="n">Application</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">set_solver</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="n">app</span><span class="o">.</span><span class="n">command_manager</span><span class="o">.</span><span class="n">add_interface</span><span class="p">(</span><span class="n">simple_interface</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="commandline-interface">
+<h2>Commandline Interface<a class="headerlink" href="#commandline-interface" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">CommandLine</span></tt> interface enables you to control the solver from
+the commandline even as it is running. Here&#8217;s a sample session of the command-line
+interface from the controller_elliptical_drop.py example:</p>
+<div class="highlight-python"><pre>$ python controller_elliptical_drop.py
+pysph[0]&gt;&gt;&gt;
+Invalid command
+Valid commands are:
+    p | pause
+    c | cont
+    g | get &lt;name&gt;
+    s | set &lt;name&gt; &lt;value&gt;
+    q | quit -- quit commandline interface (solver keeps running)
+pysph[9]&gt;&gt;&gt; g dt
+1e-05
+pysph[64]&gt;&gt;&gt; g tf
+0.1
+pysph[114]&gt;&gt;&gt; s tf 0.01
+None
+pysph[141]&gt;&gt;&gt; g tf
+0.01
+pysph[159]&gt;&gt;&gt; get_particle_array_names
+['fluid']</pre>
+</div>
+<p>The number inside the square brackets indicates the iteration count.</p>
+<p>Note that not all operations can be performed using the command-line interface,
+notably those which use complex python objects.</p>
+</div>
+<div class="section" id="xml-rpc-interface">
+<h2>XML-RPC Interface<a class="headerlink" href="#xml-rpc-interface" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">XMLRPCInterface</span></tt> interface exports the controller object&#8217;s
+methods over an XML-RPC interface. An example html file
+<cite>controller_elliptical_drop_client.html</cite> uses this XML-RPC interface to
+control the solver from a web page.</p>
+<p>The following code snippet shows the use of XML-RPC interface, which is
+not much different from any other interface, as they all export the interface
+of the Controller object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">xmlrpclib</span>
+
+<span class="c"># address is a tuple of hostname, port, ex. (&#39;localhost&#39;,8900)</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">allow_none</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c"># client has all the methods of the controller</span>
+<span class="k">print</span> <span class="n">client</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">listMethods</span><span class="p">()</span>
+
+<span class="k">print</span> <span class="n">client</span><span class="o">.</span><span class="n">get_t</span><span class="p">()</span>
+<span class="k">print</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The XML-RPC interface also implements a
+simple http server which serves html, javascript and image files from the
+directory it is started from. This enables direct use of the file
+<cite>controller_elliptical_drop_client.html</cite> to get an html interface without
+the need of a dedicated http server.</p>
+<p>The figure <a class="reference internal" href="#fig-html-client"><em>PySPH html client using XML-RPC interface</em></a> shows a screenshot of the html client
+in action</p>
+<div class="figure align-center" id="fig-html-client">
+<img alt="_images/html_client.png" src="_images/html_client.png" />
+<p class="caption">PySPH html client using XML-RPC interface</p>
+</div>
+<p>One limitation of XML-RPC interface is that arbitrary python objects cannot be
+sent across. XML-RPC standard predefines a limited set of types which can be
+transferred.</p>
+</div>
+<div class="section" id="multiprocessing-interface">
+<h2>Multiprocessing Interface<a class="headerlink" href="#multiprocessing-interface" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="xref py py-class docutils literal"><span class="pre">MultiprocessingInterface</span></tt> interface also exports the controller
+object similar to the XML-RPC interface, but it is more featured, can use
+authentication keys and can send arbitrary picklable objects. Usage of
+Multiprocessing client is also similar to the XML-RPC client:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pysph.solver.solver_interfaces</span> <span class="kn">import</span> <span class="n">MultiprocessingClient</span>
+
+<span class="c"># address is a tuple of hostname, port, ex. (&#39;localhost&#39;,8900)</span>
+<span class="c"># authkey is authentication key set on server, defaults to &#39;pysph&#39;</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">MultiprocessingClient</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">authkey</span><span class="p">)</span>
+
+<span class="c"># controller proxy</span>
+<span class="n">controller</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">controller</span>
+
+<span class="n">pa_names</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_particle_array_names</span><span class="p">()</span>
+
+<span class="c"># arbitrary python objects can be transferred (ParticleArray)</span>
+<span class="n">pa</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_named_particle_array</span><span class="p">(</span><span class="n">pa_names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Here&#8217;s an example (straight from <cite>controller_elliptical_drop_client.py</cite>)
+put together to show how the controller can be used to create
+useful interfaces for the solver. The code below plots the particle positions
+as a scatter map with color-mapped velocities, and updates the plot every second
+while maintaining user interactivity:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pysph.solver.solver_interfaces</span> <span class="kn">import</span> <span class="n">MultiprocessingClient</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">MultiprocessingClient</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">authkey</span><span class="p">)</span>
+<span class="n">controller</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">controller</span>
+
+<span class="n">pa_name</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_particle_array_names</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">pa</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_named_particle_array</span><span class="p">(</span><span class="n">pa_name</span><span class="p">)</span>
+
+<span class="c">#plt.ion()</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+<span class="n">line</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">u</span><span class="p">,</span><span class="n">pa</span><span class="o">.</span><span class="n">v</span><span class="p">))</span>
+
+<span class="k">global</span> <span class="n">t</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">update</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">t</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">dt</span> <span class="o">=</span> <span class="n">t2</span> <span class="o">-</span> <span class="n">t</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">t2</span>
+    <span class="k">print</span> <span class="s">&#39;count:&#39;</span><span class="p">,</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_count</span><span class="p">(),</span> <span class="s">&#39;</span><span class="se">\t</span><span class="s">timer time:&#39;</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span>
+    <span class="n">pa</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_named_particle_array</span><span class="p">(</span><span class="n">pa_name</span><span class="p">)</span>
+
+    <span class="n">line</span><span class="o">.</span><span class="n">set_offsets</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+    <span class="n">line</span><span class="o">.</span><span class="n">set_array</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">u</span><span class="p">,</span><span class="n">pa</span><span class="o">.</span><span class="n">v</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+    <span class="k">print</span> <span class="s">&#39;</span><span class="se">\t</span><span class="s">result &amp; draw time:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t</span>
+
+    <span class="k">return</span> <span class="bp">True</span>
+
+<span class="n">update</span><span class="p">()</span>
+<span class="n">gobject</span><span class="o">.</span><span class="n">timeout_add_seconds</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Solver Interfaces</a><ul>
+<li><a class="reference internal" href="#commandmanager">CommandManager</a></li>
+<li><a class="reference internal" href="#controller">Controller</a></li>
+<li><a class="reference internal" href="#blocking-and-non-blocking-mode">Blocking and Non-Blocking mode</a></li>
+<li><a class="reference internal" href="#interfaces">Interfaces</a></li>
+<li><a class="reference internal" href="#adding-interface-to-solver">Adding Interface to Solver</a></li>
+<li><a class="reference internal" href="#commandline-interface">Commandline Interface</a></li>
+<li><a class="reference internal" href="#xml-rpc-interface">XML-RPC Interface</a></li>
+<li><a class="reference internal" href="#multiprocessing-interface">Multiprocessing Interface</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="getting_started.html"
+                        title="previous chapter">Getting started</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="reference/index.html"
+                        title="next chapter">PySPH Reference Documentation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/solver_interfaces.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="reference/index.html" title="PySPH Reference Documentation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="getting_started.html" title="Getting started"
+             >previous</a> |</li>
+        <li><a href="index.html">PySPH v0.9 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Chandrashekhar P. Kaushik and Prabhu Ramachandran.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
