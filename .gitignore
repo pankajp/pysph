@@ -1,0 +1,16 @@
+*.c
+*.cpp
+*.pyc
+*.so
+*.o
+*~
+*.rej
+*.orig
+*.swp
+*.log
+*.html
+docs/build/
+source/build/
+source/PySPH.egg-info/
+dist/
+build/
